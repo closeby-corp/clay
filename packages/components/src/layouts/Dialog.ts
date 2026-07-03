@@ -1,4 +1,4 @@
-import { Component } from '@ralph/core';
+import { Component } from '@badui/core';
 
 export interface DialogProps {
   title?: string;

@@ -1,8 +1,9 @@
 {
-  "name": "@ralph/server",
+  "name": "@badui/server",
   "version": "0.1.0",
   "main": "src/index.ts",
   "dependencies": {
-    "@ralph/core": "workspace:*"
+    "@badui/core": "workspace:*",
+    "@starfederation/datastar-sdk": "^1.0.0"
   }
 }

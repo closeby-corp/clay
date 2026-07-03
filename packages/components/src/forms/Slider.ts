@@ -1,7 +1,6 @@
-import { Component } from '@ralph/core';
+import { ValueComponent, eventRegistry, getCurrentContext, wrapValueComponent } from '@badui/core';
 
 export interface SliderProps {
-  name: string;
   label?: string;
   min?: number;
   max?: number;
@@ -11,46 +10,77 @@ export interface SliderProps {
   showValue?: boolean;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   color?: 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error';
-  endpoint?: string;
+  on_change?: (value: number) => void;
 }
 
-export class Slider extends Component<SliderProps> {
-  render(): string {
-    const htmxAttrs = this.hasEvents() && this.props.endpoint
-      ? this.generateEventAttributes(this.props.endpoint)
-      : '';
+export class SliderComponent extends ValueComponent<number, SliderProps> {
+  private _initialized = false;
 
-    const value = this.props.value ?? this.props.min ?? 0;
+  constructor(name: string, props: SliderProps = {}) {
+    const initialValue = props.value ?? props.min ?? 0;
+    super(name, initialValue, props);
+  }
+
+  private _ensureInitialized(): void {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    if (this.props.on_change) {
+      this.onValueChange(this.props.on_change);
+    }
+
+    eventRegistry.register(this.id, 'change', (data) => {
+      const newValue = parseFloat(data.value ?? '0');
+      this.set(newValue);
+    });
+  }
+
+  render(): string {
+    this._ensureInitialized();
+
+    const { min = 0, max = 100, step = 1, label, showValue, disabled, size, color } = this.props;
+
     const rangeClasses = [
       'range',
-      this.props.size && this.props.size !== 'md' ? `range-${this.props.size}` : '',
-      this.props.color ? `range-${this.props.color}` : ''
+      size && size !== 'md' ? `range-${size}` : '',
+      color ? `range-${color}` : ''
     ].filter(Boolean).join(' ');
 
+    const postAction = this.getDataStarPostAction('change', this._name);
+
     return `
-      <div id="${this.id}" class="form-control w-full">
-        ${this.props.label || this.props.showValue ? `
-          <label class="label">
-            ${this.props.label ? `<span class="label-text">${this.props.label}</span>` : ''}
-            ${this.props.showValue ? `<span class="label-text-alt">${value}</span>` : ''}
+      <fieldset id="${this.id}" class="fieldset w-full">
+        ${label || showValue ? `
+          <label class="label flex justify-between">
+            ${label ? `<span>${label}</span>` : '<span></span>'}
+            ${showValue ? `<span class="text-sm opacity-70">${this._value}</span>` : ''}
           </label>
         ` : ''}
         <input 
           type="range"
-          name="${this.props.name}"
-          min="${this.props.min ?? 0}"
-          max="${this.props.max ?? 100}"
-          step="${this.props.step ?? 1}"
-          value="${value}"
+          min="${min}"
+          max="${max}"
+          step="${step}"
+          value="${this._value}"
           class="${rangeClasses}"
-          ${this.props.disabled ? 'disabled' : ''}
-          ${htmxAttrs}
+          ${disabled ? 'disabled' : ''}
+          data-bind="${this._name}"
+          data-on:change="${postAction}"
         />
-      </div>
+      </fieldset>
     `;
   }
 }
 
-export function slider(name: string, props?: Omit<SliderProps, 'name'>): Slider {
-  return new Slider({ name, ...props });
+/**
+ * Create a slider component with reactive get/set binding
+ */
+export function slider(name: string, props: SliderProps = {}): SliderComponent {
+  const ctx = getCurrentContext();
+
+  if (ctx) {
+    return wrapValueComponent(ctx.getOrCreateValueComponent(name, () => new SliderComponent(name, props)));
+  }
+
+  return wrapValueComponent(new SliderComponent(name, props));
 }

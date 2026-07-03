@@ -1,17 +1,41 @@
 import { eventRegistry, type EventHandler } from './events';
 import { generateId } from './utils';
+import { getCurrentContext } from './context';
+
+export interface Renderable {
+  render(): string;
+}
+
+export interface HasValue<T> {
+  get(): T;
+  set(value: T): void;
+  subscribe(listener: (value: T) => void): () => void;
+  toString(): string;
+}
 
 export abstract class Component<P = any> {
   protected props: P;
-  protected children: (Component | string)[];
+  protected children: (Component | string | Renderable)[];
   public id: string;
   protected eventHandlers: Map<string, EventHandler> = new Map();
   protected debouncedHandlers: Map<string, EventHandler> = new Map();
+  protected _extraClasses: string[] = [];
+  protected _styles: Record<string, string> = {};
+  protected _tooltip: string | null = null;
 
-  constructor(props: P = {} as P, children: (Component | string)[] = []) {
+  constructor(props: P = {} as P, children: (Component | string | Renderable)[] = []) {
     this.props = props;
     this.children = children;
-    this.id = (props as any).id || generateId();
+    
+    // Get stable ID from context, or fall back to random
+    const ctx = getCurrentContext();
+    const explicitId = (props as any).id;
+    const key = (props as any).key;
+    const typeName = this.constructor.name;
+    
+    this.id = ctx 
+      ? ctx.getComponentId(typeName, explicitId, key)
+      : (explicitId || generateId());
   }
 
   abstract render(): string;
@@ -19,8 +43,57 @@ export abstract class Component<P = any> {
   protected renderChildren(): string {
     return this.children.map(child => {
       if (typeof child === 'string') return child;
-      return child.render();
+      if ('render' in child && typeof child.render === 'function') {
+        return child.render();
+      }
+      return String(child);
     }).join('');
+  }
+  
+  protected getExtraClasses(): string {
+    return this._extraClasses.length > 0 ? ' ' + this._extraClasses.join(' ') : '';
+  }
+  
+  protected getExtraStyles(): string {
+    const entries = Object.entries(this._styles);
+    if (entries.length === 0) return '';
+    return ` style="${entries.map(([k, v]) => `${k}:${v}`).join(';')}"`;
+  }
+  
+  protected getTooltipAttr(): string {
+    return this._tooltip ? ` title="${this._tooltip}"` : '';
+  }
+
+  /**
+   * Add CSS classes (NiceGUI-style method chaining)
+   */
+  classes(...classNames: string[]): this {
+    this._extraClasses.push(...classNames.flatMap(c => c.split(' ')));
+    return this;
+  }
+  
+  /**
+   * Add inline styles
+   */
+  style(property: string, value: string): this {
+    this._styles[property] = value;
+    return this;
+  }
+  
+  /**
+   * Add tooltip
+   */
+  tooltip(text: string): this {
+    this._tooltip = text;
+    return this;
+  }
+
+  /**
+   * Add a child component
+   */
+  add(child: Component | string | Renderable): this {
+    this.children.push(child);
+    return this;
   }
 
   /**
@@ -82,38 +155,72 @@ export abstract class Component<P = any> {
   }
 
   /**
-   * Generate HTMX event attributes for this component
+   * Build a DataStar action that assigns event metadata then POSTs.
+   * Signals must be set in the handler — static data-signals on siblings
+   * collide globally and only the last component's compId survives.
    */
-  generateEventAttributes(endpoint: string): string {
-    if (!this.hasEvents()) {
-      return '';
-    }
+  protected getDataStarPostAction(eventType: string, valKey?: string): string {
+    return this.getDataStarPostActionWithSignals(eventType, {}, valKey);
+  }
 
-    const triggers: string[] = [];
-    
-    for (const [eventType] of this.eventHandlers) {
-      switch (eventType) {
-        case 'click':
-          triggers.push('click');
-          break;
-        case 'input':
-          const hasDebounce = this.debouncedHandlers.has('input');
-          triggers.push(hasDebounce ? 'input changed delay:300ms' : 'input');
-          break;
-        case 'change':
-          triggers.push('change');
-          break;
-        case 'submit':
-          triggers.push('submit');
-          break;
-      }
+  protected getDataStarPostActionWithSignals(
+    eventType: string,
+    signals: Record<string, string | number | boolean> = {},
+    valKey?: string,
+  ): string {
+    const ctx = getCurrentContext();
+    const assignments = [
+      `$compId='${this.id}'`,
+      `$evtType='${eventType}'`,
+    ];
+    if (valKey) {
+      assignments.push(`$dsValKey='${valKey}'`);
     }
-
-    if (triggers.length === 0) {
-      return '';
+    for (const [key, value] of Object.entries(signals)) {
+      const escaped = String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      assignments.push(`$${key}='${escaped}'`);
     }
+    if (ctx) {
+      assignments.push(`$ctxId='${ctx.id}'`);
+    }
+    return `${assignments.join('; ')}; @post('/badui/events')`;
+  }
 
-    return `hx-post="${endpoint}" hx-trigger="${triggers.join(', ')}" hx-target="#${this.id}" hx-swap="outerHTML"`;
+  protected registerEvent(eventType: string, handler: EventHandler): this {
+    this.eventHandlers.set(eventType, handler);
+    eventRegistry.register(this.id, eventType, handler);
+    return this;
+  }
+
+  /**
+   * Generate DataStar signals JSON for wrapping interactive elements.
+   * Returns a JSON string with compId and evtType.
+   */
+  protected getDataStarSignals(eventType: string, valKey?: string): string {
+    const ctx = getCurrentContext();
+    const signals: Record<string, any> = {
+      compId: this.id,
+      evtType: eventType,
+    };
+    if (valKey) {
+      signals.dsValKey = valKey;
+    }
+    if (ctx) {
+      signals.ctxId = ctx.id;
+    }
+    // Escape single quotes for HTML attribute safety
+    return JSON.stringify(signals).replace(/'/g, "&#39;");
+  }
+
+  /**
+   * Get the first registered event type for this component.
+   */
+  protected getPrimaryEventType(): string | null {
+    if (this.eventHandlers.has('click')) return 'click';
+    if (this.eventHandlers.has('change')) return 'change';
+    if (this.eventHandlers.has('input')) return 'input';
+    if (this.eventHandlers.has('submit')) return 'submit';
+    return null;
   }
 
   /**
@@ -125,5 +232,87 @@ export abstract class Component<P = any> {
     }
     this.eventHandlers.clear();
     this.debouncedHandlers.clear();
+  }
+}
+
+/**
+ * Base class for components that hold a value (inputs, sliders, checkboxes, etc.)
+ */
+export abstract class ValueComponent<T, P = any> extends Component<P> implements HasValue<T> {
+  protected _value: T;
+  protected _name: string;
+  protected _valueListeners: Set<(value: T) => void> = new Set();
+
+  constructor(name: string, initialValue: T, props: P = {} as P) {
+    // Use name as the key for stable ID (ValueComponents are keyed by name)
+    super({ ...props, key: name } as P);
+    this._name = name;
+    this._value = initialValue;
+  }
+
+  get(): T {
+    return this._value;
+  }
+
+  set(newValue: T): void {
+    if (this._value !== newValue) {
+      this._value = newValue;
+      this._notifyValueListeners();
+      this._triggerRerender();
+    }
+  }
+
+  update(fn: (current: T) => T): void {
+    this.set(fn(this._value));
+  }
+
+  get name(): string {
+    return this._name;
+  }
+
+  /**
+   * Subscribe to value changes
+   */
+  subscribe(listener: (value: T) => void): () => void {
+    return this.onValueChange(listener);
+  }
+
+  onValueChange(listener: (value: T) => void): () => void {
+    this._valueListeners.add(listener);
+    return () => this._valueListeners.delete(listener);
+  }
+
+  protected _notifyValueListeners(): void {
+    for (const listener of this._valueListeners) {
+      listener(this._value);
+    }
+  }
+
+  protected _triggerRerender(): void {
+    const ctx = getCurrentContext();
+    if (ctx) {
+      ctx.requestRerender();
+    }
+  }
+
+  /**
+   * For template strings: `Volume: ${slider}` → "Volume: 50"
+   */
+  toString(): string {
+    return String(this._value);
+  }
+
+  /**
+   * For JSON.stringify
+   */
+  toJSON(): T {
+    return this._value;
+  }
+
+  /**
+   * Check if this is a ValueComponent (for label binding)
+   */
+  static isValueComponent(obj: any): obj is ValueComponent<any> {
+    return obj instanceof ValueComponent;
   }
 }

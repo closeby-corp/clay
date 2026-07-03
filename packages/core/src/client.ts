@@ -155,7 +155,7 @@ export class Client {
           this.set(message.key, message.value);
           const state = this.getState(message.key);
           if (state) {
-            state.value = message.value;
+            state.set(message.value);
           }
           this.send({ type: 'ack', id: message.id });
         }

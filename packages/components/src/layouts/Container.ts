@@ -1,4 +1,5 @@
-import { Component } from '@ralph/core';
+import { Component } from '@badui/core';
+import { buildLayout, type LayoutChild } from './build';
 
 export type ContainerWidth = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
 export type ContainerPadding = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -10,12 +11,19 @@ export interface ContainerProps {
   className?: string;
 }
 
+const CONTAINER_KEYS = new Set(['width', 'padding', 'centered', 'className']);
+
+// Container that collects children from callback
 export class Container extends Component<ContainerProps> {
+  constructor(props: ContainerProps = {}) {
+    super(props, []);
+  }
+  
   render(): string {
-    const classes = this.generateClasses();
+    const classes = this.generateClasses() + this.getExtraClasses();
 
     return `
-      <div id="${this.id}" class="${classes}">
+      <div class="${classes}">
         ${this.renderChildren()}
       </div>
     `;
@@ -55,10 +63,9 @@ export class Container extends Component<ContainerProps> {
   }
 }
 
-// Functional API with children callback
-export function container(children: () => void, props?: ContainerProps): Container {
-  const container = new Container(props || {});
-  // Note: In a real implementation, we'd need a context system to manage children
-  // For now, this is a placeholder for the functional API pattern
-  return container;
+// NiceGUI-style: container(col1, col2, { centered: true }) or container(c => c.add(...), props)
+export function container(childrenFn: (container: Container) => void, props?: ContainerProps): Container;
+export function container(...args: (LayoutChild | ContainerProps)[]): Container;
+export function container(...args: unknown[]): Container {
+  return buildLayout(Container, CONTAINER_KEYS, ...args);
 }

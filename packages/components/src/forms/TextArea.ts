@@ -1,7 +1,6 @@
-import { Component } from '@ralph/core';
+import { ValueComponent, eventRegistry, getCurrentContext, wrapValueComponent } from '@badui/core';
 
 export interface TextAreaProps {
-  name: string;
   label?: string;
   placeholder?: string;
   value?: string;
@@ -12,47 +11,77 @@ export interface TextAreaProps {
   resize?: 'none' | 'vertical' | 'horizontal' | 'both';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
-  endpoint?: string;
+  on_change?: (value: string) => void;
 }
 
-export class TextArea extends Component<TextAreaProps> {
+export class TextAreaComponent extends ValueComponent<string, TextAreaProps> {
+  private _initialized = false;
+
+  constructor(name: string, props: TextAreaProps = {}) {
+    const initialValue = props.value ?? '';
+    super(name, initialValue, props);
+  }
+
+  private _ensureInitialized(): void {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    if (this.props.on_change) {
+      this.onValueChange(this.props.on_change);
+    }
+
+    eventRegistry.register(this.id, 'change', (data) => {
+      const newValue = data.value ?? '';
+      this.set(newValue);
+    });
+  }
+
   render(): string {
-    const htmxAttrs = this.hasEvents() && this.props.endpoint
-      ? this.generateEventAttributes(this.props.endpoint)
-      : '';
+    this._ensureInitialized();
+
+    const { label, placeholder, rows, cols, disabled, required, resize, size, fullWidth } = this.props;
 
     const textareaClasses = [
       'textarea',
-      'textarea-bordered',
-      this.props.size && this.props.size !== 'md' ? `textarea-${this.props.size}` : '',
-      this.props.fullWidth ? 'w-full' : ''
+      size && size !== 'md' ? `textarea-${size}` : '',
+      fullWidth ? 'w-full' : ''
     ].filter(Boolean).join(' ');
 
-    const resizeStyle = this.props.resize ? `resize: ${this.props.resize};` : '';
+    const resizeStyle = resize ? `resize: ${resize};` : '';
+    const postAction = this.getDataStarPostAction('change', this._name);
 
     return `
-      <div id="${this.id}" class="form-control ${this.props.fullWidth ? 'w-full' : ''}">
-        ${this.props.label ? `
+      <fieldset id="${this.id}" class="fieldset ${fullWidth ? 'w-full' : ''}">
+        ${label ? `
           <label class="label">
-            <span class="label-text">${this.props.label}</span>
+            ${label}
           </label>
         ` : ''}
         <textarea
-          name="${this.props.name}"
-          rows="${this.props.rows ?? 4}"
-          ${this.props.cols ? `cols="${this.props.cols}"` : ''}
+          rows="${rows ?? 4}"
+          ${cols ? `cols="${cols}"` : ''}
           class="${textareaClasses}"
-          placeholder="${this.props.placeholder || ''}"
-          ${this.props.disabled ? 'disabled' : ''}
-          ${this.props.required ? 'required' : ''}
+          placeholder="${placeholder || ''}"
+          ${disabled ? 'disabled' : ''}
+          ${required ? 'required' : ''}
           style="${resizeStyle}"
-          ${htmxAttrs}
-        >${this.props.value || ''}</textarea>
-      </div>
+          data-bind="${this._name}"
+          data-on:change="${postAction}"
+        >${this._value}</textarea>
+      </fieldset>
     `;
   }
 }
 
-export function textArea(name: string, props?: Omit<TextAreaProps, 'name'>): TextArea {
-  return new TextArea({ name, ...props });
+/**
+ * Create a textarea component with reactive get/set binding
+ */
+export function textArea(name: string, props: TextAreaProps = {}): TextAreaComponent {
+  const ctx = getCurrentContext();
+
+  if (ctx) {
+    return wrapValueComponent(ctx.getOrCreateValueComponent(name, () => new TextAreaComponent(name, props)));
+  }
+
+  return wrapValueComponent(new TextAreaComponent(name, props));
 }

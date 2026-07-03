@@ -1,10 +1,16 @@
 {
   "name": "demo",
   "version": "0.1.0",
+  "scripts": {
+    "dev": "bun apps/demo/src/main.ts"
+  },
   "dependencies": {
-    "@ralph/core": "workspace:*",
-    "@ralph/server": "workspace:*",
-    "@ralph/components": "workspace:*",
-    "@ralph/htmx": "workspace:*"
+    "@badui/core": "workspace:*",
+    "@badui/server": "workspace:*",
+    "@badui/components": "workspace:*",
+    "@badui/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@badui/compiler": "workspace:*"
   }
 }

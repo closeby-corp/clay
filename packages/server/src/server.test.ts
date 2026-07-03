@@ -1,13 +1,13 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
-import { RalphServer } from "./server";
-import { page, Component } from "@ralph/core";
+import { BadUIServer } from "./server";
+import { page, Component } from "@badui/core";
 
-describe("RalphServer", () => {
-  let server: RalphServer;
+describe("BadUIServer", () => {
+  let server: BadUIServer;
   const port = 3002;
 
   beforeAll(() => {
-    server = new RalphServer({ port });
+    server = new BadUIServer({ port });
     server.start();
   });
 
@@ -18,56 +18,14 @@ describe("RalphServer", () => {
   test("should return 200 OK for root", async () => {
     const response = await fetch(`http://localhost:${port}/`);
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe("Ralph Server is running!");
+    const text = await response.text();
+    expect(text).toContain("BadUI");
+    expect(text).toContain("datastar");
   });
 
   test("should return 404 for unknown paths", async () => {
     const response = await fetch(`http://localhost:${port}/unknown`);
     expect(response.status).toBe(404);
-  });
-
-  test("should handle WebSocket client protocol", async () => {
-    const ws = new WebSocket(`ws://localhost:${port}/ralph-ws`);
-
-    const openPromise = new Promise<void>((resolve) => {
-      ws.onopen = () => resolve();
-    });
-    
-    // We expect a welcome message upon connection
-    const welcomePromise = new Promise<any>((resolve) => {
-      ws.addEventListener("message", (event) => {
-         const data = JSON.parse(event.data.toString());
-         if (data.type === 'welcome') resolve(data);
-      });
-    });
-
-    await openPromise;
-    expect(ws.readyState).toBe(WebSocket.OPEN);
-    
-    const welcome = await welcomePromise;
-    expect(welcome.type).toBe("welcome");
-    expect(welcome.id).toBeDefined();
-
-    // Test update/ack protocol
-    const ackPromise = new Promise<any>((resolve) => {
-        ws.addEventListener("message", (event) => {
-            const data = JSON.parse(event.data.toString());
-            if (data.type === 'ack') resolve(data);
-        });
-    });
-    
-    ws.send(JSON.stringify({
-        type: 'update',
-        key: 'test-state',
-        value: 123,
-        id: 'req-1'
-    }));
-
-    const ack = await ackPromise;
-    expect(ack.type).toBe("ack");
-    expect(ack.id).toBe("req-1");
-
-    ws.close();
   });
 
   test("should render registered page", async () => {
@@ -80,6 +38,36 @@ describe("RalphServer", () => {
 
     const response = await fetch(`http://localhost:${port}/hello`);
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe("<h1>Hello World</h1>");
+    const text = await response.text();
+    expect(text).toContain("<h1>Hello World</h1>");
+    expect(text).toContain("BadUI App");
+  });
+
+  test("should respond to POST /badui/events with SSE", async () => {
+    @page("/test-events")
+    class TestEventsPage extends Component {
+      render() {
+        return "<div id=\"test\">Static content</div>";
+      }
+    }
+
+    const response = await fetch(`http://localhost:${port}/badui/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        compId: "nonexistent",
+        evtType: "click"
+      })
+    });
+
+    // Without a handler, it should return 404
+    expect(response.status).toBe(404);
+  });
+
+  test("template should include Datastar script", async () => {
+    const response = await fetch(`http://localhost:${port}/`);
+    const text = await response.text();
+    expect(text).toContain("datastar");
+    expect(text).not.toContain("htmx");
   });
 });

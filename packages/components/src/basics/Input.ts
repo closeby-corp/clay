@@ -1,13 +1,11 @@
-import { Component } from '@ralph/core';
+import { ValueComponent, eventRegistry, getCurrentContext, wrapValueComponent } from '@badui/core';
 
 export type InputType = 'text' | 'password' | 'email' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'datetime-local' | 'time' | 'file';
 export type InputSize = 'xs' | 'sm' | 'md' | 'lg';
 
 export interface InputProps {
-  name: string;
   type?: InputType;
   placeholder?: string;
-  value?: string;
   label?: string;
   error?: string;
   hint?: string;
@@ -15,69 +13,98 @@ export interface InputProps {
   required?: boolean;
   size?: InputSize;
   fullWidth?: boolean;
-  endpoint?: string; // HTMX endpoint for events
+  value?: string;
+  on_change?: (value: string) => void;
+  on_input?: (value: string) => void;
+  debounce?: number;
 }
 
-export class Input extends Component<InputProps> {
+export class InputComponent extends ValueComponent<string, InputProps> {
+  private _initialized = false;
+
+  constructor(name: string, props: InputProps = {}) {
+    const initialValue = props.value ?? '';
+    super(name, initialValue, props);
+  }
+
+  private _ensureInitialized(): void {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    if (this.props.on_change) {
+      this.onValueChange(this.props.on_change);
+    }
+
+    eventRegistry.register(this.id, 'change', (data) => {
+      const newValue = data.value ?? '';
+      this.set(newValue);
+    });
+
+    if (this.props.on_input) {
+      eventRegistry.register(this.id, 'input', (data) => {
+        const newValue = data.value ?? '';
+        this._value = newValue;
+        this.props.on_input!(newValue);
+      });
+    }
+  }
+
   render(): string {
-    const htmxAttrs = this.hasEvents() && this.props.endpoint
-      ? this.generateEventAttributes(this.props.endpoint)
-      : '';
-    
-    const inputClasses = this.generateInputClasses();
-    const containerClasses = this.props.fullWidth ? 'w-full' : '';
+    this._ensureInitialized();
+
+    const { type = 'text', placeholder = '', label, error, hint, disabled, required, size, fullWidth } = this.props;
+
+    const inputClasses = [
+      'input',
+      size && size !== 'md' ? `input-${size}` : '',
+      error ? 'input-error' : '',
+      fullWidth ? 'w-full' : ''
+    ].filter(Boolean).join(' ');
+
+    const eventType = this.props.on_input ? 'input' : 'change';
+    const postAction = this.getDataStarPostAction(eventType, this._name);
 
     return `
-      <div id="${this.id}" class="form-control ${containerClasses}">
-        ${this.props.label ? `
+      <fieldset id="${this.id}" class="fieldset ${fullWidth ? 'w-full' : ''}">
+        ${label ? `
           <label class="label">
-            <span class="label-text">${this.props.label}</span>
+            ${label}
           </label>
         ` : ''}
         <input 
-          type="${this.props.type || 'text'}"
-          name="${this.props.name}"
-          placeholder="${this.props.placeholder || ''}"
-          value="${this.props.value || ''}"
+          type="${type}"
+          placeholder="${placeholder}"
+          value="${this._value}"
           class="${inputClasses}"
-          ${this.props.disabled ? 'disabled' : ''}
-          ${this.props.required ? 'required' : ''}
-          ${htmxAttrs}
+          ${disabled ? 'disabled' : ''}
+          ${required ? 'required' : ''}
+          data-bind="${this._name}"
+          data-on:${eventType}="${postAction}"
         />
-        ${this.props.error ? `
+        ${error ? `
           <label class="label">
-            <span class="label-text-alt text-error">${this.props.error}</span>
+            <span class="text-sm text-error">${error}</span>
           </label>
         ` : ''}
-        ${this.props.hint && !this.props.error ? `
+        ${hint && !error ? `
           <label class="label">
-            <span class="label-text-alt">${this.props.hint}</span>
+            <span class="text-sm opacity-70">${hint}</span>
           </label>
         ` : ''}
-      </div>
+      </fieldset>
     `;
-  }
-
-  private generateInputClasses(): string {
-    const parts = ['input', 'input-bordered'];
-
-    if (this.props.size && this.props.size !== 'md') {
-      parts.push(`input-${this.props.size}`);
-    }
-
-    if (this.props.error) {
-      parts.push('input-error');
-    }
-
-    if (this.props.fullWidth) {
-      parts.push('w-full');
-    }
-
-    return parts.join(' ');
   }
 }
 
-// Functional API
-export function input(name: string, props?: Omit<InputProps, 'name'>): Input {
-  return new Input({ name, ...props });
+/**
+ * Create an input component with reactive get/set binding
+ */
+export function input(name: string, props: InputProps = {}): InputComponent {
+  const ctx = getCurrentContext();
+
+  if (ctx) {
+    return wrapValueComponent(ctx.getOrCreateValueComponent(name, () => new InputComponent(name, props)));
+  }
+
+  return wrapValueComponent(new InputComponent(name, props));
 }

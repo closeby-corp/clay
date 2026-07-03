@@ -1,4 +1,5 @@
 import { State } from './state';
+import { createReactiveState, type ReactiveState } from './reactive';
 import type { Client } from './client';
 
 export interface GlobalStateEntry<T> {
@@ -16,9 +17,9 @@ export class GlobalState {
   /**
    * Create a global state entry
    */
-  static create<T>(key: string, initialValue: T): State<T> {
+  static create<T>(key: string, initialValue: T): ReactiveState<T> {
     if (this.states.has(key)) {
-      return this.states.get(key)!.state;
+      return createReactiveState(this.states.get(key)!.state);
     }
 
     const state = new State<T>(initialValue);
@@ -33,14 +34,15 @@ export class GlobalState {
     });
 
     this.states.set(key, entry);
-    return state;
+    return createReactiveState(state);
   }
 
   /**
    * Get an existing global state
    */
-  static get<T>(key: string): State<T> | undefined {
-    return this.states.get(key)?.state;
+  static get<T>(key: string): ReactiveState<T> | undefined {
+    const entry = this.states.get(key);
+    return entry ? createReactiveState(entry.state) : undefined;
   }
 
   /**

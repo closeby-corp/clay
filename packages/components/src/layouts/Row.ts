@@ -1,4 +1,5 @@
-import { Component } from '@ralph/core';
+import { Component } from '@badui/core';
+import { buildLayout, type LayoutChild } from './build';
 
 export type GapSize = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '8' | '10' | '12';
 export type AlignItems = 'start' | 'center' | 'end' | 'stretch';
@@ -13,50 +14,46 @@ export interface RowProps {
   responsive?: boolean;
 }
 
-export class Row extends Component<RowProps> {
-  render(): string {
-    const classes = this.generateClasses();
+const ROW_KEYS = new Set(['gap', 'align', 'justify', 'wrap', 'className', 'responsive']);
 
-    return `
-      <div id="${this.id}" class="${classes}">
-        ${this.renderChildren()}
-      </div>
-    `;
+export class Row extends Component<RowProps> {
+  constructor(props: RowProps = {}) {
+    super(props, []);
+  }
+  
+  render(): string {
+    const classes = this.generateClasses() + this.getExtraClasses();
+
+    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}>${this.renderChildren()}</div>`;
   }
 
   private generateClasses(): string {
     const parts = ['flex', 'flex-row'];
 
-    // Gap
     if (this.props.gap) {
       parts.push(`gap-${this.props.gap}`);
     } else {
       parts.push('gap-4');
     }
 
-    // Alignment
     if (this.props.align) {
       parts.push(`items-${this.props.align}`);
     } else {
       parts.push('items-center');
     }
 
-    // Justify
     if (this.props.justify) {
       parts.push(`justify-${this.props.justify}`);
     }
 
-    // Wrap
     if (this.props.wrap) {
       parts.push('flex-wrap');
     }
 
-    // Responsive
     if (this.props.responsive) {
       parts.push('flex-col', 'md:flex-row');
     }
 
-    // Custom classes
     if (this.props.className) {
       parts.push(this.props.className);
     }
@@ -65,7 +62,8 @@ export class Row extends Component<RowProps> {
   }
 }
 
-// Functional API
-export function row(children: () => void, props?: RowProps): Row {
-  return new Row(props || {});
+export function row(childrenFn: (row: Row) => void, props?: RowProps): Row;
+export function row(...args: (LayoutChild | RowProps)[]): Row;
+export function row(...args: unknown[]): Row {
+  return buildLayout(Row, ROW_KEYS, ...args);
 }

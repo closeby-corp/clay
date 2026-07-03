@@ -1,0 +1,13 @@
+{
+  "name": "@badui/ui",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@badui/core": "workspace:*",
+    "@badui/components": "workspace:*",
+    "@badui/server": "workspace:*"
+  }
+}

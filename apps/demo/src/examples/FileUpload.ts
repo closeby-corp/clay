@@ -1,43 +1,44 @@
-import { page, Component } from '@ralph/core';
+import { ui, getCurrentContainer } from '@badui/ui';
+import { button, label, row, card } from '@badui/components';
 
-@page('/examples/upload')
-export class FileUploadExample extends Component {
-  render(): string {
-    return `
-      <div class="container mx-auto max-w-md p-6">
-        <div class="flex flex-col gap-4">
-          <h1 class="text-3xl font-bold">File Upload</h1>
-          
-          <div class="card bordered shadow">
-            <div class="card-body p-4 space-y-4">
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text">Select file</span>
-                </label>
-                <input type="file" name="file" class="file-input file-input-bordered w-full" />
-              </div>
-              
-              <button class="btn btn-primary" onclick="console.log('Start upload')">Upload</button>
-              
-              <!-- Progress bar -->
-              <div class="w-full">
-                <div class="flex justify-between mb-1">
-                  <span class="text-sm font-medium">Progress</span>
-                  <span class="text-sm font-medium">0%</span>
-                </div>
-                <progress class="progress progress-primary w-full" value="0" max="100"></progress>
-              </div>
-              
-              <!-- File list -->
-              <h3 class="font-bold">Uploaded Files:</h3>
-              <div class="flex items-center justify-between">
-                <span>document.pdf</span>
-                <button class="btn btn-sm btn-ghost text-error" onclick="console.log('Delete file')">Delete</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-}
+ui.page('/examples/upload', () => {
+  let files: string[] = [];
+
+  ui.container(() => {
+    ui.column(() => {
+      ui.label('File Upload').classes('text-3xl font-bold');
+
+      getCurrentContainer().add(card({ bordered: true }, (cardCol) => {
+        cardCol.add({
+          render: () => `
+            <fieldset class="fieldset">
+              <label class="label">Select file</label>
+              <input type="file" name="file" class="file-input w-full" />
+            </fieldset>
+          `,
+        });
+        cardCol.add(button('Upload', {
+          color: 'primary',
+          on_click: () => {
+            files.push(`file-${Date.now()}.pdf`);
+          },
+        }));
+        if (files.length > 0) {
+          cardCol.add(label('Uploaded Files:', { weight: 'bold' }));
+          for (const file of files) {
+            cardCol.add(row(
+              label(file),
+              button('Delete', {
+                color: 'error',
+                size: 'sm',
+                on_click: () => {
+                  files = files.filter((f) => f !== file);
+                },
+              }),
+            ));
+          }
+        }
+      }));
+    });
+  }, { centered: true, width: 'md' });
+});

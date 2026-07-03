@@ -1,4 +1,4 @@
-import { Component } from '@ralph/core';
+import { ValueComponent, eventRegistry, getCurrentContext, wrapValueComponent } from '@badui/core';
 
 export interface SelectOption {
   value: string;
@@ -7,63 +7,93 @@ export interface SelectOption {
 }
 
 export interface SelectProps {
-  name: string;
   label?: string;
   options: SelectOption[];
-  value?: string;
   placeholder?: string;
   disabled?: boolean;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
-  endpoint?: string;
+  value?: string;
+  on_change?: (value: string) => void;
 }
 
-export class Select extends Component<SelectProps> {
+export class SelectComponent extends ValueComponent<string, SelectProps> {
+  private _initialized = false;
+
+  constructor(name: string, props: SelectProps) {
+    const initialValue = props.value ?? '';
+    super(name, initialValue, props);
+  }
+
+  private _ensureInitialized(): void {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    if (this.props.on_change) {
+      this.onValueChange(this.props.on_change);
+    }
+
+    eventRegistry.register(this.id, 'change', (data) => {
+      const newValue = data.value ?? '';
+      this.set(newValue);
+    });
+  }
+
   render(): string {
-    const htmxAttrs = this.hasEvents() && this.props.endpoint
-      ? this.generateEventAttributes(this.props.endpoint)
-      : '';
+    this._ensureInitialized();
+
+    const { label, options, placeholder, disabled, size, fullWidth } = this.props;
 
     const selectClasses = [
       'select',
-      'select-bordered',
-      this.props.size && this.props.size !== 'md' ? `select-${this.props.size}` : '',
-      this.props.fullWidth ? 'w-full' : ''
+      size && size !== 'md' ? `select-${size}` : '',
+      fullWidth ? 'w-full' : ''
     ].filter(Boolean).join(' ');
 
+    const postAction = this.getDataStarPostAction('change', this._name);
+
     return `
-      <div id="${this.id}" class="form-control ${this.props.fullWidth ? 'w-full' : ''}">
-        ${this.props.label ? `
+      <fieldset id="${this.id}" class="fieldset ${fullWidth ? 'w-full' : ''}">
+        ${label ? `
           <label class="label">
-            <span class="label-text">${this.props.label}</span>
+            ${label}
           </label>
         ` : ''}
         <select 
-          name="${this.props.name}"
           class="${selectClasses}"
-          ${this.props.disabled ? 'disabled' : ''}
-          ${htmxAttrs}
+          ${disabled ? 'disabled' : ''}
+          data-bind="${this._name}"
+          data-on:change="${postAction}"
         >
-          ${this.props.placeholder ? `
-            <option disabled ${!this.props.value ? 'selected' : ''}>
-              ${this.props.placeholder}
+          ${placeholder ? `
+            <option disabled ${!this._value ? 'selected' : ''}>
+              ${placeholder}
             </option>
           ` : ''}
-          ${this.props.options.map(opt => `
+          ${options.map(opt => `
             <option 
               value="${opt.value}"
               ${opt.disabled ? 'disabled' : ''}
-              ${this.props.value === opt.value ? 'selected' : ''}
+              ${this._value === opt.value ? 'selected' : ''}
             >
               ${opt.label}
             </option>
           `).join('')}
         </select>
-      </div>
+      </fieldset>
     `;
   }
 }
 
-export function select(name: string, options: SelectOption[], props?: Omit<SelectProps, 'name' | 'options'>): Select {
-  return new Select({ name, options, ...props });
+/**
+ * Create a select component with reactive get/set binding
+ */
+export function select(name: string, options: SelectOption[], props: Omit<SelectProps, 'options'> = {}): SelectComponent {
+  const ctx = getCurrentContext();
+
+  if (ctx) {
+    return wrapValueComponent(ctx.getOrCreateValueComponent(name, () => new SelectComponent(name, { ...props, options })));
+  }
+
+  return wrapValueComponent(new SelectComponent(name, { ...props, options }));
 }

@@ -1,4 +1,4 @@
-import { Component } from '@ralph/core';
+import { Component } from '@badui/core';
 
 export interface Tab {
   id: string;
@@ -24,7 +24,12 @@ export class Tabs extends Component<TabsProps> {
   }
 
   render(): string {
-    const variantClass = this.props.variant ? `tabs-${this.props.variant}` : '';
+    const variantMap: Record<NonNullable<TabsProps['variant']>, string> = {
+      bordered: 'border',
+      lifted: 'lift',
+      boxed: 'box',
+    };
+    const variantClass = this.props.variant ? `tabs-${variantMap[this.props.variant]}` : '';
     const sizeClass = this.props.size && this.props.size !== 'md' ? `tabs-${this.props.size}` : '';
 
     const activeContent = this.props.tabs.find(t => t.id === this.activeTab);

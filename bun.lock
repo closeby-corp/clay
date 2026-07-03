@@ -13,47 +13,63 @@
       "name": "demo",
       "version": "0.1.0",
       "dependencies": {
-        "@ralph/components": "workspace:*",
-        "@ralph/core": "workspace:*",
-        "@ralph/htmx": "workspace:*",
-        "@ralph/server": "workspace:*",
+        "@badui/components": "workspace:*",
+        "@badui/core": "workspace:*",
+        "@badui/server": "workspace:*",
+        "@badui/ui": "workspace:*",
+      },
+      "devDependencies": {
+        "@badui/compiler": "workspace:*",
+      },
+    },
+    "packages/compiler": {
+      "name": "@badui/compiler",
+      "version": "0.1.0",
+      "dependencies": {
+        "typescript": "^5.0.0",
       },
     },
     "packages/components": {
-      "name": "@ralph/components",
+      "name": "@badui/components",
       "version": "0.1.0",
       "dependencies": {
-        "@ralph/core": "workspace:*",
-        "@ralph/htmx": "workspace:*",
+        "@badui/core": "workspace:*",
       },
     },
     "packages/core": {
-      "name": "@ralph/core",
+      "name": "@badui/core",
       "version": "0.1.0",
-    },
-    "packages/htmx": {
-      "name": "@ralph/htmx",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ralph/core": "workspace:*",
-      },
     },
     "packages/server": {
-      "name": "@ralph/server",
+      "name": "@badui/server",
       "version": "0.1.0",
       "dependencies": {
-        "@ralph/core": "workspace:*",
+        "@badui/core": "workspace:*",
+        "@starfederation/datastar-sdk": "^1.0.0",
+      },
+    },
+    "packages/ui": {
+      "name": "@badui/ui",
+      "version": "0.1.0",
+      "dependencies": {
+        "@badui/components": "workspace:*",
+        "@badui/core": "workspace:*",
+        "@badui/server": "workspace:*",
       },
     },
   },
   "packages": {
-    "@ralph/components": ["@ralph/components@workspace:packages/components"],
+    "@badui/compiler": ["@badui/compiler@workspace:packages/compiler"],
 
-    "@ralph/core": ["@ralph/core@workspace:packages/core"],
+    "@badui/components": ["@badui/components@workspace:packages/components"],
 
-    "@ralph/htmx": ["@ralph/htmx@workspace:packages/htmx"],
+    "@badui/core": ["@badui/core@workspace:packages/core"],
 
-    "@ralph/server": ["@ralph/server@workspace:packages/server"],
+    "@badui/server": ["@badui/server@workspace:packages/server"],
+
+    "@badui/ui": ["@badui/ui@workspace:packages/ui"],
+
+    "@starfederation/datastar-sdk": ["@starfederation/datastar-sdk@1.0.0", "", {}, "sha512-VT1co9LeRLJ3wynffvkxXLJaCh4PHt1YUhH3zCQYhjTuaeWjozNjQQrg+BUbkDMO58mSgeQp9pgOXRWciy0y6g=="],
 
     "@types/bun": ["@types/bun@1.3.8", "", { "dependencies": { "bun-types": "1.3.8" } }, "sha512-3LvWJ2q5GerAXYxO2mffLTqOzEu5qnhEAlh48Vnu8WQfnmSwbgagjGZV6BoHKJztENYEDn6QmVd949W4uESRJA=="],
 

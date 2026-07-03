@@ -1,43 +1,96 @@
-import { page, Component } from '@ralph/core';
+import { ui, getCurrentContainer } from '@badui/ui';
+import { button, label, input, checkbox, row, card } from '@badui/components';
 
-@page('/examples/todo')
-export class TodoExample extends Component {
-  render(): string {
-    return `
-      <div class="container mx-auto max-w-lg p-6">
-        <div class="flex flex-col gap-4">
-          <h1 class="text-3xl font-bold">Todo List</h1>
-          
-          <!-- Add new todo -->
-          <div class="flex gap-2">
-            <input type="text" name="newTodo" placeholder="What needs to be done?" class="input input-bordered flex-1" />
-            <button class="btn btn-primary" onclick="console.log('Add todo')">Add</button>
-          </div>
-          
-          <!-- Filters -->
-          <div class="flex gap-2">
-            <button class="btn btn-sm">All</button>
-            <button class="btn btn-sm btn-ghost">Active</button>
-            <button class="btn btn-sm btn-ghost">Completed</button>
-          </div>
-          
-          <!-- Todo list -->
-          <div class="card bordered bg-base-100 shadow">
-            <div class="card-body p-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" class="checkbox" />
-                  <span class="text-sm">Sample todo item</span>
-                </div>
-                <button class="btn btn-sm btn-ghost text-error" onclick="console.log('Delete')">×</button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Stats -->
-          <p class="text-sm text-neutral">0 of 1 completed</p>
-        </div>
-      </div>
-    `;
-  }
+interface Todo {
+  id: string;
+  text: string;
+  completed: boolean;
 }
+
+ui.page('/examples/todo', () => {
+  let todos: Todo[] = [];
+  let todoFilter: 'all' | 'active' | 'completed' = 'all';
+
+  const newTodoText = input('newTodo', {
+    placeholder: 'What needs to be done?',
+  });
+
+  const filteredTodos = todos.filter((todo) => {
+    if (todoFilter === 'active') return !todo.completed;
+    if (todoFilter === 'completed') return todo.completed;
+    return true;
+  });
+
+  const completedCount = todos.filter((t) => t.completed).length;
+
+  ui.container(() => {
+    ui.column(() => {
+      ui.label('Todo List').classes('text-3xl font-bold');
+
+      ui.row(() => {
+        getCurrentContainer().add(newTodoText);
+        ui.button('Add', {
+          color: 'primary',
+          on_click: () => {
+            const text = newTodoText.get().trim();
+            if (text) {
+              todos.push({
+                id: Date.now().toString(),
+                text,
+                completed: false,
+              });
+              newTodoText.set('');
+            }
+          },
+        });
+      });
+
+      ui.row(() => {
+        ui.button('All', {
+          variant: todoFilter === 'all' ? 'default' : 'ghost',
+          size: 'sm',
+          on_click: () => { todoFilter = 'all'; },
+        });
+        ui.button(`Active (${todos.filter((t) => !t.completed).length})`, {
+          variant: todoFilter === 'active' ? 'default' : 'ghost',
+          size: 'sm',
+          on_click: () => { todoFilter = 'active'; },
+        });
+        ui.button(`Completed (${completedCount})`, {
+          variant: todoFilter === 'completed' ? 'default' : 'ghost',
+          size: 'sm',
+          on_click: () => { todoFilter = 'completed'; },
+        });
+      });
+
+      if (filteredTodos.length === 0) {
+        ui.label('No todos yet!').classes('text-neutral opacity-70');
+      } else {
+        for (const todo of filteredTodos) {
+          getCurrentContainer().add(card({ bordered: true }, (cardCol) => {
+            const checked = checkbox(`todo-${todo.id}`, { checked: todo.completed });
+            checked.onChange((isChecked) => {
+              todos = todos.map((t) =>
+                t.id === todo.id ? { ...t, completed: isChecked } : t,
+              );
+            });
+            cardCol.add(row(
+              checked,
+              label(todo.text).classes(todo.completed ? 'line-through opacity-50' : ''),
+              button('×', {
+                color: 'error',
+                size: 'sm',
+                variant: 'ghost',
+                on_click: () => {
+                  todos = todos.filter((t) => t.id !== todo.id);
+                },
+              }),
+            ));
+          }));
+        }
+      }
+
+      ui.label(`${completedCount} of ${todos.length} completed`).classes('text-sm text-neutral');
+    });
+  }, { centered: true, width: 'lg' });
+});

@@ -1,4 +1,5 @@
-import { Component } from '@ralph/core';
+import { Component } from '@badui/core';
+import { buildLayout, type LayoutChild } from './build';
 
 export interface CardProps {
   title?: string;
@@ -15,21 +16,22 @@ export interface CardProps {
   className?: string;
 }
 
-export class Card extends Component<CardProps> {
-  render(): string {
-    const classes = [
-      'card',
-      this.props.compact ? 'card-compact' : '',
-      this.props.bordered ? 'card-bordered' : '',
-      this.props.bgColor || 'bg-base-100',
-      this.props.shadow ? `shadow-${this.props.shadow}` : 'shadow-xl',
-      this.props.className || ''
-    ].filter(Boolean).join(' ');
+const CARD_KEYS = new Set(['title', 'subtitle', 'image', 'compact', 'bordered', 'bgColor', 'shadow', 'className']);
 
+export class Card extends Component<CardProps> {
+  constructor(props: CardProps = {}) {
+    super(props, []);
+  }
+  
+  render(): string {
     const imageSide = this.props.image?.position === 'side';
+    const classes = [
+      this.generateClasses(),
+      imageSide ? 'card-side' : '',
+    ].filter(Boolean).join(' ') + this.getExtraClasses();
 
     return `
-      <div id="${this.id}" class="${classes} ${imageSide ? 'card-side' : ''}">
+      <div id="${this.id}" class="${classes}">
         ${this.props.image && !imageSide ? `
           <figure>
             <img src="${this.props.image.src}" alt="${this.props.image.alt || ''}" />
@@ -53,10 +55,36 @@ export class Card extends Component<CardProps> {
       </div>
     `;
   }
+
+  private generateClasses(): string {
+    const parts = ['card', 'w-96', 'bg-base-100', 'card-xs', 'shadow-sm'];
+
+    if (this.props.compact) {
+      parts.push('card-sm');
+    }
+
+    if (this.props.bordered) {
+      parts.push('card-border');
+    }
+
+    parts.push(this.props.bgColor || 'bg-base-100');
+
+    if (this.props.shadow) {
+      parts.push(`shadow-${this.props.shadow}`);
+    } else {
+      parts.push('shadow-xl');
+    }
+
+    if (this.props.className) {
+      parts.push(this.props.className);
+    }
+
+    return parts.join(' ');
+  }
 }
 
-export function card(children: () => void, props?: CardProps): Card {
-  const card = new Card(props || {});
-  // Note: children callback pattern requires a context system
-  return card;
+export function card(childrenFn: (card: Card) => void, props?: CardProps): Card;
+export function card(...args: (LayoutChild | CardProps)[]): Card;
+export function card(...args: unknown[]): Card {
+  return buildLayout(Card, CARD_KEYS, ...args);
 }

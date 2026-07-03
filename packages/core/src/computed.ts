@@ -1,5 +1,6 @@
-import { State, type Listener } from './state';
-import type { Client } from './client';
+import { State } from './state';
+import { createReactiveState, readReactive, type ReactiveState } from './reactive';
+import type { HasValue } from './component';
 
 export interface ComputedOptions {
   immediate?: boolean;
@@ -8,71 +9,70 @@ export interface ComputedOptions {
 /**
  * Create a computed state that automatically updates when its dependencies change
  */
+type ReactiveDep = State<any> | ReactiveState<any> | HasValue<any>;
+
 export function computed<T>(
-  deps: State<any>[],
+  deps: ReactiveDep[],
   compute: (...values: any[]) => T,
   options: ComputedOptions = {}
-): State<T> {
-  const initialValue = compute(...deps.map(d => d.value));
+): ReactiveState<T> {
+  const initialValue = compute(...deps.map(readReactive));
   const computedState = new State<T>(initialValue);
-  
-  // Subscribe to all dependencies
+
   deps.forEach(dep => {
     dep.subscribe(() => {
-      const newValue = compute(...deps.map(d => d.value));
-      computedState.value = newValue;
+      computedState.set(compute(...deps.map(readReactive)));
     });
   });
-  
-  return computedState;
+
+  return createReactiveState(computedState);
 }
 
 /**
  * Create a computed state with a custom equality check
  */
 export function computedWithEquality<T>(
-  deps: State<any>[],
+  deps: ReactiveDep[],
   compute: (...values: any[]) => T,
   equalityFn: (a: T, b: T) => boolean
-): State<T> {
-  const initialValue = compute(...deps.map(d => d.value));
+): ReactiveState<T> {
+  const initialValue = compute(...deps.map(readReactive));
   const computedState = new State<T>(initialValue);
-  
+
   deps.forEach(dep => {
     dep.subscribe(() => {
-      const newValue = compute(...deps.map(d => d.value));
-      if (!equalityFn(computedState.value, newValue)) {
-        computedState.value = newValue;
+      const newValue = compute(...deps.map(readReactive));
+      if (!equalityFn(computedState.get(), newValue)) {
+        computedState.set(newValue);
       }
     });
   });
-  
-  return computedState;
+
+  return createReactiveState(computedState);
 }
 
 /**
  * Watch for changes in states and execute a callback
  */
 export function watch(
-  deps: State<any>[],
+  deps: ReactiveDep[],
   callback: (...values: any[]) => void,
   options: { immediate?: boolean } = {}
 ): () => void {
   const unsubs: (() => void)[] = [];
-  
+
   const run = () => {
-    callback(...deps.map(d => d.value));
+    callback(...deps.map(readReactive));
   };
-  
+
   deps.forEach(dep => {
     unsubs.push(dep.subscribe(run));
   });
-  
+
   if (options.immediate) {
     run();
   }
-  
-  // Return unsubscribe function
+
   return () => {
     unsubs.forEach(unsub => unsub());
   };
