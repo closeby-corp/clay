@@ -28,7 +28,7 @@ export class Chat extends Component<ChatProps> {
       `;
     }).join('');
 
-    return `<div id="${this.id}" class="${this.props.className || ''}${this.getExtraClasses()}"${this.getExtraStyles()}>${bubbles}</div>`;
+    return `<div id="${this.id}" class="${this.props.className || ''}${this.getExtraClasses()}"${this.patchRegionAttr()}${this.getExtraStyles()}>${bubbles}</div>`;
   }
 }
 

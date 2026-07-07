@@ -74,7 +74,6 @@ export class InputComponent extends ValueComponent<string, InputProps> {
         <input 
           type="${type}"
           placeholder="${placeholder}"
-          value="${this._value}"
           class="${inputClasses}"
           ${disabled ? 'disabled' : ''}
           ${required ? 'required' : ''}

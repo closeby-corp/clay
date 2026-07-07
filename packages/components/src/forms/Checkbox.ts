@@ -50,7 +50,6 @@ export class CheckboxComponent extends ValueComponent<boolean, CheckboxProps> {
           <input 
             type="checkbox"
             class="${checkboxClasses}"
-            ${this._value ? 'checked' : ''}
             ${disabled ? 'disabled' : ''}
             data-bind="${this._name}"
             data-on:change="${postAction}"

@@ -17,7 +17,7 @@ export class Loading extends Component<LoadingProps> {
     ].filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="flex items-center gap-2">
+      <div id="${this.id}" class="flex items-center gap-2"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <span class="${spinnerClass}"></span>
         ${this.props.text ? `<span>${this.props.text}</span>` : ''}
       </div>

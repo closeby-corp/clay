@@ -24,7 +24,7 @@ export class Row extends Component<RowProps> {
   render(): string {
     const classes = this.generateClasses() + this.getExtraClasses();
 
-    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}>${this.renderChildren()}</div>`;
+    return `<div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${this.renderChildren()}</div>`;
   }
 
   private generateClasses(): string {

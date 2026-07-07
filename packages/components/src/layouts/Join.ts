@@ -23,7 +23,7 @@ export class Join extends Component<JoinProps> {
       this.getExtraClasses().trim(),
     ].filter(Boolean).join(' ');
 
-    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}>${this.renderChildren()}</div>`;
+    return `<div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${this.renderChildren()}</div>`;
   }
 }
 

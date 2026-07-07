@@ -67,7 +67,7 @@ export class TextAreaComponent extends ValueComponent<string, TextAreaProps> {
           style="${resizeStyle}"
           data-bind="${this._name}"
           data-on:change="${postAction}"
-        >${this._value}</textarea>
+        ></textarea>
       </fieldset>
     `;
   }

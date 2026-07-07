@@ -73,13 +73,12 @@ export class ColorPickerComponent extends ValueComponent<string, ColorPickerProp
         <div class="flex items-center gap-3">
           <input 
             type="color"
-            value="${this._value}"
             class="${colorInputSize} cursor-pointer rounded border-0"
             ${disabled ? 'disabled' : ''}
             data-bind="${this._name}"
             data-on:change="${postAction}"
           />
-          ${showHex ? `<span class="font-mono text-sm">${this._value}</span>` : ''}
+          ${showHex ? `<span class="font-mono text-sm"${this.signalText(`$${this._name}`)}></span>` : ''}
         </div>
         ${presets.length > 0 ? `
           <div class="flex flex-wrap gap-1 mt-2">

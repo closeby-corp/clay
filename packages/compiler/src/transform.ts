@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { collectReactiveBindings, getPageCallback, hasStateParam, isPageCall } from './collect-reactive';
+import { collectGlobalStateBindings, collectReactiveBindings, getPageCallback, hasStateParam, isPageCall } from './collect-reactive';
 import { createDesugarTransformer } from './desugar';
 import { createPageTransformer } from './rewrite';
 
@@ -13,8 +13,12 @@ function needsTransform(sourceFile: ts.SourceFile): boolean {
   const visit = (node: ts.Node) => {
     if (isPageCall(node)) {
       const callback = getPageCallback(node);
-      if (callback && !hasStateParam(callback.parameters) && collectReactiveBindings(callback.body).length > 0) {
-        found = true;
+      if (callback && !hasStateParam(callback.parameters)) {
+        const hasReactive = collectReactiveBindings(callback.body).length > 0;
+        const hasGlobal = collectGlobalStateBindings(callback.body).size > 0;
+        if (hasReactive || hasGlobal) {
+          found = true;
+        }
       }
     }
     if (!found) {

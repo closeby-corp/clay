@@ -1,0 +1,40 @@
+{
+  "documents": {
+    "nicegui_io_documentation.md": {
+      "url": "https://nicegui.io/documentation",
+      "title": "NiceGUI Documentation",
+      "fetchedAt": "2026-01-31T20:09:19.093Z",
+      "expiresAt": "2026-02-01T20:09:19.093Z",
+      "size": 246
+    },
+    "nicegui_io_documentation_section_controls.md": {
+      "url": "https://nicegui.io/documentation/section_controls",
+      "title": "Controls | NiceGUI",
+      "fetchedAt": "2026-01-31T20:09:30.737Z",
+      "expiresAt": "2026-02-01T20:09:30.737Z",
+      "size": 260
+    },
+    "nicegui_io.md": {
+      "url": "https://nicegui.io/#basic_elements",
+      "title": "NiceGUI",
+      "fetchedAt": "2026-01-31T20:09:34.311Z",
+      "expiresAt": "2026-02-01T20:09:34.311Z",
+      "size": 234
+    },
+    "raw_githubusercontent_com_zauberzeug_nicegui_main_examples_todo_list_mainpy.md": {
+      "url": "https://raw.githubusercontent.com/zauberzeug/nicegui/main/examples/todo_list/main.py",
+      "title": "Plain Text",
+      "fetchedAt": "2026-01-31T20:09:39.194Z",
+      "expiresAt": "2026-02-01T20:09:39.194Z",
+      "size": 2260
+    },
+    "raw_githubusercontent_com_zauberzeug_nicegui_main_examples_chat_app_mainpy.md": {
+      "url": "https://raw.githubusercontent.com/zauberzeug/nicegui/main/examples/chat_app/main.py",
+      "title": "Plain Text",
+      "fetchedAt": "2026-01-31T20:09:43.117Z",
+      "expiresAt": "2026-02-01T20:09:43.117Z",
+      "size": 1932
+    }
+  },
+  "lastUpdated": "2026-01-31T20:09:43.123Z"
+}

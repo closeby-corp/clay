@@ -32,7 +32,7 @@ export class Table extends Component<TableProps> {
       `<tr>${this.props.columns.map((c) => `<td>${row[c.key] ?? ''}</td>`).join('')}</tr>`
     ).join('')}</tbody>`;
 
-    return `<div id="${this.id}" class="overflow-x-auto"${this.getExtraStyles()}><table class="${classes}">${head}${body}</table></div>`;
+    return `<div id="${this.id}" class="overflow-x-auto"${this.patchRegionAttr()}${this.getExtraStyles()}><table class="${classes}">${head}${body}</table></div>`;
   }
 }
 

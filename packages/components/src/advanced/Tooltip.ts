@@ -21,7 +21,7 @@ export class Tooltip extends Component<TooltipProps> {
     const classes = [posClass, openClass, this.props.className || '', this.getExtraClasses().trim()]
       .filter(Boolean).join(' ');
 
-    return `<div id="${this.id}" class="${classes}" data-tip="${this.props.tip}"${this.getExtraStyles()}>${this.renderChildren()}</div>`;
+    return `<div id="${this.id}" class="${classes}" data-tip="${this.props.tip}"${this.patchRegionAttr()}${this.getExtraStyles()}>${this.renderChildren()}</div>`;
   }
 }
 

@@ -4,7 +4,8 @@ A server-driven UI framework for TypeScript, inspired by NiceGUI (Python).
 
 ## Features
 
-- **Server-driven rendering** with reactive state
+- **Signal-sync architecture** — shared client/server state via Datastar signals
+- **SSE patches** — `patch-signals` and `patch-elements` instead of full-page morphs
 - **Datastar** for hypermedia-driven frontend updates
 - **Tailwind CSS 4 + DaisyUI 5** for styling (via CDN)
 - **Bun** runtime for speed
@@ -31,7 +32,7 @@ open http://localhost:4000/examples/counter
 | `@badui/components` | UI components (Button, Input, Card, etc.) |
 | `@badui/ui` | Imperative NiceGUI-style API (`ui.label`, `ui.row`, `ui.page`, `ui.run`) |
 | `@badui/compiler` | Optional compile-time `let` → reactive state transform |
-| `@badui/server` | Bun server with WebSocket support |
+| `@badui/server` | Bun server with SSE stream + Datastar event handling |
 
 ## Imperative UI API
 
@@ -147,7 +148,7 @@ preload = ["./packages/compiler/src/preload.ts"]
 - `state.defaults({ ... })` is injected automatically on first run
 - Reads and assignments (`count = count + 1`) are rewritten to `state.count`
 - `+=`, `++`, and `--` are desugared to assignments first
-- `label(\`Count: ${count}\`)` and `ui.label(\`...\`)` auto-bind to `() => \`Count: ${state.count}\``
+- `label(\`Count: ${count}\`)` and `ui.label(\`...\`)` compile to Datastar `textExpr` bindings (e.g. `'Count: ' + $count`)
 - Nested `let` and function parameters shadow outer reactive names
 - `let x = input(...)` / `slider(...)` / other form factories are **not** transformed
 - Pages that already use `({ state }) =>` are left unchanged
@@ -156,8 +157,37 @@ preload = ["./packages/compiler/src/preload.ts"]
 **Tests**
 
 ```bash
-bun test packages/compiler packages/core packages/ui
+bun test packages/compiler packages/core packages/ui packages/server packages/components
 ```
+
+## Architecture
+
+BadUI uses **Datastar signals** as the wire format between browser and server:
+
+1. **Page load** — server renders HTML and seeds `#app` with `data-signals` containing all page state (`ctxId`, `count`, form values, etc.)
+2. **Persistent SSE** — `GET /badui/stream?ctxId=` keeps a connection open for server-initiated pushes (timers, `GlobalState`, background jobs)
+3. **User events** — `POST /badui/events` receives signals, runs handlers, responds with SSE `datastar-patch-signals` and/or `datastar-patch-elements`
+4. **Client-managed UI** — labels use `data-text`, inputs use `data-bind`; scalar updates stay on the client without re-rendering `#app`
+
+```typescript
+import { runInBackground } from '@badui/core';
+
+ui.page('/jobs', () => {
+  let status = 'idle';
+
+  ui.button('Run', {
+    on_click: () => {
+      status = 'running';
+      runInBackground(async () => {
+        await doWork();
+        status = 'done';
+      });
+    },
+  });
+});
+```
+
+**Global state** (`GlobalState.create`) broadcasts signal patches to all connected clients via the SSE stream — useful for chat, live dashboards, etc.
 
 ## License
 

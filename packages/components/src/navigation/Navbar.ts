@@ -20,7 +20,7 @@ export class Navbar extends Component<NavbarProps> {
       .filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div class="navbar-start">
           ${this.props.start || ''}
           ${this.props.title ? `<a class="btn btn-ghost text-xl">${this.props.title}</a>` : ''}

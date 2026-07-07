@@ -1,6 +1,17 @@
 import type { Server } from "bun";
-import { pageRegistry, eventRegistry, RenderContext, runWithContext } from "@badui/core";
+import {
+  pageRegistry,
+  eventRegistry,
+  RenderContext,
+  runWithContext,
+  extractMetaSignalsLegacy,
+  META_DS_VAL_KEY,
+  setGlobalStreamPatcher,
+} from "@badui/core";
 import { PageTemplate, type PageTemplateOptions } from "./template";
+import { readBadUISignals, BadRequestError } from "./datastar";
+import { patchResponse } from "./patch-response";
+import { createStreamResponse, signalStreamRegistry } from "./signal-stream";
 
 export interface BadUIServerConfig {
   port?: number;
@@ -9,6 +20,32 @@ export interface BadUIServerConfig {
 }
 
 const clientContexts = new Map<string, RenderContext>();
+const CONTEXT_TTL_MS = 30 * 60 * 1000;
+const contextExpiry = new Map<string, ReturnType<typeof setTimeout>>();
+
+function touchContext(ctxId: string): void {
+  const existing = contextExpiry.get(ctxId);
+  if (existing) clearTimeout(existing);
+  contextExpiry.set(
+    ctxId,
+    setTimeout(() => {
+      signalStreamRegistry.close(ctxId);
+      clientContexts.get(ctxId)?.destroy();
+      clientContexts.delete(ctxId);
+      contextExpiry.delete(ctxId);
+    }, CONTEXT_TTL_MS),
+  );
+}
+
+function wireContextStream(context: RenderContext): void {
+  context.setStreamSender((patch) => {
+    signalStreamRegistry.patch(context.id, patch);
+  });
+}
+
+setGlobalStreamPatcher((ctxId, patch) => {
+  signalStreamRegistry.patch(ctxId, patch);
+});
 
 export class BadUIServer {
   private server: Server | null = null;
@@ -35,6 +72,13 @@ export class BadUIServer {
 
   stop() {
     if (this.server) {
+      for (const ctxId of signalStreamRegistry.getActiveIds()) {
+        signalStreamRegistry.close(ctxId);
+      }
+      for (const ctx of clientContexts.values()) {
+        ctx.destroy();
+      }
+      clientContexts.clear();
       this.server.stop();
       this.server = null;
     }
@@ -50,25 +94,31 @@ export class BadUIServer {
 
   private getOrCreateContext(contextId?: string | null): RenderContext {
     if (contextId && clientContexts.has(contextId)) {
-      return clientContexts.get(contextId)!;
+      const ctx = clientContexts.get(contextId)!;
+      touchContext(contextId);
+      return ctx;
     }
     const newId = contextId || crypto.randomUUID();
     const context = new RenderContext(newId, {
-      send: () => {} // No-op; re-renders happen in event response HTML
+      send: () => {},
     });
+    wireContextStream(context);
     clientContexts.set(newId, context);
+    touchContext(newId);
     return context;
   }
 
   private handleRequest(req: Request): Response | Promise<Response> {
     const url = new URL(req.url);
 
-    // Event handling (user interactions via DataStar @post actions)
+    if (req.method === "GET" && url.pathname === "/badui/stream") {
+      return this.handleStream(req, url);
+    }
+
     if (req.method === "POST" && url.pathname === "/badui/events") {
       return this.handleEvent(req);
     }
 
-    // Root page
     if (url.pathname === "/") {
       return new Response(this.template.render(`
         <div class="hero min-h-screen bg-base-200">
@@ -85,7 +135,6 @@ export class BadUIServer {
       });
     }
 
-    // Registered page routes
     const createPage = pageRegistry.get(url.pathname);
     if (createPage) {
       const context = this.getOrCreateContext();
@@ -97,12 +146,27 @@ export class BadUIServer {
         return page.render();
       }) : '';
 
-      return new Response(this.template.render(html, context.id), {
+      const initialSignals = context.exportInitialSignals();
+
+      return new Response(this.template.render(html, context.id, initialSignals), {
         headers: { "Content-Type": "text/html" },
       });
     }
 
     return new Response("Not Found", { status: 404 });
+  }
+
+  private handleStream(_req: Request, url: URL): Response {
+    const ctxId = url.searchParams.get("ctxId");
+    if (!ctxId || !clientContexts.has(ctxId)) {
+      return new Response("Unknown context", { status: 404 });
+    }
+    touchContext(ctxId);
+    return createStreamResponse(ctxId, () => {
+      clientContexts.get(ctxId)?.destroy();
+      clientContexts.delete(ctxId);
+      contextExpiry.delete(ctxId);
+    });
   }
 
   private initializePage(context: RenderContext, path: string): void {
@@ -119,27 +183,19 @@ export class BadUIServer {
     });
   }
 
-  /**
-   * Handle user interaction events sent via DataStar @post() actions.
-   * Reads signals from the request, dispatches the event handler,
-   * re-renders the page, and returns text/html for DataStar to morph.
-   *
-   * DataStar's @post() action handles text/html responses by morphing
-   * the returned HTML elements into the DOM based on element IDs.
-   * It also handles JSON responses by patching signals.
-   */
   private async handleEvent(req: Request): Promise<Response> {
-    // Parse JSON body sent by DataStar's @post action
-    let signals: Record<string, any>;
+    let signals: Record<string, unknown>;
     try {
-      signals = await req.json();
-    } catch {
-      return new Response("Invalid JSON", { status: 400 });
+      signals = await readBadUISignals(req) as Record<string, unknown>;
+    } catch (e) {
+      if (e instanceof BadRequestError) {
+        return new Response(e.message, { status: 400 });
+      }
+      return new Response("Invalid request", { status: 400 });
     }
 
-    const componentId = signals.compId as string;
-    const eventType = signals.evtType as string;
-    const contextId = signals.ctxId as string | undefined;
+    const meta = extractMetaSignalsLegacy(signals);
+    const { compId: componentId, evtType: eventType, ctxId: contextId, dsValKey } = meta;
 
     if (!componentId || !eventType) {
       return new Response("Missing component or event", { status: 400 });
@@ -152,41 +208,43 @@ export class BadUIServer {
 
     const context = contextId ? clientContexts.get(contextId) : null;
 
-    const valueSignal = signals.dsValKey
-      ? (signals[signals.dsValKey as string] as string | undefined)
+    const valKey = dsValKey ?? (signals[META_DS_VAL_KEY] as string | undefined);
+    const valueSignal = valKey
+      ? (signals[valKey] as string | undefined)
       : (signals.value as string | undefined);
 
     if (context) {
-      // Suppress re-renders during event dispatch so ValueComponent value
-      // changes (e.g., textInput.value = '') don't trigger microtask
-      // re-renders between the handler and the response render.
+      touchContext(context.id);
       context.suppressRerender(true);
-      context.syncValueComponentsFromSignals(signals);
+      context.importSignals(signals);
 
       await runWithContext(context, async () => {
         await handler({ value: valueSignal, formData: null, signals });
       });
 
-      const page = context.getPage();
-      if (page) {
-        context.suppressRerender(false);
-        context.beginRender();
+      context.suppressRerender(false);
 
-        const html = runWithContext(context, () => page.render());
+      const dirty = context.getDirtyKind();
+      const exported = context.exportSignals();
+      context.beginRender();
 
-        // Reset stale data-bind signals on client
-        const valKey = signals.dsValKey as string | undefined;
-        const signalsAttr = valKey
-          ? ` data-signals='{"${valKey}":""}'`
-          : '';
-        return new Response(`<div id="app" class="w-full"${signalsAttr}>${html}</div>`, {
-          headers: { "Content-Type": "text/html" },
-        });
+      const patch: Parameters<typeof patchResponse>[0] = { signals: exported };
+
+      if (dirty === 'elements' || dirty === 'both') {
+        const page = context.getPage();
+        const renderFn = context.getRenderFn();
+        if (page && renderFn) {
+          const html = runWithContext(context, () => renderFn());
+          patch.elements = `<div id="app" class="w-full">${html}</div>`;
+          patch.selector = '#app';
+          patch.useViewTransition = true;
+        }
       }
-    } else {
-      await handler({ value: valueSignal, formData: null, signals });
+
+      return patchResponse(patch);
     }
 
-    return new Response("OK", { status: 200 });
+    await handler({ value: valueSignal, formData: null, signals });
+    return patchResponse({});
   }
 }

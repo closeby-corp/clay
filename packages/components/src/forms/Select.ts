@@ -66,7 +66,7 @@ export class SelectComponent extends ValueComponent<string, SelectProps> {
           data-on:change="${postAction}"
         >
           ${placeholder ? `
-            <option disabled ${!this._value ? 'selected' : ''}>
+            <option disabled>
               ${placeholder}
             </option>
           ` : ''}
@@ -74,7 +74,6 @@ export class SelectComponent extends ValueComponent<string, SelectProps> {
             <option 
               value="${opt.value}"
               ${opt.disabled ? 'disabled' : ''}
-              ${this._value === opt.value ? 'selected' : ''}
             >
               ${opt.label}
             </option>

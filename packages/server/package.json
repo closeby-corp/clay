@@ -5,5 +5,9 @@
   "dependencies": {
     "@badui/core": "workspace:*",
     "@starfederation/datastar-sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@badui/components": "workspace:*",
+    "@badui/ui": "workspace:*"
   }
 }

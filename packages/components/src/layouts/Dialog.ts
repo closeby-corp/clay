@@ -5,6 +5,8 @@ export interface DialogProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   closeButton?: boolean;
   backdrop?: boolean;
+  /** Datastar expression for open state, e.g. "$modalOpen" */
+  showExpr?: string;
   className?: string;
 }
 
@@ -12,8 +14,10 @@ export class Dialog extends Component<DialogProps> {
   render(): string {
     const modalClass = this.props.size ? `modal-${this.props.size}` : '';
 
+    const showAttr = this.props.showExpr ? this.signalShow(this.props.showExpr) : '';
+
     return `
-      <dialog id="${this.id}" class="modal ${modalClass}">
+      <dialog id="${this.id}" class="modal ${modalClass}"${showAttr}${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div class="modal-box ${this.props.className || ''}">
           ${this.props.closeButton !== false ? `
             <form method="dialog">

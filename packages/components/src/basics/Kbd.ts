@@ -19,9 +19,9 @@ export class Kbd extends Component<KbdProps> {
 
     const rendered = keys.length > 0
       ? keys.map((k) => `<kbd class="kbd ${sizeClass} ${extra}">${k}</kbd>`).join(' ')
-      : `<kbd id="${this.id}" class="kbd ${sizeClass} ${extra}"${this.getExtraStyles()}>${this.renderChildren()}</kbd>`;
+      : `<kbd id="${this.id}" class="kbd ${sizeClass} ${extra}"${this.patchRegionAttr()}${this.getExtraStyles()}>${this.renderChildren()}</kbd>`;
 
-    return keys.length > 0 ? `<span id="${this.id}">${rendered}</span>` : rendered;
+    return keys.length > 0 ? `<span id="${this.id}"${this.patchRegionAttr()}>${rendered}</span>` : rendered;
   }
 }
 

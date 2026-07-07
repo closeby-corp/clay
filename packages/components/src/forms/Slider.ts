@@ -53,7 +53,7 @@ export class SliderComponent extends ValueComponent<number, SliderProps> {
         ${label || showValue ? `
           <label class="label flex justify-between">
             ${label ? `<span>${label}</span>` : '<span></span>'}
-            ${showValue ? `<span class="text-sm opacity-70">${this._value}</span>` : ''}
+            ${showValue ? `<span class="text-sm opacity-70"${this.signalText(`$${this._name}`)}></span>` : ''}
           </label>
         ` : ''}
         <input 
@@ -61,7 +61,6 @@ export class SliderComponent extends ValueComponent<number, SliderProps> {
           min="${min}"
           max="${max}"
           step="${step}"
-          value="${this._value}"
           class="${rangeClasses}"
           ${disabled ? 'disabled' : ''}
           data-bind="${this._name}"

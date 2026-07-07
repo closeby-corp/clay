@@ -24,7 +24,7 @@ export class Dropdown extends Component<DropdownProps> {
       .filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}" tabindex="0" role="button"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}" tabindex="0" role="button"${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this.props.label ? `<div tabindex="0" role="button" class="btn m-1">${this.props.label}</div>` : ''}
         <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
           ${this.renderChildren()}

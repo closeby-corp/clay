@@ -23,7 +23,7 @@ export class Mockup extends Component<MockupProps> {
 
     if (type === 'code') {
       return `
-        <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+        <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
           <pre data-prefix="$"><code>${this.renderChildren()}</code></pre>
         </div>
       `;
@@ -31,7 +31,7 @@ export class Mockup extends Component<MockupProps> {
 
     if (type === 'phone') {
       return `
-        <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+        <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
           <div class="mockup-phone-camera"></div>
           <div class="mockup-phone-display">${this.renderChildren()}</div>
         </div>
@@ -40,7 +40,7 @@ export class Mockup extends Component<MockupProps> {
 
     if (type === 'window') {
       return `
-        <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+        <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
           <div class="mockup-window-toolbar">
             <div class="flex gap-1"><div class="w-3 h-3 rounded-full bg-error"></div><div class="w-3 h-3 rounded-full bg-warning"></div><div class="w-3 h-3 rounded-full bg-success"></div></div>
             ${this.props.title ? `<div class="text-xs opacity-60">${this.props.title}</div>` : ''}
@@ -52,7 +52,7 @@ export class Mockup extends Component<MockupProps> {
 
     // browser (default)
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div class="mockup-browser-toolbar">
           <div class="input">${this.props.title || 'https://daisyui.com'}</div>
         </div>

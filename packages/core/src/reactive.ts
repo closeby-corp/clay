@@ -1,5 +1,6 @@
 import { State, type Listener } from './state';
 import type { HasValue } from './component';
+import { getCurrentContext } from './context';
 
 const BACKING = Symbol('badui.state.backing');
 
@@ -19,6 +20,12 @@ function isMutableArrayMethod(prop: string | symbol): prop is 'push' | 'pop' | '
     || prop === 'splice' || prop === 'sort' || prop === 'reverse';
 }
 
+function markStructuralIfNeeded(value: unknown): void {
+  if (Array.isArray(value)) {
+    getCurrentContext()?.markStructuralDirty();
+  }
+}
+
 function wrapArrayValue<T extends unknown[]>(backing: State<T>): T {
   return new Proxy(backing.value, {
     get(_target, prop, receiver) {
@@ -31,6 +38,7 @@ function wrapArrayValue<T extends unknown[]>(backing: State<T>): T {
           const method = Reflect.get(copy, prop) as (...a: unknown[]) => unknown;
           const result = method.apply(copy, args);
           backing.value = copy;
+          markStructuralIfNeeded(copy);
           return result;
         };
       }
@@ -41,6 +49,7 @@ function wrapArrayValue<T extends unknown[]>(backing: State<T>): T {
       const current = [...backing.value] as T;
       Reflect.set(current, prop, newValue);
       backing.value = current;
+      markStructuralIfNeeded(current);
       return true;
     },
   }) as T;
@@ -74,6 +83,7 @@ export function readStateValue<T>(backing: State<T>): T {
 
 export function writeStateValue<T>(backing: State<T>, newValue: T): void {
   backing.value = newValue;
+  markStructuralIfNeeded(newValue);
 }
 
 function numberHelpers<T>(backing: State<T>) {

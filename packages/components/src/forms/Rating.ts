@@ -33,12 +33,11 @@ export class RatingComponent extends ValueComponent<number, RatingProps> {
 
     const inputs = Array.from({ length: max }, (_, i) => {
       const val = i + 1;
-      const checked = this._value === val ? 'checked' : '';
       const halfClass = this.props.half ? 'mask-half-1' : '';
-      return `<input type="radio" name="${this._name}-rating" class="mask mask-star-2 ${halfClass}" aria-label="${val} star" value="${val}" ${checked} ${this.props.readonly ? 'disabled' : ''} data-on:change="${postAction}" />`;
+      return `<input type="radio" name="${this._name}-rating" class="mask mask-star-2 ${halfClass}" aria-label="${val} star" value="${val}" ${this.props.readonly ? 'disabled' : ''} data-bind="${this._name}" data-on:change="${postAction}" />`;
     }).join('');
 
-    return `<div id="${this.id}" class="rating ${sizeClass}">${inputs}</div>`;
+    return `<div id="${this.id}" class="rating ${sizeClass}"${this.patchRegionAttr()}>${inputs}</div>`;
   }
 }
 

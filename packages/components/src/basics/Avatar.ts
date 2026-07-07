@@ -30,7 +30,7 @@ export class Avatar extends Component<AvatarProps> {
 
     const ringClass = this.props.ring ? ' ring ring-primary ring-offset-base-100 ring-offset-2' : '';
 
-    return `<div id="${this.id}" class="${classes}${ringClass}"${this.getExtraStyles()}>${this.renderChildren() || `<div>${img}</div>`}</div>`;
+    return `<div id="${this.id}" class="${classes}${ringClass}"${this.patchRegionAttr()}${this.getExtraStyles()}>${this.renderChildren() || `<div>${img}</div>`}</div>`;
   }
 }
 

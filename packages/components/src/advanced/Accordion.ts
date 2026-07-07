@@ -30,7 +30,7 @@ export class Accordion extends Component<AccordionProps> {
       `;
     }).join('');
 
-    return `<div id="${this.id}" class="${this.props.className || ''}${this.getExtraClasses()}">${items}</div>`;
+    return `<div id="${this.id}" class="${this.props.className || ''}${this.getExtraClasses()}"${this.patchRegionAttr()}>${items}</div>`;
   }
 }
 

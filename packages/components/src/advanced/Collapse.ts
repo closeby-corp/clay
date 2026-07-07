@@ -21,7 +21,7 @@ export class Collapse extends Component<CollapseProps> {
       .filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <input type="checkbox" ${this.props.open ? 'checked' : ''} />
         ${this.props.title ? `<div class="collapse-title font-semibold">${this.props.title}</div>` : ''}
         <div class="collapse-content">${this.renderChildren()}</div>

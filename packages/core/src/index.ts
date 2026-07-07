@@ -3,13 +3,13 @@ export * from './page';
 export * from './state';
 export * from './reactive';
 export * from './router';
-export * from './client';
 export * from './events';
 export * from './utils';
 export * from './computed';
 export * from './global-state';
 export * from './context';
-
+export * from './signals';
+export * from './background';
 export * from './page-state';
 
 import { getCurrentContext } from './context';

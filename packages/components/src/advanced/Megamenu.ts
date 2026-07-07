@@ -18,7 +18,7 @@ export class Megamenu extends Component<MegamenuProps> {
       .filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div tabindex="0" role="button" class="btn m-1">${this.props.label || 'Menu'}</div>
         <div tabindex="0" class="dropdown-content bg-base-100 rounded-box z-1 w-screen max-w-4xl shadow-lg p-6">
           <div class="grid grid-cols-3 gap-4">${this.renderChildren()}</div>

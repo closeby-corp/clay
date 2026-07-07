@@ -20,7 +20,7 @@ export class Alert extends Component<AlertProps> {
 
     const body = this.props.message || this.renderChildren();
     return `
-      <div id="${this.id}" role="alert" class="${classes}"${this.getExtraStyles()}${this.getTooltipAttr()}>
+      <div id="${this.id}" role="alert" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}${this.getTooltipAttr()}>
         ${this.props.title ? `<h3 class="font-bold">${this.props.title}</h3>` : ''}
         ${body ? `<span>${body}</span>` : ''}
       </div>

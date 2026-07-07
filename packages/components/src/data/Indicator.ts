@@ -17,7 +17,7 @@ export class Indicator extends Component<IndicatorProps> {
     const classes = ['indicator', this.props.className || '', this.getExtraClasses().trim()].filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this.props.badge ? `<span class="indicator-item badge badge-secondary">${this.props.badge}</span>` : ''}
         ${this.renderChildren()}
       </div>

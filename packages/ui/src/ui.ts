@@ -11,6 +11,7 @@ import {
   progress as progressFactory,
   dataTable as dataTableFactory,
   type ButtonProps,
+  type ButtonText,
   type LabelContent,
   type LabelProps,
   type BadgeProps,
@@ -61,7 +62,7 @@ export function label(content?: LabelContent, props?: Omit<LabelProps, 'text'>) 
   return addToCurrent(labelFactory(content, props));
 }
 
-export function button(text?: string, props?: Omit<ButtonProps, 'text'>) {
+export function button(text?: ButtonText, props?: Omit<ButtonProps, 'text'>) {
   return addToCurrent(buttonFactory(text, props));
 }
 

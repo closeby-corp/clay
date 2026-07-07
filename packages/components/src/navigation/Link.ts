@@ -2,6 +2,8 @@ import { Component } from '@badui/core';
 
 export interface LinkProps {
   text: string;
+  /** Datastar expression for reactive link text */
+  textExpr?: string;
   to: string | (() => void);
   external?: boolean;
   underline?: boolean;
@@ -22,14 +24,18 @@ export class Link extends Component<LinkProps> {
       this.props.className || ''
     ].filter(Boolean).join(' ');
 
+    const textAttr = this.props.textExpr ? this.signalText(this.props.textExpr) : '';
+    const inner = this.props.textExpr ? '' : this.props.text;
+
     return `
       <a 
         id="${this.id}"
         href="${href}"
         class="${classes}"
         ${this.props.external ? 'target="_blank" rel="noopener noreferrer"' : ''}
+        ${textAttr}${this.patchRegionAttr()}${this.getExtraStyles()}
       >
-        ${this.props.text}
+        ${inner}
       </a>
     `;
   }

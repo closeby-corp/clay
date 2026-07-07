@@ -27,14 +27,11 @@ export class OTPComponent extends ValueComponent<string, OTPProps> {
     this._ensureInitialized();
     const len = this.props.length ?? 4;
     const postAction = this.getDataStarPostAction('input', this._name);
-    const chars = this._value.split('');
-
-    const inputs = Array.from({ length: len }, (_, i) => {
-      const val = chars[i] ?? '';
-      return `<input type="text" maxlength="1" class="input join-item w-12 text-center" value="${val}" ${this.props.disabled ? 'disabled' : ''} data-on:input="${postAction}" />`;
+    const inputs = Array.from({ length: len }, () => {
+      return `<input type="text" maxlength="1" class="input join-item w-12 text-center" ${this.props.disabled ? 'disabled' : ''} data-on:input="${postAction}" />`;
     }).join('');
 
-    return `<div id="${this.id}" class="join">${inputs}</div>`;
+    return `<div id="${this.id}" class="join"${this.patchRegionAttr()}><input type="hidden" data-bind="${this._name}" />${inputs}</div>`;
   }
 }
 

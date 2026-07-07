@@ -51,6 +51,7 @@ ui.page('/examples/todo', () => {
           size: 'sm',
           on_click: () => { todoFilter = 'all'; },
         });
+        // const totalActive = todos.filter((t) => !t.completed).length;
         ui.button(`Active (${todos.filter((t) => !t.completed).length})`, {
           variant: todoFilter === 'active' ? 'default' : 'ghost',
           size: 'sm',
@@ -67,7 +68,7 @@ ui.page('/examples/todo', () => {
         ui.label('No todos yet!').classes('text-neutral opacity-70');
       } else {
         for (const todo of filteredTodos) {
-          getCurrentContainer().add(card({ bordered: true }, (cardCol) => {
+          ui.card({ bordered: true }, (cardCol) => {
             const checked = checkbox(`todo-${todo.id}`, { checked: todo.completed });
             checked.onChange((isChecked) => {
               todos = todos.map((t) =>
@@ -86,7 +87,7 @@ ui.page('/examples/todo', () => {
                 },
               }),
             ));
-          }));
+          });
         }
       }
 

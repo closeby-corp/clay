@@ -4,24 +4,29 @@
  */
 export const DATATABLE_CLIENT_SCRIPT = `
 (function() {
-  function getCtxId() {
-    var attr = document.body.getAttribute('data-signals');
-    if (!attr) return null;
-    try { return JSON.parse(attr).ctxId; } catch (e) { return null; }
+  function getAppSignals() {
+    var app = document.getElementById('app');
+    var attr = app && app.getAttribute('data-signals');
+    if (!attr) return { ctxId: null };
+    try { return JSON.parse(attr); } catch (e) { return { ctxId: null }; }
   }
 
   function postTableEvent(compId, evtType, signals) {
-    var body = Object.assign({ compId: compId, evtType: evtType, ctxId: getCtxId() }, signals || {});
+    var base = getAppSignals();
+    var body = Object.assign({}, base, signals || {}, {
+      compId: compId,
+      evtType: evtType,
+      ctxId: base.ctxId
+    });
     return fetch('/badui/events', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Datastar-Request': 'true'
+      },
       body: JSON.stringify(body)
-    }).then(function(r) { return r.text(); }).then(function(html) {
-      if (html && html.trim().startsWith('<')) {
-        var app = document.getElementById('app');
-        if (app) app.outerHTML = html;
-        initDataTables();
-      }
+    }).then(function() {
+      setTimeout(initDataTables, 0);
     });
   }
 

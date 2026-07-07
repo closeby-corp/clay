@@ -24,7 +24,7 @@ export class Dock extends Component<DockProps> {
       return `<button class="${active}"><a href="${item.href || '#'}">${icon}<span class="dock-label">${item.label}</span></a></button>`;
     }).join('');
 
-    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}>${buttons}</div>`;
+    return `<div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${buttons}</div>`;
   }
 }
 

@@ -14,7 +14,7 @@ export class Mask extends Component<MaskProps> {
     const shapeClass = this.props.shape ? `mask-${this.props.shape}` : 'mask-squircle';
     const classes = ['mask', shapeClass, 'w-24', this.props.className || '', this.getExtraClasses().trim()].filter(Boolean).join(' ');
 
-    return `<img id="${this.id}" class="${classes}" src="${this.props.src}" alt="${this.props.alt || ''}"${this.getExtraStyles()} />`;
+    return `<img id="${this.id}" class="${classes}" src="${this.props.src}" alt="${this.props.alt || ''}"${this.patchRegionAttr()}${this.getExtraStyles()} />`;
   }
 }
 

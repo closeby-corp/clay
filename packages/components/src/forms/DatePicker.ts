@@ -61,7 +61,6 @@ export class DatePickerComponent extends ValueComponent<string, DatePickerProps>
         ` : ''}
         <input 
           type="${type}"
-          value="${this._value}"
           class="${inputClasses}"
           ${placeholder ? `placeholder="${placeholder}"` : ''}
           ${min ? `min="${min}"` : ''}

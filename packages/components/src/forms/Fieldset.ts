@@ -18,7 +18,7 @@ export class Fieldset extends Component<FieldsetProps> {
       .filter(Boolean).join(' ');
 
     return `
-      <fieldset id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <fieldset id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this.props.legend ? `<legend class="fieldset-legend">${this.props.legend}</legend>` : ''}
         ${this.renderChildren()}
       </fieldset>

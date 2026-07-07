@@ -16,7 +16,7 @@ export class Skeleton extends Component<SkeletonProps> {
       this.props.height ? `height:${this.props.height}` : 'height:1rem',
     ].join(';');
 
-    return `<div id="${this.id}" class="${classes}" style="${style}"${this.getExtraStyles()}></div>`;
+    return `<div id="${this.id}" class="${classes}" style="${style}"${this.patchRegionAttr()}${this.getExtraStyles()}></div>`;
   }
 }
 

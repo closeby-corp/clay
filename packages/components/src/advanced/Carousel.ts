@@ -20,7 +20,7 @@ export class Carousel extends Component<CarouselProps> {
     const classes = ['carousel', snapClass, vertClass, 'rounded-box', this.props.className || '', this.getExtraClasses().trim()]
       .filter(Boolean).join(' ');
 
-    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}>${this.renderChildren()}</div>`;
+    return `<div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${this.renderChildren()}</div>`;
   }
 }
 

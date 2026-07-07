@@ -12,7 +12,7 @@ export class Status extends Component<StatusProps> {
     const classes = ['status', this.props.type ? `status-${this.props.type}` : 'status-info', this.props.className || '', this.getExtraClasses().trim()]
       .filter(Boolean).join(' ');
 
-    return `<span id="${this.id}" class="${classes}" aria-label="${this.props.type || 'info'}"${this.getExtraStyles()}></span>`;
+    return `<span id="${this.id}" class="${classes}" aria-label="${this.props.type || 'info'}"${this.patchRegionAttr()}${this.getExtraStyles()}></span>`;
   }
 }
 

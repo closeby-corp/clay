@@ -1,124 +1,104 @@
 import { State } from './state';
 import { createReactiveState, type ReactiveState } from './reactive';
-import type { Client } from './client';
+import type { RenderContext } from './context';
+import { getCurrentContext } from './context';
+import { PAGE_PREFIX } from './signals';
 
 export interface GlobalStateEntry<T> {
   state: State<T>;
-  subscribers: Set<Client>;
+  subscribers: Set<RenderContext>;
+}
+
+export type GlobalStreamPatcher = (
+  ctxId: string,
+  patch: { signals: Record<string, unknown> },
+) => void;
+
+let streamPatcher: GlobalStreamPatcher | null = null;
+
+export function setGlobalStreamPatcher(patcher: GlobalStreamPatcher | null): void {
+  streamPatcher = patcher;
 }
 
 /**
- * Global state that can be shared across all connected clients
- * Useful for chat rooms, live dashboards, notifications, etc.
+ * Global state shared across all connected clients (chat, dashboards, etc.)
  */
 export class GlobalState {
-  private static states: Map<string, GlobalStateEntry<any>> = new Map();
+  private static states: Map<string, GlobalStateEntry<unknown>> = new Map();
 
-  /**
-   * Create a global state entry
-   */
   static create<T>(key: string, initialValue: T): ReactiveState<T> {
     if (this.states.has(key)) {
-      return createReactiveState(this.states.get(key)!.state);
+      return createReactiveState(this.states.get(key)!.state as State<T>);
     }
 
     const state = new State<T>(initialValue);
     const entry: GlobalStateEntry<T> = {
       state,
-      subscribers: new Set()
+      subscribers: new Set(),
     };
 
-    // Subscribe to changes and broadcast to all subscribers
-    state.subscribe((newValue, oldValue) => {
-      this.broadcast(key, newValue, oldValue);
+    state.subscribe((newValue) => {
+      this.broadcast(key, newValue);
     });
 
-    this.states.set(key, entry);
+    this.states.set(key, entry as GlobalStateEntry<unknown>);
+
+    const ctx = getCurrentContext();
+    if (ctx) {
+      entry.subscribers.add(ctx);
+      ctx.setNamedState(`${PAGE_PREFIX}${key}`, state);
+    }
+
     return createReactiveState(state);
   }
 
-  /**
-   * Get an existing global state
-   */
   static get<T>(key: string): ReactiveState<T> | undefined {
     const entry = this.states.get(key);
-    return entry ? createReactiveState(entry.state) : undefined;
+    return entry ? createReactiveState(entry.state as State<T>) : undefined;
   }
 
-  /**
-   * Subscribe a client to a global state
-   */
-  static subscribe<T>(client: Client, key: string): void {
+  static subscribe(ctx: RenderContext, key: string): void {
     const entry = this.states.get(key);
     if (entry) {
-      entry.subscribers.add(client);
+      entry.subscribers.add(ctx);
     }
   }
 
-  /**
-   * Unsubscribe a client from a global state
-   */
-  static unsubscribe(client: Client, key?: string): void {
+  static unsubscribe(ctx: RenderContext, key?: string): void {
     if (key) {
-      this.states.get(key)?.subscribers.delete(client);
+      this.states.get(key)?.subscribers.delete(ctx);
     } else {
-      // Unsubscribe from all
       for (const entry of this.states.values()) {
-        entry.subscribers.delete(client);
+        entry.subscribers.delete(ctx);
       }
     }
   }
 
-  /**
-   * Broadcast a state change to all subscribed clients
-   */
-  private static broadcast<T>(key: string, newValue: T, oldValue: T): void {
+  private static broadcast<T>(key: string, newValue: T): void {
     const entry = this.states.get(key);
-    if (!entry) return;
+    if (!entry || !streamPatcher) return;
 
-    const message = {
-      type: 'global-state-update',
-      key,
-      value: newValue,
-      timestamp: Date.now()
-    };
-
-    for (const client of entry.subscribers) {
-      client.send(message);
+    for (const ctx of entry.subscribers) {
+      streamPatcher(ctx.id, { signals: { [key]: newValue } });
     }
   }
 
-  /**
-   * Get all global state keys
-   */
   static keys(): string[] {
     return Array.from(this.states.keys());
   }
 
-  /**
-   * Check if a global state exists
-   */
   static has(key: string): boolean {
     return this.states.has(key);
   }
 
-  /**
-   * Delete a global state
-   */
   static delete(key: string): boolean {
     return this.states.delete(key);
   }
 
-  /**
-   * Clear all global states
-   */
   static clear(): void {
     this.states.clear();
   }
 
-  /**
-   * Get subscriber count for a state
-   */
   static subscriberCount(key: string): number {
     return this.states.get(key)?.subscribers.size || 0;
   }

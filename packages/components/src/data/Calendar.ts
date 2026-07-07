@@ -24,7 +24,7 @@ export class Calendar extends Component<CalendarProps> {
     }).join('');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div class="flex justify-between items-center mb-2">
           <span class="font-bold">${this.props.month || 'January'} ${this.props.year || new Date().getFullYear()}</span>
         </div>

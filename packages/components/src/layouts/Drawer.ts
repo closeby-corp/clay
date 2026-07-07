@@ -33,7 +33,7 @@ export class Drawer extends Component<DrawerProps> {
       .filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <input id="${drawerId}" type="checkbox" class="drawer-toggle" ${this.props.open ? 'checked' : ''} />
         <div class="drawer-content">${this.renderChildren()}</div>
         <div class="drawer-side">

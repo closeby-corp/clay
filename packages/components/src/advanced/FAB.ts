@@ -24,7 +24,7 @@ export class FAB extends Component<FABProps> {
     }[pos];
 
     return `
-      <div id="${this.id}" class="${posClass} z-50 flex flex-col gap-2 items-end ${this.props.className || ''}${this.getExtraClasses()}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${posClass} z-50 flex flex-col gap-2 items-end ${this.props.className || ''}${this.getExtraClasses()}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div class="flex flex-col gap-2 mb-2">${this.renderChildren()}</div>
         <button class="btn btn-circle btn-lg btn-primary">${this.props.mainIcon || '+'}</button>
       </div>

@@ -21,7 +21,7 @@ export class Pagination extends Component<PaginationProps> {
     }).join('');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <a class="join-item btn" href="${this.props.prevHref || '#'}">«</a>
         ${pages}
         <a class="join-item btn" href="${this.props.nextHref || '#'}">»</a>

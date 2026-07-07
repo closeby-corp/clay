@@ -41,7 +41,7 @@ export class Menu extends Component<MenuProps> {
       return `<li class="${state}"><span>${item.label}</span></li>`;
     }).join('') ?? '';
 
-    return `<ul id="${this.id}" class="${classes}"${this.getExtraStyles()}>${items}${this.renderChildren()}</ul>`;
+    return `<ul id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${items}${this.renderChildren()}</ul>`;
   }
 }
 

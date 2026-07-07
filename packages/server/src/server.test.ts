@@ -1,6 +1,7 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { BadUIServer } from "./server";
 import { page, Component } from "@badui/core";
+import { button, label, column } from "@badui/components";
 
 describe("BadUIServer", () => {
   let server: BadUIServer;
@@ -28,7 +29,7 @@ describe("BadUIServer", () => {
     expect(response.status).toBe(404);
   });
 
-  test("should render registered page", async () => {
+  test("should render registered page with initial signals", async () => {
     @page("/hello")
     class HelloPage extends Component {
       render() {
@@ -40,28 +41,47 @@ describe("BadUIServer", () => {
     expect(response.status).toBe(200);
     const text = await response.text();
     expect(text).toContain("<h1>Hello World</h1>");
-    expect(text).toContain("BadUI App");
+    expect(text).toContain("ctxId");
+    expect(text).toContain("badui-stream");
   });
 
-  test("should respond to POST /badui/events with SSE", async () => {
+  test("should respond to POST /badui/events with SSE patch", async () => {
+    let clickCount = 0;
+
     @page("/test-events")
     class TestEventsPage extends Component {
       render() {
-        return "<div id=\"test\">Static content</div>";
+        const btn = button("Click", {
+          on_click: () => { clickCount++; },
+        });
+        return column(label("Test"), btn).render();
       }
     }
+
+    const pageRes = await fetch(`http://localhost:${port}/test-events`);
+    const pageHtml = await pageRes.text();
+    const signalsMatch = pageHtml.match(/id="app"[^>]*data-signals='([^']+)'/);
+    expect(signalsMatch).toBeTruthy();
+    const signals = JSON.parse(signalsMatch![1]!.replace(/&#39;/g, "'"));
+    const ctxId = signals.ctxId;
+
+    const compIdMatch = pageHtml.match(/\$compId='([^']+)'/);
+    expect(compIdMatch).toBeTruthy();
+    const compId = compIdMatch![1];
 
     const response = await fetch(`http://localhost:${port}/badui/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        compId: "nonexistent",
-        evtType: "click"
-      })
+        compId: compId,
+        evtType: "click",
+        ctxId: ctxId,
+      }),
     });
 
-    // Without a handler, it should return 404
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(clickCount).toBe(1);
   });
 
   test("template should include Datastar script", async () => {

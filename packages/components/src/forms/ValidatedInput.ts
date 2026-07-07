@@ -49,7 +49,7 @@ export class ValidatedInputState extends State<string> {
     ].filter(Boolean).join(' ');
     
     return `
-      <fieldset id="${this.id}" class="fieldset ${fullWidth ? 'w-full' : ''}">
+      <fieldset id="${this.id}" class="fieldset ${fullWidth ? 'w-full' : ''}"${this.patchRegionAttr()}>
         ${label ? `
           <label class="label">
             ${label}

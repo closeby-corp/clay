@@ -4,6 +4,6 @@ page('/test', ({ state }) => {
     state.defaults({
         count: 0
     });
-    label(() => `Count: ${state.count}`);
+    label({ textExpr: "'Count: ' + $count" });
     label(() => `Already bound`);
 });

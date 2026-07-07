@@ -12,7 +12,7 @@ export class Countdown extends Component<CountdownProps> {
     const classes = ['countdown', 'font-mono', sizeClass, this.props.className || '', this.getExtraClasses().trim()]
       .filter(Boolean).join(' ');
 
-    return `<span id="${this.id}" class="${classes}" style="--value:${this.props.value};"${this.getExtraStyles()}></span>`;
+    return `<span id="${this.id}" class="${classes}" style="--value:${this.props.value};"${this.patchRegionAttr()}${this.getExtraStyles()}></span>`;
   }
 }
 

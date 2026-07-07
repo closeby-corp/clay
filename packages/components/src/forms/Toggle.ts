@@ -38,7 +38,7 @@ export class ToggleComponent extends ValueComponent<boolean, ToggleProps> {
     return `
       <label id="${this.id}" class="label cursor-pointer gap-2">
         ${this.props.label ? `<span>${this.props.label}</span>` : ''}
-        <input type="checkbox" class="${classes}" ${this._value ? 'checked' : ''}
+        <input type="checkbox" class="${classes}"
           ${this.props.disabled ? 'disabled' : ''} data-bind="${this._name}" data-on:change="${postAction}" />
       </label>
     `;

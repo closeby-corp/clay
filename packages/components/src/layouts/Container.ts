@@ -23,7 +23,7 @@ export class Container extends Component<ContainerProps> {
     const classes = this.generateClasses() + this.getExtraClasses();
 
     return `
-      <div class="${classes}">
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this.renderChildren()}
       </div>
     `;

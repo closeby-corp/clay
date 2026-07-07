@@ -28,7 +28,7 @@ export class Steps extends Component<StepsProps> {
       return `<li class="step ${state}">${item.label}</li>`;
     }).join('');
 
-    return `<ul id="${this.id}" class="${classes}"${this.getExtraStyles()}>${items}</ul>`;
+    return `<ul id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${items}</ul>`;
   }
 }
 

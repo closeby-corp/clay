@@ -22,7 +22,7 @@ export class Filter extends Component<FilterProps> {
       return `<input class="btn ${active}" type="radio" name="${this.id}-filter" aria-label="${opt.label}" value="${opt.value}" />`;
     }).join('');
 
-    return `<${tag} id="${this.id}" class="${classes}"${this.getExtraStyles()}>${buttons}</${tag}>`;
+    return `<${tag} id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${buttons}</${tag}>`;
   }
 }
 

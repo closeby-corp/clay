@@ -25,6 +25,39 @@ export function hasStateParam(params: ts.NodeArray<ts.ParameterDeclaration>): bo
   return false;
 }
 
+/** `const messages = GlobalState.create('chatMessages', [])` → messages → chatMessages signal */
+export function collectGlobalStateBindings(body: ts.ConciseBody): Map<string, string> {
+  const bindings = new Map<string, string>();
+  if (!ts.isBlock(body)) {
+    return bindings;
+  }
+
+  for (const statement of body.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+
+    for (const decl of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
+      const signalKey = globalStateCreateKey(decl.initializer);
+      if (signalKey) {
+        bindings.set(decl.name.text, signalKey);
+      }
+    }
+  }
+
+  return bindings;
+}
+
+function globalStateCreateKey(expr: ts.Expression): string | null {
+  if (!ts.isCallExpression(expr)) return null;
+  const callee = expr.expression;
+  if (!ts.isPropertyAccessExpression(callee)) return null;
+  if (!ts.isIdentifier(callee.expression) || callee.expression.text !== 'GlobalState') return null;
+  if (callee.name.text !== 'create') return null;
+  const firstArg = expr.arguments[0];
+  if (!firstArg || !ts.isStringLiteral(firstArg)) return null;
+  return firstArg.text;
+}
+
 export function collectReactiveBindings(body: ts.ConciseBody): ReactiveBinding[] {
   if (!ts.isBlock(body)) {
     return [];

@@ -27,7 +27,7 @@ export class Footer extends Component<FooterProps> {
     ].filter(Boolean).join(' ');
 
     return `
-      <footer id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <footer id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this.props.title ? `<aside><p class="font-bold">${this.props.title}</p></aside>` : ''}
         ${this.renderChildren()}
       </footer>

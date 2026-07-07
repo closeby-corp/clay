@@ -31,7 +31,7 @@ export class Card extends Component<CardProps> {
     ].filter(Boolean).join(' ') + this.getExtraClasses();
 
     return `
-      <div id="${this.id}" class="${classes}">
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this.props.image && !imageSide ? `
           <figure>
             <img src="${this.props.image.src}" alt="${this.props.image.alt || ''}" />

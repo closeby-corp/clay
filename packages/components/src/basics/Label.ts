@@ -6,6 +6,10 @@ export type LabelColor = 'primary' | 'secondary' | 'accent' | 'neutral' | 'info'
 
 export interface LabelProps {
   text?: string | (() => string);
+  /** Datastar expression for reactive text, e.g. "'Count: ' + $count" */
+  textExpr?: string;
+  /** Datastar expression for visibility, e.g. "$history.length" */
+  showExpr?: string;
   size?: LabelSize;
   weight?: LabelWeight;
   color?: LabelColor;
@@ -14,12 +18,12 @@ export interface LabelProps {
   className?: string;
 }
 
-export type LabelContent = string | HasValue<any> | (() => string);
+export type LabelContent = string | HasValue<unknown> | (() => string) | Omit<LabelProps, never>;
 
 export class Label extends Component<LabelProps> {
   private dynamicFn?: () => string;
-  private boundState?: State<any>;
-  private boundValueComponent?: HasValue<any>;
+  private boundState?: State<unknown>;
+  private boundValueComponent?: HasValue<unknown>;
   
   constructor(props: LabelProps) {
     super(props);
@@ -31,35 +35,45 @@ export class Label extends Component<LabelProps> {
   render(): string {
     const classes = this.generateClasses() + this.getExtraClasses();
     const tag = this.props.as || 'span';
-    
-    let text: string;
-    if (this.boundValueComponent) {
-      text = String(this.boundValueComponent);
-    } else if (this.dynamicFn) {
-      text = this.dynamicFn();
-    } else {
-      text = this.props.text as string || '';
-    }
-    
-    const content = this.props.truncate 
-      ? `<span class="truncate block">${text}</span>`
-      : text;
+    const textAttr = this.props.textExpr ? this.signalText(this.props.textExpr) : '';
+    const showAttr = this.props.showExpr ? this.signalShow(this.props.showExpr) : '';
 
-    return `<${tag} id="${this.id}" class="${classes}"${this.getExtraStyles()}${this.getTooltipAttr()}>${content}</${tag}>`;
+    let inner: string;
+    if (this.props.textExpr) {
+      inner = '';
+    } else if (this.boundValueComponent) {
+      const text = String(this.boundValueComponent);
+      inner = this.props.truncate
+        ? `<span class="truncate block">${text}</span>`
+        : text;
+    } else if (this.dynamicFn) {
+      const text = this.dynamicFn();
+      inner = this.props.truncate
+        ? `<span class="truncate block">${text}</span>`
+        : text;
+    } else {
+      const text = (this.props.text as string) || '';
+      inner = this.props.truncate
+        ? `<span class="truncate block">${text}</span>`
+        : text;
+    }
+
+    const el = `<${tag} id="${this.id}" class="${classes}"${textAttr}${showAttr}${this.getExtraStyles()}${this.getTooltipAttr()}>${inner}</${tag}>`;
+    return el;
   }
   
   bind_text_from<T>(source: State<T> | { get(): T }, property?: keyof T): this {
     this.dynamicFn = () => {
       const val = source.get();
       if (property && typeof val === 'object' && val !== null) {
-        return String((val as any)[property]);
+        return String((val as Record<string, unknown>)[property as string]);
       }
       return String(val);
     };
     return this;
   }
   
-  bind(state: State<any>): this {
+  bind(state: State<unknown>): this {
     this.boundState = state;
     return this;
   }
@@ -87,21 +101,14 @@ export class Label extends Component<LabelProps> {
   }
 }
 
-/**
- * Create a label component
- * @param content - String, ValueComponent (slider, input, etc.), or getter function
- * @param props - Optional label props
- * 
- * Examples:
- *   label('Hello')                    // Static text
- *   label(slider)                     // Binds via toString/get()
- *   label(() => `Count: ${count}`)    // Dynamic function
- *   label(`Volume: ${slider}`)        // Template string (uses toString)
- */
 export function label(content?: LabelContent, props?: Omit<LabelProps, 'text'>): Label {
+  if (content && typeof content === 'object' && !('get' in content) && ('textExpr' in content || 'text' in content || 'showExpr' in content)) {
+    return new Label(content as LabelProps);
+  }
+
   if (content && typeof content === 'object' && typeof (content as HasValue<unknown>).get === 'function') {
     const lbl = new Label({ ...props });
-    lbl['boundValueComponent'] = content;
+    (lbl as { boundValueComponent?: HasValue<unknown> }).boundValueComponent = content as HasValue<unknown>;
     return lbl;
   }
   

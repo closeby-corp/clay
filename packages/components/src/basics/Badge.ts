@@ -5,6 +5,8 @@ export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
 
 export interface BadgeProps {
   text?: string;
+  /** Datastar expression for reactive text */
+  textExpr?: string;
   color?: BadgeColor;
   size?: BadgeSize;
   outline?: boolean;
@@ -22,10 +24,16 @@ export class Badge extends Component<BadgeProps> {
       this.getExtraClasses().trim(),
     ].filter(Boolean).join(' ');
 
-    return `<span id="${this.id}" class="${classes}"${this.getExtraStyles()}${this.getTooltipAttr()}>${this.props.text || this.renderChildren()}</span>`;
+    const textAttr = this.props.textExpr ? this.signalText(this.props.textExpr) : '';
+    const inner = this.props.textExpr ? '' : (this.props.text || this.renderChildren());
+
+    return `<span id="${this.id}" class="${classes}"${textAttr}${this.patchRegionAttr()}${this.getExtraStyles()}${this.getTooltipAttr()}>${inner}</span>`;
   }
 }
 
-export function badge(text?: string, props?: Omit<BadgeProps, 'text'>): Badge {
-  return new Badge({ text, ...props });
+export function badge(text?: string | Omit<BadgeProps, 'text'>, props?: Omit<BadgeProps, 'text'>): Badge {
+  if (text && typeof text === 'object') {
+    return new Badge(text);
+  }
+  return new Badge({ text: text as string | undefined, ...props });
 }

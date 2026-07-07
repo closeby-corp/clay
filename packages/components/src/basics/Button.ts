@@ -1,11 +1,15 @@
-import { Component, eventRegistry, type EventHandler, getCurrentContext } from '@badui/core';
+import { Component, type EventHandler } from '@badui/core';
 
 export type ButtonColor = 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error' | 'ghost' | 'link' | 'neutral';
 export type ButtonSize = 'lg' | 'md' | 'sm' | 'xs';
 export type ButtonVariant = 'default' | 'outline' | 'dashed' | 'soft' | 'ghost';
 
+export type ButtonText = string | (() => string);
+
 export interface ButtonProps {
-  text?: string;
+  text?: ButtonText;
+  /** Datastar expression for reactive button label */
+  textExpr?: string;
   color?: ButtonColor;
   size?: ButtonSize;
   variant?: ButtonVariant;
@@ -33,7 +37,17 @@ export class Button extends Component<ButtonProps> {
     const clickAttr = this.hasEvents()
       ? ` data-on:click="${this.getDataStarPostAction('click')}"`
       : '';
-    return `<button id="${this.id}" type="${type}" class="${classes}" ${disabled}${clickAttr}${this.getExtraStyles()}${this.getTooltipAttr()}>${this.props.loading ? '<span class="loading loading-spinner"></span>' : ''}${this.props.icon ? `<span class="${this.getIconClasses()}">${this.props.icon}</span>` : ''}${this.props.text || ''}</button>`;
+
+    let labelContent: string;
+    if (this.props.textExpr) {
+      labelContent = `<span${this.signalText(this.props.textExpr)}></span>`;
+    } else if (typeof this.props.text === 'function') {
+      labelContent = this.props.text();
+    } else {
+      labelContent = this.props.text || '';
+    }
+
+    return `<button id="${this.id}" type="${type}" class="${classes}" ${disabled}${clickAttr}${this.getExtraStyles()}${this.getTooltipAttr()}>${this.props.loading ? '<span class="loading loading-spinner"></span>' : ''}${this.props.icon ? `<span class="${this.getIconClasses()}">${this.props.icon}</span>` : ''}${labelContent}</button>`;
   }
 
   private generateClasses(): string {
@@ -59,11 +73,19 @@ export class Button extends Component<ButtonProps> {
   }
 
   private getIconClasses(): string {
-    return this.props.text ? 'mr-2' : '';
+    return this.props.text || this.props.textExpr ? 'mr-2' : '';
   }
 }
 
-// Functional API - supports NiceGUI-style on_click prop
-export function button(text?: string, props?: Omit<ButtonProps, 'text'>): Button {
+export function button(
+  text?: ButtonText | Omit<ButtonProps, 'text'>,
+  props?: Omit<ButtonProps, 'text'>,
+): Button {
+  if (typeof text === 'function') {
+    return new Button({ text, ...props });
+  }
+  if (text && typeof text === 'object') {
+    return new Button(text);
+  }
   return new Button({ text, ...props });
 }

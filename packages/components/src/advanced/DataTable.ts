@@ -331,7 +331,7 @@ export class DataTable<T extends Record<string, any>> extends Component<DataTabl
       (this.props.selectable ? 1 : 0) + (this.props.rowReorder ? 1 : 0);
 
     return `
-      <div id="${this.id}" class="overflow-x-auto${this.getExtraClasses()}" data-badui-table data-comp-id="${this.id}"${tableKeyAttr}${clientAttr}${this.getExtraStyles()}>
+      <div id="${this.id}" class="overflow-x-auto${this.getExtraClasses()}" data-badui-table data-comp-id="${this.id}"${tableKeyAttr}${clientAttr}${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this._renderToolbar(visibleColumns, total)}
         <table class="${tableClass}">
           <thead>
@@ -363,7 +363,6 @@ export class DataTable<T extends Record<string, any>> extends Component<DataTabl
             type="search"
             class="input input-bordered input-sm w-full max-w-xs"
             placeholder="${escapeAttr(this.props.searchPlaceholder ?? 'Search…')}"
-            value="${escapeAttr(this.viewState.searchQuery)}"
             ${this.searchSignalKey ? `data-bind="${this.searchSignalKey}"` : ''}
             ${searchAction}
           />

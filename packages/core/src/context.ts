@@ -1,6 +1,21 @@
 import { State } from './state';
 import type { Component } from './component';
 import { createPageState, type PageState } from './page-state';
+import {
+  applySignalsToContext,
+  collectSignalsFromContext,
+  serializeSignals,
+  type DirtyKind,
+} from './signals';
+
+export interface SignalPatch {
+  signals?: Record<string, unknown>;
+  elements?: string;
+  selector?: string;
+  useViewTransition?: boolean;
+}
+
+export type SignalStreamSender = (patch: SignalPatch) => void;
 
 export interface RenderContextSender {
   send(data: string): void;
@@ -9,6 +24,7 @@ export interface RenderContextSender {
 export class RenderContext {
   readonly id: string;
   private sender: RenderContextSender;
+  private streamSender: SignalStreamSender | null = null;
   private trackedStates: Set<State<any>> = new Set();
   private namedStates: Map<string, State<any>> = new Map();
   private valueComponents: Map<string, any> = new Map();
@@ -16,11 +32,12 @@ export class RenderContext {
   private renderFn: (() => string) | null = null;
   private unsubscribes: (() => void)[] = [];
   private timers: Map<string, Timer> = new Map();
+  private patchRegions: Map<string, string> = new Map();
 
   private pageStateProxy: PageState | null = null;
   private stateIndex = 0;
+  private dirtyKind: DirtyKind = 'none';
 
-  // Stable component ID system: generate once, reuse on subsequent renders
   private componentIds: Map<string, string> = new Map();
   private typeCounters: Map<string, number> = new Map();
 
@@ -31,6 +48,10 @@ export class RenderContext {
 
   getSender(): RenderContextSender {
     return this.sender;
+  }
+
+  setStreamSender(sender: SignalStreamSender | null): void {
+    this.streamSender = sender;
   }
 
   updateSender(sender: RenderContextSender): void {
@@ -46,6 +67,10 @@ export class RenderContext {
     return this.pageInstance;
   }
 
+  getRenderFn(): (() => string) | null {
+    return this.renderFn;
+  }
+
   resetStateIndex(): void {
     this.stateIndex = 0;
   }
@@ -53,6 +78,29 @@ export class RenderContext {
   beginRender(): void {
     this.stateIndex = 0;
     this.typeCounters.clear();
+    this.dirtyKind = 'none';
+  }
+
+  getDirtyKind(): DirtyKind {
+    return this.dirtyKind;
+  }
+
+  markDirty(kind: 'signals' | 'elements'): void {
+    if (kind === 'elements') {
+      this.dirtyKind = this.dirtyKind === 'signals' ? 'both' : kind;
+    } else if (this.dirtyKind === 'none') {
+      this.dirtyKind = 'signals';
+    } else if (this.dirtyKind === 'elements') {
+      this.dirtyKind = 'both';
+    }
+  }
+
+  registerPatchRegion(regionId: string, selector?: string): void {
+    this.patchRegions.set(regionId, selector ?? `#${regionId}`);
+  }
+
+  getPatchRegionSelector(regionId: string): string | undefined {
+    return this.patchRegions.get(regionId);
   }
 
   getComponentId(type: string, explicitId?: string, key?: string): string {
@@ -96,6 +144,10 @@ export class RenderContext {
     return this.namedStates.get(key);
   }
 
+  getNamedStatesMap(): Map<string, State<unknown>> {
+    return this.namedStates;
+  }
+
   setNamedState(key: string, state: State<unknown>): void {
     this.namedStates.set(key, state);
     this.trackState(state);
@@ -118,21 +170,42 @@ export class RenderContext {
     return component;
   }
 
-  /**
-   * Sync ValueComponent values from incoming DataStar signals.
-   * Called before dispatching event handlers so that handler code
-   * reading `valueComponent.get()` gets the latest client-side value.
-   */
-  syncValueComponentsFromSignals(signals: Record<string, any>): void {
+  getValueComponents(): Map<string, unknown> {
+    return this.valueComponents;
+  }
+
+  syncValueComponentsFromSignals(signals: Record<string, unknown>): void {
     for (const [name, comp] of this.valueComponents) {
       if (signals[name] !== undefined) {
         try {
-          (comp as any)._value = signals[name];
-          comp._notifyValueListeners();
+          (comp as { _value: unknown; _notifyValueListeners(): void })._value = signals[name];
+          (comp as { _notifyValueListeners(): void })._notifyValueListeners();
         } catch (e) {
           console.error(`[BadUI] Error syncing ValueComponent "${name}":`, e);
         }
       }
+    }
+  }
+
+  importSignals(signals: Record<string, unknown>): void {
+    applySignalsToContext(this, signals);
+  }
+
+  exportSignals(): Record<string, unknown> {
+    const signals = collectSignalsFromContext(this);
+    for (const [name, comp] of this.valueComponents) {
+      signals[name] = (comp as { get(): unknown }).get();
+    }
+    return signals;
+  }
+
+  exportInitialSignals(): Record<string, unknown> {
+    return { ctxId: this.id, ...this.exportSignals() };
+  }
+
+  pushSignals(signals: Record<string, unknown>): void {
+    if (this.streamSender) {
+      this.streamSender({ signals });
     }
   }
 
@@ -161,15 +234,16 @@ export class RenderContext {
   private scheduleUpdate(): void {
     if (this.updateScheduled || this._suppressRerender) return;
     this.updateScheduled = true;
+    this.markDirty('signals');
 
     queueMicrotask(() => {
       this.updateScheduled = false;
-      // Re-rendering is handled within @post() event responses.
-      // This method is kept for future SSE push support.
+      if (this._suppressRerender || !this.streamSender) return;
+      this.streamSender({ signals: this.exportSignals() });
     });
   }
 
-  send(message: any): void {
+  send(message: unknown): void {
     this.sender.send(JSON.stringify(message));
   }
 
@@ -178,30 +252,53 @@ export class RenderContext {
     type: 'info' | 'success' | 'warning' | 'error' = 'info',
     options: { duration?: number; position?: string } = {}
   ): void {
-    // Toast notifications rendered inline in @post() response
-    this.send({
-      type: 'toast',
-      message,
-      toastType: type,
-      duration: options.duration ?? 3000,
-      position: options.position ?? 'bottom-right'
-    });
+    const duration = options.duration ?? 3000;
+    const position = options.position ?? 'bottom-right';
+    const posClasses: Record<string, string> = {
+      'top-left': 'top-4 left-4',
+      'top-center': 'top-4 left-1/2 -translate-x-1/2',
+      'top-right': 'top-4 right-4',
+      'bottom-left': 'bottom-4 left-4',
+      'bottom-center': 'bottom-4 left-1/2 -translate-x-1/2',
+      'bottom-right': 'bottom-4 right-4',
+    };
+    const posClass = posClasses[position] ?? posClasses['bottom-right'];
+    const toastHtml = `<div class="alert alert-${type} fixed ${posClass} z-50 shadow-lg max-w-sm" id="badui-toast-${Date.now()}"><span>${message}</span></div>`;
+
+    if (this.streamSender) {
+      this.streamSender({
+        elements: toastHtml,
+        selector: 'body',
+        useViewTransition: false,
+      });
+      if (duration > 0) {
+        setTimeout(() => {
+          this.runJavascript(`document.querySelectorAll('[id^="badui-toast-"]').forEach(el => { if (el.textContent === ${JSON.stringify(message)}) el.remove(); });`);
+        }, duration);
+      }
+    }
   }
 
   runJavascript(code: string): void {
-    this.send({ type: 'eval', code });
+    if (this.streamSender) {
+      this.streamSender({
+        elements: `<script>${code}</script>`,
+        selector: 'body',
+        useViewTransition: false,
+      });
+    }
   }
 
   navigate(path: string): void {
-    this.send({ type: 'navigate', path });
+    this.runJavascript(`window.location.href = ${JSON.stringify(path)};`);
   }
 
   openDialog(dialogId: string): void {
-    this.send({ type: 'modal', action: 'show', modalId: dialogId });
+    this.runJavascript(`document.getElementById(${JSON.stringify(dialogId)})?.showModal?.();`);
   }
 
   closeDialog(dialogId: string): void {
-    this.send({ type: 'modal', action: 'close', modalId: dialogId });
+    this.runJavascript(`document.getElementById(${JSON.stringify(dialogId)})?.close?.();`);
   }
 
   timer(callback: () => void, intervalMs: number, options: { immediate?: boolean; once?: boolean } = {}): string {
@@ -245,15 +342,24 @@ export class RenderContext {
   }
 
   showLoading(text?: string): void {
-    this.send({ type: 'loading', action: 'show', text: text || 'Loading...' });
+    const loadingText = text || 'Loading...';
+    const overlay = `<div id="badui-loading-overlay" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"><div class="bg-base-100 rounded-lg p-6 flex flex-col items-center gap-3 shadow-xl"><span class="loading loading-spinner loading-lg text-primary"></span><span class="text-base-content">${loadingText}</span></div></div>`;
+    if (this.streamSender) {
+      this.streamSender({ elements: overlay, selector: 'body', useViewTransition: false });
+    }
   }
 
   hideLoading(): void {
-    this.send({ type: 'loading', action: 'hide' });
+    this.runJavascript(`document.getElementById('badui-loading-overlay')?.remove();`);
   }
 
   requestRerender(): void {
+    this.markDirty('elements');
     this.scheduleUpdate();
+  }
+
+  markStructuralDirty(): void {
+    this.markDirty('elements');
   }
 
   destroy(): void {
@@ -265,9 +371,11 @@ export class RenderContext {
     this.trackedStates.clear();
     this.namedStates.clear();
     this.valueComponents.clear();
+    this.patchRegions.clear();
     this.pageInstance = null;
     this.renderFn = null;
     this.pageStateProxy = null;
+    this.streamSender = null;
   }
 }
 
@@ -290,3 +398,5 @@ export function runWithContext<T>(ctx: RenderContext, fn: () => T): T {
     currentContext = prev;
   }
 }
+
+export { serializeSignals };

@@ -1,12 +1,12 @@
 import { ui, getCurrentContainer } from '@badui/ui';
 import { GlobalState } from '@badui/core';
-import { button, label, input, row, card } from '@badui/components';
+import { label, input } from '@badui/components';
 
 interface ChatMessage {
   id: string;
   user: string;
   text: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
 ui.page('/examples/chat', () => {
@@ -16,32 +16,21 @@ ui.page('/examples/chat', () => {
   const username = input('username', { label: 'Your name', value: 'Anonymous' });
   const messageText = input('message', { placeholder: 'Type a message...' });
 
-  const userCount = onlineUsers.get().length;
-
   ui.container(() => {
     ui.column(() => {
-      ui.label(`Chat Room (${userCount} online)`).classes('text-3xl font-bold');
+      ui.label(`Chat Room (${onlineUsers.length} online)`).classes('text-3xl font-bold');
 
       ui.row(() => {
-        getCurrentContainer().add(card({ bordered: true, bgColor: 'bg-base-200' }, (msgCol) => {
+        ui.card({ bordered: true, bgColor: 'bg-base-200' }, (msgCol) => {
           msgCol.add(label('System: Welcome to the chat!').classes('text-sm text-info'));
-          for (const msg of messages.get()) {
-            msgCol.add(row(
-              label(`${msg.user}:`).classes('font-bold text-primary'),
-              label(msg.text),
-              label(msg.timestamp.toLocaleTimeString()).classes('text-xs text-neutral'),
-            ));
-          }
-        }));
+          msgCol.add(
+            label(`${messages.map((m) => `${m.user}: ${m.text}`).join('\n')}`).classes('text-sm whitespace-pre-wrap'),
+          );
+        });
 
         ui.column(() => {
-          ui.label(`Online (${userCount})`).classes('font-bold');
-          for (const user of onlineUsers.get()) {
-            ui.row(() => {
-              ui.label('●').classes('text-success');
-              ui.label(user);
-            });
-          }
+          ui.label(`Online (${onlineUsers.length})`).classes('font-bold');
+          ui.label(`${onlineUsers.join(', ')}`).classes('text-sm');
         });
       }, { gap: '4' });
 
@@ -52,12 +41,17 @@ ui.page('/examples/chat', () => {
           color: 'primary',
           on_click: () => {
             const text = messageText.get().trim();
+            const user = username.get().trim() || 'Anonymous';
             if (text) {
+              const users = onlineUsers.get();
+              if (!users.includes(user)) {
+                onlineUsers.set([...users, user]);
+              }
               messages.set([...messages.get(), {
                 id: Date.now().toString(),
-                user: username.get(),
+                user,
                 text,
-                timestamp: new Date(),
+                timestamp: new Date().toLocaleTimeString(),
               }]);
               messageText.set('');
             }

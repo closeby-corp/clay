@@ -38,7 +38,7 @@ export class Tabs extends Component<TabsProps> {
       : '';
 
     return `
-      <div id="${this.id}" class="w-full">
+      <div id="${this.id}" class="w-full"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div class="tabs ${variantClass} ${sizeClass}" role="tablist">
           ${this.props.tabs.map(tab => `
             <button 

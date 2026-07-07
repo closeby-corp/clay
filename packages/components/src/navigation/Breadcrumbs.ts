@@ -21,7 +21,7 @@ export class Breadcrumbs extends Component<BreadcrumbsProps> {
       return `<li>${item.label}</li>`;
     }).join('');
 
-    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}><ul>${items}</ul></div>`;
+    return `<div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}><ul>${items}</ul></div>`;
   }
 }
 

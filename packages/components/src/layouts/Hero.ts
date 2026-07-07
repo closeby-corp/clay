@@ -21,7 +21,7 @@ export class Hero extends Component<HeroProps> {
       .filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}"${style}${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${style}${this.patchRegionAttr()}${this.getExtraStyles()}>
         <div class="hero-overlay bg-opacity-60"></div>
         <div class="hero-content text-center text-neutral-content">
           <div class="max-w-md">

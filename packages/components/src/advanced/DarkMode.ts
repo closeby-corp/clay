@@ -9,7 +9,7 @@ export class DarkModeToggle extends Component<DarkModeToggleProps> {
     const sizeClass = this.props.size ? `swap-${this.props.size}` : '';
 
     return `
-      <label id="${this.id}" class="swap swap-rotate ${sizeClass}">
+      <label id="${this.id}" class="swap swap-rotate ${sizeClass}"${this.patchRegionAttr()}>
         <input type="checkbox" class="theme-controller" value="dark" />
 
         <!-- Sun icon -->

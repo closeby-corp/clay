@@ -62,7 +62,6 @@ export class RadioComponent extends ValueComponent<string, RadioProps> {
           type="radio"
           value="${opt.value}"
           class="${radioClasses}"
-          ${this._value === opt.value ? 'checked' : ''}
           ${disabled || opt.disabled ? 'disabled' : ''}
           data-bind="${this._name}"
           data-on:change="${postAction}"

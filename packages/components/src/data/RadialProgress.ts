@@ -16,7 +16,7 @@ export class RadialProgress extends Component<RadialProgressProps> {
       this.props.thickness ? `--thickness:${this.props.thickness}` : '',
     ].filter(Boolean).join(';');
 
-    return `<div id="${this.id}" class="${classes}" style="${style}" role="progressbar"${this.getExtraStyles()}>${this.props.value}%</div>`;
+    return `<div id="${this.id}" class="${classes}" style="${style}" role="progressbar"${this.patchRegionAttr()}${this.getExtraStyles()}>${this.props.value}%</div>`;
   }
 }
 

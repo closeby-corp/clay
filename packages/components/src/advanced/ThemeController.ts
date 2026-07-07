@@ -16,11 +16,11 @@ export class ThemeController extends Component<ThemeControllerProps> {
     if (as === 'select') {
       const themes: ThemeName[] = ['light', 'dark', 'cupcake', 'corporate', 'synthwave', 'retro'];
       const options = themes.map((t) => `<option value="${t}" ${this.props.value === t ? 'selected' : ''}>${t}</option>`).join('');
-      return `<select id="${this.id}" class="${classes} select" data-theme-controller${this.getExtraStyles()}>${options}</select>`;
+      return `<select id="${this.id}" class="${classes} select" data-theme-controller${this.patchRegionAttr()}${this.getExtraStyles()}>${options}</select>`;
     }
 
     const inputClass = as === 'toggle' ? 'toggle toggle-primary' : 'toggle theme-controller';
-    return `<input id="${this.id}" type="checkbox" class="${inputClass}" value="${this.props.value || 'synthwave'}" data-theme-controller${this.getExtraStyles()} />`;
+    return `<input id="${this.id}" type="checkbox" class="${inputClass}" value="${this.props.value || 'synthwave'}" data-theme-controller${this.patchRegionAttr()}${this.getExtraStyles()} />`;
   }
 }
 

@@ -5,9 +5,9 @@ ui.page('/examples/counter', ({ state }) => {
         history: []
     });
     ui.label('Counter Example').classes('text-3xl font-bold');
-    ui.label(() => `Count: ${state.count}`).classes('text-2xl');
+    ui.label({ textExpr: "'Count: ' + $count" }).classes('text-2xl');
     if (state.history.length > 0) {
-        ui.label(() => `History: ${state.history.join(' → ')}`).classes('text-sm opacity-70');
+        ui.label({ textExpr: "'History: ' + $history.join(' → ')" }).classes('text-sm opacity-70');
     }
     ui.row(() => {
         ui.button('-', {

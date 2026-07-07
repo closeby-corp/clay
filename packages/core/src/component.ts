@@ -1,6 +1,12 @@
 import { eventRegistry, type EventHandler } from './events';
 import { generateId } from './utils';
 import { getCurrentContext } from './context';
+import {
+  META_COMP_ID,
+  META_CTX_ID,
+  META_DS_VAL_KEY,
+  META_EVT_TYPE,
+} from './signals';
 
 export interface Renderable {
   render(): string;
@@ -62,6 +68,22 @@ export abstract class Component<P = any> {
   
   protected getTooltipAttr(): string {
     return this._tooltip ? ` title="${this._tooltip}"` : '';
+  }
+
+  protected signalText(expr: string): string {
+    return ` data-text="${expr.replace(/"/g, '&quot;')}"`;
+  }
+
+  protected signalShow(expr: string): string {
+    return ` data-show="${expr.replace(/"/g, '&quot;')}"`;
+  }
+
+  protected signalBind(name: string): string {
+    return ` data-bind="${name}"`;
+  }
+
+  protected patchRegionAttr(): string {
+    return ` data-patch-id="${this.id}"`;
   }
 
   /**
@@ -170,18 +192,18 @@ export abstract class Component<P = any> {
   ): string {
     const ctx = getCurrentContext();
     const assignments = [
-      `$compId='${this.id}'`,
-      `$evtType='${eventType}'`,
+      `$${META_COMP_ID}='${this.id}'`,
+      `$${META_EVT_TYPE}='${eventType}'`,
     ];
     if (valKey) {
-      assignments.push(`$dsValKey='${valKey}'`);
+      assignments.push(`$${META_DS_VAL_KEY}='${valKey}'`);
     }
     for (const [key, value] of Object.entries(signals)) {
       const escaped = String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       assignments.push(`$${key}='${escaped}'`);
     }
     if (ctx) {
-      assignments.push(`$ctxId='${ctx.id}'`);
+      assignments.push(`$${META_CTX_ID}='${ctx.id}'`);
     }
     return `${assignments.join('; ')}; @post('/badui/events')`;
   }
@@ -198,15 +220,15 @@ export abstract class Component<P = any> {
    */
   protected getDataStarSignals(eventType: string, valKey?: string): string {
     const ctx = getCurrentContext();
-    const signals: Record<string, any> = {
-      compId: this.id,
-      evtType: eventType,
+    const signals: Record<string, string> = {
+      [META_COMP_ID]: this.id,
+      [META_EVT_TYPE]: eventType,
     };
     if (valKey) {
-      signals.dsValKey = valKey;
+      signals[META_DS_VAL_KEY] = valKey;
     }
     if (ctx) {
-      signals.ctxId = ctx.id;
+      signals[META_CTX_ID] = ctx.id;
     }
     // Escape single quotes for HTML attribute safety
     return JSON.stringify(signals).replace(/'/g, "&#39;");

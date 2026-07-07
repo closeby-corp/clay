@@ -28,7 +28,7 @@ export class Stat extends Component<StatProps> {
       </div>
     `).join('');
 
-    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}>${items}</div>`;
+    return `<div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${items}</div>`;
   }
 }
 

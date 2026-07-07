@@ -22,7 +22,7 @@ export class Swap extends Component<SwapProps> {
     const activeClass = this.props.active ? 'swap-active' : '';
 
     return `
-      <label id="${this.id}" class="${classes} ${activeClass}"${this.getExtraStyles()}>
+      <label id="${this.id}" class="${classes} ${activeClass}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         <input type="checkbox" ${this.props.active ? 'checked' : ''} />
         <div class="swap-on">${this.props.on || this.renderChildren()}</div>
         <div class="swap-off">${this.props.off || ''}</div>

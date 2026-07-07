@@ -13,7 +13,7 @@ function fixture(name: string): { input: string; expected: string } {
 }
 
 function normalize(code: string): string {
-  return code.replace(/\r\n/g, '\n').trim();
+  return code.replace(/\r\n/g, '\n').replace(/\u2192/g, '\\u2192').trim();
 }
 
 describe('transformSource', () => {
@@ -40,6 +40,16 @@ describe('transformSource', () => {
   test('auto-binds reactive template literals in label/button', () => {
     const { input, expected } = fixture('template-bind');
     expect(normalize(transformSource(input, 'template-bind.ts'))).toBe(normalize(expected));
+  });
+
+  test('falls back to getter when template mixes reactive and local const', () => {
+    const { input, expected } = fixture('mixed-bind');
+    expect(normalize(transformSource(input, 'mixed-bind.ts'))).toBe(normalize(expected));
+  });
+
+  test('auto-binds GlobalState template literals to signal keys', () => {
+    const { input, expected } = fixture('global-bind');
+    expect(normalize(transformSource(input, 'global-bind.ts'))).toBe(normalize(expected));
   });
 
   test('desugars += and ++ before reactive rewrite', () => {

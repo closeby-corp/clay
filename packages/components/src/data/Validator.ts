@@ -12,7 +12,7 @@ export class Validator extends Component<ValidatorProps> {
     const classes = ['validator', this.props.className || '', this.getExtraClasses().trim()].filter(Boolean).join(' ');
 
     return `
-      <div id="${this.id}" class="${classes}"${this.getExtraStyles()}>
+      <div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>
         ${this.renderChildren()}
         ${this.props.hint ? `<p class="validator-hint">${this.props.hint}</p>` : ''}
         ${this.props.error ? `<p class="text-error text-sm">${this.props.error}</p>` : ''}

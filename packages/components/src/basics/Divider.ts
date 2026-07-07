@@ -18,7 +18,7 @@ export class Divider extends Component<DividerProps> {
     ].filter(Boolean).join(' ');
 
     const content = this.props.text || this.renderChildren();
-    return `<div id="${this.id}" class="${classes}"${this.getExtraStyles()}>${content}</div>`;
+    return `<div id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${content}</div>`;
   }
 }
 

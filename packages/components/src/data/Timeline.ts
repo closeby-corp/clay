@@ -28,7 +28,7 @@ export class Timeline extends Component<TimelineProps> {
       `;
     }).join('');
 
-    return `<ul id="${this.id}" class="${classes}"${this.getExtraStyles()}>${items}</ul>`;
+    return `<ul id="${this.id}" class="${classes}"${this.patchRegionAttr()}${this.getExtraStyles()}>${items}</ul>`;
   }
 }
 
