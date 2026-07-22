@@ -36,14 +36,16 @@ describe("counter integration", () => {
     const signals = JSON.parse(signalsMatch![1]!.replace(/&#39;/g, "'"));
     expect(signals.count).toBe(0);
 
+    // compId is in the initial HTML (pre-rendered content included in GET response)
     const compIdMatch = html.match(/\$compId='([^']+)'/);
     expect(compIdMatch).toBeTruthy();
+    const compId = compIdMatch![1];
 
     const res = await fetch(`http://localhost:${port}/badui/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        compId: compIdMatch![1],
+        compId: compId,
         evtType: "click",
         ctxId: signals.ctxId,
         count: 0,

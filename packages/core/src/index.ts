@@ -11,6 +11,9 @@ export * from './context';
 export * from './signals';
 export * from './background';
 export * from './page-state';
+export * from './patch-bus';
+export * from './jsx-runtime';
+export { renderToString } from './jsx-render';
 
 import { getCurrentContext } from './context';
 import { readReactive } from './reactive';

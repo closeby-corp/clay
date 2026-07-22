@@ -3,3 +3,4 @@ export * from './template';
 export * from './patch-response';
 export * from './datastar';
 export * from './signal-stream';
+export * from './in-memory-patch-bus';

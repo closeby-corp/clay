@@ -1,4 +1,4 @@
-import { Component, type EventHandler } from '@badui/core';
+import { Component, type EventHandler, renderToString, jsx, type VNode } from '@badui/core';
 
 export type ButtonColor = 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error' | 'ghost' | 'link' | 'neutral';
 export type ButtonSize = 'lg' | 'md' | 'sm' | 'xs';
@@ -8,7 +8,6 @@ export type ButtonText = string | (() => string);
 
 export interface ButtonProps {
   text?: ButtonText;
-  /** Datastar expression for reactive button label */
   textExpr?: string;
   color?: ButtonColor;
   size?: ButtonSize;
@@ -30,45 +29,44 @@ export class Button extends Component<ButtonProps> {
   }
 
   render(): string {
-    const classes = this.generateClasses() + this.getExtraClasses();
-    const disabled = this.props.disabled || this.props.loading ? 'disabled' : '';
-    const type = this.props.type || 'button';
-
     const clickAttr = this.hasEvents()
-      ? ` data-on:click="${this.getDataStarPostAction('click')}"`
-      : '';
+      ? this.getDataStarPostAction('click')
+      : undefined;
 
-    let labelContent: string;
+    const classes = this.generateClasses() + this.getExtraClasses();
+    const style = Object.keys(this._styles).length > 0 ? this._styles as Record<string, string> : undefined;
+
+    const children: (VNode | string | false | null | undefined)[] = [];
+    if (this.props.loading) children.push(jsx('span', { class: 'loading loading-spinner' }));
+    if (this.props.icon) children.push(jsx('span', { class: this.getIconClasses() }, this.props.icon));
     if (this.props.textExpr) {
-      labelContent = `<span${this.signalText(this.props.textExpr)}></span>`;
+      children.push(jsx('span', { 'data-text': this.props.textExpr }));
     } else if (typeof this.props.text === 'function') {
-      labelContent = this.props.text();
+      children.push(this.props.text());
     } else {
-      labelContent = this.props.text || '';
+      children.push(this.props.text || '');
     }
 
-    return `<button id="${this.id}" type="${type}" class="${classes}" ${disabled}${clickAttr}${this.getExtraStyles()}${this.getTooltipAttr()}>${this.props.loading ? '<span class="loading loading-spinner"></span>' : ''}${this.props.icon ? `<span class="${this.getIconClasses()}">${this.props.icon}</span>` : ''}${labelContent}</button>`;
+    return renderToString(
+      jsx('button', {
+        id: this.id,
+        type: this.props.type || 'button',
+        class: classes,
+        disabled: this.props.disabled || this.props.loading || undefined,
+        'data-on:click': clickAttr,
+        style,
+        title: this._tooltip || undefined,
+        children: children.filter(Boolean),
+      }),
+    );
   }
 
   private generateClasses(): string {
     const parts = ['btn'];
-
-    if (this.props.color) {
-      parts.push(`btn-${this.props.color}`);
-    }
-
-    if (this.props.size && this.props.size !== 'md') {
-      parts.push(`btn-${this.props.size}`);
-    }
-
-    if (this.props.variant) {
-      parts.push(`btn-${this.props.variant}`);
-    }
-
-    if (this.props.fullWidth) {
-      parts.push('w-full');
-    }
-
+    if (this.props.color) parts.push(`btn-${this.props.color}`);
+    if (this.props.size && this.props.size !== 'md') parts.push(`btn-${this.props.size}`);
+    if (this.props.variant) parts.push(`btn-${this.props.variant}`);
+    if (this.props.fullWidth) parts.push('w-full');
     return parts.join(' ');
   }
 

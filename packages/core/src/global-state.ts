@@ -2,7 +2,6 @@ import { State } from './state';
 import { createReactiveState, type ReactiveState } from './reactive';
 import type { RenderContext } from './context';
 import { getCurrentContext } from './context';
-import { PAGE_PREFIX } from './signals';
 
 export interface GlobalStateEntry<T> {
   state: State<T>;
@@ -46,7 +45,7 @@ export class GlobalState {
     const ctx = getCurrentContext();
     if (ctx) {
       entry.subscribers.add(ctx);
-      ctx.setNamedState(`${PAGE_PREFIX}${key}`, state);
+      ctx.setNamedState(key, state);
     }
 
     return createReactiveState(state);

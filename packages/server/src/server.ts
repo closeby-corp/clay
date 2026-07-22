@@ -1,4 +1,5 @@
 import type { Server } from "bun";
+import type { PatchBus, StreamWriter } from "@badui/core";
 import {
   pageRegistry,
   eventRegistry,
@@ -8,28 +9,30 @@ import {
   META_DS_VAL_KEY,
   setGlobalStreamPatcher,
 } from "@badui/core";
+import { ServerSentEventGenerator } from "@starfederation/datastar-sdk/web";
 import { PageTemplate, type PageTemplateOptions } from "./template";
 import { readBadUISignals, BadRequestError } from "./datastar";
 import { patchResponse } from "./patch-response";
-import { createStreamResponse, signalStreamRegistry } from "./signal-stream";
+import { defaultInMemoryPatchBus } from "./signal-stream";
 
 export interface BadUIServerConfig {
   port?: number;
   title?: string;
   theme?: PageTemplateOptions['theme'];
+  patchBus?: PatchBus;
 }
 
 const clientContexts = new Map<string, RenderContext>();
 const CONTEXT_TTL_MS = 30 * 60 * 1000;
 const contextExpiry = new Map<string, ReturnType<typeof setTimeout>>();
 
-function touchContext(ctxId: string): void {
+function touchContext(ctxId: string, bus: PatchBus): void {
   const existing = contextExpiry.get(ctxId);
   if (existing) clearTimeout(existing);
   contextExpiry.set(
     ctxId,
     setTimeout(() => {
-      signalStreamRegistry.close(ctxId);
+      bus.close(ctxId);
       clientContexts.get(ctxId)?.destroy();
       clientContexts.delete(ctxId);
       contextExpiry.delete(ctxId);
@@ -37,26 +40,28 @@ function touchContext(ctxId: string): void {
   );
 }
 
-function wireContextStream(context: RenderContext): void {
+function wireContextStream(context: RenderContext, bus: PatchBus): void {
   context.setStreamSender((patch) => {
-    signalStreamRegistry.patch(context.id, patch);
+    bus.publish(context.id, patch);
   });
 }
-
-setGlobalStreamPatcher((ctxId, patch) => {
-  signalStreamRegistry.patch(ctxId, patch);
-});
 
 export class BadUIServer {
   private server: Server | null = null;
   private port: number;
   private template: PageTemplate;
+  private patchBus: PatchBus;
 
   constructor(config: BadUIServerConfig = {}) {
     this.port = config.port || 3000;
+    this.patchBus = config.patchBus ?? defaultInMemoryPatchBus;
     this.template = new PageTemplate({
       title: config.title || 'BadUI App',
       theme: config.theme || 'nord'
+    });
+
+    setGlobalStreamPatcher((ctxId, patch) => {
+      this.patchBus.publish(ctxId, patch);
     });
   }
 
@@ -72,8 +77,8 @@ export class BadUIServer {
 
   stop() {
     if (this.server) {
-      for (const ctxId of signalStreamRegistry.getActiveIds()) {
-        signalStreamRegistry.close(ctxId);
+      for (const ctxId of this.patchBus.getActiveIds()) {
+        this.patchBus.close(ctxId);
       }
       for (const ctx of clientContexts.values()) {
         ctx.destroy();
@@ -95,16 +100,16 @@ export class BadUIServer {
   private getOrCreateContext(contextId?: string | null): RenderContext {
     if (contextId && clientContexts.has(contextId)) {
       const ctx = clientContexts.get(contextId)!;
-      touchContext(contextId);
+      touchContext(contextId, this.patchBus);
       return ctx;
     }
     const newId = contextId || crypto.randomUUID();
     const context = new RenderContext(newId, {
       send: () => {},
     });
-    wireContextStream(context);
+    wireContextStream(context, this.patchBus);
     clientContexts.set(newId, context);
-    touchContext(newId);
+    touchContext(newId, this.patchBus);
     return context;
   }
 
@@ -112,7 +117,7 @@ export class BadUIServer {
     const url = new URL(req.url);
 
     if (req.method === "GET" && url.pathname === "/badui/stream") {
-      return this.handleStream(req, url);
+      return this.handleStream(url);
     }
 
     if (req.method === "POST" && url.pathname === "/badui/events") {
@@ -139,16 +144,12 @@ export class BadUIServer {
     if (createPage) {
       const context = this.getOrCreateContext();
       this.initializePage(context, url.pathname);
-
-      const page = context.getPage();
-      const html = page ? runWithContext(context, () => {
-        context.beginRender();
-        return page.render();
-      }) : '';
-
       const initialSignals = context.exportInitialSignals();
 
-      return new Response(this.template.render(html, context.id, initialSignals), {
+      // Include pre-rendered content in initial response (no spinner).
+      // SSE stream is used for subsequent reactive updates.
+      const content = context._initialHtml || '';
+      return new Response(this.template.render(content, context.id, initialSignals), {
         headers: { "Content-Type": "text/html" },
       });
     }
@@ -156,16 +157,48 @@ export class BadUIServer {
     return new Response("Not Found", { status: 404 });
   }
 
-  private handleStream(_req: Request, url: URL): Response {
+  private handleStream(url: URL): Response {
     const ctxId = url.searchParams.get("ctxId");
     if (!ctxId || !clientContexts.has(ctxId)) {
       return new Response("Unknown context", { status: 404 });
     }
-    touchContext(ctxId);
-    return createStreamResponse(ctxId, () => {
-      clientContexts.get(ctxId)?.destroy();
-      clientContexts.delete(ctxId);
-      contextExpiry.delete(ctxId);
+    touchContext(ctxId, this.patchBus);
+
+    const abort = new AbortController();
+
+    return ServerSentEventGenerator.stream((writer) => {
+      this.patchBus.subscribe(ctxId, writer as StreamWriter, abort);
+
+      const context = clientContexts.get(ctxId);
+      if (context) {
+        if (context._initialHtml) {
+          (writer as StreamWriter).patchElements(
+            `<div id="app" class="w-full">${context._initialHtml}</div>`,
+            { selector: '#app', useViewTransition: true },
+          );
+          context._initialHtml = null;
+        }
+        const signals = context.exportSignals();
+        if (Object.keys(signals).length > 0) {
+          (writer as StreamWriter).patchSignals(JSON.stringify(signals));
+        }
+      }
+
+      const heartbeat = setInterval(() => {
+        try {
+          (writer as StreamWriter).keepalive();
+        } catch {
+          clearInterval(heartbeat);
+        }
+      }, 15000);
+
+      abort.signal.addEventListener('abort', () => {
+        clearInterval(heartbeat);
+        this.patchBus.unsubscribe(ctxId);
+        clientContexts.get(ctxId)?.destroy();
+        clientContexts.delete(ctxId);
+        contextExpiry.delete(ctxId);
+      });
     });
   }
 
@@ -176,10 +209,19 @@ export class BadUIServer {
     context.beginRender();
     runWithContext(context, () => {
       const page = createPage();
-      context.setPage(page, () => {
+      const renderFn = () => {
         context.beginRender();
         return runWithContext(context, () => page.render());
-      });
+      };
+      context.setPage(page, renderFn);
+
+      try {
+        const html = renderFn();
+        context._initialHtml = html;
+      } catch (err) {
+        console.error(`[BadUI] Error rendering page ${path}:`, err);
+        context._initialHtml = '';
+      }
     });
   }
 
@@ -214,7 +256,7 @@ export class BadUIServer {
       : (signals.value as string | undefined);
 
     if (context) {
-      touchContext(context.id);
+      touchContext(context.id, this.patchBus);
       context.suppressRerender(true);
       context.importSignals(signals);
 
@@ -224,13 +266,13 @@ export class BadUIServer {
 
       context.suppressRerender(false);
 
-      const dirty = context.getDirtyKind();
       const exported = context.exportSignals();
+      const needsElementRender = context.isElementDirty();
       context.beginRender();
 
       const patch: Parameters<typeof patchResponse>[0] = { signals: exported };
 
-      if (dirty === 'elements' || dirty === 'both') {
+      if (needsElementRender) {
         const page = context.getPage();
         const renderFn = context.getRenderFn();
         if (page && renderFn) {

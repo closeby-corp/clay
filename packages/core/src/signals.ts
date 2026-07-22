@@ -1,5 +1,6 @@
 import type { RenderContext } from './context';
 import { State } from './state';
+import { getCurrentContext } from './context';
 
 /** Event metadata signals — must NOT use `_` prefix (Datastar excludes those from requests). */
 export const META_COMP_ID = 'compId';
@@ -14,9 +15,7 @@ export const META_SIGNALS = new Set([
   META_DS_VAL_KEY,
 ]);
 
-/** Page state keys are stored with this prefix in RenderContext.namedStates. */
-export const PAGE_PREFIX = '__page:';
-
+/** @deprecated Use `_elementDirty: boolean` on RenderContext instead. */
 export type DirtyKind = 'none' | 'signals' | 'elements' | 'both';
 
 export function isMetaKey(key: string): boolean {
@@ -63,20 +62,10 @@ export function extractMetaSignalsLegacy(signals: Record<string, unknown>): {
   };
 }
 
-function pageKeyToSignal(key: string): string {
-  return key.startsWith(PAGE_PREFIX) ? key.slice(PAGE_PREFIX.length) : key;
-}
-
-function signalToPageKey(signal: string): string {
-  return `${PAGE_PREFIX}${signal}`;
-}
-
 export function serializeSignals(namedStates: Map<string, State<unknown>>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, state] of namedStates) {
-    if (key.startsWith(PAGE_PREFIX)) {
-      result[pageKeyToSignal(key)] = state.value;
-    }
+    result[key] = state.value;
   }
   return result;
 }
@@ -87,13 +76,12 @@ export function applySignalsToContext(
 ): void {
   const pageSignals = stripMetaSignals(signals);
 
-  for (const [signal, value] of Object.entries(pageSignals)) {
-    const pageKey = signalToPageKey(signal);
-    const existing = ctx.getNamedState(pageKey);
+  for (const [key, value] of Object.entries(pageSignals)) {
+    const existing = ctx.getNamedState(key);
     if (existing) {
       existing.value = value;
     } else {
-      ctx.setNamedState(pageKey, new State(value));
+      ctx.setNamedState(key, new State(value));
     }
   }
 
@@ -102,4 +90,49 @@ export function applySignalsToContext(
 
 export function collectSignalsFromContext(ctx: RenderContext): Record<string, unknown> {
   return serializeSignals(ctx.getNamedStatesMap());
+}
+
+/**
+ * Typed signal helpers for pages.
+ *
+ * ```ts
+ * const s = defineSignals<{ count: number; name: string }>();
+ * const count = s.state('count', 0);  // State<number> ✓
+ * const name = s.state('name', '');   // State<string> ✓
+ * // s.state('counts', 0);            // Type error ✨
+ * ```
+ */
+export function defineSignals<T extends Record<string, unknown>>() {
+  const ctx = getCurrentContext();
+
+  return {
+    state<K extends keyof T & string>(
+      key: K,
+      initialValue: T[K],
+    ): State<T[K]> {
+      if (ctx) {
+        return ctx.getOrCreateState(key, initialValue) as State<T[K]>;
+      }
+      return new State<T[K]>(initialValue);
+    },
+
+    get<K extends keyof T & string>(key: K): T[K] | undefined {
+      if (ctx) {
+        const state = ctx.getNamedState(key);
+        return state?.value as T[K] | undefined;
+      }
+      return undefined;
+    },
+
+    set<K extends keyof T & string>(key: K, value: T[K]): void {
+      if (ctx) {
+        const state = ctx.getNamedState(key);
+        if (state) {
+          state.value = value;
+        } else {
+          ctx.setNamedState(key, new State(value));
+        }
+      }
+    },
+  };
 }

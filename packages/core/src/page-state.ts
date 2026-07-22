@@ -2,8 +2,6 @@ import type { RenderContext } from './context';
 import { State } from './state';
 import { readStateValue, writeStateValue } from './reactive';
 
-const PAGE_PREFIX = '__page:';
-
 export interface PageState {
   /** Set initial values only for keys that do not exist yet (safe to call every render). */
   defaults(values: Record<string, unknown>): void;
@@ -23,8 +21,6 @@ function createStateStore(ctx: RenderContext | null): StateStore {
   const track = (state: State<unknown>) => {
     ctx?.trackState(state);
   };
-
-  const keyFor = (prop: string) => `${PAGE_PREFIX}${prop}`;
 
   return {
     has(key) {
@@ -51,9 +47,8 @@ function createStateStore(ctx: RenderContext | null): StateStore {
     },
     defaultProps(values) {
       for (const [prop, value] of Object.entries(values)) {
-        const key = keyFor(prop);
-        if (!this.has(key)) {
-          this.setProp(key, value);
+        if (!this.has(prop)) {
+          this.setProp(prop, value);
         }
       }
     },
@@ -73,7 +68,7 @@ export function createPageState(ctx: RenderContext | null): PageState {
         return undefined;
       }
 
-      const backing = store.getBacking(`${PAGE_PREFIX}${prop}`);
+      const backing = store.getBacking(prop);
       if (!backing) {
         return undefined;
       }
@@ -86,7 +81,7 @@ export function createPageState(ctx: RenderContext | null): PageState {
         return false;
       }
 
-      store.setProp(`${PAGE_PREFIX}${prop}`, value);
+      store.setProp(prop, value);
       return true;
     },
   });

@@ -5,7 +5,6 @@ import {
   applySignalsToContext,
   collectSignalsFromContext,
   serializeSignals,
-  type DirtyKind,
 } from './signals';
 
 export interface SignalPatch {
@@ -36,7 +35,9 @@ export class RenderContext {
 
   private pageStateProxy: PageState | null = null;
   private stateIndex = 0;
-  private dirtyKind: DirtyKind = 'none';
+  private _elementDirty = false;
+  /** Pre-rendered inner app HTML (without #app wrapper). Pushed via SSE or included in initial response. */
+  _initialHtml: string | null = null;
 
   private componentIds: Map<string, string> = new Map();
   private typeCounters: Map<string, number> = new Map();
@@ -78,21 +79,11 @@ export class RenderContext {
   beginRender(): void {
     this.stateIndex = 0;
     this.typeCounters.clear();
-    this.dirtyKind = 'none';
+    this._elementDirty = false;
   }
 
-  getDirtyKind(): DirtyKind {
-    return this.dirtyKind;
-  }
-
-  markDirty(kind: 'signals' | 'elements'): void {
-    if (kind === 'elements') {
-      this.dirtyKind = this.dirtyKind === 'signals' ? 'both' : kind;
-    } else if (this.dirtyKind === 'none') {
-      this.dirtyKind = 'signals';
-    } else if (this.dirtyKind === 'elements') {
-      this.dirtyKind = 'both';
-    }
+  isElementDirty(): boolean {
+    return this._elementDirty;
   }
 
   registerPatchRegion(regionId: string, selector?: string): void {
@@ -234,12 +225,21 @@ export class RenderContext {
   private scheduleUpdate(): void {
     if (this.updateScheduled || this._suppressRerender) return;
     this.updateScheduled = true;
-    this.markDirty('signals');
 
     queueMicrotask(() => {
       this.updateScheduled = false;
       if (this._suppressRerender || !this.streamSender) return;
-      this.streamSender({ signals: this.exportSignals() });
+      const patch: SignalPatch = { signals: this.exportSignals() };
+      if (this._elementDirty) {
+        const renderFn = this.renderFn;
+        if (renderFn) {
+          patch.elements = `<div id="app" class="w-full">${renderFn()}</div>`;
+          patch.selector = '#app';
+          patch.useViewTransition = true;
+        }
+        this._elementDirty = false;
+      }
+      this.streamSender(patch);
     });
   }
 
@@ -354,12 +354,12 @@ export class RenderContext {
   }
 
   requestRerender(): void {
-    this.markDirty('elements');
+    this._elementDirty = true;
     this.scheduleUpdate();
   }
 
   markStructuralDirty(): void {
-    this.markDirty('elements');
+    this._elementDirty = true;
   }
 
   destroy(): void {

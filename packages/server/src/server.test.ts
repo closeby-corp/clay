@@ -29,7 +29,7 @@ describe("BadUIServer", () => {
     expect(response.status).toBe(404);
   });
 
-  test("should render registered page with initial signals", async () => {
+  test("should return page with pre-rendered content and initial signals", async () => {
     @page("/hello")
     class HelloPage extends Component {
       render() {
@@ -43,6 +43,7 @@ describe("BadUIServer", () => {
     expect(text).toContain("<h1>Hello World</h1>");
     expect(text).toContain("ctxId");
     expect(text).toContain("badui-stream");
+    expect(text).toContain('data-signals');
   });
 
   test("should respond to POST /badui/events with SSE patch", async () => {
@@ -65,6 +66,8 @@ describe("BadUIServer", () => {
     const signals = JSON.parse(signalsMatch![1]!.replace(/&#39;/g, "'"));
     const ctxId = signals.ctxId;
 
+    // compId is now in the initial HTML (not just SSE), since we include
+    // pre-rendered content in the GET response
     const compIdMatch = pageHtml.match(/\$compId='([^']+)'/);
     expect(compIdMatch).toBeTruthy();
     const compId = compIdMatch![1];

@@ -12,6 +12,31 @@ function escapeJsonForAttr(obj: Record<string, unknown>): string {
   return JSON.stringify(obj).replace(/'/g, '&#39;');
 }
 
+function buildHead(title: string, theme: string): string {
+  return `<!DOCTYPE html>
+<html data-theme="${theme}" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"></script>
+  <style>
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid oklch(var(--p));
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-base-100">`;
+}
+
+function buildFoot(): string {
+  return `<script>${DATATABLE_CLIENT_SCRIPT}</script></body></html>`;
+}
+
 export function generatePageHTML(options: PageTemplateOptions = {}): string {
   const {
     title = 'BadUI App',
@@ -34,37 +59,47 @@ export function generatePageHTML(options: PageTemplateOptions = {}): string {
     ? `<div id="badui-stream" class="hidden" data-on-load="@get('/badui/stream?ctxId=${contextId}')"></div>`
     : '';
 
-  return `<!DOCTYPE html>
-<html data-theme="${theme}" lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-  
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  
-  <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"></script>
-  
-  <style>
-    input:focus, textarea:focus, select:focus {
-      outline: 2px solid oklch(var(--p));
-      outline-offset: 2px;
-    }
-  </style>
-</head>
-<body class="min-h-screen bg-base-100">
+  return `${buildHead(title, theme)}
   ${streamConnect}
   <div id="app" class="w-full"${signalsAttr}>
     ${content}
   </div>
-  
-  <script>
-    ${DATATABLE_CLIENT_SCRIPT}
-  </script>
-</body>
-</html>`;
+  ${buildFoot()}`;
+}
+
+/**
+ * Render only the HTML shell — no page content, just a loading placeholder.
+ * The actual content is pushed via SSE when the stream connects.
+ */
+export function generateShellHTML(options: PageTemplateOptions = {}): string {
+  const {
+    title = 'BadUI App',
+    theme = 'light',
+    contextId = null,
+    initialSignals = {},
+  } = options;
+
+  const signals: Record<string, unknown> = { ...initialSignals };
+  if (contextId && !signals.ctxId) {
+    signals.ctxId = contextId;
+  }
+
+  const signalsAttr = Object.keys(signals).length > 0
+    ? ` data-signals='${escapeJsonForAttr(signals)}'`
+    : '';
+
+  const streamConnect = contextId
+    ? `<div id="badui-stream" class="hidden" data-on-load="@get('/badui/stream?ctxId=${contextId}')"></div>`
+    : '';
+
+  const loadingHtml = `<div class="flex items-center justify-center min-h-[60vh]"><span class="loading loading-spinner loading-lg text-primary"></span></div>`;
+
+  return `${buildHead(title, theme)}
+  ${streamConnect}
+  <div id="app" class="w-full"${signalsAttr}>
+    ${loadingHtml}
+  </div>
+  ${buildFoot()}`;
 }
 
 export class PageTemplate {
@@ -82,6 +117,17 @@ export class PageTemplate {
     return generatePageHTML({
       ...this.options,
       content,
+      contextId,
+      initialSignals,
+    });
+  }
+
+  shell(
+    contextId?: string | null,
+    initialSignals?: Record<string, unknown>,
+  ): string {
+    return generateShellHTML({
+      ...this.options,
       contextId,
       initialSignals,
     });
