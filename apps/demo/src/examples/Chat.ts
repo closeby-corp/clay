@@ -1,5 +1,6 @@
 import { GlobalState } from '@badui/core';
 import { ui } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 interface ChatMessage {
   id: string;
@@ -70,5 +71,3 @@ ui.page('/examples/chat', () => {
   }, { centered: true, width: 'xl' });
   });
 });
-import { APP_SHELL } from '../nav';
-

@@ -16,6 +16,8 @@ export type TableColumn = {
 export type DataTableAction = {
   id: string;
   label: string;
+  /** Lucide icon name (`Pencil`, `trash-2`, …). */
+  icon?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 };
 
@@ -336,7 +338,7 @@ export class DataTableElement extends Element {
       columnFilterable,
       columnToggle,
       exportable,
-      actions: actions.map(({ id, label, variant }) => ({ id, label, variant })),
+      actions: actions.map(({ id, label, icon, variant }) => ({ id, label, icon, variant })),
       filter: '',
       columnFilters: {},
       hiddenColumns: [],
@@ -554,7 +556,7 @@ export class DataTableElement extends Element {
       columnFilterable: this.columnFilterable,
       columnToggle: this.columnToggle,
       exportable: this.exportable,
-      actions: this.actions.map(({ id, label, variant }) => ({ id, label, variant })),
+      actions: this.actions.map(({ id, label, icon, variant }) => ({ id, label, icon, variant })),
       keyField: this.keyField,
     });
   }

@@ -11,4 +11,5 @@ ui.run({
   port,
   title: 'BadUI Demo',
   clientDir: fileURLToPath(new URL('../../../packages/client/dist', import.meta.url)),
+  css: fileURLToPath(new URL('./globals.css', import.meta.url)),
 });

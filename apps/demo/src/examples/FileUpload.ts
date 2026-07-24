@@ -1,4 +1,5 @@
 import { ui } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 ui.page('/examples/upload', () => {
   ui.app({ ...APP_SHELL }, () => {
@@ -42,5 +43,3 @@ ui.page('/examples/upload', () => {
   }, { centered: true, width: 'md' });
   });
 });
-import { APP_SHELL } from '../nav';
-

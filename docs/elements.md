@@ -23,9 +23,10 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `container` | `container` | Max-width wrapper |
 | `hero` | `hero` | Centered hero |
 | `card` | `card` | ShadCN `Card` |
+| `app` | `app` | Sidebar + centered main (SPA shell) |
 | `dialog` | `dialog` | Modal overlay (server-owned `open`) |
 | `refreshable` | `refreshable` | Fragment-like wrapper (`contents`) |
-| *(internal)* | `root` | Page root padding |
+| *(internal)* | `root` | Page root (`min-h-screen`) |
 
 ## Events exposed to the client
 

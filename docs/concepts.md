@@ -138,6 +138,10 @@ ui.column(() => {
 
 Children created inside the callback become children of that layout element.
 
+### App shell (`ui.app`)
+
+For multi-page demos, wrap page content in `ui.app({ title, nav }, fn)`. The client renders a left sidebar and puts children in the center main pane. This is **not** a persistent client shell — on `navigate` / link click the session remounts and the shell rebuilds with the correct active nav item.
+
 ## Notifications and navigation
 
 ```typescript

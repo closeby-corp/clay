@@ -73,10 +73,13 @@ ui.run({
   port: 4000,
   title: 'My App',
   clientDir: fileURLToPath(new URL('../packages/client/dist', import.meta.url)),
+  css: fileURLToPath(new URL('./globals.css', import.meta.url)), // optional theme overrides
 });
 ```
 
 Point `clientDir` at a built `@badui/client` dist (or the monorepo’s `packages/client/dist`).
+
+Use `css` to inject your own `globals.css` after the built client styles — override shadcn-style tokens such as `--primary`, `--background`, and `--sidebar` (and optional `.dark`) without rebuilding the client. Runtime CSS cannot add new Tailwind utilities; use those variables or plain CSS.
 
 ## Project layout (monorepo)
 

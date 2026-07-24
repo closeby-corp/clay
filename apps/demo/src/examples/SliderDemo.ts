@@ -1,5 +1,6 @@
 import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 ui.page('/examples/slider-demo', () => {
   ui.app({ ...APP_SHELL }, () => {
@@ -78,5 +79,3 @@ ui.page('/examples/slider-demo', () => {
   }, { centered: true, width: 'lg' });
   });
 });
-import { APP_SHELL } from '../nav';
-

@@ -1,5 +1,6 @@
 import { reactive } from '@badui/core';
 import { ui } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 interface Todo {
   id: string;
@@ -104,5 +105,3 @@ ui.page('/examples/todo', () => {
   }, { centered: true, width: 'lg' });
   });
 });
-import { APP_SHELL } from '../nav';
-

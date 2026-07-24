@@ -1,5 +1,6 @@
 import { ui } from '@badui/ui';
 import type { DataTableElement } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 type Task = {
   id: number;
@@ -73,9 +74,9 @@ ui.page('/examples/datatable', () => {
         { key: 'owner', header: 'Owner' },
       ],
       actions: [
-        { id: 'edit', label: 'Rename' },
-        { id: 'status', label: 'Status' },
-        { id: 'delete', label: 'Delete', variant: 'destructive' },
+        { id: 'edit', label: 'Rename', icon: 'pencil' },
+        { id: 'status', label: 'Status', icon: 'refresh-cw' },
+        { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
       ],
       onAction: async (actionId, row) => {
         if (actionId === 'delete') {
@@ -156,5 +157,3 @@ ui.page('/examples/datatable', () => {
   }, { gap: 3 });
   });
 });
-import { APP_SHELL } from '../nav';
-

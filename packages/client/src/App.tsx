@@ -34,7 +34,7 @@ function ToastStack({
         <div
           key={toast.id}
           className={cn(
-            'pointer-events-auto flex items-start gap-3 rounded-md border px-4 py-3 text-sm shadow-lg',
+            'badui-toast-in pointer-events-auto flex items-start gap-3 rounded-md border px-4 py-3 text-sm shadow-lg',
             typeClass[toast.type],
           )}
         >

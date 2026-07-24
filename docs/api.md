@@ -32,6 +32,7 @@ ui.run({
   port: 4000,
   title: 'My App',
   clientDir: '/absolute/path/to/client/dist', // optional
+  css: './globals.css', // optional extra stylesheet(s)
 });
 ```
 
@@ -40,8 +41,11 @@ ui.run({
 | `port` | `number` | `3000` | HTTP + WS port |
 | `title` | `string` | `'BadUI'` | HTML `<title>` |
 | `clientDir` | `string` | `packages/client/dist` | Built Vite assets |
+| `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 
 Returns `BadUIServer` with `.start()` / `.stop()` (`.start()` is already called by `ui.run`).
+
+Custom CSS is linked as `/assets/custom-0.css`, … after `/assets/index.css`. Use **shadcn-style** theme variables (`--background`, `--primary`, `--sidebar`, `--radius`, …, plus optional `.dark { … }`). Runtime CSS cannot invent new Tailwind utility classes.
 
 #### `ui.refreshable(fn)`
 
@@ -201,8 +205,8 @@ const table = ui.dataTable(tasks, {
   searchPlaceholder: 'Search…',
   pageSize: 8, // 0 = no pagination
   actions: [
-    { id: 'edit', label: 'Edit' },
-    { id: 'delete', label: 'Delete', variant: 'destructive' },
+    { id: 'edit', label: 'Edit', icon: 'pencil' },
+    { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
   ],
   onAction: (actionId, row) => {
     if (actionId === 'delete') table.setRows(tasks.filter((t) => t.id !== row.id));
@@ -221,7 +225,7 @@ const table = ui.dataTable(tasks, {
 | `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
 | `exportFilename` | `string` | `'data'` | Download base name (no extension) |
 | `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
-| `actions` | `DataTableAction[]` | `[]` | Per-row buttons |
+| `actions` | `DataTableAction[]` | `[]` | Per-row actions (≤2 as buttons; more collapse into an **Actions** menu) |
 | `onAction` | `(actionId, row) => void` | | Row action handler |
 | `className` | `string` | | Extra classes |
 
@@ -257,6 +261,7 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 |--------------|------|
 | `id` | `string` |
 | `label` | `string` |
+| `icon` | Lucide name (`pencil`, `trash-2`, …) from a curated action set |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
 Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `action`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
@@ -331,6 +336,34 @@ All layout helpers accept either `(fn, props?)` or `(props, fn)`.
 | `ui.container` | Width-constrained wrapper |
 | `ui.hero` | Centered hero region |
 | `ui.card` | Card; callback receives the card element |
+| `ui.app` | SPA shell: sidebar nav + centered main content |
+
+#### `ui.app(props, fn)`
+
+Sidebar layout for multi-page apps. Wrap each `ui.page` body so every route shares the same chrome (rebuilds on navigate with the current session path for active nav).
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `title` | `string` | Brand label in the sidebar |
+| `nav` | `{ label, href, description? }[]` | Sidebar links (SPA `pushState` for `/…`) |
+| `className` | `string` | Extra classes on the shell |
+
+```typescript
+ui.page('/examples/counter', () => {
+  ui.app(
+    {
+      title: 'BadUI',
+      nav: [
+        { label: 'Home', href: '/' },
+        { label: 'Counter', href: '/examples/counter' },
+      ],
+    },
+    () => {
+      ui.label('Counter');
+    },
+  );
+});
+```
 
 Shared layout props:
 

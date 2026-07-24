@@ -1,5 +1,6 @@
 import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 ui.page('/examples/form-demo', () => {
   ui.app({ ...APP_SHELL }, () => {
@@ -118,5 +119,3 @@ ui.page('/examples/form-demo', () => {
   }, { centered: true, width: 'lg' });
   });
 });
-import { APP_SHELL } from '../nav';
-

@@ -1,4 +1,39 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  Archive,
+  Ban,
+  Check,
+  Copy,
+  Download,
+  Edit,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileText,
+  Info,
+  Link2,
+  Lock,
+  Mail,
+  Minus,
+  MoreHorizontal,
+  MoreVertical,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Settings,
+  Share2,
+  Star,
+  Trash2,
+  Unlock,
+  Upload,
+  User,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import type { ElementNode } from './protocol';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -264,8 +299,68 @@ type DataTableColumn = {
 type DataTableActionProp = {
   id: string;
   label: string;
+  icon?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 };
+
+function toPascalIconName(name: string): string {
+  return name
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+}
+
+/** Curated Lucide icons for DataTable actions (keeps the client bundle small). */
+const ACTION_ICONS: Record<string, LucideIcon> = {
+  Archive,
+  Ban,
+  Check,
+  Copy,
+  Download,
+  Edit,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileText,
+  Info,
+  Link2,
+  Lock,
+  Mail,
+  Minus,
+  MoreHorizontal,
+  MoreVertical,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Settings,
+  Share2,
+  Star,
+  Trash2,
+  Unlock,
+  Upload,
+  User,
+  X,
+};
+
+function resolveLucideIcon(name?: string): LucideIcon | null {
+  if (!name) return null;
+  return ACTION_ICONS[toPascalIconName(name)] ?? null;
+}
+
+function ActionLabel({ action, iconClassName }: { action: DataTableActionProp; iconClassName?: string }) {
+  const Icon = resolveLucideIcon(action.icon);
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {Icon ? <Icon className={cn('size-3.5 shrink-0', iconClassName)} aria-hidden /> : null}
+      <span>{action.label}</span>
+    </span>
+  );
+}
 
 function BoundDataTable({
   id,
@@ -302,8 +397,10 @@ function BoundDataTable({
   const [columnFilters, setColumnFilters] = useOptimisticValue(serverColumnFilters);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [actionsMenuKey, setActionsMenuKey] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const anyMenuOpen = columnsOpen || exportOpen || actionsMenuKey != null;
 
   useEffect(() => {
     return () => {
@@ -311,6 +408,29 @@ function BoundDataTable({
       if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!anyMenuOpen) return;
+    const closeMenus = () => {
+      setColumnsOpen(false);
+      setExportOpen(false);
+      setActionsMenuKey(null);
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.('[data-badui-menu]')) return;
+      closeMenus();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenus();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [anyMenuOpen]);
 
   const showPagination = pageSize > 0;
   const rangeStart = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -339,19 +459,20 @@ function BoundDataTable({
 
           <div className="ml-auto flex flex-wrap items-start gap-2">
             {columnToggle ? (
-              <div className="relative">
+              <div className="relative" data-badui-menu>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => {
                     setColumnsOpen((o) => !o);
                     setExportOpen(false);
+                    setActionsMenuKey(null);
                   }}
                 >
                   Columns
                 </Button>
                 {columnsOpen ? (
-                  <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border bg-card p-2 shadow-md">
+                  <div className="badui-menu-panel absolute right-0 z-20 mt-1 w-52 rounded-md border bg-card p-2 shadow-md">
                     {allColumns.map((col) => {
                       const checked = !hiddenColumns.has(col.key);
                       const onlyVisible =
@@ -383,19 +504,20 @@ function BoundDataTable({
             ) : null}
 
             {exportable ? (
-              <div className="relative">
+              <div className="relative" data-badui-menu>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => {
                     setExportOpen((o) => !o);
                     setColumnsOpen(false);
+                    setActionsMenuKey(null);
                   }}
                 >
                   Export
                 </Button>
                 {exportOpen ? (
-                  <div className="absolute right-0 z-20 mt-1 w-48 rounded-md border bg-card p-1 shadow-md">
+                  <div className="badui-menu-panel absolute right-0 z-20 mt-1 w-48 rounded-md border bg-card p-1 shadow-md">
                     {(
                       [
                         ['download', 'csv', 'Download CSV'],
@@ -520,22 +642,63 @@ function BoundDataTable({
                     })}
                     {actions.length > 0 ? (
                       <td className="px-3 py-2 text-right">
-                        <div className="flex justify-end gap-1">
-                          {actions.map((action) => (
+                        {actions.length <= 2 ? (
+                          <div className="flex justify-end gap-1">
+                            {actions.map((action) => (
+                              <Button
+                                key={action.id}
+                                size="sm"
+                                variant={action.variant ?? 'ghost'}
+                                onClick={() => {
+                                  if (hasEvent(props, 'action')) {
+                                    emit(id, 'action', { actionId: action.id, rowKey });
+                                  }
+                                }}
+                              >
+                                <ActionLabel action={action} />
+                              </Button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="relative inline-flex justify-end" data-badui-menu>
                             <Button
-                              key={action.id}
                               size="sm"
-                              variant={action.variant ?? 'ghost'}
+                              variant="ghost"
+                              aria-label="Row actions"
                               onClick={() => {
-                                if (hasEvent(props, 'action')) {
-                                  emit(id, 'action', { actionId: action.id, rowKey });
-                                }
+                                const key = String(rowKey);
+                                setActionsMenuKey((cur) => (cur === key ? null : key));
+                                setColumnsOpen(false);
+                                setExportOpen(false);
                               }}
                             >
-                              {action.label}
+                              Actions
                             </Button>
-                          ))}
-                        </div>
+                            {actionsMenuKey === String(rowKey) ? (
+                              <div className="badui-menu-panel absolute right-0 z-20 mt-1 min-w-[9rem] rounded-md border bg-card p-1 shadow-md">
+                                {actions.map((action) => (
+                                  <button
+                                    key={action.id}
+                                    type="button"
+                                    className={cn(
+                                      'block w-full rounded px-3 py-1.5 text-left text-sm hover:bg-muted/60',
+                                      action.variant === 'destructive' &&
+                                        'text-destructive hover:bg-destructive/10',
+                                    )}
+                                    onClick={() => {
+                                      setActionsMenuKey(null);
+                                      if (hasEvent(props, 'action')) {
+                                        emit(id, 'action', { actionId: action.id, rowKey });
+                                      }
+                                    }}
+                                  >
+                                    <ActionLabel action={action} />
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
                       </td>
                     ) : null}
                   </tr>
@@ -669,7 +832,7 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
       return (
         <div className={cn('flex min-h-screen w-full bg-background', className)} style={asStyle(style)}>
-          <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-border bg-muted/30 px-3 py-5 md:w-64">
+          <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground md:w-64">
             {title ? (
               <div className="mb-6 px-2 text-lg font-semibold tracking-tight">{title}</div>
             ) : null}
@@ -683,10 +846,10 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
                     go(item.href);
                   }}
                   className={cn(
-                    'rounded-md px-2.5 py-2 text-sm transition-colors',
+                    'rounded-md px-2.5 py-2 text-sm transition-colors duration-150',
                     item.active
-                      ? 'bg-background font-medium text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
+                      ? 'bg-sidebar-accent font-medium text-sidebar-primary shadow-sm ring-1 ring-sidebar-ring/30'
+                      : 'text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
                   )}
                 >
                   <div>{item.label}</div>
@@ -698,7 +861,7 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
             </nav>
           </aside>
           <main className="flex min-h-screen flex-1 justify-center overflow-y-auto px-6 py-8 md:px-10">
-            <div className="w-full max-w-5xl">{renderChildren()}</div>
+            <div className="badui-animate-in w-full max-w-5xl">{renderChildren()}</div>
           </main>
         </div>
       );

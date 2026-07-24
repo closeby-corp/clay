@@ -1,4 +1,5 @@
 import { ui } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 type Order = {
   id: number;
@@ -67,5 +68,3 @@ ui.page('/examples/dashboard', () => {
   }, { gap: 4 });
   });
 });
-import { APP_SHELL } from '../nav';
-
