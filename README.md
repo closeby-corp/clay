@@ -1,25 +1,29 @@
 # BadUI
 
-Server-driven UI for TypeScript, inspired by [NiceGUI](https://nicegui.io/). You write imperative `ui.*` on the server; a thin React + ShadCN client renders the element tree over WebSocket.
+Server-driven UI for TypeScript, inspired by [NiceGUI](https://nicegui.io/).
+
+You write imperative `ui.*` on the server. BadUI owns a per-client element tree and syncs it to a thin **React + ShadCN** client over **WebSocket**.
+
+**Full documentation:** [docs/README.md](./docs/README.md)
 
 ## Features
 
-- **NiceGUI-like API** — `ui.page`, `ui.run`, `ui.button`, `ui.label`, `ui.row`, `ui.refreshable`, `bindValue`, `bindTextFrom`, `setText`, `onClick`
-- **Server-owned element tree** — per-client session; updates are WS patches, not full-page morphs
-- **React + ShadCN client** — Radix/Tailwind components under the hood (PascalCase internals only)
+- **NiceGUI-like API** — `ui.page`, `ui.run`, `ui.button`, `ui.refreshable`, `bindValue`, `setText`, `onClick`
+- **Server-owned element tree** — per-tab sessions; incremental WS patches
+- **React + ShadCN client** — Radix/Tailwind under the hood
+- **camelCase everywhere** on the public API and wire protocol
 - **Bun monorepo** — TypeScript end-to-end
 
-## Quick Start
+## Quick start
 
 ```bash
 bun install
-bun run build:client   # Vite build → packages/client/dist
-bun run demo           # or: bun run dev  (builds client then starts)
+bun run build:client   # Vite → packages/client/dist
+bun run demo           # http://localhost:4000
 
-open http://localhost:4000/examples/counter
+# or
+bun run dev            # build client + start demo
 ```
-
-## Authoring example
 
 ```typescript
 import { ui } from '@badui/ui';
@@ -47,41 +51,50 @@ ui.page('/examples/counter', () => {
 ui.run({ port: 4000, title: 'BadUI Demo' });
 ```
 
-Todo-style patterns use `bindValue` and `ui.refreshable(...).refresh()` for structural updates.
+## Documentation
 
-## Architecture
+| Guide | Description |
+|-------|-------------|
+| [Getting started](./docs/getting-started.md) | Install, run, minimal app |
+| [Concepts](./docs/concepts.md) | Sessions, elements, refreshable, bindings |
+| [API reference](./docs/api.md) | Complete `ui.*` and Element API |
+| [Elements](./docs/elements.md) | Wire types and client mapping |
+| [WebSocket protocol](./docs/protocol.md) | Message formats |
+| [Architecture](./docs/architecture.md) | Packages and data flow |
+| [Examples](./docs/examples.md) | Demo routes and patterns |
+
+## Packages
+
+| Package | Role |
+|---------|------|
+| `@badui/ui` | NiceGUI-style `ui` facade |
+| `@badui/core` | Element tree, session, reactive, protocol |
+| `@badui/components` | Element factories |
+| `@badui/client` | React + ShadCN renderer |
+| `@badui/server` | Bun HTTP + WebSocket |
+
+## Architecture (short)
 
 ```
 App (ui.page / ui.refreshable)
   → Server element tree (per WebSocket session)
-  → WS ops: hello / mount / patch / event
-  → React client shell → ShadCN components
+  → WS: hello / mount / patch / event
+  → React client → ShadCN components
 ```
 
-| Package | Role |
-|---------|------|
-| `@badui/core` | Element tree, session, bindings, refreshable, WS protocol types |
-| `@badui/ui` | NiceGUI-style `ui` facade (`page`, `run`, `button`, `row`, …) |
-| `@badui/components` | Thin factories that create element nodes |
-| `@badui/client` | React app: WS hook + element → ShadCN renderer |
-| `@badui/server` | Bun HTTP for static client + WebSocket upgrade |
+## Scripts
 
-## WebSocket protocol (camelCase)
+| Command | Description |
+|---------|-------------|
+| `bun run build:client` | Build the React client |
+| `bun run demo` | Start the demo server |
+| `bun run dev` | Build client, then demo |
+| `bun test` | Run package tests |
 
-- **Client → server:** `{ op: "hello", path }` then `{ op: "event", id, type, value? }`
-- **Server → client:** `{ op: "mount", sessionId, tree }` and `{ op: "patch", patches }`
-- **Element JSON:** `{ id, type, props, children }` — handlers stay on the server; client gets `props.events`
+## Current gaps vs full NiceGUI
 
-## Retired
+Not in the first cut: timers / JS bridge, horizontal scaling, advanced DataTable (selection/edit/group), full control catalog, compile-time reactive `let`.
 
-The previous Datastar + DaisyUI + SSE signal-sync path is removed from the demo runtime:
+## License
 
-- No Datastar SDK, `/badui/stream`, or `/badui/events`
-- No DaisyUI CDN template
-- `@badui/compiler` (reactive `let` → Datastar signals) is no longer loaded (`bunfig.toml` preload removed)
-
-Historical experiments may still live under `iterations/`.
-
-## Gaps vs full NiceGUI
-
-Not in this first cut: timers/JS bridge, horizontal scaling, advanced DataTable (selection/edit/group), every NiceGUI control, or compile-time reactive `let`. Core model + Counter/Todo/Chat/Form demos are the target.
+Private / unpublished unless otherwise noted.
