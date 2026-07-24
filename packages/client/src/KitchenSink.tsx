@@ -23,14 +23,6 @@ import {
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Calendar } from '@/components/ui/calendar';
@@ -141,13 +133,15 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">{children}</CardContent>
-    </Card>
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5 border-b pb-4">
+        <h2 className="text-sm font-medium leading-none">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <div className="flex flex-col items-stretch gap-4 rounded-xl border bg-card p-6 shadow-sm">
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -162,25 +156,13 @@ export default function KitchenSink() {
   return (
     <TooltipProvider>
       <Toaster position="top-right" richColors closeButton />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-2">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Kitchen Sink</h1>
-          <p className="max-w-2xl text-muted-foreground">
-            Interactive showcase of the ShadCN New York catalog imported into the BadUI client.
-            Wired BadUI elements still render through the server tree; this page mounts components
-            directly for exploration.
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-2xl font-semibold tracking-tight">Kitchen Sink</h1>
+          <p className="text-sm text-muted-foreground">
+            Interactive showcase of the ShadCN New York catalog. Preview panels mirror the docs
+            component pages.
           </p>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Home</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Kitchen Sink</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
         </div>
 
         <Section title="Buttons & badges" description="Variants, sizes, and status chips.">
@@ -592,7 +574,7 @@ export default function KitchenSink() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Cards are the default section container in this kitchen sink.
+              Cards are still available when you need titled containers.
             </p>
             <Separator className="my-4" />
             <p className="text-sm">Separators divide related content without nesting more cards.</p>

@@ -35,13 +35,14 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ElementNode } from './protocol';
+import { BoundAppShell } from './AppShell';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -814,49 +815,10 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         active?: boolean;
       }>;
 
-      const go = (href: string) => {
-        if (href.startsWith('/')) {
-          window.history.pushState({}, '', href);
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        } else {
-          window.location.href = href;
-        }
-      };
-
       return (
-        <div className={cn('flex min-h-screen w-full bg-background', className)} style={asStyle(style)}>
-          <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground md:w-64">
-            {title ? (
-              <div className="mb-6 px-2 text-lg font-semibold tracking-tight">{title}</div>
-            ) : null}
-            <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
-              {nav.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go(item.href);
-                  }}
-                  className={cn(
-                    'rounded-md px-2.5 py-2 text-sm transition-colors duration-150',
-                    item.active
-                      ? 'bg-sidebar-accent font-medium text-sidebar-primary shadow-sm ring-1 ring-sidebar-ring/30'
-                      : 'text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
-                  )}
-                >
-                  <div>{item.label}</div>
-                  {item.description ? (
-                    <div className="mt-0.5 text-xs font-normal text-muted-foreground">{item.description}</div>
-                  ) : null}
-                </a>
-              ))}
-            </nav>
-          </aside>
-          <main className="flex min-h-screen flex-1 justify-center overflow-y-auto px-6 py-8 md:px-10">
-            <div className="badui-animate-in w-full max-w-5xl">{renderChildren()}</div>
-          </main>
-        </div>
+        <BoundAppShell title={title} nav={nav} className={className} style={asStyle(style)}>
+          {renderChildren()}
+        </BoundAppShell>
       );
     }
 
@@ -902,12 +864,15 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
     case 'card':
       return (
         <Card className={cn('w-full', className)} style={asStyle(style)}>
-          {props.title ? (
+          {props.title || props.description ? (
             <CardHeader>
-              <CardTitle>{String(props.title)}</CardTitle>
+              {props.title ? <CardTitle>{String(props.title)}</CardTitle> : null}
+              {props.description ? (
+                <CardDescription>{String(props.description)}</CardDescription>
+              ) : null}
             </CardHeader>
           ) : null}
-          <CardContent className={cn('flex flex-col pt-6', gapClass(props.gap))}>
+          <CardContent className={cn('flex flex-col', gapClass(props.gap))}>
             {renderChildren()}
           </CardContent>
         </Card>
@@ -1007,11 +972,11 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           {items.map((item, i) => (
             <Card key={i}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{item.title}</CardTitle>
+                <CardDescription>{item.title}</CardDescription>
+                <CardTitle className="text-2xl font-semibold tabular-nums tracking-tight">
+                  {item.value}
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{item.value}</div>
-              </CardContent>
             </Card>
           ))}
         </div>

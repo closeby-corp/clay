@@ -1,52 +1,52 @@
 import { ui } from '@badui/ui';
+import { exampleHeader } from '../chrome';
 import { APP_SHELL } from '../nav';
 
 ui.page('/examples/counter', () => {
   ui.app({ ...APP_SHELL }, () => {
-  let count = 0;
-  let history: number[] = [];
+    let count = 0;
+    let history: number[] = [];
 
-  ui.column(() => {
-    ui.label('Counter Example').classes('text-3xl font-bold');
-    const countLabel = ui.label(`Count: ${count}`).classes('text-2xl');
+    ui.column(() => {
+      exampleHeader('Counter', 'Element refs, setText, and refreshable history.');
 
-    const historyUi = ui.refreshable(() => {
-      if (history.length > 0) {
-        ui.label(`History: ${history.join(' → ')}`).classes('text-sm text-muted-foreground');
-      }
-    });
+      ui.card({ title: 'Preview', description: 'Click to update the count over WebSocket.', gap: 6 }, () => {
+        const countLabel = ui.label(String(count)).classes('text-4xl font-semibold tabular-nums tracking-tight');
 
-    ui.row(() => {
-      ui.button('-', {
-        variant: 'destructive',
-        size: 'lg',
-        onClick: () => {
-          count--;
-          history = [...history, count];
-          countLabel.setText(`Count: ${count}`);
-          historyUi.refresh();
-        },
+        const historyUi = ui.refreshable(() => {
+          ui.label(history.length ? history.join(' → ') : 'No history yet')
+            .classes('text-sm text-muted-foreground');
+        });
+
+        ui.row(() => {
+          ui.button('Decrement', {
+            variant: 'outline',
+            onClick: () => {
+              count--;
+              history = [...history, count];
+              countLabel.setText(String(count));
+              historyUi.refresh();
+            },
+          });
+          ui.button('Reset', {
+            variant: 'ghost',
+            onClick: () => {
+              count = 0;
+              history = [];
+              countLabel.setText(String(count));
+              historyUi.refresh();
+            },
+          });
+          ui.button('Increment', {
+            onClick: () => {
+              count++;
+              history = [...history, count];
+              countLabel.setText(String(count));
+              historyUi.refresh();
+            },
+          });
+        }, { gap: 2 });
       });
-      ui.button('Reset', {
-        variant: 'ghost',
-        size: 'lg',
-        onClick: () => {
-          count = 0;
-          history = [];
-          countLabel.setText(`Count: ${count}`);
-          historyUi.refresh();
-        },
-      });
-      ui.button('+', {
-        size: 'lg',
-        onClick: () => {
-          count++;
-          history = [...history, count];
-          countLabel.setText(`Count: ${count}`);
-          historyUi.refresh();
-        },
-      });
-    }, { gap: 2 });
-  }, { gap: 3 });
+    }, { gap: 6 });
   });
 });

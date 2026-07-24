@@ -291,7 +291,7 @@ export function hero(propsOrFn: LayoutProps | (() => void), fnOrProps?: (() => v
   return layout('hero', propsOrFn, fnOrProps);
 }
 
-export type CardProps = LayoutProps & { title?: string };
+export type CardProps = LayoutProps & { title?: string; description?: string };
 
 export function card(fn: (card: Element) => void, props?: CardProps): Element;
 export function card(props: CardProps, fn: (card: Element) => void): Element;
@@ -312,7 +312,8 @@ export function card(
 
   const el = new Element('card', {
     title: props.title,
-    gap: props.gap ?? 2,
+    description: props.description,
+    gap: props.gap ?? 4,
     className: props.className,
   });
   withParent(el, () => fn(el));

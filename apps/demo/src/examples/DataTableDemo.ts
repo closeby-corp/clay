@@ -1,5 +1,6 @@
 import { ui } from '@badui/ui';
 import type { DataTableElement } from '@badui/ui';
+import { exampleSection } from '../chrome';
 import { APP_SHELL } from '../nav';
 
 type Task = {
@@ -35,125 +36,128 @@ const seed: Task[] = [
 
 ui.page('/examples/datatable', () => {
   ui.app({ ...APP_SHELL }, () => {
-  let tasks = seed.map((t) => ({ ...t }));
-  let nextId = tasks.length + 1;
-  let table: DataTableElement;
+    let tasks = seed.map((t) => ({ ...t }));
+    let nextId = tasks.length + 1;
+    let table: DataTableElement;
 
-  ui.column(() => {
-    ui.label('DataTable').classes('text-3xl font-bold');
-    ui.label('Computed columns, Badge cells, confirm / prompt / choose, toasts.')
-      .classes('text-muted-foreground');
-    const statusLabel = ui.label(`Tasks: ${tasks.length}`).classes('text-muted-foreground');
-
-    table = ui.dataTable(tasks, {
-      keyField: 'id',
-      searchable: true,
-      searchPlaceholder: 'Search tasks…',
-      pageSize: 8,
-      columns: [
-        { key: 'id', header: 'ID' },
-        { key: 'title', header: 'Title' },
-        {
-          key: 'status',
-          header: 'Status',
-          value: (row) => row.status,
-          render: (row) =>
-            ui.badge(String(row.status), {
-              color:
-                row.status === 'done' ? 'green' : row.status === 'todo' ? 'slate' : 'amber',
-            }),
-        },
-        { key: 'hours', header: 'Hours', align: 'right' },
-        {
-          key: 'billable',
-          header: 'Billable',
-          align: 'right',
-          value: (row) => Number(row.hours) * 50,
-          render: (row) => `${row.hours}h -> $${Number(row.hours) * 50}`,
-        },
-        { key: 'owner', header: 'Owner' },
-      ],
-      actions: [
-        { id: 'edit', label: 'Rename', icon: 'pencil' },
-        { id: 'status', label: 'Status', icon: 'refresh-cw' },
-        { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
-      ],
-      onAction: async (actionId, row) => {
-        if (actionId === 'delete') {
-          const sure = await ui.confirm(`Delete “${row.title}”? This cannot be undone.`, {
-            title: 'Delete task?',
-            confirmLabel: 'Delete',
-            confirmVariant: 'destructive',
-          });
-          if (!sure) return;
-          tasks = tasks.filter((t) => t.id !== row.id);
-          table.setRows(tasks);
-          statusLabel.setText(`Tasks: ${tasks.length}`);
-          ui.notify('Task deleted', 'success');
-          return;
-        }
-
-        if (actionId === 'edit') {
-          const next = await ui.prompt('New title', {
-            title: 'Rename task',
-            defaultValue: String(row.title ?? ''),
-            confirmLabel: 'Save',
-          });
-          if (next == null) return;
-          tasks = tasks.map((t) => (t.id === row.id ? { ...t, title: next } : t));
-          table.setRows(tasks);
-          ui.notify('Task renamed', 'info');
-          return;
-        }
-
-        if (actionId === 'status') {
-          const status = await ui.choose('Set status', ['todo', 'in progress', 'done'], {
-            title: 'Task status',
-          });
-          if (status == null) return;
-          tasks = tasks.map((t) => (t.id === row.id ? { ...t, status } : t));
-          table.setRows(tasks);
-          ui.notify(`Status → ${status}`, 'success');
-        }
-      },
-    });
-
-    ui.button('Add task', {
-      onClick: async () => {
-        const title = await ui.prompt('Task title', {
-          title: 'New task',
-          defaultValue: `New task ${nextId}`,
-        });
-        if (title == null) return;
-        tasks = [
-          ...tasks,
-          {
-            id: nextId++,
-            title,
-            status: 'todo',
-            hours: 1,
-            owner: 'You',
+    ui.column(() => {
+      ui.row(() => {
+        ui.column(() => {
+          ui.label('DataTable').classes('text-2xl font-semibold tracking-tight');
+          ui.label('Computed columns, badge cells, confirm / prompt / choose, and toasts.')
+            .classes('text-sm text-muted-foreground');
+        }, { gap: 1 });
+        ui.button('Add task', {
+          size: 'sm',
+          onClick: async () => {
+            const title = await ui.prompt('Task title', {
+              title: 'New task',
+              defaultValue: `New task ${nextId}`,
+            });
+            if (title == null) return;
+            tasks = [
+              ...tasks,
+              {
+                id: nextId++,
+                title,
+                status: 'todo',
+                hours: 1,
+                owner: 'You',
+              },
+            ];
+            table.setRows(tasks);
+            statusLabel.setText(`${tasks.length} tasks`);
+            ui.notify('Task added', 'success');
           },
-        ];
-        table.setRows(tasks);
-        statusLabel.setText(`Tasks: ${tasks.length}`);
-        ui.notify('Task added', 'success');
-      },
-    });
+        });
+      }, { gap: 4 }).classes('items-start justify-between');
 
-    ui.label('Key / value object').classes('text-xl font-bold mt-4');
-    ui.label('Pass a plain object and the table shows Key / Value rows.')
-      .classes('text-muted-foreground');
-    ui.dataTable(
-      {
-        host: 'localhost',
-        port: 4000,
-        env: 'demo',
-        debug: true,
-        features: { search: true, actions: true },
-      },
-      { pageSize: 0, searchable: true, searchPlaceholder: 'Search config…' },
-    );
-  }, { gap: 3 });
+      const statusLabel = ui.label(`${tasks.length} tasks`).classes('text-sm text-muted-foreground');
+
+      table = ui.dataTable(tasks, {
+        keyField: 'id',
+        searchable: true,
+        searchPlaceholder: 'Search tasks…',
+        pageSize: 8,
+        columns: [
+          { key: 'id', header: 'ID' },
+          { key: 'title', header: 'Title' },
+          {
+            key: 'status',
+            header: 'Status',
+            value: (row) => row.status,
+            render: (row) =>
+              ui.badge(String(row.status), {
+                color:
+                  row.status === 'done' ? 'green' : row.status === 'todo' ? 'slate' : 'amber',
+              }),
+          },
+          { key: 'hours', header: 'Hours', align: 'right' },
+          {
+            key: 'billable',
+            header: 'Billable',
+            align: 'right',
+            value: (row) => Number(row.hours) * 50,
+            render: (row) => `${row.hours}h → $${Number(row.hours) * 50}`,
+          },
+          { key: 'owner', header: 'Owner' },
+        ],
+        actions: [
+          { id: 'edit', label: 'Rename', icon: 'pencil' },
+          { id: 'status', label: 'Status', icon: 'refresh-cw' },
+          { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
+        ],
+        onAction: async (actionId, row) => {
+          if (actionId === 'delete') {
+            const sure = await ui.confirm(`Delete “${row.title}”? This cannot be undone.`, {
+              title: 'Delete task?',
+              confirmLabel: 'Delete',
+              confirmVariant: 'destructive',
+            });
+            if (!sure) return;
+            tasks = tasks.filter((t) => t.id !== row.id);
+            table.setRows(tasks);
+            statusLabel.setText(`${tasks.length} tasks`);
+            ui.notify('Task deleted', 'success');
+            return;
+          }
+
+          if (actionId === 'edit') {
+            const next = await ui.prompt('New title', {
+              title: 'Rename task',
+              defaultValue: String(row.title ?? ''),
+              confirmLabel: 'Save',
+            });
+            if (next == null) return;
+            tasks = tasks.map((t) => (t.id === row.id ? { ...t, title: next } : t));
+            table.setRows(tasks);
+            ui.notify('Task renamed', 'info');
+            return;
+          }
+
+          if (actionId === 'status') {
+            const status = await ui.choose('Set status', ['todo', 'in progress', 'done'], {
+              title: 'Task status',
+            });
+            if (status == null) return;
+            tasks = tasks.map((t) => (t.id === row.id ? { ...t, status } : t));
+            table.setRows(tasks);
+            ui.notify(`Status → ${status}`, 'success');
+          }
+        },
+      });
+
+      exampleSection('Key / value object', 'Pass a plain object and the table shows Key / Value rows.');
+      ui.dataTable(
+        {
+          host: 'localhost',
+          port: 4000,
+          env: 'demo',
+          debug: true,
+          features: { search: true, actions: true },
+        },
+        { pageSize: 0, searchable: true, searchPlaceholder: 'Search config…' },
+      );
+    }, { gap: 6 });
   });
 });
