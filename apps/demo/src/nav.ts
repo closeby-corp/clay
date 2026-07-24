@@ -11,6 +11,7 @@ export const APP_NAV: AppNavItem[] = [
   { label: 'DataTable', href: '/examples/datatable', description: 'Sortable table' },
   { label: 'Slider Demo', href: '/examples/slider-demo', description: 'Sliders & select' },
   { label: 'Form Demo', href: '/examples/form-demo', description: 'Form controls' },
+  { label: 'Kitchen Sink', href: '/examples/kitchen-sink', description: 'ShadCN catalog' },
 ];
 
 export const APP_SHELL = { title: 'BadUI', nav: APP_NAV } as const;

@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* Scan demo authoring files so ui.classes('…') utilities are generated */
 @source "../../../apps/demo/src/**/*.ts";

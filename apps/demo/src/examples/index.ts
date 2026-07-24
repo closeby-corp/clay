@@ -8,3 +8,4 @@ import './Dashboard';
 import './DataTableDemo';
 import './SliderDemo';
 import './FormDemo';
+import './KitchenSink';

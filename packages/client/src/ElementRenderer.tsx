@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   Archive,
   Ban,
@@ -35,12 +35,46 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ElementNode } from './protocol';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+
+const KitchenSink = lazy(() => import('./KitchenSink'));
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -107,7 +141,7 @@ function BoundInput({
 
   return (
     <div className={cn('flex w-full flex-col gap-1.5', className)}>
-      {props.label ? <label className="text-sm font-medium">{String(props.label)}</label> : null}
+      {props.label ? <Label>{String(props.label)}</Label> : null}
       <Input
         type={String(props.type ?? 'text')}
         value={value}
@@ -143,9 +177,8 @@ function BoundTextarea({
 
   return (
     <div className={cn('flex w-full flex-col gap-1.5', className)}>
-      {props.label ? <label className="text-sm font-medium">{String(props.label)}</label> : null}
-      <textarea
-        className="flex min-h-[80px] w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <Textarea
         rows={Number(props.rows ?? 3)}
         value={value}
         placeholder={String(props.placeholder ?? '')}
@@ -178,27 +211,30 @@ function BoundSelect({
   const options = (props.options as Array<{ value: string; label: string }>) ?? [];
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
+  const selectValue = value === '' ? undefined : value;
 
   return (
     <div className={cn('flex w-full flex-col gap-1.5', className)}>
-      {props.label ? <label className="text-sm font-medium">{String(props.label)}</label> : null}
-      <select
-        className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        value={value}
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <Select
+        value={selectValue}
         disabled={!!props.disabled}
-        style={asStyle(style)}
-        onChange={(e) => {
-          const next = e.target.value;
+        onValueChange={(next) => {
           setValue(next);
           if (hasEvent(props, 'change')) emit(id, 'change', next);
         }}
       >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger style={asStyle(style)}>
+          <SelectValue placeholder={String(props.placeholder ?? 'Select…')} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -218,25 +254,26 @@ function BoundSlider({
 }) {
   const serverValue = Number(props.value ?? 0);
   const [value, setValue] = useOptimisticValue(serverValue);
+  const min = Number(props.min ?? 0);
+  const max = Number(props.max ?? 100);
+  const step = Number(props.step ?? 1);
 
   return (
     <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
       <div className="flex items-center justify-between text-sm">
-        {props.label ? <label className="font-medium">{String(props.label)}</label> : <span />}
+        {props.label ? <Label>{String(props.label)}</Label> : <span />}
         {props.showValue ? <span className="text-muted-foreground">{String(value)}</span> : null}
       </div>
-      <input
-        type="range"
-        min={Number(props.min ?? 0)}
-        max={Number(props.max ?? 100)}
-        step={Number(props.step ?? 1)}
-        value={value}
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[value]}
         disabled={!!props.disabled}
-        className="w-full accent-[var(--color-primary)]"
-        onChange={(e) => {
-          const next = Number(e.target.value);
-          setValue(next);
-          if (hasEvent(props, 'change')) emit(id, 'change', next);
+        onValueChange={([next]) => {
+          const n = next ?? min;
+          setValue(n);
+          if (hasEvent(props, 'change')) emit(id, 'change', n);
         }}
       />
     </div>
@@ -260,8 +297,9 @@ function BoundCheckbox({
   const [checked, setChecked] = useOptimisticValue(serverValue);
 
   return (
-    <label className={cn('flex items-center gap-2 text-sm', className)} style={asStyle(style)}>
+    <div className={cn('flex items-center gap-2 text-sm', className)} style={asStyle(style)}>
       <Checkbox
+        id={`cb-${id}`}
         checked={checked}
         disabled={!!props.disabled}
         onCheckedChange={(next) => {
@@ -271,8 +309,12 @@ function BoundCheckbox({
           if (hasEvent(props, 'input')) emit(id, 'input', value);
         }}
       />
-      {props.label ? <span>{String(props.label)}</span> : null}
-    </label>
+      {props.label ? (
+        <Label htmlFor={`cb-${id}`} className="font-normal">
+          {String(props.label)}
+        </Label>
+      ) : null}
+    </div>
   );
 }
 
@@ -400,7 +442,6 @@ function BoundDataTable({
   const [actionsMenuKey, setActionsMenuKey] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const anyMenuOpen = columnsOpen || exportOpen || actionsMenuKey != null;
 
   useEffect(() => {
     return () => {
@@ -408,29 +449,6 @@ function BoundDataTable({
       if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!anyMenuOpen) return;
-    const closeMenus = () => {
-      setColumnsOpen(false);
-      setExportOpen(false);
-      setActionsMenuKey(null);
-    };
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest?.('[data-badui-menu]')) return;
-      closeMenus();
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeMenus();
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [anyMenuOpen]);
 
   const showPagination = pageSize > 0;
   const rangeStart = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -459,113 +477,109 @@ function BoundDataTable({
 
           <div className="ml-auto flex flex-wrap items-start gap-2">
             {columnToggle ? (
-              <div className="relative" data-badui-menu>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setColumnsOpen((o) => !o);
+              <DropdownMenu
+                open={columnsOpen}
+                onOpenChange={(open) => {
+                  setColumnsOpen(open);
+                  if (open) {
                     setExportOpen(false);
                     setActionsMenuKey(null);
-                  }}
-                >
-                  Columns
-                </Button>
-                {columnsOpen ? (
-                  <div className="badui-menu-panel absolute right-0 z-20 mt-1 w-52 rounded-md border bg-card p-2 shadow-md">
-                    {allColumns.map((col) => {
-                      const checked = !hiddenColumns.has(col.key);
-                      const onlyVisible =
-                        checked && allColumns.length - hiddenColumns.size <= 1;
-                      return (
-                        <label
-                          key={col.key}
-                          className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/60"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            disabled={onlyVisible}
-                            onCheckedChange={(next) => {
-                              if (hasEvent(props, 'columnVisibility')) {
-                                emit(id, 'columnVisibility', {
-                                  key: col.key,
-                                  visible: next === true,
-                                });
-                              }
-                            }}
-                          />
-                          <span>{col.header}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
+                  }
+                }}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  {allColumns.map((col) => {
+                    const checked = !hiddenColumns.has(col.key);
+                    const onlyVisible =
+                      checked && allColumns.length - hiddenColumns.size <= 1;
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={col.key}
+                        checked={checked}
+                        disabled={onlyVisible}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={(next) => {
+                          if (hasEvent(props, 'columnVisibility')) {
+                            emit(id, 'columnVisibility', {
+                              key: col.key,
+                              visible: next === true,
+                            });
+                          }
+                        }}
+                      >
+                        {col.header}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : null}
 
             {exportable ? (
-              <div className="relative" data-badui-menu>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setExportOpen((o) => !o);
+              <DropdownMenu
+                open={exportOpen}
+                onOpenChange={(open) => {
+                  setExportOpen(open);
+                  if (open) {
                     setColumnsOpen(false);
                     setActionsMenuKey(null);
-                  }}
-                >
-                  Export
-                </Button>
-                {exportOpen ? (
-                  <div className="badui-menu-panel absolute right-0 z-20 mt-1 w-48 rounded-md border bg-card p-1 shadow-md">
-                    {(
-                      [
-                        ['download', 'csv', 'Download CSV'],
-                        ['download', 'tsv', 'Download TSV'],
-                        ['download', 'json', 'Download JSON'],
-                        ['copy', 'csv', 'Copy CSV'],
-                        ['copy', 'tsv', 'Copy TSV'],
-                        ['copy', 'json', 'Copy JSON'],
-                      ] as const
-                    ).map(([mode, format, label]) => (
-                      <button
-                        key={`${mode}-${format}`}
-                        type="button"
-                        className="block w-full rounded px-3 py-1.5 text-left text-sm hover:bg-muted/60"
-                        onClick={() => {
-                          if (hasEvent(props, 'export')) {
-                            emit(id, 'export', { format, mode });
-                          }
-                          setExportOpen(false);
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+                  }
+                }}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {(
+                    [
+                      ['download', 'csv', 'Download CSV'],
+                      ['download', 'tsv', 'Download TSV'],
+                      ['download', 'json', 'Download JSON'],
+                      ['copy', 'csv', 'Copy CSV'],
+                      ['copy', 'tsv', 'Copy TSV'],
+                      ['copy', 'json', 'Copy JSON'],
+                    ] as const
+                  ).map(([mode, format, label]) => (
+                    <DropdownMenuItem
+                      key={`${mode}-${format}`}
+                      onSelect={() => {
+                        if (hasEvent(props, 'export')) {
+                          emit(id, 'export', { format, mode });
+                        }
+                      }}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : null}
           </div>
         </div>
       ) : null}
 
-      <div className="w-full overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
               {columns.map((col) => {
                 const sortable = col.sortable !== false;
                 const active = sortKey === col.key;
                 const indicator = !sortable ? '' : active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
                 return (
-                  <th
+                  <TableHead
                     key={col.key}
                     className={cn(
-                      'px-3 py-2 text-left font-medium',
                       col.align === 'right' && 'text-right',
                       col.align === 'center' && 'text-center',
-                      sortable && 'cursor-pointer select-none hover:bg-muted/80',
+                      sortable && 'cursor-pointer select-none',
                     )}
                     onClick={() => {
                       if (!sortable || !hasEvent(props, 'sort')) return;
@@ -576,17 +590,17 @@ function BoundDataTable({
                   >
                     {col.header}
                     {indicator}
-                  </th>
+                  </TableHead>
                 );
               })}
               {actions.length > 0 ? (
-                <th className="px-3 py-2 text-right font-medium">Actions</th>
+                <TableHead className="text-right">Actions</TableHead>
               ) : null}
-            </tr>
+            </TableRow>
             {columnFilterable ? (
-              <tr>
+              <TableRow className="hover:bg-transparent">
                 {columns.map((col) => (
-                  <th key={`filter-${col.key}`} className="px-2 pb-2 pt-0 font-normal">
+                  <TableHead key={`filter-${col.key}`} className="h-auto pb-2 pt-0 font-normal">
                     <Input
                       value={columnFilters[col.key] ?? ''}
                       placeholder="Filter…"
@@ -603,45 +617,44 @@ function BoundDataTable({
                         }, 150);
                       }}
                     />
-                  </th>
+                  </TableHead>
                 ))}
-                {actions.length > 0 ? <th className="px-2 pb-2 pt-0" /> : null}
-              </tr>
+                {actions.length > 0 ? <TableHead className="h-auto pb-2 pt-0" /> : null}
+              </TableRow>
             ) : null}
-          </thead>
-          <tbody>
+          </TableHeader>
+          <TableBody>
             {rows.length === 0 ? (
-              <tr className="border-t">
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
-                  className="px-3 py-6 text-center text-muted-foreground"
+                  className="h-24 text-center text-muted-foreground"
                 >
                   No rows
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               rows.map((row, i) => {
                 const rowKey = row[keyField] ?? i;
                 return (
-                  <tr key={String(rowKey)} className="border-t">
+                  <TableRow key={String(rowKey)}>
                     {columns.map((col) => {
                       const cells = row.__cells as Record<string, unknown> | undefined;
                       const content = cells?.[col.key] ?? row[col.key];
                       return (
-                        <td
+                        <TableCell
                           key={col.key}
                           className={cn(
-                            'px-3 py-2',
                             col.align === 'right' && 'text-right',
                             col.align === 'center' && 'text-center',
                           )}
                         >
                           {renderTableCell(content, emit)}
-                        </td>
+                        </TableCell>
                       );
                     })}
                     {actions.length > 0 ? (
-                      <td className="px-3 py-2 text-right">
+                      <TableCell className="text-right">
                         {actions.length <= 2 ? (
                           <div className="flex justify-end gap-1">
                             {actions.map((action) => (
@@ -660,53 +673,50 @@ function BoundDataTable({
                             ))}
                           </div>
                         ) : (
-                          <div className="relative inline-flex justify-end" data-badui-menu>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              aria-label="Row actions"
-                              onClick={() => {
-                                const key = String(rowKey);
-                                setActionsMenuKey((cur) => (cur === key ? null : key));
+                          <DropdownMenu
+                            open={actionsMenuKey === String(rowKey)}
+                            onOpenChange={(open) => {
+                              setActionsMenuKey(open ? String(rowKey) : null);
+                              if (open) {
                                 setColumnsOpen(false);
                                 setExportOpen(false);
-                              }}
-                            >
-                              Actions
-                            </Button>
-                            {actionsMenuKey === String(rowKey) ? (
-                              <div className="badui-menu-panel absolute right-0 z-20 mt-1 min-w-[9rem] rounded-md border bg-card p-1 shadow-md">
-                                {actions.map((action) => (
-                                  <button
-                                    key={action.id}
-                                    type="button"
-                                    className={cn(
-                                      'block w-full rounded px-3 py-1.5 text-left text-sm hover:bg-muted/60',
-                                      action.variant === 'destructive' &&
-                                        'text-destructive hover:bg-destructive/10',
-                                    )}
-                                    onClick={() => {
-                                      setActionsMenuKey(null);
-                                      if (hasEvent(props, 'action')) {
-                                        emit(id, 'action', { actionId: action.id, rowKey });
-                                      }
-                                    }}
-                                  >
-                                    <ActionLabel action={action} />
-                                  </button>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
+                              }
+                            }}
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="ghost" aria-label="Row actions">
+                                Actions
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {actions.map((action) => (
+                                <DropdownMenuItem
+                                  key={action.id}
+                                  className={
+                                    action.variant === 'destructive'
+                                      ? 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                                      : undefined
+                                  }
+                                  onSelect={() => {
+                                    if (hasEvent(props, 'action')) {
+                                      emit(id, 'action', { actionId: action.id, rowKey });
+                                    }
+                                  }}
+                                >
+                                  <ActionLabel action={action} />
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
-                      </td>
+                      </TableCell>
                     ) : null}
-                  </tr>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {showPagination ? (
@@ -762,41 +772,24 @@ function BoundDialog({
 }) {
   const open = !!props.open;
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && hasEvent(props, 'close')) {
-        emit(id, 'close');
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, id, props, emit]);
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={() => {
-        if (hasEvent(props, 'close')) emit(id, 'close');
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && hasEvent(props, 'close')) emit(id, 'close');
       }}
     >
-      <Card
-        className={cn('w-full max-w-md shadow-lg', className)}
-        style={asStyle(style)}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <DialogContent className={cn('sm:max-w-md', className)} style={asStyle(style)}>
         {props.title ? (
-          <CardHeader>
-            <CardTitle>{String(props.title)}</CardTitle>
-          </CardHeader>
-        ) : null}
-        <CardContent className={cn('flex flex-col gap-4', props.title ? 'pt-0' : 'pt-6')}>
-          {children}
-        </CardContent>
-      </Card>
-    </div>
+          <DialogHeader>
+            <DialogTitle>{String(props.title)}</DialogTitle>
+          </DialogHeader>
+        ) : (
+          <DialogTitle className="sr-only">Dialog</DialogTitle>
+        )}
+        <div className="flex flex-col gap-4">{children}</div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -998,18 +991,13 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'alert':
       return (
-        <div
-          className={cn(
-            'rounded-md border px-4 py-3 text-sm',
-            props.variant === 'destructive'
-              ? 'border-destructive/50 bg-destructive/10 text-destructive'
-              : 'bg-muted',
-            className,
-          )}
+        <Alert
+          variant={props.variant === 'destructive' ? 'destructive' : 'default'}
+          className={className}
           style={asStyle(style)}
         >
-          {String(props.text ?? '')}
-        </div>
+          <AlertDescription>{String(props.text ?? '')}</AlertDescription>
+        </Alert>
       );
 
     case 'stat': {
@@ -1032,6 +1020,17 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'datatable':
       return <BoundDataTable id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'kitchensink':
+      return (
+        <Suspense
+          fallback={
+            <div className="p-8 text-sm text-muted-foreground">Loading kitchen sink…</div>
+          }
+        >
+          <KitchenSink />
+        </Suspense>
+      );
 
     default:
       return (
