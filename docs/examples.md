@@ -15,7 +15,7 @@ After `bun run build:client && bun run demo`, open http://localhost:4000.
 | `/examples/chat` | `Chat.ts` | `GlobalState`, multi-session shared messages |
 | `/examples/upload` | `FileUpload.ts` | Simple upload UI pattern |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `dataTable` |
-| `/examples/datatable` | `DataTableDemo.ts` | Table of rows/columns |
+| `/examples/datatable` | `DataTableDemo.ts` | `ui.confirm` / `prompt` / `choose` / `notify`, table tools |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` |
 

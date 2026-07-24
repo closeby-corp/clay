@@ -200,27 +200,32 @@ export function stat(items: StatItem[], props: { className?: string } = {}): Ele
   });
 }
 
-export type TableColumn = {
-  key: string;
-  header: string;
-  align?: 'left' | 'right' | 'center';
-};
+export {
+  dataTable,
+  DataTableElement,
+  ROW_ID_FIELD,
+  normalizeTableData,
+  rowsToCsv,
+  rowsToTsv,
+  rowsToJson,
+  type TableColumn,
+  type DataTableAction,
+  type DataTableProps,
+  type ExportFormat,
+  type ExportMode,
+} from './data-table';
 
-export type DataTableProps = {
-  columns: TableColumn[];
-  className?: string;
-};
+export { dialog, DialogElement, type DialogProps } from './dialog';
 
-export function dataTable(
-  rows: Record<string, unknown>[],
-  props: DataTableProps,
-): Element {
-  return new Element('datatable', {
-    columns: props.columns,
-    rows,
-    className: props.className,
-  });
-}
+export {
+  confirm,
+  prompt,
+  choose,
+  type ConfirmOptions,
+  type PromptOptions,
+  type ChooseOptions,
+  type ChooseOption,
+} from './imperative';
 
 type LayoutProps = {
   gap?: string | number;

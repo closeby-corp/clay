@@ -17,12 +17,13 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
 | `stat` | `stat` | Grid of metric cards |
-| `dataTable` | `datatable` | HTML table |
+| `dataTable` | `datatable` | Search, column filters, visibility, export, sort, pagination, actions |
 | `row` | `row` | Flex row |
 | `column` | `column` | Flex column |
 | `container` | `container` | Max-width wrapper |
 | `hero` | `hero` | Centered hero |
 | `card` | `card` | ShadCN `Card` |
+| `dialog` | `dialog` | Modal overlay (server-owned `open`) |
 | `refreshable` | `refreshable` | Fragment-like wrapper (`contents`) |
 | *(internal)* | `root` | Page root padding |
 
@@ -36,6 +37,8 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `input` / `textarea` | `input`, `change` |
 | `checkbox` | `change` (and `input` if bound) |
 | `select` / `slider` | `change` |
+| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `action` |
+| `dialog` | `close` |
 
 Prop names use camelCase (`onClick` → event name `click`).
 
@@ -48,6 +51,7 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `checkbox`
 - `select`
 - `slider`
+- `datatable` (search input)
 
 Server patches still reconcile when `props.value` changes (e.g. `draft.text = ''` after Add).
 

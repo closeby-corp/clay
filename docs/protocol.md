@@ -81,10 +81,54 @@ Client updates history and sends a new `hello`.
 ### `notify`
 
 ```json
-{ "op": "notify", "message": "Saved!", "type": "success" }
+{
+  "op": "notify",
+  "id": "toast_1",
+  "message": "Saved!",
+  "type": "success",
+  "duration": 2500,
+  "position": "bottom-right"
+}
 ```
 
-`type`: `info` | `success` | `warning` | `error`
+| Field | Type | Default | Notes |
+|-------|------|---------|-------|
+| `id` | `string` | required (server) | Client may invent one if missing |
+| `message` | `string` | | Toast body |
+| `type` | `info\|success\|warning\|error` | `info` | Styling |
+| `duration` | `number` | `2500` | ms; `0` = sticky until dismissed |
+| `position` | `top-left\|top-right\|bottom-left\|bottom-right` | `bottom-right` | Stack corner |
+
+Client appends to a toast stack; auto-removes when `duration > 0`.
+
+### `dismissNotify`
+
+```json
+{ "op": "dismissNotify", "id": "toast_1" }
+```
+
+Removes one toast from the stack (server-driven). The client also dismisses locally when the user clicks ×.
+
+### `download`
+
+```json
+{
+  "op": "download",
+  "filename": "data.csv",
+  "mime": "text/csv;charset=utf-8",
+  "content": "Title,Status\nAlpha,done"
+}
+```
+
+Client triggers a file download via a temporary Blob URL.
+
+### `clipboard`
+
+```json
+{ "op": "clipboard", "content": "Title\tStatus\nAlpha\tdone" }
+```
+
+Client writes `content` with `navigator.clipboard.writeText` (shows an error toast on failure).
 
 ### `error`
 

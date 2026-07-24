@@ -1,4 +1,4 @@
-import { notify, reactive, subscribe } from '@badui/core';
+import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
 
 ui.page('/examples/form-demo', () => {
@@ -89,10 +89,10 @@ ui.page('/examples/form-demo', () => {
         ui.button('Submit', {
           onClick: () => {
             if (!form.terms) {
-              notify('Please accept the terms', 'warning');
+              ui.notify('Please accept the terms', 'warning');
               return;
             }
-            notify(`Thanks, ${form.name || 'friend'}!`, 'success');
+            ui.notify(`Thanks, ${form.name || 'friend'}!`, 'success');
           },
         });
         ui.button('Reset', {

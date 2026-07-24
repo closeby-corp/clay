@@ -6,10 +6,22 @@ import {
   withParent,
 } from './context';
 import { Element } from './element';
-import type { ClientMessage, Patch, ServerMessage } from './protocol';
+import type {
+  ClientMessage,
+  NotifyType,
+  Patch,
+  ServerMessage,
+  ToastPosition,
+} from './protocol';
 import { getPage } from './page';
 
 export type SendFn = (msg: ServerMessage) => void;
+
+export type NotifyOptions = {
+  type?: NotifyType;
+  duration?: number;
+  position?: ToastPosition;
+};
 
 export class ClientSession {
   readonly id: string;
@@ -43,6 +55,16 @@ export class ClientSession {
   enqueuePatch(patch: Patch): void {
     this.patches.push(patch);
     this.scheduleFlush();
+  }
+
+  /** Sync root children to the client after dynamic attach/detach. */
+  syncRootChildren(): void {
+    if (!this.root) return;
+    this.enqueuePatch({
+      op: 'setChildren',
+      id: this.root.id,
+      children: this.root.children.map((c) => c.toJSON()),
+    });
   }
 
   private scheduleFlush(): void {
@@ -102,8 +124,32 @@ export class ClientSession {
     }
   }
 
-  notify(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info'): void {
-    this.send({ op: 'notify', message, type });
+  notify(
+    message: string,
+    typeOrOptions: NotifyType | NotifyOptions = 'info',
+  ): void {
+    const options: NotifyOptions =
+      typeof typeOrOptions === 'string' ? { type: typeOrOptions } : typeOrOptions;
+    this.send({
+      op: 'notify',
+      id: generateId('toast'),
+      message,
+      type: options.type ?? 'info',
+      duration: options.duration ?? 2500,
+      position: options.position ?? 'bottom-right',
+    });
+  }
+
+  dismissNotify(id: string): void {
+    this.send({ op: 'dismissNotify', id });
+  }
+
+  download(filename: string, mime: string, content: string): void {
+    this.send({ op: 'download', filename, mime, content });
+  }
+
+  clipboard(content: string): void {
+    this.send({ op: 'clipboard', content });
   }
 
   navigate(path: string): void {

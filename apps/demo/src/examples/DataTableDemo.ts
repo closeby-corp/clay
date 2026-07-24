@@ -1,56 +1,133 @@
 import { ui } from '@badui/ui';
+import type { DataTableElement } from '@badui/ui';
 
-const rows = [
-  { id: 1, name: 'Alpha', role: 'Admin', status: 'active' },
-  { id: 2, name: 'Bravo', role: 'Editor', status: 'active' },
-  { id: 3, name: 'Charlie', role: 'Viewer', status: 'inactive' },
-  { id: 4, name: 'Delta', role: 'Editor', status: 'active' },
-  { id: 5, name: 'Echo', role: 'Admin', status: 'inactive' },
+type Task = {
+  id: number;
+  title: string;
+  status: string;
+  hours: number;
+  owner: string;
+};
+
+const seed: Task[] = [
+  { id: 1, title: 'Design landing hero', status: 'done', hours: 6, owner: 'Ada' },
+  { id: 2, title: 'Wire DataTable events', status: 'in progress', hours: 8, owner: 'Lin' },
+  { id: 3, title: 'Write element docs', status: 'todo', hours: 3, owner: 'Sam' },
+  { id: 4, title: 'Fix slider binding', status: 'done', hours: 2, owner: 'Ada' },
+  { id: 5, title: 'Polish dashboard stats', status: 'todo', hours: 4, owner: 'Kai' },
+  { id: 6, title: 'Add chat persistence', status: 'in progress', hours: 10, owner: 'Lin' },
+  { id: 7, title: 'Review form demo', status: 'done', hours: 1, owner: 'Sam' },
+  { id: 8, title: 'Ship client rebuild', status: 'todo', hours: 5, owner: 'Kai' },
+  { id: 9, title: 'Triage upload bugs', status: 'in progress', hours: 7, owner: 'Ada' },
+  { id: 10, title: 'Sketch refreshable API', status: 'done', hours: 4, owner: 'Lin' },
+  { id: 11, title: 'Benchmark patch bus', status: 'todo', hours: 9, owner: 'Sam' },
+  { id: 12, title: 'Normalize badge styles', status: 'done', hours: 2, owner: 'Kai' },
+  { id: 13, title: 'Document protocol', status: 'in progress', hours: 6, owner: 'Ada' },
+  { id: 14, title: 'Add select options', status: 'todo', hours: 3, owner: 'Lin' },
+  { id: 15, title: 'Harden WebSocket reconnect', status: 'todo', hours: 11, owner: 'Sam' },
+  { id: 16, title: 'Improve home links', status: 'done', hours: 1, owner: 'Kai' },
+  { id: 17, title: 'Audit checkbox a11y', status: 'in progress', hours: 5, owner: 'Ada' },
+  { id: 18, title: 'Cut release notes', status: 'todo', hours: 2, owner: 'Lin' },
+  { id: 19, title: 'Tune pagination UX', status: 'done', hours: 3, owner: 'Sam' },
+  { id: 20, title: 'Demo row actions', status: 'in progress', hours: 4, owner: 'Kai' },
 ];
 
 ui.page('/examples/datatable', () => {
-  let sortKey: 'id' | 'name' | 'role' | 'status' = 'id';
-  let ascending = true;
+  let tasks = seed.map((t) => ({ ...t }));
+  let nextId = tasks.length + 1;
+  let table: DataTableElement;
 
   ui.column(() => {
     ui.label('DataTable').classes('text-3xl font-bold');
-    ui.label('Simplified table — full NiceGUI/DataTable features come later.')
+    ui.label('Imperative confirm / prompt / choose, plus toasts.')
       .classes('text-muted-foreground');
+    const statusLabel = ui.label(`Tasks: ${tasks.length}`).classes('text-muted-foreground');
 
-    const tableUi = ui.refreshable(() => {
-      const sorted = [...rows].sort((a, b) => {
-        const av = a[sortKey];
-        const bv = b[sortKey];
-        if (av < bv) return ascending ? -1 : 1;
-        if (av > bv) return ascending ? 1 : -1;
-        return 0;
-      });
-
-      ui.row(() => {
-        for (const key of ['id', 'name', 'role', 'status'] as const) {
-          ui.button(`Sort ${key}`, {
-            size: 'sm',
-            variant: sortKey === key ? 'default' : 'outline',
-            onClick: () => {
-              if (sortKey === key) ascending = !ascending;
-              else {
-                sortKey = key;
-                ascending = true;
-              }
-              tableUi.refresh();
-            },
+    table = ui.dataTable(tasks, {
+      keyField: 'id',
+      searchable: true,
+      searchPlaceholder: 'Search tasks…',
+      pageSize: 8,
+      actions: [
+        { id: 'edit', label: 'Rename' },
+        { id: 'status', label: 'Status' },
+        { id: 'delete', label: 'Delete', variant: 'destructive' },
+      ],
+      onAction: async (actionId, row) => {
+        if (actionId === 'delete') {
+          const sure = await ui.confirm(`Delete “${row.title}”? This cannot be undone.`, {
+            title: 'Delete task?',
+            confirmLabel: 'Delete',
+            confirmVariant: 'destructive',
           });
+          if (!sure) return;
+          tasks = tasks.filter((t) => t.id !== row.id);
+          table.setRows(tasks);
+          statusLabel.setText(`Tasks: ${tasks.length}`);
+          ui.notify('Task deleted', 'success');
+          return;
         }
-      }, { gap: 2 });
 
-      ui.dataTable(sorted, {
-        columns: [
-          { key: 'id', header: 'ID' },
-          { key: 'name', header: 'Name' },
-          { key: 'role', header: 'Role' },
-          { key: 'status', header: 'Status' },
-        ],
-      });
+        if (actionId === 'edit') {
+          const next = await ui.prompt('New title', {
+            title: 'Rename task',
+            defaultValue: String(row.title ?? ''),
+            confirmLabel: 'Save',
+          });
+          if (next == null) return;
+          tasks = tasks.map((t) => (t.id === row.id ? { ...t, title: next } : t));
+          table.setRows(tasks);
+          ui.notify('Task renamed', 'info');
+          return;
+        }
+
+        if (actionId === 'status') {
+          const status = await ui.choose('Set status', ['todo', 'in progress', 'done'], {
+            title: 'Task status',
+          });
+          if (status == null) return;
+          tasks = tasks.map((t) => (t.id === row.id ? { ...t, status } : t));
+          table.setRows(tasks);
+          ui.notify(`Status → ${status}`, 'success');
+        }
+      },
     });
+
+    ui.button('Add task', {
+      onClick: async () => {
+        const title = await ui.prompt('Task title', {
+          title: 'New task',
+          defaultValue: `New task ${nextId}`,
+        });
+        if (title == null) return;
+        tasks = [
+          ...tasks,
+          {
+            id: nextId++,
+            title,
+            status: 'todo',
+            hours: 1,
+            owner: 'You',
+          },
+        ];
+        table.setRows(tasks);
+        statusLabel.setText(`Tasks: ${tasks.length}`);
+        ui.notify('Task added', 'success');
+      },
+    });
+
+    ui.label('Key / value object').classes('text-xl font-bold mt-4');
+    ui.label('Pass a plain object and the table shows Key / Value rows.')
+      .classes('text-muted-foreground');
+    ui.dataTable(
+      {
+        host: 'localhost',
+        port: 4000,
+        env: 'demo',
+        debug: true,
+        features: { search: true, actions: true },
+      },
+      { pageSize: 0, searchable: true, searchPlaceholder: 'Search config…' },
+    );
   }, { gap: 3 });
 });

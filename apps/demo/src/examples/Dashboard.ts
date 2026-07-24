@@ -50,6 +50,9 @@ ui.page('/examples/dashboard', () => {
     ui.dataTable(
       recentOrders.map((o) => ({ ...o, amount: `$${o.amount.toFixed(2)}` })),
       {
+        searchable: true,
+        searchPlaceholder: 'Search orders…',
+        pageSize: 5,
         columns: [
           { key: 'id', header: 'Order ID' },
           { key: 'customer', header: 'Customer' },

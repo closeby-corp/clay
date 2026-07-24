@@ -16,6 +16,10 @@ import {
   container as containerFactory,
   hero as heroFactory,
   card as cardFactory,
+  dialog as dialogFactory,
+  confirm as confirmFactory,
+  prompt as promptFactory,
+  choose as chooseFactory,
   type ButtonProps,
   type LabelProps,
   type InputProps,
@@ -28,10 +32,42 @@ import {
   type AlertProps,
   type StatItem,
   type DataTableProps,
+  type DataTableAction,
+  type TableColumn,
   type CardProps,
+  type DialogProps,
+  type ConfirmOptions,
+  type PromptOptions,
+  type ChooseOptions,
+  type ChooseOption,
+  DataTableElement,
+  DialogElement,
 } from '@badui/components';
-import { Element, RefreshableElement, page as corePage } from '@badui/core';
+import {
+  Element,
+  RefreshableElement,
+  page as corePage,
+  notify as notifyCore,
+  type NotifyOptions,
+  type NotifyType,
+  type ToastPosition,
+} from '@badui/core';
 import { BadUIServer, type BadUIServerConfig } from '@badui/server';
+
+export type {
+  DataTableProps,
+  DataTableAction,
+  TableColumn,
+  DialogProps,
+  ConfirmOptions,
+  PromptOptions,
+  ChooseOptions,
+  ChooseOption,
+  NotifyOptions,
+  NotifyType,
+  ToastPosition,
+};
+export { DataTableElement, DialogElement };
 
 export function label(text?: string, props?: Omit<LabelProps, 'text'>): Element {
   return labelFactory(text, props);
@@ -77,8 +113,8 @@ export function stat(items: StatItem[], props?: { className?: string }): Element
   return statFactory(items, props);
 }
 
-export function dataTable(rows: Record<string, unknown>[], props: DataTableProps): Element {
-  return dataTableFactory(rows, props);
+export function dataTable(data?: unknown, props?: DataTableProps): DataTableElement {
+  return dataTableFactory(data, props);
 }
 
 export function row(fn: () => void, props?: Parameters<typeof rowFactory>[1]): Element;
@@ -109,6 +145,32 @@ export function card(fn: (card: Element) => void, props?: CardProps): Element;
 export function card(props: CardProps, fn: (card: Element) => void): Element;
 export function card(a: any, b?: any): Element {
   return cardFactory(a, b);
+}
+
+export function dialog(fn: (dlg: DialogElement) => void, props?: DialogProps): DialogElement;
+export function dialog(props: DialogProps, fn: (dlg: DialogElement) => void): DialogElement;
+export function dialog(a: any, b?: any): DialogElement {
+  return dialogFactory(a, b);
+}
+
+export function confirm(message: string, options?: ConfirmOptions): Promise<boolean> {
+  return confirmFactory(message, options);
+}
+
+export function prompt(message: string, options?: PromptOptions): Promise<string | null> {
+  return promptFactory(message, options);
+}
+
+export function choose(
+  message: string,
+  choices: ChooseOption[],
+  options?: ChooseOptions,
+): Promise<string | null> {
+  return chooseFactory(message, choices, options);
+}
+
+export function notify(message: string, typeOrOptions?: NotifyType | NotifyOptions): void {
+  notifyCore(message, typeOrOptions);
 }
 
 export function refreshable(fn: () => void): RefreshableElement {
@@ -143,6 +205,11 @@ export const ui = {
   container,
   hero,
   card,
+  dialog,
+  confirm,
+  prompt,
+  choose,
+  notify,
   refreshable,
   page,
   run,

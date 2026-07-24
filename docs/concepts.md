@@ -141,10 +141,22 @@ Children created inside the callback become children of that layout element.
 ## Notifications and navigation
 
 ```typescript
-import { notify, navigate } from '@badui/core';
+ui.notify('Saved!', 'success');
+ui.notify('Look here', { type: 'warning', duration: 0, position: 'top-right' });
 
-notify('Saved!', 'success');
+// still available:
+import { notify, navigate } from '@badui/core';
 navigate('/examples/todo');
 ```
 
-These send `notify` / `navigate` messages over the same WebSocket. Client-side links (`ui.link`) also update the path and reconnect the session for that route.
+`ui.notify` / `notify` push onto a **toast stack** on the client (typed colors, dismiss button, optional auto-hide). `navigate` tells the client to change path and reconnect the session.
+
+## Imperative overlays
+
+```typescript
+const sure = await ui.confirm('Continue?');
+const name = await ui.prompt('Your name');
+const pick = await ui.choose('Pick one', ['A', 'B']);
+```
+
+These open ephemeral dialogs, return Promises, and only work inside an active session (e.g. `onClick` / `onAction`). They are not synchronous — a WebSocket round-trip is required.

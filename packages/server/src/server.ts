@@ -108,7 +108,12 @@ export class BadUIServer {
           }
 
           if (data.session) {
-            await data.session.handleMessage(msg);
+            // Do not await: allow concurrent events so await ui.confirm/prompt/choose can resolve
+            void data.session.handleMessage(msg).catch((err: unknown) => {
+              console.error(err);
+              const message = err instanceof Error ? err.message : String(err);
+              data.session?.notify(message, 'error');
+            });
           }
         },
         close(ws) {

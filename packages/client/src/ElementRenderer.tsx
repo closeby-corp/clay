@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ElementNode } from './protocol';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -241,6 +241,385 @@ function BoundCheckbox({
   );
 }
 
+type DataTableColumn = {
+  key: string;
+  header: string;
+  align?: string;
+  sortable?: boolean;
+};
+
+type DataTableActionProp = {
+  id: string;
+  label: string;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+};
+
+function BoundDataTable({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const columns = (props.columns as DataTableColumn[]) ?? [];
+  const allColumns = (props.allColumns as DataTableColumn[]) ?? columns;
+  const rows = (props.rows as Record<string, unknown>[]) ?? [];
+  const actions = (props.actions as DataTableActionProp[]) ?? [];
+  const keyField = String(props.keyField ?? 'id');
+  const searchable = props.searchable !== false;
+  const columnFilterable = props.columnFilterable !== false;
+  const columnToggle = props.columnToggle !== false;
+  const exportable = props.exportable !== false;
+  const sortKey = (props.sortKey as string | null) ?? null;
+  const sortDir = (props.sortDir as 'asc' | 'desc') ?? 'asc';
+  const page = Number(props.page ?? 1);
+  const pageSize = Number(props.pageSize ?? 10);
+  const totalRows = Number(props.totalRows ?? rows.length);
+  const totalPages = Number(props.totalPages ?? 1);
+  const hiddenColumns = new Set((props.hiddenColumns as string[]) ?? []);
+  const serverFilter = String(props.filter ?? '');
+  const serverColumnFilters = (props.columnFilters as Record<string, string>) ?? {};
+  const [filter, setFilter] = useOptimisticValue(serverFilter);
+  const [columnFilters, setColumnFilters] = useOptimisticValue(serverColumnFilters);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
+    };
+  }, []);
+
+  const showPagination = pageSize > 0;
+  const rangeStart = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = totalRows === 0 ? 0 : Math.min(page * pageSize, totalRows);
+  const showToolbar = searchable || columnToggle || exportable;
+
+  return (
+    <div className={cn('flex w-full flex-col gap-3', className)} style={asStyle(style)}>
+      {showToolbar ? (
+        <div className="flex flex-wrap items-start gap-2">
+          {searchable ? (
+            <Input
+              value={filter}
+              placeholder={String(props.searchPlaceholder ?? 'Search…')}
+              className="max-w-sm"
+              onChange={(e) => {
+                const next = e.target.value;
+                setFilter(next);
+                if (debounceRef.current) clearTimeout(debounceRef.current);
+                debounceRef.current = setTimeout(() => {
+                  if (hasEvent(props, 'filter')) emit(id, 'filter', next);
+                }, 150);
+              }}
+            />
+          ) : null}
+
+          <div className="ml-auto flex flex-wrap items-start gap-2">
+            {columnToggle ? (
+              <div className="relative">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setColumnsOpen((o) => !o);
+                    setExportOpen(false);
+                  }}
+                >
+                  Columns
+                </Button>
+                {columnsOpen ? (
+                  <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border bg-card p-2 shadow-md">
+                    {allColumns.map((col) => {
+                      const checked = !hiddenColumns.has(col.key);
+                      const onlyVisible =
+                        checked && allColumns.length - hiddenColumns.size <= 1;
+                      return (
+                        <label
+                          key={col.key}
+                          className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/60"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            disabled={onlyVisible}
+                            onCheckedChange={(next) => {
+                              if (hasEvent(props, 'columnVisibility')) {
+                                emit(id, 'columnVisibility', {
+                                  key: col.key,
+                                  visible: next === true,
+                                });
+                              }
+                            }}
+                          />
+                          <span>{col.header}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {exportable ? (
+              <div className="relative">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setExportOpen((o) => !o);
+                    setColumnsOpen(false);
+                  }}
+                >
+                  Export
+                </Button>
+                {exportOpen ? (
+                  <div className="absolute right-0 z-20 mt-1 w-48 rounded-md border bg-card p-1 shadow-md">
+                    {(
+                      [
+                        ['download', 'csv', 'Download CSV'],
+                        ['download', 'tsv', 'Download TSV'],
+                        ['download', 'json', 'Download JSON'],
+                        ['copy', 'csv', 'Copy CSV'],
+                        ['copy', 'tsv', 'Copy TSV'],
+                        ['copy', 'json', 'Copy JSON'],
+                      ] as const
+                    ).map(([mode, format, label]) => (
+                      <button
+                        key={`${mode}-${format}`}
+                        type="button"
+                        className="block w-full rounded px-3 py-1.5 text-left text-sm hover:bg-muted/60"
+                        onClick={() => {
+                          if (hasEvent(props, 'export')) {
+                            emit(id, 'export', { format, mode });
+                          }
+                          setExportOpen(false);
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="w-full overflow-x-auto rounded-md border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              {columns.map((col) => {
+                const sortable = col.sortable !== false;
+                const active = sortKey === col.key;
+                const indicator = !sortable ? '' : active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+                return (
+                  <th
+                    key={col.key}
+                    className={cn(
+                      'px-3 py-2 text-left font-medium',
+                      col.align === 'right' && 'text-right',
+                      col.align === 'center' && 'text-center',
+                      sortable && 'cursor-pointer select-none hover:bg-muted/80',
+                    )}
+                    onClick={() => {
+                      if (!sortable || !hasEvent(props, 'sort')) return;
+                      const nextDir: 'asc' | 'desc' =
+                        active && sortDir === 'asc' ? 'desc' : 'asc';
+                      emit(id, 'sort', { key: col.key, dir: nextDir });
+                    }}
+                  >
+                    {col.header}
+                    {indicator}
+                  </th>
+                );
+              })}
+              {actions.length > 0 ? (
+                <th className="px-3 py-2 text-right font-medium">Actions</th>
+              ) : null}
+            </tr>
+            {columnFilterable ? (
+              <tr>
+                {columns.map((col) => (
+                  <th key={`filter-${col.key}`} className="px-2 pb-2 pt-0 font-normal">
+                    <Input
+                      value={columnFilters[col.key] ?? ''}
+                      placeholder="Filter…"
+                      className="h-8"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setColumnFilters({ ...columnFilters, [col.key]: next });
+                        if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
+                        columnDebounceRef.current = setTimeout(() => {
+                          if (hasEvent(props, 'columnFilter')) {
+                            emit(id, 'columnFilter', { key: col.key, value: next });
+                          }
+                        }, 150);
+                      }}
+                    />
+                  </th>
+                ))}
+                {actions.length > 0 ? <th className="px-2 pb-2 pt-0" /> : null}
+              </tr>
+            ) : null}
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr className="border-t">
+                <td
+                  colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
+                  className="px-3 py-6 text-center text-muted-foreground"
+                >
+                  No rows
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, i) => {
+                const rowKey = row[keyField] ?? i;
+                return (
+                  <tr key={String(rowKey)} className="border-t">
+                    {columns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={cn(
+                          'px-3 py-2',
+                          col.align === 'right' && 'text-right',
+                          col.align === 'center' && 'text-center',
+                        )}
+                      >
+                        {String(row[col.key] ?? '')}
+                      </td>
+                    ))}
+                    {actions.length > 0 ? (
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex justify-end gap-1">
+                          {actions.map((action) => (
+                            <Button
+                              key={action.id}
+                              size="sm"
+                              variant={action.variant ?? 'ghost'}
+                              onClick={() => {
+                                if (hasEvent(props, 'action')) {
+                                  emit(id, 'action', { actionId: action.id, rowKey });
+                                }
+                              }}
+                            >
+                              {action.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showPagination ? (
+        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <span>
+            Showing {rangeStart}–{rangeEnd} of {totalRows}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => {
+                if (hasEvent(props, 'page')) emit(id, 'page', page - 1);
+              }}
+            >
+              Previous
+            </Button>
+            <span>
+              Page {page} / {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => {
+                if (hasEvent(props, 'page')) emit(id, 'page', page + 1);
+              }}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BoundDialog({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ReactNode;
+}) {
+  const open = !!props.open;
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && hasEvent(props, 'close')) {
+        emit(id, 'close');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, id, props, emit]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={() => {
+        if (hasEvent(props, 'close')) emit(id, 'close');
+      }}
+    >
+      <Card
+        className={cn('w-full max-w-md shadow-lg', className)}
+        style={asStyle(style)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {props.title ? (
+          <CardHeader>
+            <CardTitle>{String(props.title)}</CardTitle>
+          </CardHeader>
+        ) : null}
+        <CardContent className={cn('flex flex-col gap-4', props.title ? 'pt-0' : 'pt-6')}>
+          {children}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit }) {
   const { id, type, props, children } = node;
   const className = props.className as string | undefined;
@@ -304,6 +683,13 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
             {renderChildren()}
           </CardContent>
         </Card>
+      );
+
+    case 'dialog':
+      return (
+        <BoundDialog id={id} props={props} className={className} style={style} emit={emit}>
+          {renderChildren()}
+        </BoundDialog>
       );
 
     case 'label':
@@ -404,36 +790,8 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
       );
     }
 
-    case 'datatable': {
-      const columns = (props.columns as Array<{ key: string; header: string; align?: string }>) ?? [];
-      const rows = (props.rows as Record<string, unknown>[]) ?? [];
-      return (
-        <div className={cn('w-full overflow-x-auto rounded-md border', className)} style={asStyle(style)}>
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                {columns.map((col) => (
-                  <th key={col.key} className={cn('px-3 py-2 text-left font-medium', col.align === 'right' && 'text-right')}>
-                    {col.header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={i} className="border-t">
-                  {columns.map((col) => (
-                    <td key={col.key} className={cn('px-3 py-2', col.align === 'right' && 'text-right')}>
-                      {String(row[col.key] ?? '')}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
+    case 'datatable':
+      return <BoundDataTable id={id} props={props} className={className} style={style} emit={emit} />;
 
     default:
       return (

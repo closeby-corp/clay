@@ -173,25 +173,128 @@ ui.stat([
 ]);
 ```
 
-#### `ui.dataTable(rows, props)`
+#### `ui.dataTable(data, props?)`
 
-Simple read-only table.
+Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows`.
+
+`data` may be:
+
+- an **array of objects** → one row per item; columns inferred from keys when `columns` omitted
+- a **plain key-value object** → Key / Value rows (nested values are JSON-stringified)
+- omitted / empty → empty table
+
+When `keyField` is omitted, each row is stamped with an internal `__rowId` (`0..n-1`) used for actions and client keys (not shown as a column).
 
 ```typescript
-ui.dataTable(rows, {
+ui.dataTable(tasks); // infer columns + __rowId
+ui.dataTable({ host: 'localhost', port: 4000 }); // Key / Value
+
+const table = ui.dataTable(tasks, {
+  keyField: 'id',
   columns: [
-    { key: 'id', header: 'ID' },
-    { key: 'name', header: 'Name' },
-    { key: 'amount', header: 'Amount', align: 'right' },
+    { key: 'title', header: 'Title', sortable: true },
+    { key: 'status', header: 'Status' },
+    { key: 'hours', header: 'Hours', align: 'right' },
   ],
+  searchable: true,
+  searchPlaceholder: 'Search…',
+  pageSize: 8, // 0 = no pagination
+  actions: [
+    { id: 'edit', label: 'Edit' },
+    { id: 'delete', label: 'Delete', variant: 'destructive' },
+  ],
+  onAction: (actionId, row) => {
+    if (actionId === 'delete') table.setRows(tasks.filter((t) => t.id !== row.id));
+  },
 });
 ```
 
-| Column field | Type |
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `columns` | `TableColumn[]` | inferred from data | Column defs |
+| `keyField` | `string` | `'__rowId'` | Row identity for actions |
+| `searchable` | `boolean` | `true` | Global filter input |
+| `searchPlaceholder` | `string` | `'Search…'` | Filter placeholder |
+| `columnFilterable` | `boolean` | `true` | Per-column filter row |
+| `columnToggle` | `boolean` | `true` | Columns visibility menu |
+| `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
+| `exportFilename` | `string` | `'data'` | Download base name (no extension) |
+| `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
+| `actions` | `DataTableAction[]` | `[]` | Per-row buttons |
+| `onAction` | `(actionId, row) => void` | | Row action handler |
+| `className` | `string` | | Extra classes |
+
+| Column field | Type | Notes |
+|--------------|------|-------|
+| `key` | `string` | Row field |
+| `header` | `string` | Header label |
+| `align` | `'left' \| 'right' \| 'center'` | Cell alignment |
+| `sortable` | `boolean` | Default `true` |
+
+| Action field | Type |
 |--------------|------|
-| `key` | `string` |
-| `header` | `string` |
-| `align` | `'left' \| 'right' \| 'center'` |
+| `id` | `string` |
+| `label` | `string` |
+| `variant` | Button variant (e.g. `destructive`, `ghost`) |
+
+Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `action`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages.
+
+#### `ui.dialog(props, fn)` / `ui.dialog(fn, props?)`
+
+Server-owned modal overlay. Returns a `DialogElement` with `open()`, `close()`, and `setOpen(boolean)`.
+
+```typescript
+const dlg = ui.dialog({ title: 'Delete task?', open: false }, () => {
+  ui.label('This cannot be undone.');
+  ui.row(() => {
+    ui.button('Cancel', { variant: 'outline', onClick: () => dlg.close() });
+    ui.button('Delete', { variant: 'destructive', onClick: () => { /* … */ dlg.close(); } });
+  });
+});
+
+dlg.open();
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | | Dialog heading |
+| `open` | `boolean` | `false` | Visibility |
+| `className` | `string` | | Extra classes on the panel |
+| `onClose` | `() => void` | | Runs when the client emits `close` (backdrop / Escape), then `open` is set to `false` |
+
+Client emits `close` on backdrop click or Escape. The server always clears `open` on that event.
+
+### Imperative helpers
+
+These require an active session (typically inside an async event handler). Confirm / prompt / choose are **async** (WebSocket round-trip). Notify is fire-and-forget.
+
+```typescript
+onClick: async () => {
+  const sure = await ui.confirm('Delete this?', {
+    confirmLabel: 'Delete',
+    confirmVariant: 'destructive',
+  });
+  if (!sure) return;
+
+  const name = await ui.prompt('Name?', { defaultValue: 'Ada' });
+  if (name == null) return;
+
+  const color = await ui.choose('Pick a color', ['Red', 'Green', 'Blue']);
+  if (color == null) return;
+
+  ui.notify(`Hello ${name} (${color})`, 'success');
+  // or: ui.notify('Sticky', { type: 'warning', duration: 0, position: 'top-right' });
+}
+```
+
+| Helper | Returns | Notes |
+|--------|---------|-------|
+| `ui.confirm(message, options?)` | `Promise<boolean>` | Cancel / Escape → `false` |
+| `ui.prompt(message, options?)` | `Promise<string \| null>` | Cancel → `null` |
+| `ui.choose(message, choices, options?)` | `Promise<string \| null>` | `choices` as strings or `{ value, label }` |
+| `ui.notify(message, typeOrOptions?)` | `void` | Toast stack; types `info\|success\|warning\|error` |
+
+`ui.notify` options object: `{ type?, duration?, position? }` — `duration: 0` is sticky; positions `top-left` \| `top-right` \| `bottom-left` \| `bottom-right`.
 
 ---
 
@@ -301,9 +404,16 @@ messages.update((prev) => [...prev, newMessage]);
 
 ## Helpers (`@badui/core`)
 
-### `notify(message, type?)`
+### `notify(message, typeOrOptions?)`
 
-Toast on the client. Types: `'info' | 'success' | 'warning' | 'error'` (default `'info'`).
+Toast on the client (stack). Prefer `ui.notify` from app code.
+
+```typescript
+notify('Saved!', 'success');
+notify('Heads up', { type: 'warning', duration: 0, position: 'top-right' });
+```
+
+Types: `'info' | 'success' | 'warning' | 'error'`.
 
 ### `navigate(path)`
 
