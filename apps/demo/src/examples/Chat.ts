@@ -1,6 +1,5 @@
-import { ui, getCurrentContainer } from '@badui/ui';
 import { GlobalState } from '@badui/core';
-import { label, input } from '@badui/components';
+import { ui } from '@badui/ui';
 
 interface ChatMessage {
   id: string;
@@ -13,51 +12,59 @@ ui.page('/examples/chat', () => {
   const messages = GlobalState.create<ChatMessage[]>('chatMessages', []);
   const onlineUsers = GlobalState.create<string[]>('onlineUsers', []);
 
-  const username = input('username', { label: 'Your name', value: 'Anonymous' });
-  const messageText = input('message', { placeholder: 'Type a message...' });
-
   ui.container(() => {
     ui.column(() => {
-      ui.label(`Chat Room (${onlineUsers.length} online)`).classes('text-3xl font-bold');
+      const header = ui.label(`Chat Room (${onlineUsers.get().length} online)`).classes('text-3xl font-bold');
 
-      ui.row(() => {
-        ui.card({ bordered: true, bgColor: 'bg-base-200' }, (msgCol) => {
-          msgCol.add(label('System: Welcome to the chat!').classes('text-sm text-info'));
-          msgCol.add(
-            label(`${messages.map((m) => `${m.user}: ${m.text}`).join('\n')}`).classes('text-sm whitespace-pre-wrap'),
-          );
+      const chatUi = ui.refreshable(() => {
+        ui.card(() => {
+          ui.label('System: Welcome to the chat!').classes('text-sm text-muted-foreground');
+          for (const m of messages.get()) {
+            ui.label(`[${m.timestamp}] ${m.user}: ${m.text}`).classes('text-sm');
+          }
         });
-
         ui.column(() => {
-          ui.label(`Online (${onlineUsers.length})`).classes('font-bold');
-          ui.label(`${onlineUsers.join(', ')}`).classes('text-sm');
+          ui.label(`Online (${onlineUsers.get().length})`).classes('font-bold');
+          ui.label(onlineUsers.get().join(', ') || '—').classes('text-sm text-muted-foreground');
         });
-      }, { gap: '4' });
+      });
+
+      const syncHeader = () => header.setText(`Chat Room (${onlineUsers.get().length} online)`);
+      messages.subscribe(() => {
+        syncHeader();
+        chatUi.refresh();
+      });
+      onlineUsers.subscribe(() => {
+        syncHeader();
+        chatUi.refresh();
+      });
+
+      const username = ui.input({ label: 'Your name', value: 'Anonymous' });
+      const messageText = ui.input({ placeholder: 'Type a message...' });
 
       ui.row(() => {
-        getCurrentContainer().add(username);
-        getCurrentContainer().add(messageText);
         ui.button('Send', {
-          color: 'primary',
-          on_click: () => {
-            const text = messageText.get().trim();
-            const user = username.get().trim() || 'Anonymous';
-            if (text) {
-              const users = onlineUsers.get();
-              if (!users.includes(user)) {
-                onlineUsers.set([...users, user]);
-              }
-              messages.set([...messages.get(), {
+          onClick: () => {
+            const text = String(messageText.get() ?? '').trim();
+            const user = String(username.get() ?? '').trim() || 'Anonymous';
+            if (!text) return;
+            const users = onlineUsers.get();
+            if (!users.includes(user)) {
+              onlineUsers.set([...users, user]);
+            }
+            messages.set([
+              ...messages.get(),
+              {
                 id: Date.now().toString(),
                 user,
                 text,
                 timestamp: new Date().toLocaleTimeString(),
-              }]);
-              messageText.set('');
-            }
+              },
+            ]);
+            messageText.set('');
           },
         });
-      }, { gap: '2' });
-    });
+      }, { gap: 2 });
+    }, { gap: 3 });
   }, { centered: true, width: 'xl' });
 });

@@ -1,78 +1,312 @@
-export * from './basics/Button';
-export * from './basics/Label';
-export * from './basics/Input';
-export * from './basics/Badge';
-export * from './basics/Avatar';
-export * from './basics/Kbd';
-export * from './basics/Divider';
+import { Element, withParent } from '@badui/core';
 
-export * from './layouts/Container';
-export * from './layouts/Row';
-export * from './layouts/Column';
-export * from './layouts/Tabs';
-export * from './layouts/Card';
-export * from './layouts/Dialog';
-export * from './layouts/Stack';
-export * from './layouts/Join';
-export * from './layouts/Hero';
-export * from './layouts/Footer';
-export * from './layouts/Drawer';
+export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 
-export * from './navigation/Link';
-export * from './navigation/Breadcrumbs';
-export * from './navigation/Pagination';
-export * from './navigation/Menu';
-export * from './navigation/Navbar';
-export * from './navigation/Dock';
+export type ButtonProps = {
+  text?: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  disabled?: boolean;
+  className?: string;
+  onClick?: () => void | Promise<void>;
+};
 
-export * from './forms/Checkbox';
-export * from './forms/Select';
-export * from './forms/Slider';
-export * from './forms/TextArea';
-export * from './forms/Radio';
-export * from './forms/DatePicker';
-export * from './forms/ColorPicker';
-export * from './forms/FileUpload';
-export * from './forms/validation';
-export * from './forms/ValidatedInput';
-export * from './forms/Toggle';
-export * from './forms/Rating';
-export * from './forms/OTP';
-export * from './forms/Fieldset';
-export * from './forms/Filter';
+export function button(text?: string, props: Omit<ButtonProps, 'text'> = {}): Element {
+  return new Element('button', {
+    text: text ?? '',
+    variant: props.variant ?? 'default',
+    size: props.size ?? 'default',
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onClick: props.onClick,
+  });
+}
 
-export * from './advanced/DataTable';
-export { DATATABLE_CLIENT_SCRIPT } from './advanced/datatable.client';
-export * from './advanced/Toast';
-export * from './advanced/DarkMode';
-export * from './advanced/Progress';
-export * from './advanced/Loading';
-export * from './advanced/Alert';
-export * from './advanced/Accordion';
-export * from './advanced/Collapse';
-export * from './advanced/Dropdown';
-export * from './advanced/Megamenu';
-export * from './advanced/Carousel';
-export * from './advanced/FAB';
-export * from './advanced/Modal';
-export * from './advanced/Swap';
-export * from './advanced/Tooltip';
-export * from './advanced/ThemeController';
+export type LabelProps = {
+  text?: string;
+  className?: string;
+};
 
-export * from './data/Stat';
-export * from './data/Timeline';
-export * from './data/Chat';
-export * from './data/Skeleton';
-export * from './data/Table';
-export * from './data/Countdown';
-export * from './data/Diff';
-export * from './data/Indicator';
-export * from './data/List';
-export * from './data/Mask';
-export * from './data/RadialProgress';
-export * from './data/Status';
-export * from './data/Steps';
-export * from './data/TextRotate';
-export * from './data/Validator';
-export * from './data/Calendar';
-export * from './data/Mockup';
+export function label(text?: string, props: Omit<LabelProps, 'text'> = {}): Element {
+  return new Element('label', {
+    text: text ?? '',
+    className: props.className,
+  });
+}
+
+export type InputProps = {
+  value?: string;
+  placeholder?: string;
+  type?: string;
+  label?: string;
+  disabled?: boolean;
+  className?: string;
+  onInput?: (value: string) => void;
+  onChange?: (value: string) => void;
+};
+
+export function input(props: InputProps = {}): Element {
+  return new Element('input', {
+    value: props.value ?? '',
+    placeholder: props.placeholder ?? '',
+    type: props.type ?? 'text',
+    label: props.label,
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onInput: props.onInput,
+    onChange: props.onChange,
+  });
+}
+
+export type CheckboxProps = {
+  checked?: boolean;
+  label?: string;
+  disabled?: boolean;
+  className?: string;
+  onChange?: (checked: boolean) => void;
+};
+
+export function checkbox(props: CheckboxProps = {}): Element {
+  return new Element('checkbox', {
+    value: props.checked ?? false,
+    label: props.label,
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onChange: props.onChange,
+  });
+}
+
+export type SelectOption = { value: string; label: string };
+
+export type SelectProps = {
+  options: SelectOption[];
+  value?: string;
+  label?: string;
+  disabled?: boolean;
+  className?: string;
+  onChange?: (value: string) => void;
+};
+
+export function select(props: SelectProps): Element {
+  return new Element('select', {
+    options: props.options,
+    value: props.value ?? props.options[0]?.value ?? '',
+    label: props.label,
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onChange: props.onChange,
+  });
+}
+
+export type SliderProps = {
+  min?: number;
+  max?: number;
+  step?: number;
+  value?: number;
+  label?: string;
+  showValue?: boolean;
+  disabled?: boolean;
+  className?: string;
+  onChange?: (value: number) => void;
+};
+
+export function slider(props: SliderProps = {}): Element {
+  return new Element('slider', {
+    min: props.min ?? 0,
+    max: props.max ?? 100,
+    step: props.step ?? 1,
+    value: props.value ?? 0,
+    label: props.label,
+    showValue: props.showValue ?? false,
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onChange: props.onChange,
+  });
+}
+
+export type TextAreaProps = {
+  value?: string;
+  placeholder?: string;
+  label?: string;
+  rows?: number;
+  disabled?: boolean;
+  className?: string;
+  onInput?: (value: string) => void;
+  onChange?: (value: string) => void;
+};
+
+export function textArea(props: TextAreaProps = {}): Element {
+  return new Element('textarea', {
+    value: props.value ?? '',
+    placeholder: props.placeholder ?? '',
+    label: props.label,
+    rows: props.rows ?? 3,
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onInput: props.onInput,
+    onChange: props.onChange,
+  });
+}
+
+export type LinkProps = {
+  href: string;
+  text?: string;
+  className?: string;
+};
+
+export function link(text: string, href: string, props: Omit<LinkProps, 'href' | 'text'> = {}): Element {
+  return new Element('link', {
+    text,
+    href,
+    className: props.className,
+  });
+}
+
+export type BadgeProps = {
+  text?: string;
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline';
+  className?: string;
+};
+
+export function badge(text?: string, props: Omit<BadgeProps, 'text'> = {}): Element {
+  return new Element('badge', {
+    text: text ?? '',
+    variant: props.variant ?? 'default',
+    className: props.className,
+  });
+}
+
+export type AlertProps = {
+  message?: string;
+  variant?: 'default' | 'destructive';
+  className?: string;
+};
+
+export function alert(message?: string, props: Omit<AlertProps, 'message'> = {}): Element {
+  return new Element('alert', {
+    text: message ?? '',
+    variant: props.variant ?? 'default',
+    className: props.className,
+  });
+}
+
+export type StatItem = { title: string; value: string | number };
+
+export function stat(items: StatItem[], props: { className?: string } = {}): Element {
+  return new Element('stat', {
+    items,
+    className: props.className,
+  });
+}
+
+export type TableColumn = {
+  key: string;
+  header: string;
+  align?: 'left' | 'right' | 'center';
+};
+
+export type DataTableProps = {
+  columns: TableColumn[];
+  className?: string;
+};
+
+export function dataTable(
+  rows: Record<string, unknown>[],
+  props: DataTableProps,
+): Element {
+  return new Element('datatable', {
+    columns: props.columns,
+    rows,
+    className: props.className,
+  });
+}
+
+type LayoutProps = {
+  gap?: string | number;
+  className?: string;
+  centered?: boolean;
+  width?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+};
+
+function layout(
+  type: string,
+  propsOrFn: LayoutProps | (() => void),
+  fnOrProps?: (() => void) | LayoutProps,
+): Element {
+  let props: LayoutProps = {};
+  let fn: (() => void) | undefined;
+
+  if (typeof propsOrFn === 'function') {
+    fn = propsOrFn;
+    props = (fnOrProps as LayoutProps) ?? {};
+  } else {
+    props = propsOrFn ?? {};
+    fn = fnOrProps as (() => void) | undefined;
+  }
+
+  const el = new Element(type, {
+    gap: props.gap ?? 2,
+    className: props.className,
+    centered: props.centered,
+    width: props.width,
+  });
+
+  if (fn) {
+    // Element already attached to current parent; run children under this layout
+    withParent(el, fn);
+  }
+  return el;
+}
+
+export function row(fn: () => void, props?: LayoutProps): Element;
+export function row(props: LayoutProps, fn: () => void): Element;
+export function row(propsOrFn: LayoutProps | (() => void), fnOrProps?: (() => void) | LayoutProps): Element {
+  return layout('row', propsOrFn, fnOrProps);
+}
+
+export function column(fn: () => void, props?: LayoutProps): Element;
+export function column(props: LayoutProps, fn: () => void): Element;
+export function column(propsOrFn: LayoutProps | (() => void), fnOrProps?: (() => void) | LayoutProps): Element {
+  return layout('column', propsOrFn, fnOrProps);
+}
+
+export function container(fn: () => void, props?: LayoutProps): Element;
+export function container(props: LayoutProps, fn: () => void): Element;
+export function container(propsOrFn: LayoutProps | (() => void), fnOrProps?: (() => void) | LayoutProps): Element {
+  return layout('container', propsOrFn, fnOrProps);
+}
+
+export function hero(fn: () => void, props?: LayoutProps): Element;
+export function hero(props: LayoutProps, fn: () => void): Element;
+export function hero(propsOrFn: LayoutProps | (() => void), fnOrProps?: (() => void) | LayoutProps): Element {
+  return layout('hero', propsOrFn, fnOrProps);
+}
+
+export type CardProps = LayoutProps & { title?: string };
+
+export function card(fn: (card: Element) => void, props?: CardProps): Element;
+export function card(props: CardProps, fn: (card: Element) => void): Element;
+export function card(
+  propsOrFn: CardProps | ((card: Element) => void),
+  fnOrProps?: ((card: Element) => void) | CardProps,
+): Element {
+  let props: CardProps = {};
+  let fn: (card: Element) => void;
+
+  if (typeof propsOrFn === 'function') {
+    fn = propsOrFn;
+    props = (fnOrProps as CardProps) ?? {};
+  } else {
+    props = propsOrFn;
+    fn = fnOrProps as (card: Element) => void;
+  }
+
+  const el = new Element('card', {
+    title: props.title,
+    gap: props.gap ?? 2,
+    className: props.className,
+  });
+  withParent(el, () => fn(el));
+  return el;
+}

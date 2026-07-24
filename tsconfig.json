@@ -5,7 +5,6 @@
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
-    "jsxImportSource": "@badui/core",
     "allowJs": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

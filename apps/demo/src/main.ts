@@ -1,28 +1,14 @@
-import { Component, State } from '@badui/core';
-import * as Server from '@badui/server';
-import * as Components from '@badui/components';
+import { fileURLToPath } from 'url';
+import { ui } from '@badui/ui';
 
-// Import all examples
 import './examples';
 
-console.log('BadUI Demo Application');
-console.log('Components available:', Object.keys(Components));
-
 const port = Bun.env.PORT ? parseInt(Bun.env.PORT) : 4000;
-// Create and start server
-const server = new Server.BadUIServer({
+
+console.log('BadUI Demo — NiceGUI-like API + React/ShadCN client');
+
+ui.run({
   port,
   title: 'BadUI Demo',
-  theme: 'cmyk'
+  clientDir: fileURLToPath(new URL('../../../packages/client/dist', import.meta.url)),
 });
-
-server.start();
-
-console.log(`Demo server running at http://localhost:${port}`);
-console.log('Available examples:');
-console.log('  - /examples/counter');
-console.log('  - /examples/todo');
-console.log('  - /examples/chat');
-console.log('  - /examples/upload');
-console.log('  - /examples/dashboard');
-console.log('  - /examples/form-demo');

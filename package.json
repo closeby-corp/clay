@@ -6,8 +6,10 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "bun build ./index.ts --outdir ./dist",
-    "test": "bun test"
+    "build:client": "bun run --cwd packages/client build",
+    "dev": "bun run build:client && bun apps/demo/src/main.ts",
+    "demo": "bun apps/demo/src/main.ts",
+    "test": "bun test packages/core packages/ui packages/server"
   },
   "devDependencies": {
     "@types/bun": "latest",

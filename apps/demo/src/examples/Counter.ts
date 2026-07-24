@@ -6,37 +6,44 @@ ui.page('/examples/counter', () => {
 
   ui.column(() => {
     ui.label('Counter Example').classes('text-3xl font-bold');
-    ui.label(`Count: ${count}`).classes('text-2xl');
-  
-    if (history.length > 0) {
-      ui.label(`History: ${history.join(' → ')}`).classes('text-sm opacity-70');
-    }
-  });
+    const countLabel = ui.label(`Count: ${count}`).classes('text-2xl');
 
-  ui.row(() => {
-    ui.button('-', {
-      color: 'error',
-      size: 'lg',
-      on_click: () => {
-        count--;
-        history.push(count);
-      },
+    const historyUi = ui.refreshable(() => {
+      if (history.length > 0) {
+        ui.label(`History: ${history.join(' → ')}`).classes('text-sm text-muted-foreground');
+      }
     });
-    ui.button('Reset', {
-      variant: 'ghost',
-      size: 'lg',
-      on_click: () => {
-        count = 0;
-        history = [];
-      },
-    });
-    ui.button('+', {
-      color: 'success',
-      size: 'lg',
-      on_click: () => {
-        count++;
-        history.push(count);
-      },
-    });
-  });
+
+    ui.row(() => {
+      ui.button('-', {
+        variant: 'destructive',
+        size: 'lg',
+        onClick: () => {
+          count--;
+          history = [...history, count];
+          countLabel.setText(`Count: ${count}`);
+          historyUi.refresh();
+        },
+      });
+      ui.button('Reset', {
+        variant: 'ghost',
+        size: 'lg',
+        onClick: () => {
+          count = 0;
+          history = [];
+          countLabel.setText(`Count: ${count}`);
+          historyUi.refresh();
+        },
+      });
+      ui.button('+', {
+        size: 'lg',
+        onClick: () => {
+          count++;
+          history = [...history, count];
+          countLabel.setText(`Count: ${count}`);
+          historyUi.refresh();
+        },
+      });
+    }, { gap: 2 });
+  }, { gap: 3 });
 });

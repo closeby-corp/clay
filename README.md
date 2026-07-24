@@ -1,194 +1,87 @@
 # BadUI
 
-A server-driven UI framework for TypeScript, inspired by NiceGUI (Python).
+Server-driven UI for TypeScript, inspired by [NiceGUI](https://nicegui.io/). You write imperative `ui.*` on the server; a thin React + ShadCN client renders the element tree over WebSocket.
 
 ## Features
 
-- **Signal-sync architecture** — shared client/server state via Datastar signals
-- **SSE patches** — `patch-signals` and `patch-elements` instead of full-page morphs
-- **Datastar** for hypermedia-driven frontend updates
-- **Tailwind CSS 4 + DaisyUI 5** for styling (via CDN)
-- **Bun** runtime for speed
-- **Imperative `ui` API** (NiceGUI-style) with optional compile-time reactive `let`
+- **NiceGUI-like API** — `ui.page`, `ui.run`, `ui.button`, `ui.label`, `ui.row`, `ui.refreshable`, `bindValue`, `bindTextFrom`, `setText`, `onClick`
+- **Server-owned element tree** — per-client session; updates are WS patches, not full-page morphs
+- **React + ShadCN client** — Radix/Tailwind components under the hood (PascalCase internals only)
+- **Bun monorepo** — TypeScript end-to-end
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 bun install
+bun run build:client   # Vite build → packages/client/dist
+bun run demo           # or: bun run dev  (builds client then starts)
 
-# Run demo
-bun run apps/demo/src/main.ts
-
-# Open browser
 open http://localhost:4000/examples/counter
 ```
 
-## Packages
-
-| Package | Description |
-|---------|-------------|
-| `@badui/core` | Core framework (Component, State, Router) |
-| `@badui/components` | UI components (Button, Input, Card, etc.) |
-| `@badui/ui` | Imperative NiceGUI-style API (`ui.label`, `ui.row`, `ui.page`, `ui.run`) |
-| `@badui/compiler` | Optional compile-time `let` → reactive state transform |
-| `@badui/server` | Bun server with SSE stream + Datastar event handling |
-
-## Imperative UI API
+## Authoring example
 
 ```typescript
 import { ui } from '@badui/ui';
 
 ui.page('/examples/counter', () => {
   let count = 0;
-  let history: number[] = [];
-
-  ui.label('Counter Example').classes('text-3xl font-bold');
-  ui.label(`Count: ${count}`).classes('text-2xl');
-
-  if (history.length > 0) {
-    ui.label(`History: ${history.join(' → ')}`);
-  }
+  const label = ui.label(`Count: ${count}`);
 
   ui.row(() => {
-    ui.button('-', { on_click: () => { count = count - 1; history.push(count); } });
-    ui.button('Reset', { on_click: () => { count = 0; history = []; } });
-    ui.button('+', { on_click: () => { count = count + 1; history.push(count); } });
+    ui.button('-', {
+      onClick: () => {
+        count--;
+        label.setText(`Count: ${count}`);
+      },
+    });
+    ui.button('+', {
+      onClick: () => {
+        count++;
+        label.setText(`Count: ${count}`);
+      },
+    });
   });
 });
 
-// In your app entry (or call from main.ts after importing pages):
 ui.run({ port: 4000, title: 'BadUI Demo' });
 ```
 
-`ui.page` registers routes the same way as `page()` from `@badui/core`. Layout callbacks (`ui.row`, `ui.column`, `ui.container`) push/pop a container stack; `ui.label` / `ui.button` add to the current container.
-
-With the compiler enabled (see below), top-level `let` in `ui.page` / `page()` callbacks becomes reactive state automatically. Template literals that reference reactive variables in `label()` / `button()` / `ui.label()` / `ui.button()` are auto-wrapped in getters.
-
-## Declarative page API (still supported)
-
-```typescript
-import { page, notify } from '@badui/core';
-import { button, label, container, column } from '@badui/components';
-
-page('/counter', () => {
-  let count = 0;
-
-  return container(
-    column(
-      label(`Count: ${count}`),
-      button('Increment', {
-        on_click: () => {
-          count += 1;
-          notify('Incremented!', 'success');
-        },
-      }),
-    ),
-    { centered: true, width: 'md' },
-  );
-});
-```
-
-Without the compiler, use the `state` object passed into the page handler:
-
-```typescript
-page('/counter', ({ state }) => {
-  state.defaults({ count: 0 });
-
-  return container(
-    column(
-      label(() => `Count: ${state.count}`),
-      button('Increment', {
-        on_click: () => {
-          state.count = state.count + 1;
-          notify('Incremented!', 'success');
-        },
-      }),
-    ),
-    { centered: true, width: 'md' },
-  );
-});
-```
-
-## API Functions
-
-```typescript
-import { 
-  notify,        // Toast notifications
-  navigate,      // Server-side navigation
-  openDialog,    // Open modal
-  closeDialog,   // Close modal
-  timer,         // Periodic callbacks
-  cancelTimer,   // Cancel timer
-  showLoading,   // Show loading overlay
-  hideLoading,   // Hide loading overlay
-  runJavascript  // Execute JS on client
-} from '@badui/core';
-
-// Examples
-notify('Success!', 'success', { position: 'top-right', duration: 5000 });
-navigate('/dashboard');
-showLoading('Processing...');
-timer(() => refresh(), 1000, { immediate: true });
-```
-
-## Reactive `let` compiler
-
-The `@badui/compiler` package transforms top-level `let` declarations inside `page()` and `ui.page()` callbacks into the runtime `state` object API.
-
-**Setup** — add a root [`bunfig.toml`](bunfig.toml):
-
-```toml
-preload = ["./packages/compiler/src/preload.ts"]
-```
-
-**Rules**
-
-- Top-level `let` in a `page()` / `ui.page()` callback body becomes reactive state
-- `state.defaults({ ... })` is injected automatically on first run
-- Reads and assignments (`count = count + 1`) are rewritten to `state.count`
-- `+=`, `++`, and `--` are desugared to assignments first
-- `label(\`Count: ${count}\`)` and `ui.label(\`...\`)` compile to Datastar `textExpr` bindings (e.g. `'Count: ' + $count`)
-- Nested `let` and function parameters shadow outer reactive names
-- `let x = input(...)` / `slider(...)` / other form factories are **not** transformed
-- Pages that already use `({ state }) =>` are left unchanged
-- Not yet supported: destructuring
-
-**Tests**
-
-```bash
-bun test packages/compiler packages/core packages/ui packages/server packages/components
-```
+Todo-style patterns use `bindValue` and `ui.refreshable(...).refresh()` for structural updates.
 
 ## Architecture
 
-BadUI uses **Datastar signals** as the wire format between browser and server:
-
-1. **Page load** — server renders HTML and seeds `#app` with `data-signals` containing all page state (`ctxId`, `count`, form values, etc.)
-2. **Persistent SSE** — `GET /badui/stream?ctxId=` keeps a connection open for server-initiated pushes (timers, `GlobalState`, background jobs)
-3. **User events** — `POST /badui/events` receives signals, runs handlers, responds with SSE `datastar-patch-signals` and/or `datastar-patch-elements`
-4. **Client-managed UI** — labels use `data-text`, inputs use `data-bind`; scalar updates stay on the client without re-rendering `#app`
-
-```typescript
-import { runInBackground } from '@badui/core';
-
-ui.page('/jobs', () => {
-  let status = 'idle';
-
-  ui.button('Run', {
-    on_click: () => {
-      status = 'running';
-      runInBackground(async () => {
-        await doWork();
-        status = 'done';
-      });
-    },
-  });
-});
+```
+App (ui.page / ui.refreshable)
+  → Server element tree (per WebSocket session)
+  → WS ops: hello / mount / patch / event
+  → React client shell → ShadCN components
 ```
 
-**Global state** (`GlobalState.create`) broadcasts signal patches to all connected clients via the SSE stream — useful for chat, live dashboards, etc.
+| Package | Role |
+|---------|------|
+| `@badui/core` | Element tree, session, bindings, refreshable, WS protocol types |
+| `@badui/ui` | NiceGUI-style `ui` facade (`page`, `run`, `button`, `row`, …) |
+| `@badui/components` | Thin factories that create element nodes |
+| `@badui/client` | React app: WS hook + element → ShadCN renderer |
+| `@badui/server` | Bun HTTP for static client + WebSocket upgrade |
 
-## License
+## WebSocket protocol (camelCase)
 
-MIT
+- **Client → server:** `{ op: "hello", path }` then `{ op: "event", id, type, value? }`
+- **Server → client:** `{ op: "mount", sessionId, tree }` and `{ op: "patch", patches }`
+- **Element JSON:** `{ id, type, props, children }` — handlers stay on the server; client gets `props.events`
+
+## Retired
+
+The previous Datastar + DaisyUI + SSE signal-sync path is removed from the demo runtime:
+
+- No Datastar SDK, `/badui/stream`, or `/badui/events`
+- No DaisyUI CDN template
+- `@badui/compiler` (reactive `let` → Datastar signals) is no longer loaded (`bunfig.toml` preload removed)
+
+Historical experiments may still live under `iterations/`.
+
+## Gaps vs full NiceGUI
+
+Not in this first cut: timers/JS bridge, horizontal scaling, advanced DataTable (selection/edit/group), every NiceGUI control, or compile-time reactive `let`. Core model + Counter/Todo/Chat/Form demos are the target.

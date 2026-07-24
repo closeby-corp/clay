@@ -1,4 +1,5 @@
 // Side-effect imports register all example pages
+import './Home';
 import './Counter';
 import './Todo';
 import './Chat';

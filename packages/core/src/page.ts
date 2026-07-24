@@ -1,32 +1,19 @@
-import { Component, type Renderable } from './component';
-import { getCurrentContext } from './context';
-import { createPageState, type PageState } from './page-state';
+export type PageFn = () => void;
 
-export type PageContent = string | Renderable;
+const pages = new Map<string, PageFn>();
 
-export interface PageContext {
-  state: PageState;
+export function page(path: string, fn: PageFn): void {
+  pages.set(path, fn);
 }
 
-export type PageRenderFn = (ctx: PageContext) => PageContent;
-
-/**
- * Wraps a plain render function so the server can treat it like a page component.
- * NiceGUI-style: page('/path', ({ state }) => { ... return ui; })
- */
-export class PageComponent extends Component {
-  constructor(private renderFn: PageRenderFn) {
-    super({});
-  }
-
-  render(): string {
-    const ctx = getCurrentContext();
-    const pageState = ctx ? ctx.getPageState() : createPageState(null);
-    const result = this.renderFn({ state: pageState });
-    return typeof result === 'string' ? result : result.render();
-  }
+export function getPage(path: string): PageFn | undefined {
+  return pages.get(path);
 }
 
-export function toHtml(content: PageContent): string {
-  return typeof content === 'string' ? content : content.render();
+export function getRegisteredPaths(): string[] {
+  return [...pages.keys()];
+}
+
+export function clearPages(): void {
+  pages.clear();
 }

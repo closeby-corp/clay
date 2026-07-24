@@ -1,5 +1,4 @@
-import { ui, getCurrentContainer } from '@badui/ui';
-import { button, label, row, card } from '@badui/components';
+import { ui } from '@badui/ui';
 
 ui.page('/examples/upload', () => {
   let files: string[] = [];
@@ -7,38 +6,37 @@ ui.page('/examples/upload', () => {
   ui.container(() => {
     ui.column(() => {
       ui.label('File Upload').classes('text-3xl font-bold');
+      ui.label('Demo upload — clicks add mock files to the list.').classes('text-muted-foreground');
 
-      getCurrentContainer().add(card({ bordered: true }, (cardCol) => {
-        cardCol.add({
-          render: () => `
-            <fieldset class="fieldset">
-              <label class="label">Select file</label>
-              <input type="file" name="file" class="file-input w-full" />
-            </fieldset>
-          `,
-        });
-        cardCol.add(button('Upload', {
-          color: 'primary',
-          on_click: () => {
-            files.push(`file-${Date.now()}.pdf`);
-          },
-        }));
-        if (files.length > 0) {
-          cardCol.add(label('Uploaded Files:', { weight: 'bold' }));
-          for (const file of files) {
-            cardCol.add(row(
-              label(file),
-              button('Delete', {
-                color: 'error',
-                size: 'sm',
-                on_click: () => {
-                  files = files.filter((f) => f !== file);
-                },
-              }),
-            ));
-          }
+      let listUi: ReturnType<typeof ui.refreshable>;
+
+      ui.button('Upload file', {
+        onClick: () => {
+          files = [...files, `file-${Date.now()}.pdf`];
+          listUi.refresh();
+        },
+      });
+
+      listUi = ui.refreshable(() => {
+        if (files.length === 0) {
+          ui.label('No files uploaded yet.').classes('text-sm text-muted-foreground');
+          return;
         }
-      }));
-    });
+        ui.label('Uploaded Files:').classes('font-semibold');
+        for (const file of files) {
+          ui.row(() => {
+            ui.label(file);
+            ui.button('Delete', {
+              variant: 'destructive',
+              size: 'sm',
+              onClick: () => {
+                files = files.filter((f) => f !== file);
+                listUi.refresh();
+              },
+            });
+          }, { gap: 2 });
+        }
+      });
+    }, { gap: 3 });
   }, { centered: true, width: 'md' });
 });
