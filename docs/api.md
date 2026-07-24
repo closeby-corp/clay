@@ -89,6 +89,7 @@ Client-side navigation for paths starting with `/`.
 | Prop | Type | Default |
 |------|------|---------|
 | `variant` | `'default' \| 'secondary' \| 'destructive' \| 'outline'` | `'default'` |
+| `color` | `string` | Named (`green`, `red`, `amber`, …) or CSS (`#22c55e`). Overrides `variant` when set. |
 | `className` | `string` | |
 
 #### `ui.alert(message?, props?)`
@@ -226,10 +227,31 @@ const table = ui.dataTable(tasks, {
 
 | Column field | Type | Notes |
 |--------------|------|-------|
-| `key` | `string` | Row field |
+| `key` | `string` | Row field / column id |
 | `header` | `string` | Header label |
 | `align` | `'left' \| 'right' \| 'center'` | Cell alignment |
 | `sortable` | `boolean` | Default `true` |
+| `value` | `(row) => unknown` | Computed scalar for sort / filter / export / default display |
+| `render` | `(row) => Element \| scalar` | Optional cell UI (e.g. `ui.badge(...)`); display-only |
+
+Server-side column callbacks (not Vue/NiceGUI slots):
+
+```typescript
+{
+  key: 'status',
+  header: 'Status',
+  value: (row) => row.status,
+  render: (row) =>
+    ui.badge(String(row.status), {
+      color: row.status === 'done' ? 'green' : 'amber',
+    }),
+},
+{
+  key: 'billable',
+  header: 'Billable',
+  value: (row) => Number(row.hours) * 50,
+}
+```
 
 | Action field | Type |
 |--------------|------|
@@ -237,7 +259,7 @@ const table = ui.dataTable(tasks, {
 | `label` | `string` |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
-Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `action`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages.
+Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `action`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
 
 #### `ui.dialog(props, fn)` / `ui.dialog(fn, props?)`
 

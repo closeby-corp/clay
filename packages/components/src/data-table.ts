@@ -1,4 +1,5 @@
-import { Element } from '@badui/core';
+import { Element, withDetached } from '@badui/core';
+import type { ElementNode } from '@badui/core';
 
 export type TableColumn = {
   key: string;
@@ -6,6 +7,10 @@ export type TableColumn = {
   align?: 'left' | 'right' | 'center';
   /** Defaults to true when omitted. */
   sortable?: boolean;
+  /** Derived scalar for sort / filter / export / default display. */
+  value?: (row: Record<string, unknown>) => unknown;
+  /** Optional cell UI; may return an Element (e.g. ui.badge) or a scalar. */
+  render?: (row: Record<string, unknown>) => unknown;
 };
 
 export type DataTableAction = {
@@ -40,6 +45,11 @@ export type DataTableProps = {
 /** Reserved row identity when `keyField` is omitted. Never inferred as a visible column. */
 export const ROW_ID_FIELD = '__rowId';
 
+/** Per-row display map for the client (scalars or `{ __ui: ElementNode }`). */
+export const CELLS_FIELD = '__cells';
+
+export type UiCell = { __ui: ElementNode };
+
 type SortDir = 'asc' | 'desc';
 
 type SortPayload = { key?: string; dir?: SortDir };
@@ -51,6 +61,13 @@ type ExportPayload = { format?: ExportFormat; mode?: ExportMode };
 type NormalizedTable = {
   rows: Record<string, unknown>[];
   inferredColumns: TableColumn[];
+};
+
+type ClientColumn = {
+  key: string;
+  header: string;
+  align?: 'left' | 'right' | 'center';
+  sortable?: boolean;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -70,7 +87,7 @@ function stampRowIds(rows: Record<string, unknown>[]): Record<string, unknown>[]
 function inferColumnsFromRows(rows: Record<string, unknown>[]): TableColumn[] {
   if (rows.length === 0) return [];
   return Object.keys(rows[0]!)
-    .filter((key) => key !== ROW_ID_FIELD)
+    .filter((key) => key !== ROW_ID_FIELD && key !== CELLS_FIELD)
     .map((key) => ({ key, header: key, sortable: true }));
 }
 
@@ -79,6 +96,57 @@ function withSortableDefaults(columns: TableColumn[]): TableColumn[] {
     ...col,
     sortable: col.sortable !== false,
   }));
+}
+
+function toClientColumns(columns: TableColumn[]): ClientColumn[] {
+  return columns.map(({ key, header, align, sortable }) => ({
+    key,
+    header,
+    align,
+    sortable,
+  }));
+}
+
+/** Scalar used for sort / filter / export / default display. */
+export function cellValue(col: TableColumn, row: Record<string, unknown>): unknown {
+  return col.value ? col.value(row) : row[col.key];
+}
+
+function buildCellDisplay(col: TableColumn, row: Record<string, unknown>): unknown {
+  if (col.render) {
+    const result = withDetached(() => col.render!(row));
+    if (result instanceof Element) {
+      const node = result.toJSON();
+      result.destroy();
+      return { __ui: node } satisfies UiCell;
+    }
+    return result;
+  }
+  return cellValue(col, row);
+}
+
+function buildDisplayRow(
+  row: Record<string, unknown>,
+  columns: TableColumn[],
+): Record<string, unknown> {
+  const cells: Record<string, unknown> = {};
+  for (const col of columns) {
+    cells[col.key] = buildCellDisplay(col, row);
+  }
+  return { ...row, [CELLS_FIELD]: cells };
+}
+
+function projectExportRows(
+  rows: Record<string, unknown>[],
+  columns: TableColumn[],
+): Record<string, unknown>[] {
+  return rows.map((row) => {
+    const out: Record<string, unknown> = {};
+    for (const col of columns) {
+      out[col.key] = cellValue(col, row);
+    }
+    return out;
+  });
 }
 
 /** Normalize arrays, plain objects, and primitives into stamped rows + inferred columns. */
@@ -150,17 +218,20 @@ function rowMatchesGlobalFilter(
 ): boolean {
   const q = filter.trim().toLowerCase();
   if (!q) return true;
-  return columns.some((col) => String(row[col.key] ?? '').toLowerCase().includes(q));
+  return columns.some((col) => String(cellValue(col, row) ?? '').toLowerCase().includes(q));
 }
 
 function rowMatchesColumnFilters(
   row: Record<string, unknown>,
+  columns: TableColumn[],
   columnFilters: Record<string, string>,
 ): boolean {
   for (const [key, value] of Object.entries(columnFilters)) {
     const q = value.trim().toLowerCase();
     if (!q) continue;
-    if (!String(row[key] ?? '').toLowerCase().includes(q)) return false;
+    const col = columns.find((c) => c.key === key);
+    const cell = col ? cellValue(col, row) : row[key];
+    if (!String(cell ?? '').toLowerCase().includes(q)) return false;
   }
   return true;
 }
@@ -255,8 +326,8 @@ export class DataTableElement extends Element {
     const exportFilename = props.exportFilename ?? 'data';
 
     super('datatable', {
-      columns,
-      allColumns: columns,
+      columns: toClientColumns(columns),
+      allColumns: toClientColumns(columns),
       rows: [],
       className: props.className,
       keyField,
@@ -311,7 +382,6 @@ export class DataTableElement extends Element {
     this.sourceRows = rows;
     if (!this.columnsExplicit) {
       this.columns = withSortableDefaults(inferredColumns);
-      // Drop filters/hidden keys that no longer exist
       const keys = new Set(this.columns.map((c) => c.key));
       for (const key of Object.keys(this.columnFilters)) {
         if (!keys.has(key)) delete this.columnFilters[key];
@@ -374,7 +444,7 @@ export class DataTableElement extends Element {
     if (payload.visible === false) {
       const visibleCount = this.columns.length - this.hiddenKeys.size;
       if (visibleCount <= 1 && !this.hiddenKeys.has(key)) {
-        return; // keep at least one column
+        return;
       }
       this.hiddenKeys.add(key);
     } else {
@@ -392,7 +462,7 @@ export class DataTableElement extends Element {
     if (mode !== 'download' && mode !== 'copy') return;
 
     const columns = this.visibleColumns();
-    const rows = this.computeProcessedRows();
+    const rows = projectExportRows(this.computeProcessedRows(), columns);
     let content: string;
     if (format === 'csv') content = rowsToCsv(rows, columns);
     else if (format === 'tsv') content = rowsToTsv(rows, columns);
@@ -436,13 +506,16 @@ export class DataTableElement extends Element {
     let rows = this.sourceRows.filter(
       (row) =>
         rowMatchesGlobalFilter(row, this.columns, this.filter) &&
-        rowMatchesColumnFilters(row, this.columnFilters),
+        rowMatchesColumnFilters(row, this.columns, this.columnFilters),
     );
     if (this.sortKey) {
       const key = this.sortKey;
       const dir = this.sortDir;
+      const col = this.columns.find((c) => c.key === key);
       rows = [...rows].sort((a, b) => {
-        const cmp = compareValues(a[key], b[key]);
+        const av = col ? cellValue(col, a) : a[key];
+        const bv = col ? cellValue(col, b) : b[key];
+        const cmp = compareValues(av, bv);
         return dir === 'asc' ? cmp : -cmp;
       });
     }
@@ -458,13 +531,14 @@ export class DataTableElement extends Element {
     if (this.page < 1) this.page = 1;
 
     const start = this.pageSize > 0 ? (this.page - 1) * this.pageSize : 0;
-    const visible =
+    const pageRows =
       this.pageSize > 0 ? processed.slice(start, start + this.pageSize) : processed;
     const visibleCols = this.visibleColumns();
+    const visible = pageRows.map((row) => buildDisplayRow(row, visibleCols));
 
     this.update({
-      columns: visibleCols,
-      allColumns: this.columns,
+      columns: toClientColumns(visibleCols),
+      allColumns: toClientColumns(this.columns),
       rows: visible,
       filter: this.filter,
       columnFilters: { ...this.columnFilters },

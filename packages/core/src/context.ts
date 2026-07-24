@@ -43,6 +43,19 @@ export function withParent<T>(parent: Element, fn: () => T): T {
   }
 }
 
+/**
+ * Run `fn` with no current parent so created Elements are not attached to the tree.
+ * Session registration still applies; callers should destroy ephemeral elements after use.
+ */
+export function withDetached<T>(fn: () => T): T {
+  const saved = parentStack.splice(0, parentStack.length);
+  try {
+    return fn();
+  } finally {
+    parentStack.push(...saved);
+  }
+}
+
 export function clearParentStack(): void {
   parentStack.length = 0;
 }

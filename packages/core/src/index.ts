@@ -7,6 +7,7 @@ export {
   pushParent,
   popParent,
   withParent,
+  withDetached,
   clearParentStack,
 } from './context';
 export { ClientSession, type SendFn, type NotifyOptions } from './session';

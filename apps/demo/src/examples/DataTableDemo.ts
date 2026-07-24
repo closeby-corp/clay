@@ -39,7 +39,7 @@ ui.page('/examples/datatable', () => {
 
   ui.column(() => {
     ui.label('DataTable').classes('text-3xl font-bold');
-    ui.label('Imperative confirm / prompt / choose, plus toasts.')
+    ui.label('Computed columns, Badge cells, confirm / prompt / choose, toasts.')
       .classes('text-muted-foreground');
     const statusLabel = ui.label(`Tasks: ${tasks.length}`).classes('text-muted-foreground');
 
@@ -48,6 +48,29 @@ ui.page('/examples/datatable', () => {
       searchable: true,
       searchPlaceholder: 'Search tasks…',
       pageSize: 8,
+      columns: [
+        { key: 'id', header: 'ID' },
+        { key: 'title', header: 'Title' },
+        {
+          key: 'status',
+          header: 'Status',
+          value: (row) => row.status,
+          render: (row) =>
+            ui.badge(String(row.status), {
+              color:
+                row.status === 'done' ? 'green' : row.status === 'todo' ? 'slate' : 'amber',
+            }),
+        },
+        { key: 'hours', header: 'Hours', align: 'right' },
+        {
+          key: 'billable',
+          header: 'Billable',
+          align: 'right',
+          value: (row) => Number(row.hours) * 50,
+          render: (row) => `${row.hours}h -> $${Number(row.hours) * 50}`,
+        },
+        { key: 'owner', header: 'Owner' },
+      ],
       actions: [
         { id: 'edit', label: 'Rename' },
         { id: 'status', label: 'Status' },

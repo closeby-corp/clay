@@ -166,6 +166,8 @@ export function link(text: string, href: string, props: Omit<LinkProps, 'href' |
 export type BadgeProps = {
   text?: string;
   variant?: 'default' | 'secondary' | 'destructive' | 'outline';
+  /** Named palette color (`green`, `red`, …) or any CSS color (`#22c55e`, `rgb(…)`). Overrides variant when set. */
+  color?: string;
   className?: string;
 };
 
@@ -173,6 +175,7 @@ export function badge(text?: string, props: Omit<BadgeProps, 'text'> = {}): Elem
   return new Element('badge', {
     text: text ?? '',
     variant: props.variant ?? 'default',
+    color: props.color,
     className: props.className,
   });
 }

@@ -241,6 +241,19 @@ function BoundCheckbox({
   );
 }
 
+function isUiCell(value: unknown): value is { __ui: ElementNode } {
+  if (!value || typeof value !== 'object') return false;
+  const ui = (value as { __ui?: unknown }).__ui;
+  return !!ui && typeof ui === 'object' && typeof (ui as ElementNode).type === 'string';
+}
+
+function renderTableCell(content: unknown, emit: Emit) {
+  if (isUiCell(content)) {
+    return <ElementRenderer node={content.__ui} emit={emit} />;
+  }
+  return <>{String(content ?? '')}</>;
+}
+
 type DataTableColumn = {
   key: string;
   header: string;
@@ -489,18 +502,22 @@ function BoundDataTable({
                 const rowKey = row[keyField] ?? i;
                 return (
                   <tr key={String(rowKey)} className="border-t">
-                    {columns.map((col) => (
-                      <td
-                        key={col.key}
-                        className={cn(
-                          'px-3 py-2',
-                          col.align === 'right' && 'text-right',
-                          col.align === 'center' && 'text-center',
-                        )}
-                      >
-                        {String(row[col.key] ?? '')}
-                      </td>
-                    ))}
+                    {columns.map((col) => {
+                      const cells = row.__cells as Record<string, unknown> | undefined;
+                      const content = cells?.[col.key] ?? row[col.key];
+                      return (
+                        <td
+                          key={col.key}
+                          className={cn(
+                            'px-3 py-2',
+                            col.align === 'right' && 'text-right',
+                            col.align === 'center' && 'text-center',
+                          )}
+                        >
+                          {renderTableCell(content, emit)}
+                        </td>
+                      );
+                    })}
                     {actions.length > 0 ? (
                       <td className="px-3 py-2 text-right">
                         <div className="flex justify-end gap-1">
@@ -751,7 +768,12 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'badge':
       return (
-        <Badge variant={(props.variant as any) ?? 'default'} className={className} style={asStyle(style)}>
+        <Badge
+          variant={(props.variant as any) ?? 'default'}
+          color={typeof props.color === 'string' ? props.color : undefined}
+          className={className}
+          style={asStyle(style)}
+        >
           {String(props.text ?? '')}
         </Badge>
       );

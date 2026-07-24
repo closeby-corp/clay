@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { Element } from '@badui/core';
 import {
   DataTableElement,
   ROW_ID_FIELD,
@@ -225,5 +226,75 @@ describe('DataTableElement', () => {
         'action',
       ]),
     );
+  });
+
+  test('value() drives sort and filter', async () => {
+    const table = new DataTableElement(rows, {
+      pageSize: 10,
+      columns: [
+        { key: 'title', header: 'Title' },
+        {
+          key: 'billable',
+          header: 'Billable',
+          value: (row) => Number(row.hours) * 10,
+        },
+      ],
+    });
+    await table.handleEvent('sort', { key: 'billable', dir: 'asc' });
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Charlie',
+      'Alpha',
+      'Echo',
+      'Delta',
+      'Bravo',
+    ]);
+
+    await table.handleEvent('filter', '50'); // 5*10
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual(['Echo']);
+  });
+
+  test('render() puts badge ElementNode in __cells', () => {
+    const table = new DataTableElement(rows, {
+      pageSize: 10,
+      columns: [
+        { key: 'title', header: 'Title' },
+        {
+          key: 'status',
+          header: 'Status',
+          value: (row) => row.status,
+          render: (row) => new Element('badge', { text: String(row.status), variant: 'outline' }),
+        },
+      ],
+    });
+    const first = table.props.rows[0] as Record<string, unknown>;
+    const cells = first.__cells as Record<string, unknown>;
+    const statusCell = cells.status as { __ui: { type: string; props: Record<string, unknown> } };
+    expect(statusCell.__ui.type).toBe('badge');
+    expect(statusCell.__ui.props.text).toBe('done');
+  });
+
+  test('export uses computed value not render UI', async () => {
+    const messages: Array<{ op: string; content?: string }> = [];
+    const table = new DataTableElement(rows, {
+      pageSize: 10,
+      columns: [
+        { key: 'title', header: 'Title' },
+        {
+          key: 'billable',
+          header: 'Billable',
+          value: (row) => Number(row.hours) * 10,
+          render: (row) => new Element('badge', { text: `$${Number(row.hours) * 10}` }),
+        },
+      ],
+    });
+    // Attach a fake session for export
+    const { ClientSession } = await import('@badui/core');
+    const session = new ClientSession('/t', (m) => messages.push(m as { op: string; content?: string }));
+    table.setSession(session);
+    await table.handleEvent('export', { format: 'csv', mode: 'copy' });
+    const clip = messages.find((m) => m.op === 'clipboard');
+    expect(clip?.content).toContain('Title,Billable');
+    expect(clip?.content).toContain('Alpha,30');
+    expect(clip?.content).not.toContain('badge');
   });
 });
