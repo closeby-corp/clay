@@ -2,6 +2,7 @@ import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
 
 ui.page('/examples/slider-demo', () => {
+  ui.app({ ...APP_SHELL }, () => {
   const state = reactive({
     volume: 50,
     brightness: 75,
@@ -75,4 +76,7 @@ ui.page('/examples/slider-demo', () => {
       }, { gap: 2 });
     }, { gap: 3 });
   }, { centered: true, width: 'lg' });
+  });
 });
+import { APP_SHELL } from '../nav';
+

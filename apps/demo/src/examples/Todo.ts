@@ -8,6 +8,7 @@ interface Todo {
 }
 
 ui.page('/examples/todo', () => {
+  ui.app({ ...APP_SHELL }, () => {
   let todos: Todo[] = [];
   let todoFilter: 'all' | 'active' | 'completed' = 'all';
   const draft = reactive({ text: '' });
@@ -101,4 +102,7 @@ ui.page('/examples/todo', () => {
       });
     }, { gap: 3 });
   }, { centered: true, width: 'lg' });
+  });
 });
+import { APP_SHELL } from '../nav';
+

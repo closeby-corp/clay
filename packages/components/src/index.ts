@@ -318,3 +318,5 @@ export function card(
   withParent(el, () => fn(el));
   return el;
 }
+
+export { app, type AppNavItem, type AppProps } from './app';

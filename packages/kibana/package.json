@@ -1,0 +1,11 @@
+{
+  "name": "@badui/kibana",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@badui/duckdb": "workspace:*"
+  }
+}

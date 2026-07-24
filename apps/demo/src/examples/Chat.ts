@@ -9,6 +9,7 @@ interface ChatMessage {
 }
 
 ui.page('/examples/chat', () => {
+  ui.app({ ...APP_SHELL }, () => {
   const messages = GlobalState.create<ChatMessage[]>('chatMessages', []);
   const onlineUsers = GlobalState.create<string[]>('onlineUsers', []);
 
@@ -67,4 +68,7 @@ ui.page('/examples/chat', () => {
       }, { gap: 2 });
     }, { gap: 3 });
   }, { centered: true, width: 'xl' });
+  });
 });
+import { APP_SHELL } from '../nav';
+

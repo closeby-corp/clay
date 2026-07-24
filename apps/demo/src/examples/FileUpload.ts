@@ -1,6 +1,7 @@
 import { ui } from '@badui/ui';
 
 ui.page('/examples/upload', () => {
+  ui.app({ ...APP_SHELL }, () => {
   let files: string[] = [];
 
   ui.container(() => {
@@ -39,4 +40,7 @@ ui.page('/examples/upload', () => {
       });
     }, { gap: 3 });
   }, { centered: true, width: 'md' });
+  });
 });
+import { APP_SHELL } from '../nav';
+

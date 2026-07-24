@@ -20,6 +20,7 @@ import {
   confirm as confirmFactory,
   prompt as promptFactory,
   choose as chooseFactory,
+  app as appFactory,
   type ButtonProps,
   type LabelProps,
   type InputProps,
@@ -40,6 +41,8 @@ import {
   type PromptOptions,
   type ChooseOptions,
   type ChooseOption,
+  type AppProps,
+  type AppNavItem,
   DataTableElement,
   DialogElement,
 } from '@badui/components';
@@ -63,6 +66,8 @@ export type {
   PromptOptions,
   ChooseOptions,
   ChooseOption,
+  AppProps,
+  AppNavItem,
   NotifyOptions,
   NotifyType,
   ToastPosition,
@@ -147,6 +152,10 @@ export function card(a: any, b?: any): Element {
   return cardFactory(a, b);
 }
 
+export function app(props: AppProps, fn: () => void): Element {
+  return appFactory(props, fn);
+}
+
 export function dialog(fn: (dlg: DialogElement) => void, props?: DialogProps): DialogElement;
 export function dialog(props: DialogProps, fn: (dlg: DialogElement) => void): DialogElement;
 export function dialog(a: any, b?: any): DialogElement {
@@ -205,6 +214,7 @@ export const ui = {
   container,
   hero,
   card,
+  app,
   dialog,
   confirm,
   prompt,

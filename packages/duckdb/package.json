@@ -1,0 +1,11 @@
+{
+  "name": "@badui/duckdb",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "^1.5.4-r.1"
+  }
+}

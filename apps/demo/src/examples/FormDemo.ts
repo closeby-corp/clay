@@ -2,6 +2,7 @@ import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
 
 ui.page('/examples/form-demo', () => {
+  ui.app({ ...APP_SHELL }, () => {
   const form = reactive({
     name: '',
     email: '',
@@ -115,4 +116,7 @@ ui.page('/examples/form-demo', () => {
       }, { gap: 2 });
     }, { gap: 3 });
   }, { centered: true, width: 'lg' });
+  });
 });
+import { APP_SHELL } from '../nav';
+

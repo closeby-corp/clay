@@ -465,3 +465,17 @@ import {
 import { BadUIServer } from '@badui/server';
 import { button, input /* … */ } from '@badui/components';
 ```
+
+---
+
+## DuckDB (`@badui/duckdb`)
+
+See [DuckDB](./duckdb.md) for the multi-database wrapper (`connect`, `attach`, CRUD).
+
+## Kibana (`@badui/kibana`)
+
+See [Kibana](./kibana.md) for REST access, Elasticsearch search via console proxy, and Saved Objects.
+
+## ClickHouse (`@badui/clickhouse`)
+
+See [ClickHouse](./clickhouse.md) for the multi-connection wrapper (`connect`, `query`, CRUD, `stream`).

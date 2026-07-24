@@ -33,6 +33,7 @@ const seed: Task[] = [
 ];
 
 ui.page('/examples/datatable', () => {
+  ui.app({ ...APP_SHELL }, () => {
   let tasks = seed.map((t) => ({ ...t }));
   let nextId = tasks.length + 1;
   let table: DataTableElement;
@@ -153,4 +154,7 @@ ui.page('/examples/datatable', () => {
       { pageSize: 0, searchable: true, searchPlaceholder: 'Search config…' },
     );
   }, { gap: 3 });
+  });
 });
+import { APP_SHELL } from '../nav';
+

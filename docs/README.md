@@ -15,6 +15,9 @@ You write imperative `ui.*` code on the server. BadUI owns a per-client element 
 | [WebSocket protocol](./protocol.md) | Client ↔ server message formats |
 | [Architecture](./architecture.md) | Packages, data flow, and ownership |
 | [Examples](./examples.md) | Demo apps and patterns |
+| [DuckDB](./duckdb.md) | Multi-DB DuckDB wrapper (`@badui/duckdb`) |
+| [Kibana](./kibana.md) | Kibana REST + ES search (`@badui/kibana`) |
+| [ClickHouse](./clickhouse.md) | Multi-connection ClickHouse wrapper (`@badui/clickhouse`) |
 
 ## Quick start
 

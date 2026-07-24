@@ -647,7 +647,62 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
   switch (type) {
     case 'root':
-      return <div className="min-h-screen p-6 md:p-10">{renderChildren()}</div>;
+      return <div className="min-h-screen">{renderChildren()}</div>;
+
+    case 'app': {
+      const title = String(props.title ?? '');
+      const nav = (Array.isArray(props.nav) ? props.nav : []) as Array<{
+        label: string;
+        href: string;
+        description?: string;
+        active?: boolean;
+      }>;
+
+      const go = (href: string) => {
+        if (href.startsWith('/')) {
+          window.history.pushState({}, '', href);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        } else {
+          window.location.href = href;
+        }
+      };
+
+      return (
+        <div className={cn('flex min-h-screen w-full bg-background', className)} style={asStyle(style)}>
+          <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-border bg-muted/30 px-3 py-5 md:w-64">
+            {title ? (
+              <div className="mb-6 px-2 text-lg font-semibold tracking-tight">{title}</div>
+            ) : null}
+            <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
+              {nav.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    go(item.href);
+                  }}
+                  className={cn(
+                    'rounded-md px-2.5 py-2 text-sm transition-colors',
+                    item.active
+                      ? 'bg-background font-medium text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
+                  )}
+                >
+                  <div>{item.label}</div>
+                  {item.description ? (
+                    <div className="mt-0.5 text-xs font-normal text-muted-foreground">{item.description}</div>
+                  ) : null}
+                </a>
+              ))}
+            </nav>
+          </aside>
+          <main className="flex min-h-screen flex-1 justify-center overflow-y-auto px-6 py-8 md:px-10">
+            <div className="w-full max-w-5xl">{renderChildren()}</div>
+          </main>
+        </div>
+      );
+    }
 
     case 'refreshable':
       return <div className={cn('contents', className)}>{renderChildren()}</div>;

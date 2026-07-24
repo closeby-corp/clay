@@ -10,6 +10,7 @@ type Order = {
 };
 
 ui.page('/examples/dashboard', () => {
+  ui.app({ ...APP_SHELL }, () => {
   let users = 1234;
   let revenue = 12345.67;
   let orders = 89;
@@ -64,4 +65,7 @@ ui.page('/examples/dashboard', () => {
       },
     );
   }, { gap: 4 });
+  });
 });
+import { APP_SHELL } from '../nav';
+

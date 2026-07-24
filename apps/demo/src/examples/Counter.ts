@@ -1,6 +1,8 @@
 import { ui } from '@badui/ui';
+import { APP_SHELL } from '../nav';
 
 ui.page('/examples/counter', () => {
+  ui.app({ ...APP_SHELL }, () => {
   let count = 0;
   let history: number[] = [];
 
@@ -46,4 +48,5 @@ ui.page('/examples/counter', () => {
       });
     }, { gap: 2 });
   }, { gap: 3 });
+  });
 });
