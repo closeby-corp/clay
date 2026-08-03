@@ -11,6 +11,7 @@ import {
   alert as alertFactory,
   stat as statFactory,
   dataTable as dataTableFactory,
+  areaChart as areaChartFactory,
   row as rowFactory,
   column as columnFactory,
   container as containerFactory,
@@ -34,7 +35,11 @@ import {
   type StatItem,
   type DataTableProps,
   type DataTableAction,
+  type DataTableView,
+  type DataTablePrimaryAction,
   type TableColumn,
+  type AreaChartProps,
+  type AreaChartSeries,
   type CardProps,
   type DialogProps,
   type ConfirmOptions,
@@ -52,16 +57,28 @@ import {
   RefreshableElement,
   page as corePage,
   notify as notifyCore,
+  setPageWrapper,
   type NotifyOptions,
   type NotifyType,
+  type PageOptions,
   type ToastPosition,
 } from '@badui/core';
 import { BadUIServer, type BadUIServerConfig } from '@badui/server';
+import {
+  loadPages,
+  navFromPages,
+  clearPageMeta,
+  type PageMeta,
+} from './pages';
 
 export type {
   DataTableProps,
   DataTableAction,
+  DataTableView,
+  DataTablePrimaryAction,
   TableColumn,
+  AreaChartProps,
+  AreaChartSeries,
   DialogProps,
   ConfirmOptions,
   PromptOptions,
@@ -73,8 +90,10 @@ export type {
   NotifyOptions,
   NotifyType,
   ToastPosition,
+  PageMeta,
+  PageOptions,
 };
-export { DataTableElement, DialogElement };
+export { DataTableElement, DialogElement, loadPages, navFromPages, clearPageMeta };
 
 export function label(text?: string, props?: Omit<LabelProps, 'text'>): Element {
   return labelFactory(text, props);
@@ -122,6 +141,10 @@ export function stat(items: StatItem[], props?: { className?: string }): Element
 
 export function dataTable(data?: unknown, props?: DataTableProps): DataTableElement {
   return dataTableFactory(data, props);
+}
+
+export function areaChart(props: AreaChartProps): Element {
+  return areaChartFactory(props);
 }
 
 export function row(fn: () => void, props?: Parameters<typeof rowFactory>[1]): Element;
@@ -188,12 +211,23 @@ export function refreshable(fn: () => void): RefreshableElement {
   return new RefreshableElement(fn);
 }
 
-export function page(path: string, fn: () => void): void {
-  corePage(path, fn);
+export function page(path: string, fn: () => void, options?: PageOptions): void {
+  corePage(path, fn, options);
 }
 
-export function run(config: BadUIServerConfig = {}): BadUIServer {
-  const server = new BadUIServer(config);
+export type RunConfig = BadUIServerConfig & {
+  /** Global dashboard shell; wraps every page unless `ui.page(..., { shell: false })`. */
+  app?: AppProps;
+};
+
+export function run(config: RunConfig = {}): BadUIServer {
+  const { app: appProps, ...serverConfig } = config;
+  if (appProps) {
+    setPageWrapper((pageFn) => app(appProps, pageFn));
+  } else {
+    setPageWrapper(null);
+  }
+  const server = new BadUIServer(serverConfig);
   server.start();
   return server;
 }
@@ -211,6 +245,7 @@ export const ui = {
   alert,
   stat,
   dataTable,
+  areaChart,
   row,
   column,
   container,
@@ -225,6 +260,8 @@ export const ui = {
   refreshable,
   page,
   run,
+  loadPages,
+  navFromPages,
 };
 
 export default ui;

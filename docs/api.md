@@ -13,7 +13,7 @@ import { reactive, subscribe, notify, navigate, GlobalState } from '@badui/core'
 
 ### Lifecycle
 
-#### `ui.page(path, fn)`
+#### `ui.page(path, fn, options?)`
 
 Register a page builder. `fn` runs once per WebSocket session for that path.
 
@@ -21,18 +21,52 @@ Register a page builder. `fn` runs once per WebSocket session for that path.
 ui.page('/dashboard', () => {
   ui.label('Dashboard');
 });
+
+// Opt out of the global shell from `ui.run({ app })`:
+ui.page('/login', () => {
+  ui.label('Sign in');
+}, { shell: false });
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `shell` | `boolean` | `true` when `ui.run({ app })` is set | Set `false` to skip the global page wrapper |
+
+#### `ui.loadPages(dir)`
+
+Dynamically import every `*.ts` / `*.tsx` under `dir` (Bun). Each module should call `ui.page` once; optional `export const pageMeta` is attached to the path registered by that import.
+
+Skips `index.ts(x)`, `_*` files, and `*.test.*`.
+
+```typescript
+await ui.loadPages(new URL('./pages', import.meta.url));
+```
+
+#### `ui.navFromPages()`
+
+Build primary `AppNavItem[]` from registered routes + collected `pageMeta` (label/icon/order). Home `/` sorts first; others by `order` (default `100`) then path. Missing meta falls back to a title-cased path segment and icon `'boxes'`.
+
+```typescript
+export const pageMeta = { label: 'Charts', icon: 'chart-area', order: 90 };
 ```
 
 #### `ui.run(config?)`
 
-Start the Bun server.
+Start the Bun server. Optional `app` sets a global shell wrapper for every page (unless `shell: false`).
 
 ```typescript
+await ui.loadPages(new URL('./pages', import.meta.url));
+
 ui.run({
   port: 4000,
   title: 'My App',
   clientDir: '/absolute/path/to/client/dist', // optional
   css: './globals.css', // optional extra stylesheet(s)
+  app: {
+    title: 'My App',
+    nav: ui.navFromPages(),
+    // user, secondary, documents, …
+  },
 });
 ```
 
@@ -42,6 +76,7 @@ ui.run({
 | `title` | `string` | `'BadUI'` | HTML `<title>` |
 | `clientDir` | `string` | `packages/client/dist` | Built Vite assets |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
+| `app` | `AppProps` | | Global dashboard shell; wraps each page on mount |
 
 Returns `BadUIServer` with `.start()` / `.stop()` (`.start()` is already called by `ui.run`).
 
@@ -173,9 +208,32 @@ Form controls support `bindValue(obj, key)` for two-way binding.
 
 ```typescript
 ui.stat([
-  { title: 'Users', value: 1234 },
-  { title: 'Revenue', value: '$12k' },
+  {
+    title: 'Total Revenue',
+    value: '$1,250.00',
+    trend: '+12.5%',
+    footer: 'Trending up this month',
+    description: 'Visitors for the last 6 months',
+  },
 ]);
+```
+
+#### `ui.areaChart(props)`
+
+Stacked area chart (Recharts). Optional card chrome via `title` / `description`. Set `interactive: true` with ISO date `xKey` values for 7d / 30d / 90d filtering.
+
+```typescript
+ui.areaChart({
+  title: 'Total Visitors',
+  description: 'Last 3 months',
+  interactive: true,
+  data: visitors,
+  xKey: 'date',
+  series: [
+    { key: 'mobile', label: 'Mobile' },
+    { key: 'desktop', label: 'Desktop' },
+  ],
+});
 ```
 
 #### `ui.dataTable(data, props?)`
@@ -225,9 +283,21 @@ const table = ui.dataTable(tasks, {
 | `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
 | `exportFilename` | `string` | `'data'` | Download base name (no extension) |
 | `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
+| `views` | `DataTableView[]` | | Tabbed views; each may include a row `filter` |
+| `defaultView` | `string` | first view id | Initial active view |
+| `onViewChange` | `(viewId) => void` | | Fires after the active view changes |
 | `actions` | `DataTableAction[]` | `[]` | Per-row actions (≤2 as buttons; more collapse into an **Actions** menu) |
 | `onAction` | `(actionId, row) => void` | | Row action handler |
 | `className` | `string` | | Extra classes |
+
+| View field | Type | Notes |
+|------------|------|-------|
+| `id` | `string` | Tab value |
+| `label` | `string` | Tab label |
+| `count` | `number` | Optional badge override; otherwise derived from matching rows |
+| `filter` | `(row) => boolean` | Optional display lens over source rows while this view is active |
+
+Every view tab shows the same table chrome; switching views applies that view’s `filter` (if any) before search/column filters. Badge counts stay live after `setRows` when `count` is omitted.
 
 | Column field | Type | Notes |
 |--------------|------|-------|
@@ -310,7 +380,7 @@ onClick: async () => {
   if (color == null) return;
 
   ui.notify(`Hello ${name} (${color})`, 'success');
-  // or: ui.notify('Sticky', { type: 'warning', duration: 0, position: 'top-right' });
+  // or: ui.notify('Sticky', { type: 'warning', duration: 0, position: 'top-right', description: '…' });
 }
 ```
 
@@ -319,9 +389,9 @@ onClick: async () => {
 | `ui.confirm(message, options?)` | `Promise<boolean>` | Cancel / Escape → `false` |
 | `ui.prompt(message, options?)` | `Promise<string \| null>` | Cancel → `null` |
 | `ui.choose(message, choices, options?)` | `Promise<string \| null>` | `choices` as strings or `{ value, label }` |
-| `ui.notify(message, typeOrOptions?)` | `void` | Toast stack; types `info\|success\|warning\|error` |
+| `ui.notify(message, typeOrOptions?)` | `void` | ShadCN Sonner toast; types `info\|success\|warning\|error` |
 
-`ui.notify` options object: `{ type?, duration?, position? }` — `duration: 0` is sticky; positions `top-left` \| `top-right` \| `bottom-left` \| `bottom-right`.
+`ui.notify` options: `{ type?, duration?, position?, description? }` — `duration: 0` is sticky; `description` is Sonner’s secondary line; positions `top-left` \| `top-right` \| `bottom-left` \| `bottom-right`.
 
 ---
 
@@ -340,15 +410,23 @@ All layout helpers accept either `(fn, props?)` or `(props, fn)`.
 
 #### `ui.app(props, fn)`
 
-Sidebar layout for multi-page apps. Wrap each `ui.page` body so every route shares the same chrome (rebuilds on navigate with the current session path for active nav).
+Sidebar layout for multi-page apps. Prefer `ui.run({ app })` so every page inherits the shell; use `ui.app` directly for advanced/one-off cases (or when `shell: false`).
 
 | Prop | Type | Description |
 |------|------|-------------|
 | `title` | `string` | Brand label in the sidebar |
-| `nav` | `{ label, href, description? }[]` | Sidebar links (SPA `pushState` for `/…`) |
+| `nav` | `{ label, href, icon?, description? }[]` | Primary sidebar links (SPA `pushState` for `/…`) |
+| `user` | `AppUser` | Optional user menu |
+| `secondary` / `documents` | nav groups | Optional extra sidebar sections |
 | `className` | `string` | Extra classes on the shell |
 
 ```typescript
+// Preferred: configure once at startup
+ui.run({
+  app: { title: 'BadUI', nav: ui.navFromPages() },
+});
+
+// Advanced: wrap a single page manually
 ui.page('/examples/counter', () => {
   ui.app(
     {
@@ -362,7 +440,7 @@ ui.page('/examples/counter', () => {
       ui.label('Counter');
     },
   );
-});
+}, { shell: false });
 ```
 
 Shared layout props:
@@ -435,25 +513,49 @@ Returns an unsubscribe function.
 
 ### `GlobalState`
 
-Process-wide shared state (all sessions):
+Process-wide shared state (all sessions). Optional pluggable persistence:
 
 ```typescript
+import { GlobalState, type PersistenceAdapter } from '@badui/core';
+
+// Entrypoint — plug a backend (DuckDB, Redis, …) once:
+await GlobalState.configure({ persistence: myAdapter });
+
+// Persists by default when an adapter is configured:
 const messages = GlobalState.create<Message[]>('chatMessages', []);
+
+// Opt out of persistence for ephemeral keys:
+const online = GlobalState.create<string[]>('onlineUsers', [], { persist: false });
 
 messages.subscribe((list) => {
   // update UI for this session
 });
 
-messages.set([...messages.get(), newMessage]);
-messages.update((prev) => [...prev, newMessage]);
+await messages.set([...(await messages.get()), newMessage]);
+await messages.update((prev) => [...prev, newMessage]);
 ```
+
+`get()` is always async. For **persisted** stores it calls `adapter.load(key)` on every read so other processes’ writes are visible; then updates memory and notifies subscribers if the value changed. `set` / `update` write memory immediately and `await adapter.save` when persisted.
 
 | Method | Description |
 |--------|-------------|
-| `GlobalState.create(key, initial)` | Get or create named store |
-| `.get()` / `.set(v)` / `.update(fn)` | Read/write |
+| `GlobalState.configure({ persistence })` | Set the process-wide `PersistenceAdapter` |
+| `GlobalState.create(key, initial, options?)` | Get or create named store; `{ persist?: boolean }` |
+| `.get()` | `Promise<T>` — load from adapter when persisted |
+| `.set(v)` / `.update(fn)` | `Promise<void>` — save when persisted |
 | `.subscribe(listener)` | Listen for changes |
-| `GlobalState.clearAll()` | Test helper |
+| `GlobalState.clearAll()` | Test helper (clears stores + adapter) |
+| `createMemoryPersistence()` | In-memory adapter for tests |
+
+`PersistenceAdapter`:
+
+```typescript
+type PersistenceAdapter = {
+  load(key: string): Promise<string | null>;
+  save(key: string, json: string): Promise<void>;
+  close?(): Promise<void>;
+};
+```
 
 ---
 
@@ -461,11 +563,16 @@ messages.update((prev) => [...prev, newMessage]);
 
 ### `notify(message, typeOrOptions?)`
 
-Toast on the client (stack). Prefer `ui.notify` from app code.
+Toast on the client via ShadCN Sonner. Prefer `ui.notify` from app code.
 
 ```typescript
 notify('Saved!', 'success');
-notify('Heads up', { type: 'warning', duration: 0, position: 'top-right' });
+notify('Heads up', {
+  type: 'warning',
+  duration: 0,
+  position: 'top-right',
+  description: 'Sticky until dismissed',
+});
 ```
 
 Types: `'info' | 'success' | 'warning' | 'error'`.
@@ -491,6 +598,7 @@ import {
   reactive,
   subscribe,
   GlobalState,
+  createMemoryPersistence,
   notify,
   navigate,
 } from '@badui/core';

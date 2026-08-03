@@ -32,7 +32,7 @@ ui.page('/examples/todo', () => {
 - Register routes with `ui.page(path, fn)` (or `page` from `@badui/core`).
 - On `hello`, the server creates a session, runs the page builder, and sends `mount`.
 - State in local variables (`let count = 0`) is **per session** (per tab), not shared.
-- Use `GlobalState` for process-wide shared data (e.g. chat messages).
+- Use `GlobalState` for process-wide shared data (e.g. chat messages). Configure a `PersistenceAdapter` at the app entrypoint to persist stores (default on when configured; opt out with `{ persist: false }`). `await state.get()` reloads from the adapter when persisted.
 
 ## Elements
 
@@ -138,22 +138,51 @@ ui.column(() => {
 
 Children created inside the callback become children of that layout element.
 
-### App shell (`ui.app`)
+### App shell (`ui.run({ app })`)
 
-For multi-page demos, wrap page content in `ui.app({ title, nav }, fn)`. The client renders a left sidebar and puts children in the center main pane. This is **not** a persistent client shell — on `navigate` / link click the session remounts and the shell rebuilds with the correct active nav item.
+Configure chrome once at startup; page modules only register content. `ui.loadPages(dir)` imports every page file under a directory; optional `pageMeta` feeds `ui.navFromPages()` for the primary sidebar.
+
+```typescript
+await ui.loadPages(new URL('./pages', import.meta.url));
+
+ui.run({
+  app: {
+    title: 'My App',
+    nav: ui.navFromPages(),
+  },
+});
+```
+
+```typescript
+// pages/Charts.ts
+export const pageMeta = { label: 'Charts', icon: 'chart-area', order: 90 };
+
+ui.page('/examples/charts', () => {
+  ui.label('Charts'); // inherits global shell
+});
+```
+
+Opt out per route with `ui.page(path, fn, { shell: false })`. Keep explicit `ui.app(props, fn)` for advanced cases.
+
+This is **not** a persistent client shell — on `navigate` / link click the session remounts and the shell rebuilds with the correct active nav item.
 
 ## Notifications and navigation
 
 ```typescript
 ui.notify('Saved!', 'success');
-ui.notify('Look here', { type: 'warning', duration: 0, position: 'top-right' });
+ui.notify('Look here', {
+  type: 'warning',
+  duration: 0,
+  position: 'top-right',
+  description: 'Sticky toast via Sonner',
+});
 
 // still available:
 import { notify, navigate } from '@badui/core';
 navigate('/examples/todo');
 ```
 
-`ui.notify` / `notify` push onto a **toast stack** on the client (typed colors, dismiss button, optional auto-hide). `navigate` tells the client to change path and reconnect the session.
+`ui.notify` / `notify` map to [Sonner](https://ui.shadcn.com/docs/components/sonner) on the client (`toast.success` / `info` / `warning` / `error`). `duration: 0` is sticky; optional `description` is Sonner’s secondary line. `navigate` tells the client to change path and reconnect the session.
 
 ## Imperative overlays
 

@@ -1,9 +1,12 @@
 import { Element } from '@badui/core';
 import { ui } from '@badui/ui';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'Kitchen Sink',
+  icon: 'boxes',
+  order: 100,
+};
 
 ui.page('/examples/kitchen-sink', () => {
-  ui.app({ ...APP_SHELL }, () => {
     new Element('kitchensink', {});
-  });
 });

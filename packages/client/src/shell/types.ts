@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Boxes,
+  ChartArea,
   ClipboardList,
   Database,
   File,
@@ -42,6 +43,7 @@ const iconMap: Record<string, LucideIcon> = {
   'table-2': Table2,
   'sliders-horizontal': SlidersHorizontal,
   'form-input': FormInput,
+  'chart-area': ChartArea,
   boxes: Boxes,
   settings: Settings,
   'help-circle': HelpCircle,

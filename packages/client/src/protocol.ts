@@ -25,6 +25,7 @@ export type ServerMessage =
       type?: NotifyType;
       duration?: number;
       position?: ToastPosition;
+      description?: string;
     }
   | { op: 'dismissNotify'; id: string }
   | { op: 'download'; filename: string; mime: string; content: string }
@@ -34,11 +35,3 @@ export type ServerMessage =
 export type ClientMessage =
   | { op: 'hello'; path: string }
   | { op: 'event'; id: string; type: string; value?: unknown };
-
-export type ToastItem = {
-  id: string;
-  message: string;
-  type: NotifyType;
-  duration: number;
-  position: ToastPosition;
-};

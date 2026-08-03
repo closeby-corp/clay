@@ -1,7 +1,12 @@
 import { reactive } from '@badui/core';
 import { ui } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'Todo',
+  icon: 'list-todo',
+  order: 20,
+};
 
 interface Todo {
   id: string;
@@ -10,7 +15,6 @@ interface Todo {
 }
 
 ui.page('/examples/todo', () => {
-  ui.app({ ...APP_SHELL }, () => {
     let todos: Todo[] = [];
     let todoFilter: 'all' | 'active' | 'completed' = 'all';
     const draft = reactive({ text: '' });
@@ -106,5 +110,4 @@ ui.page('/examples/todo', () => {
       });
       }, { gap: 6 });
     });
-  });
 });

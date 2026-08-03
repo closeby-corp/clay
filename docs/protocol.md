@@ -87,19 +87,21 @@ Client updates history and sends a new `hello`.
   "message": "Saved!",
   "type": "success",
   "duration": 2500,
-  "position": "bottom-right"
+  "position": "bottom-right",
+  "description": "Optional secondary line"
 }
 ```
 
 | Field | Type | Default | Notes |
 |-------|------|---------|-------|
-| `id` | `string` | required (server) | Client may invent one if missing |
-| `message` | `string` | | Toast body |
-| `type` | `info\|success\|warning\|error` | `info` | Styling |
-| `duration` | `number` | `2500` | ms; `0` = sticky until dismissed |
-| `position` | `top-left\|top-right\|bottom-left\|bottom-right` | `bottom-right` | Stack corner |
+| `id` | `string` | required (server) | Passed to Sonner as toast id |
+| `message` | `string` | | Toast title |
+| `type` | `info\|success\|warning\|error` | `info` | Maps to `toast.info` / `success` / `warning` / `error` |
+| `duration` | `number` | `2500` | ms; `0` → Sonner `Infinity` (sticky) |
+| `position` | `top-left\|top-right\|bottom-left\|bottom-right` | `bottom-right` | Sonner position |
+| `description` | `string` | | Optional Sonner description |
 
-Client appends to a toast stack; auto-removes when `duration > 0`.
+Client renders via ShadCN `<Toaster />` + imperative `toast` from `sonner`.
 
 ### `dismissNotify`
 
@@ -107,7 +109,7 @@ Client appends to a toast stack; auto-removes when `duration > 0`.
 { "op": "dismissNotify", "id": "toast_1" }
 ```
 
-Removes one toast from the stack (server-driven). The client also dismisses locally when the user clicks ×.
+Calls `toast.dismiss(id)` on the client.
 
 ### `download`
 

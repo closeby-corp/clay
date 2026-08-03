@@ -168,17 +168,6 @@ body {
   }
 }
 
-@keyframes badui-toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 .badui-animate-in {
   animation: badui-fade-in var(--badui-duration-normal) var(--badui-ease-out),
     badui-slide-up var(--badui-duration-normal) var(--badui-ease-out);
@@ -189,14 +178,9 @@ body {
   animation: badui-menu-in var(--badui-duration-fast) var(--badui-ease-out);
 }
 
-.badui-toast-in {
-  animation: badui-toast-in var(--badui-duration-normal) var(--badui-ease-out);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .badui-animate-in,
-  .badui-menu-panel,
-  .badui-toast-in {
+  .badui-menu-panel {
     animation: none;
   }
 }

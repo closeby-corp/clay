@@ -1,7 +1,12 @@
 import { ui } from '@badui/ui';
 import type { DataTableElement } from '@badui/ui';
 import { exampleHeader, exampleSection } from '../chrome';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'DataTable',
+  icon: 'table-2',
+  order: 60,
+};
 
 type Task = {
   id: number;
@@ -35,7 +40,6 @@ const seed: Task[] = [
 ];
 
 ui.page('/examples/datatable', () => {
-  ui.app({ ...APP_SHELL }, () => {
     let tasks = seed.map((t) => ({ ...t }));
     let nextId = tasks.length + 1;
     let table: DataTableElement;
@@ -77,7 +81,9 @@ ui.page('/examples/datatable', () => {
         keyField: 'id',
         searchable: true,
         searchPlaceholder: 'Search tasks…',
+        selectable: true,
         pageSize: 8,
+        pageSizeOptions: [5, 8, 10, 20],
         columns: [
           { key: 'id', header: 'ID' },
           { key: 'title', header: 'Title' },
@@ -158,5 +164,4 @@ ui.page('/examples/datatable', () => {
         { pageSize: 0, searchable: true, searchPlaceholder: 'Search config…' },
       );
     }, { gap: 6 });
-  });
 });

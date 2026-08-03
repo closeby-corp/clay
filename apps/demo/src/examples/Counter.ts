@@ -1,9 +1,13 @@
 import { ui } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'Counter',
+  icon: 'gauge',
+  order: 10,
+};
 
 ui.page('/examples/counter', () => {
-  ui.app({ ...APP_SHELL }, () => {
     let count = 0;
     let history: number[] = [];
 
@@ -56,5 +60,4 @@ ui.page('/examples/counter', () => {
         );
       }, { gap: 6 });
     });
-  });
 });

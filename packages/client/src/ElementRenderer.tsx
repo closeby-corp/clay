@@ -1,48 +1,15 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import {
-  Archive,
-  Ban,
-  Check,
-  Copy,
-  Download,
-  Edit,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  FileText,
-  Info,
-  Link2,
-  Lock,
-  Mail,
-  Minus,
-  MoreHorizontal,
-  MoreVertical,
-  Pause,
-  Pencil,
-  Play,
-  Plus,
-  RefreshCw,
-  Save,
-  Search,
-  Settings,
-  Share2,
-  Star,
-  Trash2,
-  Unlock,
-  Upload,
-  User,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
+import { BoundAreaChart } from './BoundAreaChart';
+import { BoundDataTable } from './BoundDataTable';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -51,13 +18,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -65,18 +25,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 
 const KitchenSink = lazy(() => import('./KitchenSink'));
-const Dashboard01 = lazy(() => import('./blocks/dashboard-01'));
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -103,25 +55,37 @@ const gapMap: Record<number, string> = {
   5: 'gap-5',
   6: 'gap-6',
   8: 'gap-8',
+  10: 'gap-10',
+  12: 'gap-12',
 };
 
 function gapClass(gap: unknown): string {
-  const n = typeof gap === 'number' ? gap : Number(gap) || 2;
-  return gapMap[n] ?? 'gap-2';
+  const n = typeof gap === 'number' ? gap : Number(gap);
+  return gapMap[n] ?? 'gap-4';
 }
 
 function asStyle(style: unknown): CSSProperties | undefined {
   if (!style) return undefined;
-  if (typeof style === 'string') return undefined;
+  if (typeof style === 'string') {
+    const out: Record<string, string> = {};
+    for (const part of style.split(';')) {
+      const [k, ...rest] = part.split(':');
+      if (!k || rest.length === 0) continue;
+      const key = k.trim().replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+      out[key] = rest.join(':').trim();
+    }
+    return out as CSSProperties;
+  }
   return style as CSSProperties;
 }
 
-/** Keep typing snappy over WebSocket: local value + reconcile from server props. */
 function useOptimisticValue<T>(serverValue: T): [T, (next: T) => void] {
   const [local, setLocal] = useState(serverValue);
-  useEffect(() => {
+  const prev = useRef(serverValue);
+  if (prev.current !== serverValue) {
+    prev.current = serverValue;
     setLocal(serverValue);
-  }, [serverValue]);
+  }
   return [local, setLocal];
 }
 
@@ -142,14 +106,14 @@ function BoundInput({
   const [value, setValue] = useOptimisticValue(serverValue);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)}>
-      {props.label ? <Label>{String(props.label)}</Label> : null}
+    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+      {props.label ? <Label htmlFor={`in-${id}`}>{String(props.label)}</Label> : null}
       <Input
+        id={`in-${id}`}
         type={String(props.type ?? 'text')}
         value={value}
-        placeholder={String(props.placeholder ?? '')}
+        placeholder={props.placeholder ? String(props.placeholder) : undefined}
         disabled={!!props.disabled}
-        style={asStyle(style)}
         onChange={(e) => {
           const next = e.target.value;
           setValue(next);
@@ -178,14 +142,14 @@ function BoundTextarea({
   const [value, setValue] = useOptimisticValue(serverValue);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)}>
-      {props.label ? <Label>{String(props.label)}</Label> : null}
+    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+      {props.label ? <Label htmlFor={`ta-${id}`}>{String(props.label)}</Label> : null}
       <Textarea
-        rows={Number(props.rows ?? 3)}
+        id={`ta-${id}`}
         value={value}
-        placeholder={String(props.placeholder ?? '')}
+        placeholder={props.placeholder ? String(props.placeholder) : undefined}
         disabled={!!props.disabled}
-        style={asStyle(style)}
+        rows={typeof props.rows === 'number' ? props.rows : undefined}
         onChange={(e) => {
           const next = e.target.value;
           setValue(next);
@@ -210,16 +174,15 @@ function BoundSelect({
   style: unknown;
   emit: Emit;
 }) {
-  const options = (props.options as Array<{ value: string; label: string }>) ?? [];
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
-  const selectValue = value === '' ? undefined : value;
+  const options = (props.options as Array<{ value: string; label: string }>) ?? [];
 
   return (
     <div className={cn('flex w-full flex-col gap-1.5', className)}>
       {props.label ? <Label>{String(props.label)}</Label> : null}
       <Select
-        value={selectValue}
+        value={value || undefined}
         disabled={!!props.disabled}
         onValueChange={(next) => {
           setValue(next);
@@ -254,26 +217,30 @@ function BoundSlider({
   style: unknown;
   emit: Emit;
 }) {
-  const serverValue = Number(props.value ?? 0);
+  const serverValue = Number(props.value ?? props.min ?? 0);
   const [value, setValue] = useOptimisticValue(serverValue);
   const min = Number(props.min ?? 0);
   const max = Number(props.max ?? 100);
   const step = Number(props.step ?? 1);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
-      <div className="flex items-center justify-between text-sm">
-        {props.label ? <Label>{String(props.label)}</Label> : <span />}
-        {props.showValue ? <span className="text-muted-foreground">{String(value)}</span> : null}
-      </div>
+    <div className={cn('flex w-full flex-col gap-2', className)} style={asStyle(style)}>
+      {props.label ? (
+        <div className="flex items-center justify-between gap-2">
+          <Label>{String(props.label)}</Label>
+          {props.showValue !== false ? (
+            <span className="text-sm tabular-nums text-muted-foreground">{value}</span>
+          ) : null}
+        </div>
+      ) : null}
       <Slider
         min={min}
         max={max}
         step={step}
         value={[value]}
         disabled={!!props.disabled}
-        onValueChange={([next]) => {
-          const n = next ?? min;
+        onValueChange={(vals) => {
+          const n = vals[0] ?? min;
           setValue(n);
           if (hasEvent(props, 'change')) emit(id, 'change', n);
         }}
@@ -295,7 +262,7 @@ function BoundCheckbox({
   style: unknown;
   emit: Emit;
 }) {
-  const serverValue = !!props.value;
+  const serverValue = Boolean(props.checked ?? props.value ?? false);
   const [checked, setChecked] = useOptimisticValue(serverValue);
 
   return (
@@ -320,443 +287,6 @@ function BoundCheckbox({
   );
 }
 
-function isUiCell(value: unknown): value is { __ui: ElementNode } {
-  if (!value || typeof value !== 'object') return false;
-  const ui = (value as { __ui?: unknown }).__ui;
-  return !!ui && typeof ui === 'object' && typeof (ui as ElementNode).type === 'string';
-}
-
-function renderTableCell(content: unknown, emit: Emit) {
-  if (isUiCell(content)) {
-    return <ElementRenderer node={content.__ui} emit={emit} />;
-  }
-  return <>{String(content ?? '')}</>;
-}
-
-type DataTableColumn = {
-  key: string;
-  header: string;
-  align?: string;
-  sortable?: boolean;
-};
-
-type DataTableActionProp = {
-  id: string;
-  label: string;
-  icon?: string;
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-};
-
-function toPascalIconName(name: string): string {
-  return name
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
-}
-
-/** Curated Lucide icons for DataTable actions (keeps the client bundle small). */
-const ACTION_ICONS: Record<string, LucideIcon> = {
-  Archive,
-  Ban,
-  Check,
-  Copy,
-  Download,
-  Edit,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  FileText,
-  Info,
-  Link2,
-  Lock,
-  Mail,
-  Minus,
-  MoreHorizontal,
-  MoreVertical,
-  Pause,
-  Pencil,
-  Play,
-  Plus,
-  RefreshCw,
-  Save,
-  Search,
-  Settings,
-  Share2,
-  Star,
-  Trash2,
-  Unlock,
-  Upload,
-  User,
-  X,
-};
-
-function resolveLucideIcon(name?: string): LucideIcon | null {
-  if (!name) return null;
-  return ACTION_ICONS[toPascalIconName(name)] ?? null;
-}
-
-function ActionLabel({ action, iconClassName }: { action: DataTableActionProp; iconClassName?: string }) {
-  const Icon = resolveLucideIcon(action.icon);
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {Icon ? <Icon className={cn('size-3.5 shrink-0', iconClassName)} aria-hidden /> : null}
-      <span>{action.label}</span>
-    </span>
-  );
-}
-
-function BoundDataTable({
-  id,
-  props,
-  className,
-  style,
-  emit,
-}: {
-  id: string;
-  props: Record<string, unknown>;
-  className?: string;
-  style: unknown;
-  emit: Emit;
-}) {
-  const columns = (props.columns as DataTableColumn[]) ?? [];
-  const allColumns = (props.allColumns as DataTableColumn[]) ?? columns;
-  const rows = (props.rows as Record<string, unknown>[]) ?? [];
-  const actions = (props.actions as DataTableActionProp[]) ?? [];
-  const keyField = String(props.keyField ?? 'id');
-  const searchable = props.searchable !== false;
-  const columnFilterable = props.columnFilterable !== false;
-  const columnToggle = props.columnToggle !== false;
-  const exportable = props.exportable !== false;
-  const sortKey = (props.sortKey as string | null) ?? null;
-  const sortDir = (props.sortDir as 'asc' | 'desc') ?? 'asc';
-  const page = Number(props.page ?? 1);
-  const pageSize = Number(props.pageSize ?? 10);
-  const totalRows = Number(props.totalRows ?? rows.length);
-  const totalPages = Number(props.totalPages ?? 1);
-  const hiddenColumns = new Set((props.hiddenColumns as string[]) ?? []);
-  const serverFilter = String(props.filter ?? '');
-  const serverColumnFilters = (props.columnFilters as Record<string, string>) ?? {};
-  const [filter, setFilter] = useOptimisticValue(serverFilter);
-  const [columnFilters, setColumnFilters] = useOptimisticValue(serverColumnFilters);
-  const [columnsOpen, setColumnsOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [actionsMenuKey, setActionsMenuKey] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
-    };
-  }, []);
-
-  const showPagination = pageSize > 0;
-  const rangeStart = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
-  const rangeEnd = totalRows === 0 ? 0 : Math.min(page * pageSize, totalRows);
-  const showToolbar = searchable || columnToggle || exportable;
-
-  return (
-    <div className={cn('flex w-full flex-col gap-3', className)} style={asStyle(style)}>
-      {showToolbar ? (
-        <div className="flex flex-wrap items-start gap-2">
-          {searchable ? (
-            <Input
-              value={filter}
-              placeholder={String(props.searchPlaceholder ?? 'Search…')}
-              className="max-w-sm"
-              onChange={(e) => {
-                const next = e.target.value;
-                setFilter(next);
-                if (debounceRef.current) clearTimeout(debounceRef.current);
-                debounceRef.current = setTimeout(() => {
-                  if (hasEvent(props, 'filter')) emit(id, 'filter', next);
-                }, 150);
-              }}
-            />
-          ) : null}
-
-          <div className="ml-auto flex flex-wrap items-start gap-2">
-            {columnToggle ? (
-              <DropdownMenu
-                open={columnsOpen}
-                onOpenChange={(open) => {
-                  setColumnsOpen(open);
-                  if (open) {
-                    setExportOpen(false);
-                    setActionsMenuKey(null);
-                  }
-                }}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    Columns
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  {allColumns.map((col) => {
-                    const checked = !hiddenColumns.has(col.key);
-                    const onlyVisible =
-                      checked && allColumns.length - hiddenColumns.size <= 1;
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={col.key}
-                        checked={checked}
-                        disabled={onlyVisible}
-                        onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={(next) => {
-                          if (hasEvent(props, 'columnVisibility')) {
-                            emit(id, 'columnVisibility', {
-                              key: col.key,
-                              visible: next === true,
-                            });
-                          }
-                        }}
-                      >
-                        {col.header}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-
-            {exportable ? (
-              <DropdownMenu
-                open={exportOpen}
-                onOpenChange={(open) => {
-                  setExportOpen(open);
-                  if (open) {
-                    setColumnsOpen(false);
-                    setActionsMenuKey(null);
-                  }
-                }}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  {(
-                    [
-                      ['download', 'csv', 'Download CSV'],
-                      ['download', 'tsv', 'Download TSV'],
-                      ['download', 'json', 'Download JSON'],
-                      ['copy', 'csv', 'Copy CSV'],
-                      ['copy', 'tsv', 'Copy TSV'],
-                      ['copy', 'json', 'Copy JSON'],
-                    ] as const
-                  ).map(([mode, format, label]) => (
-                    <DropdownMenuItem
-                      key={`${mode}-${format}`}
-                      onSelect={() => {
-                        if (hasEvent(props, 'export')) {
-                          emit(id, 'export', { format, mode });
-                        }
-                      }}
-                    >
-                      {label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              {columns.map((col) => {
-                const sortable = col.sortable !== false;
-                const active = sortKey === col.key;
-                const indicator = !sortable ? '' : active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
-                return (
-                  <TableHead
-                    key={col.key}
-                    className={cn(
-                      col.align === 'right' && 'text-right',
-                      col.align === 'center' && 'text-center',
-                      sortable && 'cursor-pointer select-none',
-                    )}
-                    onClick={() => {
-                      if (!sortable || !hasEvent(props, 'sort')) return;
-                      const nextDir: 'asc' | 'desc' =
-                        active && sortDir === 'asc' ? 'desc' : 'asc';
-                      emit(id, 'sort', { key: col.key, dir: nextDir });
-                    }}
-                  >
-                    {col.header}
-                    {indicator}
-                  </TableHead>
-                );
-              })}
-              {actions.length > 0 ? (
-                <TableHead className="text-right">Actions</TableHead>
-              ) : null}
-            </TableRow>
-            {columnFilterable ? (
-              <TableRow className="hover:bg-transparent">
-                {columns.map((col) => (
-                  <TableHead key={`filter-${col.key}`} className="h-auto pb-2 pt-0 font-normal">
-                    <Input
-                      value={columnFilters[col.key] ?? ''}
-                      placeholder="Filter…"
-                      className="h-8"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setColumnFilters({ ...columnFilters, [col.key]: next });
-                        if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
-                        columnDebounceRef.current = setTimeout(() => {
-                          if (hasEvent(props, 'columnFilter')) {
-                            emit(id, 'columnFilter', { key: col.key, value: next });
-                          }
-                        }, 150);
-                      }}
-                    />
-                  </TableHead>
-                ))}
-                {actions.length > 0 ? <TableHead className="h-auto pb-2 pt-0" /> : null}
-              </TableRow>
-            ) : null}
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No rows
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row, i) => {
-                const rowKey = row[keyField] ?? i;
-                return (
-                  <TableRow key={String(rowKey)}>
-                    {columns.map((col) => {
-                      const cells = row.__cells as Record<string, unknown> | undefined;
-                      const content = cells?.[col.key] ?? row[col.key];
-                      return (
-                        <TableCell
-                          key={col.key}
-                          className={cn(
-                            col.align === 'right' && 'text-right',
-                            col.align === 'center' && 'text-center',
-                          )}
-                        >
-                          {renderTableCell(content, emit)}
-                        </TableCell>
-                      );
-                    })}
-                    {actions.length > 0 ? (
-                      <TableCell className="text-right">
-                        {actions.length <= 2 ? (
-                          <div className="flex justify-end gap-1">
-                            {actions.map((action) => (
-                              <Button
-                                key={action.id}
-                                size="sm"
-                                variant={action.variant ?? 'ghost'}
-                                onClick={() => {
-                                  if (hasEvent(props, 'action')) {
-                                    emit(id, 'action', { actionId: action.id, rowKey });
-                                  }
-                                }}
-                              >
-                                <ActionLabel action={action} />
-                              </Button>
-                            ))}
-                          </div>
-                        ) : (
-                          <DropdownMenu
-                            open={actionsMenuKey === String(rowKey)}
-                            onOpenChange={(open) => {
-                              setActionsMenuKey(open ? String(rowKey) : null);
-                              if (open) {
-                                setColumnsOpen(false);
-                                setExportOpen(false);
-                              }
-                            }}
-                          >
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="ghost" aria-label="Row actions">
-                                Actions
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {actions.map((action) => (
-                                <DropdownMenuItem
-                                  key={action.id}
-                                  className={
-                                    action.variant === 'destructive'
-                                      ? 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                                      : undefined
-                                  }
-                                  onSelect={() => {
-                                    if (hasEvent(props, 'action')) {
-                                      emit(id, 'action', { actionId: action.id, rowKey });
-                                    }
-                                  }}
-                                >
-                                  <ActionLabel action={action} />
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {showPagination ? (
-        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-          <span>
-            Showing {rangeStart}–{rangeEnd} of {totalRows}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page <= 1}
-              onClick={() => {
-                if (hasEvent(props, 'page')) emit(id, 'page', page - 1);
-              }}
-            >
-              Previous
-            </Button>
-            <span>
-              Page {page} / {totalPages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page >= totalPages}
-              onClick={() => {
-                if (hasEvent(props, 'page')) emit(id, 'page', page + 1);
-              }}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function BoundDialog({
   id,
   props,
@@ -773,7 +303,6 @@ function BoundDialog({
   children: ReactNode;
 }) {
   const open = !!props.open;
-
   return (
     <Dialog
       open={open}
@@ -781,7 +310,7 @@ function BoundDialog({
         if (!next && hasEvent(props, 'close')) emit(id, 'close');
       }}
     >
-      <DialogContent className={cn('sm:max-w-md', className)} style={asStyle(style)}>
+      <DialogContent className={className} style={asStyle(style)}>
         {props.title ? (
           <DialogHeader>
             <DialogTitle>{String(props.title)}</DialogTitle>
@@ -988,25 +517,78 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
       );
 
     case 'stat': {
-      const items = (props.items as Array<{ title: string; value: string | number }>) ?? [];
+      type StatItemView = {
+        title: string;
+        value: string | number;
+        trend?: string;
+        trendDirection?: 'up' | 'down';
+        footer?: string;
+        description?: string;
+      };
+      const items = (props.items as StatItemView[]) ?? [];
       return (
-        <div className={cn('grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-4', className)} style={asStyle(style)}>
-          {items.map((item, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <CardDescription>{item.title}</CardDescription>
-                <CardTitle className="text-2xl font-semibold tabular-nums tracking-tight">
-                  {item.value}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          ))}
+        <div
+          className={cn(
+            'grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs dark:*:data-[slot=card]:bg-card @xl/main:grid-cols-2 @5xl/main:grid-cols-4',
+            className,
+          )}
+          style={asStyle(style)}
+        >
+          {items.map((item, i) => {
+            const direction =
+              item.trendDirection ??
+              (item.trend?.trim().startsWith('-') ? 'down' : item.trend ? 'up' : undefined);
+            const TrendIcon = direction === 'down' ? TrendingDown : TrendingUp;
+            return (
+              <Card key={i} className="@container/card">
+                <CardHeader>
+                  <CardDescription>{item.title}</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {item.value}
+                  </CardTitle>
+                  {item.trend ? (
+                    <CardAction>
+                      <Badge variant="outline" className="gap-1">
+                        {direction ? <TrendIcon className="size-3.5" aria-hidden /> : null}
+                        {item.trend}
+                      </Badge>
+                    </CardAction>
+                  ) : null}
+                </CardHeader>
+                {item.footer || item.description ? (
+                  <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                    {item.footer ? (
+                      <div className="line-clamp-1 flex gap-2 font-medium">
+                        {item.footer}
+                        {direction ? <TrendIcon className="size-4" aria-hidden /> : null}
+                      </div>
+                    ) : null}
+                    {item.description ? (
+                      <div className="text-muted-foreground">{item.description}</div>
+                    ) : null}
+                  </CardFooter>
+                ) : null}
+              </Card>
+            );
+          })}
         </div>
       );
     }
 
     case 'datatable':
-      return <BoundDataTable id={id} props={props} className={className} style={style} emit={emit} />;
+      return (
+        <BoundDataTable
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          renderNode={(child, childEmit) => <ElementRenderer node={child} emit={childEmit} />}
+        />
+      );
+
+    case 'areachart':
+      return <BoundAreaChart props={props} className={className} style={style} />;
 
     case 'kitchensink':
       return (
@@ -1016,17 +598,6 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           }
         >
           <KitchenSink />
-        </Suspense>
-      );
-
-    case 'dashboard01':
-      return (
-        <Suspense
-          fallback={
-            <div className="p-8 text-sm text-muted-foreground">Loading dashboard…</div>
-          }
-        >
-          <Dashboard01 />
         </Suspense>
       );
 

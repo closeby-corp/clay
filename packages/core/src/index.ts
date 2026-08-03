@@ -11,9 +11,27 @@ export {
   clearParentStack,
 } from './context';
 export { ClientSession, type SendFn, type NotifyOptions } from './session';
-export { page, getPage, getRegisteredPaths, clearPages, type PageFn } from './page';
+export {
+  page,
+  getPage,
+  getPageEntry,
+  getRegisteredPaths,
+  clearPages,
+  setPageWrapper,
+  getPageWrapper,
+  type PageFn,
+  type PageOptions,
+  type PageEntry,
+  type PageWrapper,
+} from './page';
 export { reactive, subscribe } from './reactive';
-export { GlobalState } from './global-state';
+export {
+  GlobalState,
+  createMemoryPersistence,
+  type PersistenceAdapter,
+  type GlobalStateCreateOptions,
+  type GlobalStateConfigureOptions,
+} from './global-state';
 export { generateId, resetIdSequence } from './utils';
 export { notify, navigate, type NotifyType, type ToastPosition } from './helpers';
 export type {

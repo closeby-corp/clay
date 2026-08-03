@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import type {
   ClientMessage,
   ElementNode,
+  NotifyType,
   Patch,
   ServerMessage,
-  ToastItem,
   ToastPosition,
 } from './protocol';
 
@@ -49,18 +50,44 @@ function applyPatch(tree: ElementNode, patch: Patch): ElementNode {
   return tree;
 }
 
-let clientToastSeq = 0;
-function nextClientToastId(): string {
-  clientToastSeq += 1;
-  return `toast_client_${clientToastSeq}`;
+function showToast(
+  message: string,
+  opts: {
+    id?: string;
+    type?: NotifyType;
+    duration?: number;
+    position?: ToastPosition;
+    description?: string;
+  },
+): void {
+  const duration = opts.duration === 0 ? Infinity : (opts.duration ?? 2500);
+  const options = {
+    id: opts.id,
+    duration,
+    position: opts.position ?? 'bottom-right',
+    description: opts.description,
+  };
+  switch (opts.type) {
+    case 'success':
+      toast.success(message, options);
+      break;
+    case 'warning':
+      toast.warning(message, options);
+      break;
+    case 'error':
+      toast.error(message, options);
+      break;
+    case 'info':
+    default:
+      toast.info(message, options);
+      break;
+  }
 }
 
 export type SessionState = {
   tree: ElementNode | null;
   connected: boolean;
   error: string | null;
-  toasts: ToastItem[];
-  toastPosition: ToastPosition;
 };
 
 export function useBadUISession(path: string) {
@@ -68,35 +95,8 @@ export function useBadUISession(path: string) {
     tree: null,
     connected: false,
     error: null,
-    toasts: [],
-    toastPosition: 'bottom-right',
   });
   const wsRef = useRef<WebSocket | null>(null);
-  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-
-  const dismissToast = useCallback((id: string) => {
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
-    setState((s) => ({ ...s, toasts: s.toasts.filter((t) => t.id !== id) }));
-  }, []);
-
-  const pushToast = useCallback(
-    (item: ToastItem) => {
-      setState((s) => ({
-        ...s,
-        toasts: [...s.toasts, item],
-        toastPosition: item.position,
-      }));
-      if (item.duration > 0) {
-        const timer = setTimeout(() => dismissToast(item.id), item.duration);
-        timersRef.current.set(item.id, timer);
-      }
-    },
-    [dismissToast],
-  );
 
   const send = useCallback((msg: ClientMessage) => {
     const ws = wsRef.current;
@@ -139,15 +139,15 @@ export function useBadUISession(path: string) {
         window.history.pushState({}, '', msg.path);
         ws.send(JSON.stringify({ op: 'hello', path: msg.path } satisfies ClientMessage));
       } else if (msg.op === 'notify') {
-        pushToast({
-          id: msg.id ?? nextClientToastId(),
-          message: msg.message,
+        showToast(msg.message, {
+          id: msg.id,
           type: msg.type ?? 'info',
-          duration: msg.duration ?? 2500,
-          position: msg.position ?? 'bottom-right',
+          duration: msg.duration,
+          position: msg.position,
+          description: msg.description,
         });
       } else if (msg.op === 'dismissNotify') {
-        dismissToast(msg.id);
+        toast.dismiss(msg.id);
       } else if (msg.op === 'download') {
         const blob = new Blob([msg.content], { type: msg.mime });
         const url = URL.createObjectURL(blob);
@@ -161,13 +161,7 @@ export function useBadUISession(path: string) {
           try {
             await navigator.clipboard.writeText(msg.content);
           } catch {
-            pushToast({
-              id: nextClientToastId(),
-              message: 'Clipboard copy failed',
-              type: 'error',
-              duration: 2500,
-              position: 'bottom-right',
-            });
+            showToast('Clipboard copy failed', { type: 'error' });
           }
         };
         void write();
@@ -180,12 +174,10 @@ export function useBadUISession(path: string) {
     ws.onerror = () => setState((s) => ({ ...s, error: 'WebSocket error', connected: false }));
 
     return () => {
-      for (const timer of timersRef.current.values()) clearTimeout(timer);
-      timersRef.current.clear();
       ws.close();
       wsRef.current = null;
     };
-  }, [path, pushToast, dismissToast]);
+  }, [path]);
 
-  return { ...state, emit, dismissToast };
+  return { ...state, emit };
 }

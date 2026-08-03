@@ -42,7 +42,7 @@ BadUIServer ──HTTP──► SPA shell (index.html + assets)
 3. Page path change → destroy previous session, mount new path
 4. Socket close → `session.destroy()`
 
-Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `GlobalState` when you need a process-wide store.
+Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `GlobalState` when you need a process-wide store. Optional `PersistenceAdapter` (configure at entrypoint) persists keys by default; `{ persist: false }` keeps a key in memory only. Persisted `get()` always reloads from the adapter.
 
 ## Extending the system
 

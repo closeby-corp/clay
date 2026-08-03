@@ -1,10 +1,14 @@
 import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'Form Demo',
+  icon: 'form-input',
+  order: 80,
+};
 
 ui.page('/examples/form-demo', () => {
-  ui.app({ ...APP_SHELL }, () => {
     const form = reactive({
       name: '',
       email: '',
@@ -97,7 +101,10 @@ ui.page('/examples/form-demo', () => {
                   ui.notify('Please accept the terms', 'warning');
                   return;
                 }
-                ui.notify(`Thanks, ${form.name || 'friend'}!`, 'success');
+                ui.notify(`Thanks, ${form.name || 'friend'}!`, {
+                  type: 'success',
+                  description: 'Your response was recorded.',
+                });
               },
             });
             ui.button('Reset', {
@@ -155,5 +162,4 @@ ui.page('/examples/form-demo', () => {
       }
       }, { gap: 6 });
     });
-  });
 });

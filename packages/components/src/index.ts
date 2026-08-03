@@ -194,7 +194,18 @@ export function alert(message?: string, props: Omit<AlertProps, 'message'> = {})
   });
 }
 
-export type StatItem = { title: string; value: string | number };
+export type StatItem = {
+  title: string;
+  value: string | number;
+  /** Badge text, e.g. `+12.5%` or `-20%`. */
+  trend?: string;
+  /** Controls trend icon; inferred from `trend` sign when omitted. */
+  trendDirection?: 'up' | 'down';
+  /** Bold footer line, e.g. `Trending up this month`. */
+  footer?: string;
+  /** Muted second footer line. */
+  description?: string;
+};
 
 export function stat(items: StatItem[], props: { className?: string } = {}): Element {
   return new Element('stat', {
@@ -207,6 +218,8 @@ export {
   dataTable,
   DataTableElement,
   ROW_ID_FIELD,
+  CELLS_FIELD,
+  DETAIL_FIELD,
   normalizeTableData,
   rowsToCsv,
   rowsToTsv,
@@ -214,9 +227,17 @@ export {
   type TableColumn,
   type DataTableAction,
   type DataTableProps,
+  type DataTableView,
+  type DataTablePrimaryAction,
   type ExportFormat,
   type ExportMode,
 } from './data-table';
+
+export {
+  areaChart,
+  type AreaChartProps,
+  type AreaChartSeries,
+} from './area-chart';
 
 export { dialog, DialogElement, type DialogProps } from './dialog';
 

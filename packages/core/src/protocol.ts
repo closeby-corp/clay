@@ -25,6 +25,7 @@ export type ServerMessage =
       type?: NotifyType;
       duration?: number;
       position?: ToastPosition;
+      description?: string;
     }
   | { op: 'dismissNotify'; id: string }
   | { op: 'download'; filename: string; mime: string; content: string }

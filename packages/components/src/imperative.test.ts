@@ -98,14 +98,19 @@ describe('imperative helpers', () => {
     expect(await resultPromise).toBe('Green');
   });
 
-  test('notify sends id, type, duration, position', () => {
+  test('notify sends id, type, duration, position, description', () => {
     const messages: ServerMessage[] = [];
     const session = new ClientSession('/imperative-test', (m) => messages.push(m));
     session.mount();
     messages.length = 0;
 
     runWithSession(session, () => {
-      session.notify('Hello', { type: 'success', duration: 1000, position: 'top-left' });
+      session.notify('Hello', {
+        type: 'success',
+        duration: 1000,
+        position: 'top-left',
+        description: 'All good',
+      });
     });
 
     const note = messages.find((m) => m.op === 'notify');
@@ -115,6 +120,7 @@ describe('imperative helpers', () => {
       expect(note.type).toBe('success');
       expect(note.duration).toBe(1000);
       expect(note.position).toBe('top-left');
+      expect(note.description).toBe('All good');
       expect(typeof note.id).toBe('string');
       expect(note.id.length).toBeGreaterThan(0);
     }

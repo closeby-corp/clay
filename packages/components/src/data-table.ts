@@ -1,5 +1,7 @@
-import { Element, withDetached } from '@badui/core';
+import { Element, withDetached, withParent } from '@badui/core';
 import type { ElementNode } from '@badui/core';
+
+export type TableColumnEditor = 'text' | 'select';
 
 export type TableColumn = {
   key: string;
@@ -11,6 +13,12 @@ export type TableColumn = {
   value?: (row: Record<string, unknown>) => unknown;
   /** Optional cell UI; may return an Element (e.g. ui.badge) or a scalar. */
   render?: (row: Record<string, unknown>) => unknown;
+  /** Inline editor chrome on the client. */
+  editor?: TableColumnEditor;
+  /** Options when `editor` is `'select'`. */
+  editorOptions?: { value: string; label: string }[];
+  /** Render this cell as a link that opens the row detail drawer. */
+  detailTrigger?: boolean;
 };
 
 export type DataTableAction = {
@@ -19,6 +27,20 @@ export type DataTableAction = {
   /** Lucide icon name (`Pencil`, `trash-2`, …). */
   icon?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+};
+
+export type DataTableView = {
+  id: string;
+  label: string;
+  /** Optional badge override; when omitted, derived from matching rows. */
+  count?: number;
+  /** Display lens over sourceRows while this view is active. */
+  filter?: (row: Record<string, unknown>) => boolean;
+};
+
+export type DataTablePrimaryAction = {
+  id?: string;
+  label: string;
 };
 
 export type ExportFormat = 'csv' | 'tsv' | 'json';
@@ -32,6 +54,8 @@ export type DataTableProps = {
   searchPlaceholder?: string;
   /** Page size; `0` disables pagination. Default `10`. */
   pageSize?: number;
+  /** Rows-per-page options in the footer select. */
+  pageSizeOptions?: number[];
   actions?: DataTableAction[];
   onAction?: (actionId: string, row: Record<string, unknown>) => void | Promise<void>;
   /** Show per-column filter row. Default `true`. */
@@ -42,6 +66,23 @@ export type DataTableProps = {
   exportable?: boolean;
   /** Base filename without extension. Default `'data'`. */
   exportFilename?: string;
+  selectable?: boolean;
+  reorderable?: boolean;
+  views?: DataTableView[];
+  defaultView?: string;
+  primaryAction?: DataTablePrimaryAction;
+  /** Build detached Element tree stamped as `__detail` for the drawer. */
+  detail?: (row: Record<string, unknown>) => void;
+  onReorder?: (orderedKeys: Array<string | number>) => void | Promise<void>;
+  onSelectionChange?: (keys: Array<string | number>) => void | Promise<void>;
+  onPageSizeChange?: (pageSize: number) => void | Promise<void>;
+  onCellChange?: (
+    rowKey: string | number,
+    columnKey: string,
+    value: unknown,
+  ) => void | Promise<void>;
+  onViewChange?: (viewId: string) => void | Promise<void>;
+  onPrimaryAction?: () => void | Promise<void>;
 };
 
 /** Reserved row identity when `keyField` is omitted. Never inferred as a visible column. */
@@ -49,6 +90,9 @@ export const ROW_ID_FIELD = '__rowId';
 
 /** Per-row display map for the client (scalars or `{ __ui: ElementNode }`). */
 export const CELLS_FIELD = '__cells';
+
+/** Per-row detail drawer tree (`{ __ui: ElementNode }`). */
+export const DETAIL_FIELD = '__detail';
 
 export type UiCell = { __ui: ElementNode };
 
@@ -59,6 +103,11 @@ type ActionPayload = { actionId?: string; rowKey?: string | number };
 type ColumnFilterPayload = { key?: string; value?: string };
 type ColumnVisibilityPayload = { key?: string; visible?: boolean };
 type ExportPayload = { format?: ExportFormat; mode?: ExportMode };
+type ReorderPayload = { orderedKeys?: Array<string | number> };
+type SelectionPayload = { keys?: Array<string | number> };
+type PageSizePayload = { pageSize?: number };
+type CellChangePayload = { rowKey?: string | number; columnKey?: string; value?: unknown };
+type ViewPayload = { viewId?: string };
 
 type NormalizedTable = {
   rows: Record<string, unknown>[];
@@ -70,6 +119,9 @@ type ClientColumn = {
   header: string;
   align?: 'left' | 'right' | 'center';
   sortable?: boolean;
+  editor?: TableColumnEditor;
+  editorOptions?: { value: string; label: string }[];
+  detailTrigger?: boolean;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -89,7 +141,7 @@ function stampRowIds(rows: Record<string, unknown>[]): Record<string, unknown>[]
 function inferColumnsFromRows(rows: Record<string, unknown>[]): TableColumn[] {
   if (rows.length === 0) return [];
   return Object.keys(rows[0]!)
-    .filter((key) => key !== ROW_ID_FIELD && key !== CELLS_FIELD)
+    .filter((key) => key !== ROW_ID_FIELD && key !== CELLS_FIELD && key !== DETAIL_FIELD)
     .map((key) => ({ key, header: key, sortable: true }));
 }
 
@@ -101,11 +153,14 @@ function withSortableDefaults(columns: TableColumn[]): TableColumn[] {
 }
 
 function toClientColumns(columns: TableColumn[]): ClientColumn[] {
-  return columns.map(({ key, header, align, sortable }) => ({
+  return columns.map(({ key, header, align, sortable, editor, editorOptions, detailTrigger }) => ({
     key,
     header,
     align,
     sortable,
+    editor,
+    editorOptions,
+    detailTrigger,
   }));
 }
 
@@ -127,15 +182,33 @@ function buildCellDisplay(col: TableColumn, row: Record<string, unknown>): unkno
   return cellValue(col, row);
 }
 
+function buildDetailDisplay(
+  row: Record<string, unknown>,
+  detailFn: (row: Record<string, unknown>) => void,
+): UiCell {
+  const root = new Element('column', { gap: 4 });
+  withDetached(() => {
+    withParent(root, () => detailFn(row));
+  });
+  const node = root.toJSON();
+  root.destroy();
+  return { __ui: node };
+}
+
 function buildDisplayRow(
   row: Record<string, unknown>,
   columns: TableColumn[],
+  detailFn?: (row: Record<string, unknown>) => void,
 ): Record<string, unknown> {
   const cells: Record<string, unknown> = {};
   for (const col of columns) {
     cells[col.key] = buildCellDisplay(col, row);
   }
-  return { ...row, [CELLS_FIELD]: cells };
+  const out: Record<string, unknown> = { ...row, [CELLS_FIELD]: cells };
+  if (detailFn) {
+    out[DETAIL_FIELD] = buildDetailDisplay(row, detailFn);
+  }
+  return out;
 }
 
 function projectExportRows(
@@ -304,14 +377,31 @@ export class DataTableElement extends Element {
   private hiddenKeys = new Set<string>();
   private page = 1;
   private pageSize: number;
+  private pageSizeOptions: number[];
   private searchable: boolean;
   private searchPlaceholder: string;
   private columnFilterable: boolean;
   private columnToggle: boolean;
   private exportable: boolean;
   private exportFilename: string;
+  private selectable: boolean;
+  private reorderable: boolean;
+  private views: DataTableView[];
+  private activeView: string;
+  private primaryAction?: DataTablePrimaryAction;
+  private detailFn?: (row: Record<string, unknown>) => void;
   private actions: DataTableAction[];
   private onActionFn?: (actionId: string, row: Record<string, unknown>) => void | Promise<void>;
+  private onReorderFn?: (orderedKeys: Array<string | number>) => void | Promise<void>;
+  private onSelectionChangeFn?: (keys: Array<string | number>) => void | Promise<void>;
+  private onPageSizeChangeFn?: (pageSize: number) => void | Promise<void>;
+  private onCellChangeFn?: (
+    rowKey: string | number,
+    columnKey: string,
+    value: unknown,
+  ) => void | Promise<void>;
+  private onViewChangeFn?: (viewId: string) => void | Promise<void>;
+  private onPrimaryActionFn?: () => void | Promise<void>;
 
   constructor(data: unknown = [], props: DataTableProps = {}) {
     const columnsExplicit = props.columns !== undefined;
@@ -319,6 +409,7 @@ export class DataTableElement extends Element {
     const columns = withSortableDefaults(columnsExplicit ? props.columns! : inferredColumns);
     const searchable = props.searchable !== false;
     const pageSize = props.pageSize ?? 10;
+    const pageSizeOptions = props.pageSizeOptions ?? [10, 20, 30, 40, 50];
     const actions = props.actions ?? [];
     const keyField = props.keyField ?? ROW_ID_FIELD;
     const searchPlaceholder = props.searchPlaceholder ?? 'Search…';
@@ -326,6 +417,11 @@ export class DataTableElement extends Element {
     const columnToggle = props.columnToggle !== false;
     const exportable = props.exportable !== false;
     const exportFilename = props.exportFilename ?? 'data';
+    const selectable = props.selectable === true;
+    const reorderable = props.reorderable === true;
+    const views = props.views ?? [];
+    const activeView = props.defaultView ?? views[0]?.id ?? '';
+    const primaryAction = props.primaryAction;
 
     super('datatable', {
       columns: toClientColumns(columns),
@@ -338,6 +434,13 @@ export class DataTableElement extends Element {
       columnFilterable,
       columnToggle,
       exportable,
+      selectable,
+      reorderable,
+      views,
+      activeView,
+      primaryAction: primaryAction ?? null,
+      pageSizeOptions,
+      hasDetail: typeof props.detail === 'function',
       actions: actions.map(({ id, label, icon, variant }) => ({ id, label, icon, variant })),
       filter: '',
       columnFilters: {},
@@ -355,14 +458,27 @@ export class DataTableElement extends Element {
     this.columnsExplicit = columnsExplicit;
     this.keyField = keyField;
     this.pageSize = pageSize;
+    this.pageSizeOptions = pageSizeOptions;
     this.searchable = searchable;
     this.searchPlaceholder = searchPlaceholder;
     this.columnFilterable = columnFilterable;
     this.columnToggle = columnToggle;
     this.exportable = exportable;
     this.exportFilename = exportFilename;
+    this.selectable = selectable;
+    this.reorderable = reorderable;
+    this.views = views;
+    this.activeView = activeView;
+    this.primaryAction = primaryAction;
+    this.detailFn = props.detail;
     this.actions = actions;
     this.onActionFn = props.onAction;
+    this.onReorderFn = props.onReorder;
+    this.onSelectionChangeFn = props.onSelectionChange;
+    this.onPageSizeChangeFn = props.onPageSizeChange;
+    this.onCellChangeFn = props.onCellChange;
+    this.onViewChangeFn = props.onViewChange;
+    this.onPrimaryActionFn = props.onPrimaryAction;
 
     this.on('sort', (value) => this.handleSort(value));
     this.on('filter', (value) => this.handleFilter(value));
@@ -371,6 +487,12 @@ export class DataTableElement extends Element {
     this.on('export', (value) => this.handleExport(value));
     this.on('page', (value) => this.handlePage(value));
     this.on('action', (value) => this.handleAction(value));
+    this.on('reorder', (value) => this.handleReorder(value));
+    this.on('selectionChange', (value) => this.handleSelectionChange(value));
+    this.on('pageSize', (value) => this.handlePageSize(value));
+    this.on('cellChange', (value) => this.handleCellChange(value));
+    this.on('viewChange', (value) => this.handleViewChange(value));
+    this.on('primaryAction', () => this.handlePrimaryAction());
 
     this.syncView();
   }
@@ -503,9 +625,91 @@ export class DataTableElement extends Element {
     await this.onActionFn(actionId, { ...row });
   }
 
-  /** Visible rows after filter + sort (before pagination). */
+  private async handleReorder(value: unknown): Promise<void> {
+    const payload = (value ?? {}) as ReorderPayload;
+    const orderedKeys = payload.orderedKeys;
+    if (!Array.isArray(orderedKeys) || orderedKeys.length === 0) return;
+
+    const byKey = new Map(this.sourceRows.map((r) => [String(r[this.keyField]), r]));
+    const next: Record<string, unknown>[] = [];
+    for (const key of orderedKeys) {
+      const row = byKey.get(String(key));
+      if (row) {
+        next.push(row);
+        byKey.delete(String(key));
+      }
+    }
+    for (const row of byKey.values()) next.push(row);
+    this.sourceRows = next.map((row, index) =>
+      this.keyField === ROW_ID_FIELD ? { ...row, [ROW_ID_FIELD]: index } : row,
+    );
+    this.syncView();
+    if (this.onReorderFn) {
+      await this.onReorderFn(orderedKeys);
+    }
+  }
+
+  private async handleSelectionChange(value: unknown): Promise<void> {
+    if (!this.onSelectionChangeFn) return;
+    const payload = (value ?? {}) as SelectionPayload;
+    const keys = payload.keys;
+    if (!Array.isArray(keys)) return;
+    await this.onSelectionChangeFn(keys);
+  }
+
+  private async handlePageSize(value: unknown): Promise<void> {
+    const payload =
+      typeof value === 'number' || typeof value === 'string'
+        ? { pageSize: Number(value) }
+        : ((value ?? {}) as PageSizePayload);
+    const next = Number(payload.pageSize);
+    if (!Number.isFinite(next) || next < 0) return;
+    this.pageSize = Math.floor(next);
+    this.page = 1;
+    this.syncView();
+    if (this.onPageSizeChangeFn) {
+      await this.onPageSizeChangeFn(this.pageSize);
+    }
+  }
+
+  private async handleCellChange(value: unknown): Promise<void> {
+    const payload = (value ?? {}) as CellChangePayload;
+    if (payload.rowKey == null || !payload.columnKey) return;
+    const row = this.sourceRows.find((r) => String(r[this.keyField]) === String(payload.rowKey));
+    if (!row) return;
+    row[payload.columnKey] = payload.value;
+    this.syncView();
+    if (this.onCellChangeFn) {
+      await this.onCellChangeFn(payload.rowKey, payload.columnKey, payload.value);
+    }
+  }
+
+  private async handleViewChange(value: unknown): Promise<void> {
+    const payload =
+      typeof value === 'string' ? { viewId: value } : ((value ?? {}) as ViewPayload);
+    const viewId = payload.viewId;
+    if (!viewId || !this.views.some((v) => v.id === viewId)) return;
+    this.activeView = viewId;
+    this.page = 1;
+    this.syncView();
+    if (this.onViewChangeFn) {
+      await this.onViewChangeFn(viewId);
+    }
+  }
+
+  private async handlePrimaryAction(): Promise<void> {
+    if (this.onPrimaryActionFn) {
+      await this.onPrimaryActionFn();
+    }
+  }
+
+  /** Visible rows after view filter + search/column filters + sort (before pagination). */
   computeProcessedRows(): Record<string, unknown>[] {
-    let rows = this.sourceRows.filter(
+    const active = this.views.find((v) => v.id === this.activeView);
+    let rows = active?.filter
+      ? this.sourceRows.filter((row) => active.filter!(row))
+      : this.sourceRows;
+    rows = rows.filter(
       (row) =>
         rowMatchesGlobalFilter(row, this.columns, this.filter) &&
         rowMatchesColumnFilters(row, this.columns, this.columnFilters),
@@ -524,6 +728,16 @@ export class DataTableElement extends Element {
     return rows;
   }
 
+  private clientViews(): Array<{ id: string; label: string; count: number }> {
+    return this.views.map((view) => ({
+      id: view.id,
+      label: view.label,
+      count:
+        view.count ??
+        this.sourceRows.filter((row) => (view.filter ? view.filter(row) : true)).length,
+    }));
+  }
+
   syncView(): void {
     const processed = this.computeProcessedRows();
     const totalRows = processed.length;
@@ -536,7 +750,7 @@ export class DataTableElement extends Element {
     const pageRows =
       this.pageSize > 0 ? processed.slice(start, start + this.pageSize) : processed;
     const visibleCols = this.visibleColumns();
-    const visible = pageRows.map((row) => buildDisplayRow(row, visibleCols));
+    const visible = pageRows.map((row) => buildDisplayRow(row, visibleCols, this.detailFn));
 
     this.update({
       columns: toClientColumns(visibleCols),
@@ -549,6 +763,7 @@ export class DataTableElement extends Element {
       sortDir: this.sortDir,
       page: this.page,
       pageSize: this.pageSize,
+      pageSizeOptions: this.pageSizeOptions,
       totalRows,
       totalPages,
       searchable: this.searchable,
@@ -556,6 +771,12 @@ export class DataTableElement extends Element {
       columnFilterable: this.columnFilterable,
       columnToggle: this.columnToggle,
       exportable: this.exportable,
+      selectable: this.selectable,
+      reorderable: this.reorderable,
+      views: this.clientViews(),
+      activeView: this.activeView,
+      primaryAction: this.primaryAction ?? null,
+      hasDetail: typeof this.detailFn === 'function',
       actions: this.actions.map(({ id, label, icon, variant }) => ({ id, label, icon, variant })),
       keyField: this.keyField,
     });

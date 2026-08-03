@@ -1,9 +1,13 @@
 import { ui } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'File Upload',
+  icon: 'upload',
+  order: 40,
+};
 
 ui.page('/examples/upload', () => {
-  ui.app({ ...APP_SHELL }, () => {
     let files: string[] = [];
 
     exampleFrame(() => {
@@ -45,5 +49,4 @@ ui.page('/examples/upload', () => {
         });
       }, { gap: 6 });
     });
-  });
 });

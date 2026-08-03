@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Bold, Italic, Underline } from 'lucide-react';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 
 import {
   Accordion,
@@ -155,7 +155,6 @@ export default function KitchenSink() {
 
   return (
     <TooltipProvider>
-      <Toaster position="top-right" richColors closeButton />
       <div className="flex w-full flex-col gap-10">
         <p className="text-sm text-muted-foreground">
           Interactive showcase of the ShadCN New York catalog. Preview panels mirror the docs

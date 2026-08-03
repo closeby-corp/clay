@@ -1,9 +1,13 @@
 import { ui } from '@badui/ui';
 import { exampleHeader, exampleFrame } from '../chrome';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'Home',
+  icon: 'home',
+  order: 0,
+};
 
 ui.page('/', () => {
-  ui.app({ ...APP_SHELL }, () => {
     exampleFrame(() => {
       ui.column(() => {
         exampleHeader(
@@ -22,11 +26,12 @@ ui.page('/', () => {
               .classes('text-sm text-muted-foreground');
             ui.label('Open Kitchen Sink for the full ShadCN component catalog.')
               .classes('text-sm text-muted-foreground');
-            ui.label('Dashboard mounts the shadcn dashboard-01 block (cards, chart, table).')
+            ui.label('Dashboard shows refreshable stats and a full-chrome DataTable.')
+              .classes('text-sm text-muted-foreground');
+            ui.label('Charts covers ui.areaChart — interactive ranges, cards, and live refresh.')
               .classes('text-sm text-muted-foreground');
           },
         );
       }, { gap: 6 });
     });
-  });
 });

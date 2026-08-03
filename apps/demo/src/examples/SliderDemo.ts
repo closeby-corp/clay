@@ -1,10 +1,14 @@
 import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
-import { APP_SHELL } from '../nav';
+
+export const pageMeta = {
+  label: 'Slider Demo',
+  icon: 'sliders-horizontal',
+  order: 70,
+};
 
 ui.page('/examples/slider-demo', () => {
-  ui.app({ ...APP_SHELL }, () => {
     const state = reactive({
       volume: 50,
       brightness: 75,
@@ -92,5 +96,4 @@ ui.page('/examples/slider-demo', () => {
       }, { gap: 2 });
       }, { gap: 6 });
     });
-  });
 });

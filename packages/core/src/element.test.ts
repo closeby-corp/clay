@@ -6,12 +6,14 @@ import {
   page,
   reactive,
   runWithSession,
+  setPageWrapper,
   withParent,
 } from './index';
 
 describe('element tree', () => {
   test('builds parent/child hierarchy', () => {
     clearPages();
+    setPageWrapper(null);
     page('/t', () => {
       const row = new Element('row', {});
       withParent(row, () => {
@@ -34,6 +36,7 @@ describe('element tree', () => {
 
   test('setText queues updateProps patch', async () => {
     clearPages();
+    setPageWrapper(null);
     let label!: Element;
     page('/label', () => {
       label = new Element('label', { text: 'hi' });
@@ -51,6 +54,7 @@ describe('element tree', () => {
 
   test('bindValue syncs reactive object', async () => {
     clearPages();
+    setPageWrapper(null);
     const model = reactive({ name: 'Ada' });
     let input!: Element;
     page('/bind', () => {
@@ -70,6 +74,7 @@ describe('element tree', () => {
 
   test('reactive assignment notifies bindValue subscribers', async () => {
     clearPages();
+    setPageWrapper(null);
     const model = reactive({ name: 'Ada' });
     let input!: Element;
     const patches: unknown[] = [];

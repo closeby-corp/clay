@@ -13,7 +13,7 @@ export type BadUIServerConfig = {
   css?: string | string[];
 };
 
-const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../../client/dist');
+const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
 
 function normalizeCssPaths(css?: string | string[]): string[] {
   if (!css) return [];

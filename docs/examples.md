@@ -80,18 +80,23 @@ for (const key of Object.keys(form)) {
 ## Pattern: shared chat (`GlobalState`)
 
 ```typescript
+// main.ts (optional persistence)
+await GlobalState.configure({ persistence: myAdapter });
+
 const messages = GlobalState.create<ChatMessage[]>('chatMessages', []);
 
-messages.subscribe(() => list.refresh());
+messages.subscribe(() => {
+  void list.refresh();
+});
 
 ui.button('Send', {
-  onClick: () => {
-    messages.update((prev) => [...prev, { user, text, at: Date.now() }]);
+  onClick: async () => {
+    await messages.update((prev) => [...prev, { user, text, at: Date.now() }]);
   },
 });
 ```
 
-All connected sessions that subscribed will refresh when the store changes.
+All connected sessions that subscribed will refresh when the store changes. With a persistence adapter configured, `get()` loads from the backend on every read; pass `{ persist: false }` for ephemeral keys (e.g. online presence).
 
 ## Styling tip
 

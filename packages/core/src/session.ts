@@ -13,7 +13,7 @@ import type {
   ServerMessage,
   ToastPosition,
 } from './protocol';
-import { getPage } from './page';
+import { getPageEntry, getPageWrapper } from './page';
 
 export type SendFn = (msg: ServerMessage) => void;
 
@@ -21,6 +21,7 @@ export type NotifyOptions = {
   type?: NotifyType;
   duration?: number;
   position?: ToastPosition;
+  description?: string;
 };
 
 export class ClientSession {
@@ -82,8 +83,8 @@ export class ClientSession {
   }
 
   mount(): void {
-    const page = getPage(this.path);
-    if (!page) {
+    const entry = getPageEntry(this.path);
+    if (!entry) {
       this.send({ op: 'error', message: `No page registered for ${this.path}` });
       return;
     }
@@ -94,7 +95,14 @@ export class ClientSession {
       // Detach from any accidental parent
       root.parent = null;
       this.root = root;
-      withParent(root, () => page());
+      withParent(root, () => {
+        const wrapper = getPageWrapper();
+        if (wrapper && entry.options.shell !== false) {
+          wrapper(entry.fn);
+        } else {
+          entry.fn();
+        }
+      });
     });
 
     this.isMounted = true;
@@ -137,6 +145,7 @@ export class ClientSession {
       type: options.type ?? 'info',
       duration: options.duration ?? 2500,
       position: options.position ?? 'bottom-right',
+      description: options.description,
     });
   }
 

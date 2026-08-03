@@ -297,4 +297,109 @@ describe('DataTableElement', () => {
     expect(clip?.content).toContain('Alpha,30');
     expect(clip?.content).not.toContain('badge');
   });
+
+  test('reorders rows by orderedKeys', async () => {
+    const table = new DataTableElement(rows, { columns, keyField: 'id', pageSize: 10 });
+    await table.handleEvent('reorder', { orderedKeys: [5, 1, 2, 3, 4] });
+    expect(table.getRows().map((r) => r.id)).toEqual([5, 1, 2, 3, 4]);
+  });
+
+  test('changes pageSize and resets to page 1', async () => {
+    const table = new DataTableElement(rows, { columns, pageSize: 2 });
+    await table.handleEvent('page', 2);
+    expect(table.props.page).toBe(2);
+    await table.handleEvent('pageSize', { pageSize: 10 });
+    expect(table.props.pageSize).toBe(10);
+    expect(table.props.page).toBe(1);
+    expect(table.props.totalPages).toBe(1);
+  });
+
+  test('cellChange updates source row', async () => {
+    const table = new DataTableElement(rows, {
+      columns: [
+        ...columns,
+        { key: 'hours', header: 'Hours', editor: 'text' },
+      ],
+      keyField: 'id',
+      pageSize: 10,
+    });
+    await table.handleEvent('cellChange', { rowKey: 1, columnKey: 'hours', value: 99 });
+    expect(table.getRows().find((r) => r.id === 1)?.hours).toBe(99);
+  });
+
+  test('serializes editor and detailTrigger on columns', () => {
+    const table = new DataTableElement(rows, {
+      columns: [
+        { key: 'title', header: 'Title', detailTrigger: true },
+        {
+          key: 'status',
+          header: 'Status',
+          editor: 'select',
+          editorOptions: [
+            { value: 'todo', label: 'Todo' },
+            { value: 'done', label: 'Done' },
+          ],
+        },
+      ],
+      detail: (row) => {
+        new Element('label', { text: String(row.title) });
+      },
+      pageSize: 10,
+    });
+    const cols = table.props.allColumns as Array<Record<string, unknown>>;
+    expect(cols[0]?.detailTrigger).toBe(true);
+    expect(cols[1]?.editor).toBe('select');
+    expect(table.props.hasDetail).toBe(true);
+    const detail = (table.props.rows as Array<Record<string, unknown>>)[0]?.__detail as {
+      __ui: { type: string };
+    };
+    expect(detail?.__ui?.type).toBe('column');
+  });
+
+  test('viewChange updates activeView', async () => {
+    const table = new DataTableElement(rows, {
+      columns,
+      views: [
+        { id: 'outline', label: 'Outline', count: 5 },
+        { id: 'past', label: 'Past', count: 0 },
+      ],
+      defaultView: 'outline',
+    });
+    await table.handleEvent('viewChange', { viewId: 'past' });
+    expect(table.props.activeView).toBe('past');
+  });
+
+  test('view filter lenses rows and auto-counts badges', async () => {
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 10,
+      views: [
+        { id: 'all', label: 'All' },
+        {
+          id: 'done',
+          label: 'Done',
+          filter: (row) => row.status === 'done',
+        },
+      ],
+      defaultView: 'all',
+    });
+
+    const viewsAll = table.props.views as Array<{ id: string; count: number }>;
+    expect(viewsAll.find((v) => v.id === 'all')?.count).toBe(5);
+    expect(viewsAll.find((v) => v.id === 'done')?.count).toBe(2);
+    expect(table.props.totalRows).toBe(5);
+
+    await table.handleEvent('viewChange', { viewId: 'done' });
+    expect(table.props.activeView).toBe('done');
+    expect(table.props.totalRows).toBe(2);
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Alpha',
+      'Charlie',
+    ]);
+    // filter functions must not be sent to the client
+    expect(
+      (table.props.views as Array<Record<string, unknown>>).every((v) => v.filter === undefined),
+    ).toBe(true);
+  });
 });
