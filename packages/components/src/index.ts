@@ -320,4 +320,4 @@ export function card(
   return el;
 }
 
-export { app, type AppNavItem, type AppProps } from './app';
+export { app, type AppNavItem, type AppProps, type AppUser } from './app';

@@ -1,158 +1,72 @@
 import type { CSSProperties, ReactNode } from 'react';
-import {
-  Boxes,
-  FormInput,
-  Gauge,
-  Home,
-  LayoutDashboard,
-  ListTodo,
-  MessageSquare,
-  SlidersHorizontal,
-  Table2,
-  Upload,
-  type LucideIcon,
-} from 'lucide-react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { Separator } from '@/components/ui/separator';
+import { ArrowUpCircleIcon } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarFooter,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { NavDocuments } from './shell/nav-documents';
+import { NavMain } from './shell/nav-main';
+import { NavSecondary } from './shell/nav-secondary';
+import { NavUser } from './shell/nav-user';
+import { SiteHeader } from './shell/site-header';
+import { go, type ShellNavItem, type ShellUser } from './shell/types';
 
-export type AppNavItem = {
-  label: string;
-  href: string;
-  description?: string;
-  active?: boolean;
-};
-
-const navIcons: Record<string, LucideIcon> = {
-  '/': Home,
-  '/examples/counter': Gauge,
-  '/examples/todo': ListTodo,
-  '/examples/chat': MessageSquare,
-  '/examples/upload': Upload,
-  '/examples/dashboard': LayoutDashboard,
-  '/examples/datatable': Table2,
-  '/examples/slider-demo': SlidersHorizontal,
-  '/examples/form-demo': FormInput,
-  '/examples/kitchen-sink': Boxes,
-};
-
-function go(href: string) {
-  if (href.startsWith('/')) {
-    window.history.pushState({}, '', href);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  } else {
-    window.location.href = href;
-  }
-}
-
-function NavLink({ item }: { item: AppNavItem }) {
-  const { isMobile, setOpenMobile } = useSidebar();
-  const Icon = navIcons[item.href] ?? Boxes;
-
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        isActive={!!item.active}
-        tooltip={item.label}
-      >
-        <a
-          href={item.href}
-          onClick={(e) => {
-            e.preventDefault();
-            go(item.href);
-            if (isMobile) setOpenMobile(false);
-          }}
-        >
-          <Icon />
-          <span>{item.label}</span>
-        </a>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-}
-
-function AppBreadcrumb({ nav }: { nav: AppNavItem[] }) {
-  const active = nav.find((item) => item.active);
-  const isHome = !active || active.href === '/';
-
-  return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        {isHome ? (
-          <BreadcrumbItem>
-            <BreadcrumbPage>Home</BreadcrumbPage>
-          </BreadcrumbItem>
-        ) : (
-          <>
-            <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink
-                href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  go('/');
-                }}
-              >
-                Examples
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden md:block" />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{active.label}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </>
-        )}
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
-}
+export type { ShellNavItem, ShellUser };
 
 export function BoundAppShell({
   title,
+  headerTitle,
+  collapsible = 'icon',
+  variant = 'inset',
+  user,
   nav,
+  navSecondary = [],
+  documents = [],
   className,
   style,
   children,
 }: {
   title: string;
-  nav: AppNavItem[];
+  headerTitle?: string;
+  collapsible?: 'offcanvas' | 'icon' | 'none';
+  variant?: 'sidebar' | 'inset' | 'floating';
+  user?: ShellUser | null;
+  nav: ShellNavItem[];
+  navSecondary?: ShellNavItem[];
+  documents?: ShellNavItem[];
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
 }) {
+  const active = nav.find((item) => item.active);
+  const pageTitle = headerTitle || active?.label || title || 'BadUI';
+
   return (
-    <SidebarProvider className={cn(className)} style={style}>
-      <Sidebar collapsible="icon">
+    <SidebarProvider
+      className={cn(className)}
+      style={
+        {
+          '--sidebar-width': 'calc(var(--spacing) * 72)',
+          '--header-height': 'calc(var(--spacing) * 12)',
+          ...style,
+        } as CSSProperties
+      }
+    >
+      <Sidebar collapsible={collapsible} variant={variant}>
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                size="lg"
                 asChild
-                className="data-[slot=sidebar-menu-button]:!p-2"
+                className="data-[slot=sidebar-menu-button]:!p-1.5"
               >
                 <a
                   href="/"
@@ -161,45 +75,30 @@ export function BoundAppShell({
                     go('/');
                   }}
                 >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <Boxes className="size-4" />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{title || 'BadUI'}</span>
-                    <span className="truncate text-xs text-muted-foreground">Demo</span>
-                  </div>
+                  <ArrowUpCircleIcon className="size-5" />
+                  <span className="text-base font-semibold">{title || 'BadUI'}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Examples</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {nav.map((item) => (
-                  <NavLink key={item.href} item={item} />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <NavMain items={nav} />
+          <NavDocuments items={documents} />
+          <NavSecondary items={navSecondary} className="mt-auto" />
         </SidebarContent>
-        <SidebarRail />
+        {user ? (
+          <SidebarFooter>
+            <NavUser user={user} />
+          </SidebarFooter>
+        ) : null}
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <AppBreadcrumb nav={nav} />
+        <SiteHeader title={pageTitle} />
+        <div className="@container/main flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="badui-animate-in px-4 lg:px-6">{children}</div>
           </div>
-        </header>
-        <div className="flex flex-1 justify-center overflow-y-auto px-4 py-6 md:px-8 md:py-8">
-          <div className="badui-animate-in w-full max-w-5xl">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>

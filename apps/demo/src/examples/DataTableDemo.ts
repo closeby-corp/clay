@@ -1,6 +1,6 @@
 import { ui } from '@badui/ui';
 import type { DataTableElement } from '@badui/ui';
-import { exampleSection } from '../chrome';
+import { exampleHeader, exampleSection } from '../chrome';
 import { APP_SHELL } from '../nav';
 
 type Task = {
@@ -42,11 +42,10 @@ ui.page('/examples/datatable', () => {
 
     ui.column(() => {
       ui.row(() => {
-        ui.column(() => {
-          ui.label('DataTable').classes('text-2xl font-semibold tracking-tight');
-          ui.label('Computed columns, badge cells, confirm / prompt / choose, and toasts.')
-            .classes('text-sm text-muted-foreground');
-        }, { gap: 1 });
+        exampleHeader(
+          undefined,
+          'Computed columns, badge cells, confirm / prompt / choose, and toasts.',
+        );
         ui.button('Add task', {
           size: 'sm',
           onClick: async () => {

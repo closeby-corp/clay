@@ -1,6 +1,6 @@
 import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
-import { exampleHeader } from '../chrome';
+import { exampleFrame, exampleHeader } from '../chrome';
 import { APP_SHELL } from '../nav';
 
 ui.page('/examples/slider-demo', () => {
@@ -12,8 +12,9 @@ ui.page('/examples/slider-demo', () => {
       theme: 'light',
     });
 
-    ui.column(() => {
-      exampleHeader('Slider', 'bindValue keeps controls in sync over WebSocket.');
+    exampleFrame(() => {
+      ui.column(() => {
+        exampleHeader(undefined, 'bindValue keeps controls in sync over WebSocket.');
 
       ui.card(
         {
@@ -89,6 +90,7 @@ ui.page('/examples/slider-demo', () => {
           },
         });
       }, { gap: 2 });
-    }, { gap: 6 });
+      }, { gap: 6 });
+    });
   });
 });

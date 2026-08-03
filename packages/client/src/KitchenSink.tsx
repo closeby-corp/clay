@@ -156,14 +156,11 @@ export default function KitchenSink() {
   return (
     <TooltipProvider>
       <Toaster position="top-right" richColors closeButton />
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight">Kitchen Sink</h1>
-          <p className="text-sm text-muted-foreground">
-            Interactive showcase of the ShadCN New York catalog. Preview panels mirror the docs
-            component pages.
-          </p>
-        </div>
+      <div className="flex w-full flex-col gap-10">
+        <p className="text-sm text-muted-foreground">
+          Interactive showcase of the ShadCN New York catalog. Preview panels mirror the docs
+          component pages.
+        </p>
 
         <Section title="Buttons & badges" description="Variants, sizes, and status chips.">
           <div className="flex flex-wrap gap-2">

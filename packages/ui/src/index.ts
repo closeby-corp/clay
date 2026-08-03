@@ -43,6 +43,7 @@ import {
   type ChooseOption,
   type AppProps,
   type AppNavItem,
+  type AppUser,
   DataTableElement,
   DialogElement,
 } from '@badui/components';
@@ -68,6 +69,7 @@ export type {
   ChooseOption,
   AppProps,
   AppNavItem,
+  AppUser,
   NotifyOptions,
   NotifyType,
   ToastPosition,

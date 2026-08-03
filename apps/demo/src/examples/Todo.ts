@@ -1,6 +1,6 @@
 import { reactive } from '@badui/core';
 import { ui } from '@badui/ui';
-import { exampleHeader } from '../chrome';
+import { exampleFrame, exampleHeader } from '../chrome';
 import { APP_SHELL } from '../nav';
 
 interface Todo {
@@ -15,10 +15,11 @@ ui.page('/examples/todo', () => {
     let todoFilter: 'all' | 'active' | 'completed' = 'all';
     const draft = reactive({ text: '' });
 
-    ui.column(() => {
-      exampleHeader('Todo', 'bindValue on the draft input, refreshable filtered list.');
+    exampleFrame(() => {
+      ui.column(() => {
+        exampleHeader(undefined, 'bindValue on the draft input, refreshable filtered list.');
 
-      ui.card({ title: 'Tasks', description: 'Add items, filter, and toggle completion.', gap: 4 }, () => {
+        ui.card({ title: 'Tasks', description: 'Add items, filter, and toggle completion.', gap: 4 }, () => {
         let listUi: ReturnType<typeof ui.refreshable>;
 
         ui.row(() => {
@@ -103,6 +104,7 @@ ui.page('/examples/todo', () => {
           ui.label(`${completedCount} of ${todos.length} completed`).classes('text-xs text-muted-foreground');
         });
       });
-    }, { gap: 6 });
+      }, { gap: 6 });
+    });
   });
 });

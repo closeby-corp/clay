@@ -1,6 +1,6 @@
 import { reactive, subscribe } from '@badui/core';
 import { ui } from '@badui/ui';
-import { exampleHeader } from '../chrome';
+import { exampleFrame, exampleHeader } from '../chrome';
 import { APP_SHELL } from '../nav';
 
 ui.page('/examples/form-demo', () => {
@@ -20,8 +20,9 @@ ui.page('/examples/form-demo', () => {
       color: '#3b82f6',
     });
 
-    ui.column(() => {
-      exampleHeader('Form', 'ShadCN controls with bindValue and a live summary.');
+    exampleFrame(() => {
+      ui.column(() => {
+        exampleHeader(undefined, 'ShadCN controls with bindValue and a live summary.');
 
       ui.card(
         {
@@ -152,6 +153,7 @@ ui.page('/examples/form-demo', () => {
       for (const key of Object.keys(form)) {
         subscribe(form, key, () => summary.refresh());
       }
-    }, { gap: 6 });
+      }, { gap: 6 });
+    });
   });
 });

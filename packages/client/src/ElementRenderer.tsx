@@ -76,6 +76,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const KitchenSink = lazy(() => import('./KitchenSink'));
+const Dashboard01 = lazy(() => import('./blocks/dashboard-01'));
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -808,15 +809,36 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'app': {
       const title = String(props.title ?? '');
+      const headerTitle = String(props.headerTitle ?? '');
+      const collapsible = (props.collapsible as 'offcanvas' | 'icon' | 'none') ?? 'icon';
+      const variant = (props.variant as 'sidebar' | 'inset' | 'floating') ?? 'inset';
       const nav = (Array.isArray(props.nav) ? props.nav : []) as Array<{
         label: string;
         href: string;
+        icon?: string;
         description?: string;
         active?: boolean;
       }>;
+      const navSecondary = (Array.isArray(props.navSecondary) ? props.navSecondary : []) as typeof nav;
+      const documents = (Array.isArray(props.documents) ? props.documents : []) as typeof nav;
+      const user =
+        props.user && typeof props.user === 'object'
+          ? (props.user as { name: string; email: string; avatar?: string })
+          : null;
 
       return (
-        <BoundAppShell title={title} nav={nav} className={className} style={asStyle(style)}>
+        <BoundAppShell
+          title={title}
+          headerTitle={headerTitle}
+          collapsible={collapsible}
+          variant={variant}
+          user={user}
+          nav={nav}
+          navSecondary={navSecondary}
+          documents={documents}
+          className={className}
+          style={asStyle(style)}
+        >
           {renderChildren()}
         </BoundAppShell>
       );
@@ -994,6 +1016,17 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           }
         >
           <KitchenSink />
+        </Suspense>
+      );
+
+    case 'dashboard01':
+      return (
+        <Suspense
+          fallback={
+            <div className="p-8 text-sm text-muted-foreground">Loading dashboard…</div>
+          }
+        >
+          <Dashboard01 />
         </Suspense>
       );
 
