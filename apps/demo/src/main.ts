@@ -12,7 +12,6 @@ ui.run({
   title: 'BadUI Demo',
   css: fileURLToPath(new URL('./globals.css', import.meta.url)),
   app: {
-    // ...APP_CHROME,
     nav: ui.navFromPages(),
   },
 });
