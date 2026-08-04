@@ -65,7 +65,7 @@ ui.run({
   app: {
     title: 'My App',
     nav: ui.navFromPages(),
-    // user, secondary, documents, …
+    // user, navSecondary, documents, …
   },
 });
 ```
@@ -283,9 +283,19 @@ const table = ui.dataTable(tasks, {
 | `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
 | `exportFilename` | `string` | `'data'` | Download base name (no extension) |
 | `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
+| `pageSizeOptions` | `number[]` | `[10, 20, 30, 40, 50]` | Footer page-size select |
+| `selectable` | `boolean` | `false` | Row checkboxes + selection events |
+| `reorderable` | `boolean` | `false` | Drag handle to reorder rows |
 | `views` | `DataTableView[]` | | Tabbed views; each may include a row `filter` |
 | `defaultView` | `string` | first view id | Initial active view |
 | `onViewChange` | `(viewId) => void` | | Fires after the active view changes |
+| `primaryAction` | `{ id?, label }` | | Toolbar primary button |
+| `onPrimaryAction` | `() => void` | | Primary button handler |
+| `detail` | `(row) => void` | | Build detached UI for the row detail drawer |
+| `onReorder` | `(orderedKeys) => void` | | After drag-reorder |
+| `onSelectionChange` | `(keys) => void` | | After selection changes |
+| `onPageSizeChange` | `(pageSize) => void` | | After footer page-size change |
+| `onCellChange` | `(rowKey, columnKey, value) => void` | | After inline editor commit |
 | `actions` | `DataTableAction[]` | `[]` | Per-row actions (≤2 as buttons; more collapse into an **Actions** menu) |
 | `onAction` | `(actionId, row) => void` | | Row action handler |
 | `className` | `string` | | Extra classes |
@@ -307,6 +317,9 @@ Every view tab shows the same table chrome; switching views applies that view’
 | `sortable` | `boolean` | Default `true` |
 | `value` | `(row) => unknown` | Computed scalar for sort / filter / export / default display |
 | `render` | `(row) => Element \| scalar` | Optional cell UI (e.g. `ui.badge(...)`); display-only |
+| `editor` | `'text' \| 'select'` | Inline editor on the client |
+| `editorOptions` | `{ value, label }[]` | Options when `editor` is `'select'` |
+| `detailTrigger` | `boolean` | Cell opens the row detail drawer |
 
 Server-side column callbacks (not Vue/NiceGUI slots):
 
@@ -334,7 +347,7 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 | `icon` | Lucide name (`pencil`, `trash-2`, …) from a curated action set |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
-Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `action`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
+Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `pageSize` / `action` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `primaryAction`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
 
 #### `ui.dialog(props, fn)` / `ui.dialog(fn, props?)`
 
@@ -415,10 +428,16 @@ Sidebar layout for multi-page apps. Prefer `ui.run({ app })` so every page inher
 | Prop | Type | Description |
 |------|------|-------------|
 | `title` | `string` | Brand label in the sidebar |
-| `nav` | `{ label, href, icon?, description? }[]` | Primary sidebar links (SPA `pushState` for `/…`) |
-| `user` | `AppUser` | Optional user menu |
-| `secondary` / `documents` | nav groups | Optional extra sidebar sections |
+| `headerTitle` | `string` | Optional site header title (client defaults to active nav label) |
+| `nav` | `AppNavItem[]` | Primary sidebar links (SPA `pushState` for `/…`) |
+| `navSecondary` | `AppNavItem[]` | Optional secondary links (e.g. Settings) |
+| `documents` | `AppNavItem[]` | Optional documents group |
+| `user` | `AppUser` | Optional user menu (`name`, `email`, `avatar?`) |
+| `variant` | `'sidebar' \| 'inset'` | Shell layout variant |
+| `collapsible` | `'offcanvas' \| 'icon' \| 'none'` | Sidebar collapse behavior |
 | `className` | `string` | Extra classes on the shell |
+
+`AppNavItem`: `{ label, href, icon?, description? }` — `icon` is a curated Lucide key (e.g. `home`, `gauge`).
 
 ```typescript
 // Preferred: configure once at startup
@@ -555,7 +574,15 @@ type PersistenceAdapter = {
   save(key: string, json: string): Promise<void>;
   close?(): Promise<void>;
 };
+
+// Example in-memory adapter (also available as createMemoryPersistence):
+const myAdapter: PersistenceAdapter = {
+  async load(key) { /* … */ return null; },
+  async save(key, json) { /* … */ },
+};
 ```
+
+Ship DuckDB/Redis adapters in your app (or a future package) by implementing this interface; core only provides the contract and `createMemoryPersistence()` for tests.
 
 ---
 
@@ -595,6 +622,7 @@ import {
   page,
   getPage,
   getRegisteredPaths,
+  setPageWrapper,
   reactive,
   subscribe,
   GlobalState,

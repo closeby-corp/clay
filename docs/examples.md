@@ -1,7 +1,7 @@
 # Examples
 
-Demo entry: `apps/demo/src/main.ts`  
-Pages: `apps/demo/src/examples/`
+Demo entry: [`apps/demo/src/main.ts`](../apps/demo/src/main.ts)  
+Pages: [`apps/demo/src/examples/`](../apps/demo/src/examples/) (auto-loaded via `ui.loadPages`)
 
 After `bun run build:client && bun run demo`, open http://localhost:4000.
 
@@ -9,15 +9,44 @@ After `bun run build:client && bun run demo`, open http://localhost:4000.
 
 | Route | File | Patterns shown |
 |-------|------|----------------|
-| `/` | `Home.ts` | Links, hero layout |
+| `/` | `Home.ts` | Hero copy, `pageMeta` |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
-| `/examples/chat` | `Chat.ts` | `GlobalState`, multi-session shared messages |
+| `/examples/chat` | `Chat.ts` | `GlobalState`, async `get`/`set`, multi-session sync |
 | `/examples/upload` | `FileUpload.ts` | Simple upload UI pattern |
-| `/examples/dashboard` | `Dashboard.ts` | `stat`, `dataTable` |
+| `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, confirm/prompt/choose, toasts |
+| `/examples/charts` | `ChartDemo.ts` | `ui.areaChart` interactive ranges + live refresh |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` |
+| `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
+
+Each page file exports optional `pageMeta` (`label`, `icon`, `order`) for `ui.navFromPages()`.
+
+## Pattern: app entry + discovered pages
+
+```typescript
+// main.ts
+await ui.loadPages(new URL('./examples', import.meta.url));
+
+ui.run({
+  port: 4000,
+  title: 'BadUI Demo',
+  app: {
+    title: 'BadUI',
+    nav: ui.navFromPages(),
+  },
+});
+```
+
+```typescript
+// examples/Counter.ts
+export const pageMeta = { label: 'Counter', icon: 'hash', order: 10 };
+
+ui.page('/examples/counter', () => {
+  // content only — shell from ui.run({ app })
+});
+```
 
 ## Pattern: counter (imperative updates)
 
@@ -84,6 +113,7 @@ for (const key of Object.keys(form)) {
 await GlobalState.configure({ persistence: myAdapter });
 
 const messages = GlobalState.create<ChatMessage[]>('chatMessages', []);
+const online = GlobalState.create<string[]>('onlineUsers', [], { persist: false });
 
 messages.subscribe(() => {
   void list.refresh();
@@ -97,6 +127,22 @@ ui.button('Send', {
 ```
 
 All connected sessions that subscribed will refresh when the store changes. With a persistence adapter configured, `get()` loads from the backend on every read; pass `{ persist: false }` for ephemeral keys (e.g. online presence).
+
+## Pattern: DataTable views
+
+```typescript
+ui.dataTable(docs, {
+  keyField: 'id',
+  views: [
+    { id: 'all', label: 'All' },
+    { id: 'done', label: 'Done', filter: (row) => row.status === 'Done' },
+  ],
+  defaultView: 'all',
+  // …
+});
+```
+
+Every tab shows the table; the active view’s `filter` lenses rows. Badge counts auto-derive when `count` is omitted.
 
 ## Styling tip
 

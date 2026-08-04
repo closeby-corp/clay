@@ -41,6 +41,8 @@ Create a page file and an entrypoint:
 // pages/counter.ts
 import { ui } from '@badui/ui';
 
+export const pageMeta = { label: 'Counter', icon: 'hash', order: 10 };
+
 ui.page('/counter', () => {
   let count = 0;
   const label = ui.label(`Count: ${count}`).classes('text-2xl');
@@ -87,11 +89,11 @@ Use `css` to inject your own `globals.css` after the built client styles — ove
 ## Project layout (monorepo)
 
 ```
-apps/demo/           Demo pages + server entry
-packages/ui/         NiceGUI-style ui facade
-packages/core/       Element tree, session, protocol, reactive
-packages/components/ Element factories (button, input, …)
-packages/client/     React + ShadCN renderer
+apps/demo/           Demo pages + server entry (`loadPages` + `ui.run({ app })`)
+packages/ui/         NiceGUI-style ui facade (`loadPages`, `navFromPages`, `run`)
+packages/core/       Element tree, session, page wrapper, reactive, GlobalState
+packages/components/ Element factories (button, input, dataTable, areaChart, …)
+packages/client/     React + ShadCN renderer (Sonner toasts, BoundDataTable, …)
 packages/server/     Bun HTTP + WebSocket
 docs/                This documentation
 ```

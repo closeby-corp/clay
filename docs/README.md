@@ -31,6 +31,9 @@ bun run demo
 ```typescript
 import { ui } from '@badui/ui';
 
+// pages/home.ts
+export const pageMeta = { label: 'Home', icon: 'house', order: 0 };
+
 ui.page('/', () => {
   let count = 0;
   const label = ui.label(`Count: ${count}`);
@@ -50,8 +53,17 @@ ui.page('/', () => {
     });
   });
 });
+```
 
-ui.run({ port: 4000, title: 'My App' });
+```typescript
+// main.ts
+await ui.loadPages(new URL('./pages', import.meta.url));
+
+ui.run({
+  port: 4000,
+  title: 'My App',
+  app: { title: 'My App', nav: ui.navFromPages() },
+});
 ```
 
 ## Naming

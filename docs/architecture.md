@@ -4,29 +4,32 @@
 
 | Package | Role |
 |---------|------|
-| `@badui/ui` | App-facing `ui` object: factories + `page` + `run` |
+| `@badui/ui` | App-facing `ui` object: factories, `page`, `loadPages`, `navFromPages`, `run` |
 | `@badui/components` | Thin `Element` factories (no HTML strings) |
-| `@badui/core` | Element tree, session, reactive, protocol types, GlobalState |
+| `@badui/core` | Element tree, session, page wrapper, reactive, protocol, GlobalState + PersistenceAdapter |
 | `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade |
-| `@badui/client` | Vite/React app: WS session hook + element → ShadCN |
+| `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …) |
 | `@badui/compiler` | Stub / retired (old Datastar `let` transform) |
 
 ## Runtime data flow
 
 ```
-ui.page('/x', builder)
+ui.loadPages(dir) ──► ui.page registrations + pageMeta
+        │
+ui.run({ app }) ──► setPageWrapper(app shell)
         │
         ▼
 BadUIServer ──HTTP──► SPA shell (index.html + assets)
         │
         └──WS /ws──► ClientSession
                         │
-                        ├─ mount: builder() → Element tree → JSON
+                        ├─ mount: wrapper? → builder() → Element tree → JSON
                         ├─ event: element.handleEvent → handlers
                         └─ patch: updateProps / setChildren / …
                                     │
                                     ▼
                          React useBadUISession + ElementRenderer
+                         (notify → Sonner toast)
 ```
 
 ## Ownership boundaries
@@ -57,13 +60,19 @@ Per-tab isolation: local `let` / `reactive` state inside a page builder is not s
 
 ```typescript
 import { BadUIServer } from '@badui/server';
+import { setPageWrapper } from '@badui/core';
+import { app } from '@badui/components';
 import './pages';
+
+setPageWrapper((pageFn) =>
+  app({ title: 'App', nav: [{ label: 'Home', href: '/' }] }, pageFn),
+);
 
 const server = new BadUIServer({ port: 4000, title: 'App' });
 server.start();
 ```
 
-Or use `ui.run({ … })` which does the same.
+Or use `ui.run({ app, … })` which sets the page wrapper and starts the server.
 
 ## Retired stack
 

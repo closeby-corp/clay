@@ -17,13 +17,14 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
 | `stat` | `stat` | Grid of metric cards |
-| `dataTable` | `datatable` | Search, column filters, visibility, export, sort, pagination, actions |
+| `areaChart` | `areachart` | Recharts stacked area (+ optional interactive ranges) |
+| `dataTable` | `datatable` | Search, filters, views, selection, reorder, editors, export, sort, pagination, actions, detail drawer |
 | `row` | `row` | Flex row |
 | `column` | `column` | Flex column |
 | `container` | `container` | Max-width wrapper |
 | `hero` | `hero` | Centered hero |
 | `card` | `card` | ShadCN `Card` |
-| `app` | `app` | Sidebar + centered main (SPA shell) |
+| `app` | `app` | Dashboard shell (sidebar + inset main); usually via `ui.run({ app })` |
 | `dialog` | `dialog` | Modal overlay (server-owned `open`) |
 | `refreshable` | `refreshable` | Fragment-like wrapper (`contents`) |
 | *(internal)* | `root` | Page root (`min-h-screen`) |
@@ -38,7 +39,7 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `input` / `textarea` | `input`, `change` |
 | `checkbox` | `change` (and `input` if bound) |
 | `select` / `slider` | `change` |
-| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `action` |
+| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `primaryAction` |
 | `dialog` | `close` |
 
 Prop names use camelCase (`onClick` → event name `click`).
@@ -52,7 +53,7 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `checkbox`
 - `select`
 - `slider`
-- `datatable` (search input)
+- `datatable` (search / column filter inputs)
 
 Server patches still reconcile when `props.value` changes (e.g. `draft.text = ''` after Add).
 
@@ -66,4 +67,4 @@ ui.label('Hello').classes('text-3xl font-bold text-muted-foreground');
 
 Layout `gap` uses a small numeric scale mapped to `gap-0` … `gap-8` in the client.
 
-The client ships a light ShadCN-style theme (CSS variables in `packages/client/src/index.css`).
+The client ships a light ShadCN-style theme (CSS variables in `packages/client/src/index.css`). Override tokens at runtime with `ui.run({ css: './globals.css' })`.
