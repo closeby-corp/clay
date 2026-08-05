@@ -38,7 +38,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `pieChart` | `piechart` | Recharts pie/donut (`nameKey`/`valueKey` or `series`, `innerRadius?`) |
 | `radarChart` | `radarchart` | Recharts radar (`angleKey` + `series`, optional `fillOpacity`) |
 | `radialChart` | `radialchart` | Recharts radial bar (`nameKey`/`valueKey` or stacked `series`, optional center text / angles) |
-| `dataTable` | `datatable` | Search, filters, views, selection, reorder, editors, export, sort, pagination, actions, detail drawer |
+| `dataTable` | `datatable` | Search, filters, views, grouping, selection, reorder, editors, export, sort, pagination, actions, detail drawer |
 | `tabs` | `tabs` (+ child `tab`) | ShadCN `Tabs`; optimistic `value` |
 | `accordion` | `accordion` (+ child `accordionitem`) | ShadCN `Accordion`; optimistic `value` |
 | `collapsible` | `collapsible` | ShadCN `Collapsible`; optimistic open (`value`) |
@@ -66,7 +66,7 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `select` / `slider` / `radioGroup` / `combobox` / `date` | `change` (and `input` if bound for radio/combobox/date) |
 | `tabs` / `accordion` / `collapsible` | `change` |
 | `upload` | `upload` (file metadata + server `path`, not bytes) |
-| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `primaryAction` |
+| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` | `close` |
 
 Prop names use camelCase (`onClick` → event name `click`).

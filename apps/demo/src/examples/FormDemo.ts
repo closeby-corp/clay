@@ -17,8 +17,10 @@ ui.page('/examples/form-demo', () => {
       satisfaction: 75,
       subscribe: true,
       notifications: false,
+      darkMode: false,
       terms: false,
       country: 'us',
+      timezone: 'utc',
       plan: 'free',
       dueDate: '',
       bio: '',
@@ -66,6 +68,13 @@ ui.page('/examples/form-demo', () => {
             'notifications',
           );
           ui.checkbox({ label: 'Accept terms', checked: form.terms }).bindValue(form, 'terms');
+
+          ui.separator();
+
+          ui.switch({ label: 'Dark mode preference', checked: form.darkMode }).bindValue(
+            form,
+            'darkMode',
+          );
           ui.select({
             label: 'Country',
             value: form.country,
@@ -77,6 +86,20 @@ ui.page('/examples/form-demo', () => {
               { value: 'japan', label: 'Japan' },
             ],
           }).bindValue(form, 'country');
+          ui.combobox({
+            label: 'Timezone',
+            placeholder: 'Search timezones…',
+            value: form.timezone,
+            options: [
+              { value: 'utc', label: 'UTC' },
+              { value: 'america-new-york', label: 'America/New_York' },
+              { value: 'america-los-angeles', label: 'America/Los_Angeles' },
+              { value: 'europe-london', label: 'Europe/London' },
+              { value: 'europe-berlin', label: 'Europe/Berlin' },
+              { value: 'asia-tokyo', label: 'Asia/Tokyo' },
+              { value: 'australia-sydney', label: 'Australia/Sydney' },
+            ],
+          }).bindValue(form, 'timezone');
           ui.radioGroup({
             label: 'Plan',
             value: form.plan,
@@ -120,8 +143,10 @@ ui.page('/examples/form-demo', () => {
                 form.satisfaction = 75;
                 form.subscribe = true;
                 form.notifications = false;
+                form.darkMode = false;
                 form.terms = false;
                 form.country = 'us';
+                form.timezone = 'utc';
                 form.plan = 'free';
                 form.dueDate = '';
                 form.bio = '';
@@ -148,8 +173,10 @@ ui.page('/examples/form-demo', () => {
               `Satisfaction: ${form.satisfaction}%`,
               `Subscribe: ${form.subscribe}`,
               `Notifications: ${form.notifications}`,
+              `Dark mode: ${form.darkMode}`,
               `Terms: ${form.terms}`,
               `Country: ${form.country}`,
+              `Timezone: ${form.timezone}`,
               `Plan: ${form.plan}`,
               `Due date: ${form.dueDate || '—'}`,
               `Bio: ${form.bio || '—'}`,

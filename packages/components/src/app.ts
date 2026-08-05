@@ -46,7 +46,8 @@ function serializeNav(items: AppNavItem[] | undefined, path: string) {
 
 /**
  * SPA-style shell: dashboard sidebar + inset main content.
- * Rebuilds on each page remount (marks active nav from the current session path).
+ * Server rebuilds the tree on each navigate (marks active nav from the session path);
+ * the client keeps chrome mounted via a sticky `app` React key when structure matches.
  */
 export function app(props: AppProps, fn: () => void): Element {
   const path = getCurrentSession()?.path ?? '/';

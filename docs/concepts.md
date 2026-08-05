@@ -164,7 +164,7 @@ ui.page('/examples/charts', () => {
 
 Opt out per route with `ui.page(path, fn, { shell: false })`. Keep explicit `ui.app(props, fn)` for advanced cases.
 
-This is **not** a persistent client shell — on `navigate` / link click the session remounts and the shell rebuilds with the correct active nav item.
+The client keeps this chrome **sticky** across SPA navigate: the WebSocket stays open, a new `hello` remounts the server session, and React reuses the `app` shell (sidebar / header) when the chrome structure matches. Only the inset page content remounts; nav `active` flags update from the new tree.
 
 ## Notifications and navigation
 
@@ -182,7 +182,7 @@ import { notify, navigate } from '@badui/core';
 navigate('/examples/todo');
 ```
 
-`ui.notify` / `notify` map to [Sonner](https://ui.shadcn.com/docs/components/sonner) on the client (`toast.success` / `info` / `warning` / `error`). `duration: 0` is sticky; optional `description` is Sonner’s secondary line. `navigate` tells the client to change path and reconnect the session.
+`ui.notify` / `notify` map to [Sonner](https://ui.shadcn.com/docs/components/sonner) on the client (`toast.success` / `info` / `warning` / `error`). `duration: 0` is sticky; optional `description` is Sonner’s secondary line. `navigate` tells the client to change path and send a new `hello` on the same WebSocket (server remounts the page; client keeps matching `app` chrome mounted).
 
 ## Imperative overlays
 

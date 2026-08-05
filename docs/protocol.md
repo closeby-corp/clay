@@ -18,9 +18,9 @@ All fields are **camelCase**. Transport: single WebSocket at `/ws`.
 { "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id" }
 ```
 
-Client connects (or remounts after navigate) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user`.
+Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user`.
 
-Sent on connect and after client-side navigation.
+Sent on connect and after client-side navigation. The React client keeps matching `app` shell chrome mounted across remounts; only inset content is replaced.
 
 ### `event`
 
@@ -78,7 +78,7 @@ Sent on connect and after client-side navigation.
 { "op": "navigate", "path": "/examples/todo" }
 ```
 
-Client updates history and sends a new `hello`.
+Client updates history (`pushState` + `popstate`) and sends a new `hello` on the same WebSocket. Matching `app` chrome stays mounted on the client; inset content remounts.
 
 ### `notify`
 

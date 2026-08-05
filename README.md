@@ -105,6 +105,8 @@ App (ui.page / ui.refreshable)
 |---------|-------------|
 | `bun run build:client` | Build the React client (+ copy into `@badui/cli`) |
 | `bun run pack:publishable` | `build:client` + pack runtime packages into `dist-pack/` |
+| `bun run publish:dry` | Pack + validate + `npm publish --dry-run` (no upload) |
+| `bun run publish:npm` | Pack + validate + publish to npm (needs login; order: core → … → cli) |
 | `bun run demo` | Start the demo server |
 | `bun run demo:cli` | Demo via `badui … --app` |
 | `bun run badui …` | CLI runtime |
@@ -113,10 +115,14 @@ App (ui.page / ui.refreshable)
 
 ## Current gaps vs full NiceGUI
 
-Still out: JS bridge, horizontal scaling, DataTable row grouping, compile-time reactive `let`, browser/general storage + Redis, composed/scatter charts.
+Still out: JS bridge, horizontal scaling, compile-time reactive `let`, browser/general storage + Redis, composed/scatter charts.
 
-In: facade basics, timer / markdown / html / image, **real upload** (`POST /upload` + `ui.upload`), **tab/user storage** (`ui.storage`), **chart zoo** (`area` / `bar` / `line` / `pie` / `radar` / `radial`), DataTable selection/edit, and recent ShadCN wires (radio, date, tooltip, accordion, avatar, skeleton, sheet, drawer).
+In: facade basics, timer / markdown / html / image, **real upload** (`POST /upload` + `ui.upload`), **tab/user storage** (`ui.storage`), **chart zoo** (`area` / `bar` / `line` / `pie` / `radar` / `radial`), DataTable selection/edit/**row grouping**, and recent ShadCN wires (radio, date, tooltip, accordion, avatar, skeleton, sheet, drawer).
+
+## Publishing
+
+Maintainers: `bun run publish:dry` validates packs; `bun run publish:npm` publishes in order `core` → `persistence-file` → `components` → `server` → `ui` → `cli`. Details in [docs/getting-started.md](./docs/getting-started.md#publishing-to-npm-maintainers).
 
 ## License
 
-Root workspace is private. Runtime packages (`@badui/cli`, `@badui/ui`, …) are packable via `bun run pack:publishable` (not necessarily published to npm yet). `@badui/client` stays private — its build is copied into `@badui/cli`.
+MIT. Root workspace is private; runtime packages (`@badui/cli`, `@badui/ui`, …) are publishable via `bun run pack:publishable` / `publish:npm`. `@badui/client` stays private — its build is copied into `@badui/cli`.

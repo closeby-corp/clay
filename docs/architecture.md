@@ -55,8 +55,10 @@ BadUIServer ──HTTP──► SPA shell (index.html + assets)
 
 1. Upgrade to WebSocket; `data.session = null`
 2. On first `hello`, `new ClientSession(path, send)` → `mount()`
-3. Page path change → destroy previous session, mount new path
+3. Page path change → destroy previous session, mount new path (same socket; client sends another `hello`)
 4. Socket close → `session.destroy()`
+
+On the client, a durable WebSocket + sticky React key for `type: 'app'` keeps sidebar/header mounted across navigate when chrome identity matches; only the inset tree remounts.
 
 Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `GlobalState` when you need a process-wide store. Optional `PersistenceAdapter` (configure at entrypoint) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@badui/persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
 

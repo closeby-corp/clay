@@ -43,6 +43,13 @@ export type DataTablePrimaryAction = {
   label: string;
 };
 
+/** Client-facing group metadata (no callbacks). */
+export type DataTableGroup = {
+  key: string;
+  label: string;
+  count: number;
+};
+
 export type ExportFormat = 'csv' | 'tsv' | 'json';
 export type ExportMode = 'download' | 'copy';
 
@@ -70,6 +77,13 @@ export type DataTableProps = {
   reorderable?: boolean;
   views?: DataTableView[];
   defaultView?: string;
+  /**
+   * Group rows by a column key or a derived value.
+   * After filter/sort, rows are partitioned so each group is contiguous.
+   */
+  groupBy?: string | ((row: Record<string, unknown>) => unknown);
+  /** When true, the client starts with every group collapsed. Default `false`. */
+  defaultCollapsed?: boolean;
   primaryAction?: DataTablePrimaryAction;
   /** Build detached Element tree stamped as `__detail` for the drawer. */
   detail?: (row: Record<string, unknown>) => void;
@@ -82,6 +96,7 @@ export type DataTableProps = {
     value: unknown,
   ) => void | Promise<void>;
   onViewChange?: (viewId: string) => void | Promise<void>;
+  onGroupToggle?: (groupKey: string, collapsed: boolean) => void | Promise<void>;
   onPrimaryAction?: () => void | Promise<void>;
 };
 
@@ -93,6 +108,9 @@ export const CELLS_FIELD = '__cells';
 
 /** Per-row detail drawer tree (`{ __ui: ElementNode }`). */
 export const DETAIL_FIELD = '__detail';
+
+/** Per-row group identity stamped for the client when `groupBy` is set. */
+export const GROUP_KEY_FIELD = '__groupKey';
 
 export type UiCell = { __ui: ElementNode };
 
@@ -108,6 +126,7 @@ type SelectionPayload = { keys?: Array<string | number> };
 type PageSizePayload = { pageSize?: number };
 type CellChangePayload = { rowKey?: string | number; columnKey?: string; value?: unknown };
 type ViewPayload = { viewId?: string };
+type GroupTogglePayload = { groupKey?: string; collapsed?: boolean };
 
 type NormalizedTable = {
   rows: Record<string, unknown>[];
@@ -141,8 +160,66 @@ function stampRowIds(rows: Record<string, unknown>[]): Record<string, unknown>[]
 function inferColumnsFromRows(rows: Record<string, unknown>[]): TableColumn[] {
   if (rows.length === 0) return [];
   return Object.keys(rows[0]!)
-    .filter((key) => key !== ROW_ID_FIELD && key !== CELLS_FIELD && key !== DETAIL_FIELD)
+    .filter(
+      (key) =>
+        key !== ROW_ID_FIELD &&
+        key !== CELLS_FIELD &&
+        key !== DETAIL_FIELD &&
+        key !== GROUP_KEY_FIELD,
+    )
     .map((key) => ({ key, header: key, sortable: true }));
+}
+
+function formatGroupLabel(value: unknown): string {
+  if (value == null || value === '') return '(Empty)';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+/** Resolve the group identity for a row under the active `groupBy`. */
+export function resolveGroupValue(
+  row: Record<string, unknown>,
+  groupBy: string | ((row: Record<string, unknown>) => unknown),
+  columns: TableColumn[],
+): { key: string; label: string } {
+  let raw: unknown;
+  if (typeof groupBy === 'function') {
+    raw = groupBy(row);
+  } else {
+    const col = columns.find((c) => c.key === groupBy);
+    raw = col ? cellValue(col, row) : row[groupBy];
+  }
+  const label = formatGroupLabel(raw);
+  const key = raw == null || raw === '' ? '' : String(typeof raw === 'object' ? label : raw);
+  return { key, label };
+}
+
+/** Stable partition: groups ordered by first appearance; row order preserved within each. */
+export function groupRows(
+  rows: Record<string, unknown>[],
+  groupBy: string | ((row: Record<string, unknown>) => unknown),
+  columns: TableColumn[],
+): { groups: DataTableGroup[]; rows: Record<string, unknown>[] } {
+  const order: string[] = [];
+  const buckets = new Map<string, { label: string; rows: Record<string, unknown>[] }>();
+
+  for (const row of rows) {
+    const { key, label } = resolveGroupValue(row, groupBy, columns);
+    let bucket = buckets.get(key);
+    if (!bucket) {
+      bucket = { label, rows: [] };
+      buckets.set(key, bucket);
+      order.push(key);
+    }
+    bucket.rows.push(row);
+  }
+
+  const groups: DataTableGroup[] = order.map((key) => {
+    const bucket = buckets.get(key)!;
+    return { key, label: bucket.label, count: bucket.rows.length };
+  });
+  const flat = order.flatMap((key) => buckets.get(key)!.rows);
+  return { groups, rows: flat };
 }
 
 function withSortableDefaults(columns: TableColumn[]): TableColumn[] {
@@ -388,6 +465,8 @@ export class DataTableElement extends Element {
   private reorderable: boolean;
   private views: DataTableView[];
   private activeView: string;
+  private groupBy?: string | ((row: Record<string, unknown>) => unknown);
+  private defaultCollapsed: boolean;
   private primaryAction?: DataTablePrimaryAction;
   private detailFn?: (row: Record<string, unknown>) => void;
   private actions: DataTableAction[];
@@ -401,6 +480,7 @@ export class DataTableElement extends Element {
     value: unknown,
   ) => void | Promise<void>;
   private onViewChangeFn?: (viewId: string) => void | Promise<void>;
+  private onGroupToggleFn?: (groupKey: string, collapsed: boolean) => void | Promise<void>;
   private onPrimaryActionFn?: () => void | Promise<void>;
 
   constructor(data: unknown = [], props: DataTableProps = {}) {
@@ -421,6 +501,8 @@ export class DataTableElement extends Element {
     const reorderable = props.reorderable === true;
     const views = props.views ?? [];
     const activeView = props.defaultView ?? views[0]?.id ?? '';
+    const groupBy = props.groupBy;
+    const defaultCollapsed = props.defaultCollapsed === true;
     const primaryAction = props.primaryAction;
 
     super('datatable', {
@@ -438,6 +520,9 @@ export class DataTableElement extends Element {
       reorderable,
       views,
       activeView,
+      groupBy: typeof groupBy === 'string' ? groupBy : groupBy ? true : null,
+      groups: [],
+      defaultCollapsed,
       primaryAction: primaryAction ?? null,
       pageSizeOptions,
       hasDetail: typeof props.detail === 'function',
@@ -469,6 +554,8 @@ export class DataTableElement extends Element {
     this.reorderable = reorderable;
     this.views = views;
     this.activeView = activeView;
+    this.groupBy = groupBy;
+    this.defaultCollapsed = defaultCollapsed;
     this.primaryAction = primaryAction;
     this.detailFn = props.detail;
     this.actions = actions;
@@ -478,6 +565,7 @@ export class DataTableElement extends Element {
     this.onPageSizeChangeFn = props.onPageSizeChange;
     this.onCellChangeFn = props.onCellChange;
     this.onViewChangeFn = props.onViewChange;
+    this.onGroupToggleFn = props.onGroupToggle;
     this.onPrimaryActionFn = props.onPrimaryAction;
 
     this.on('sort', (value) => this.handleSort(value));
@@ -492,6 +580,7 @@ export class DataTableElement extends Element {
     this.on('pageSize', (value) => this.handlePageSize(value));
     this.on('cellChange', (value) => this.handleCellChange(value));
     this.on('viewChange', (value) => this.handleViewChange(value));
+    this.on('groupToggle', (value) => this.handleGroupToggle(value));
     this.on('primaryAction', () => this.handlePrimaryAction());
 
     this.syncView();
@@ -697,13 +786,20 @@ export class DataTableElement extends Element {
     }
   }
 
+  private async handleGroupToggle(value: unknown): Promise<void> {
+    if (!this.onGroupToggleFn) return;
+    const payload = (value ?? {}) as GroupTogglePayload;
+    if (payload.groupKey == null || typeof payload.collapsed !== 'boolean') return;
+    await this.onGroupToggleFn(payload.groupKey, payload.collapsed);
+  }
+
   private async handlePrimaryAction(): Promise<void> {
     if (this.onPrimaryActionFn) {
       await this.onPrimaryActionFn();
     }
   }
 
-  /** Visible rows after view filter + search/column filters + sort (before pagination). */
+  /** Visible rows after view filter + search/column filters + sort (+ group contiguous). */
   computeProcessedRows(): Record<string, unknown>[] {
     const active = this.views.find((v) => v.id === this.activeView);
     let rows = active?.filter
@@ -724,6 +820,9 @@ export class DataTableElement extends Element {
         const cmp = compareValues(av, bv);
         return dir === 'asc' ? cmp : -cmp;
       });
+    }
+    if (this.groupBy) {
+      rows = groupRows(rows, this.groupBy, this.columns).rows;
     }
     return rows;
   }
@@ -750,7 +849,16 @@ export class DataTableElement extends Element {
     const pageRows =
       this.pageSize > 0 ? processed.slice(start, start + this.pageSize) : processed;
     const visibleCols = this.visibleColumns();
-    const visible = pageRows.map((row) => buildDisplayRow(row, visibleCols, this.detailFn));
+    const groups = this.groupBy
+      ? groupRows(processed, this.groupBy, this.columns).groups
+      : [];
+    const visible = pageRows.map((row) => {
+      const display = buildDisplayRow(row, visibleCols, this.detailFn);
+      if (this.groupBy) {
+        display[GROUP_KEY_FIELD] = resolveGroupValue(row, this.groupBy, this.columns).key;
+      }
+      return display;
+    });
 
     this.update({
       columns: toClientColumns(visibleCols),
@@ -775,6 +883,9 @@ export class DataTableElement extends Element {
       reorderable: this.reorderable,
       views: this.clientViews(),
       activeView: this.activeView,
+      groupBy: typeof this.groupBy === 'string' ? this.groupBy : this.groupBy ? true : null,
+      groups,
+      defaultCollapsed: this.defaultCollapsed,
       primaryAction: this.primaryAction ?? null,
       hasDetail: typeof this.detailFn === 'function',
       actions: this.actions.map(({ id, label, icon, variant }) => ({ id, label, icon, variant })),

@@ -9,24 +9,15 @@
  */
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
+import {
+  outDir,
+  PACKAGES,
+  readCoreVersion,
+  root,
+  tarballPath,
+} from './publishable.ts';
 
-const root = join(import.meta.dir, '..');
-const outDir = join(root, 'dist-pack');
-
-/** Runtime packages consumers need for `badui hello.ts` (client is bundled into cli). */
-const PACKAGES = [
-  'core',
-  'persistence-file',
-  'components',
-  'server',
-  'ui',
-  'cli',
-] as const;
-
-const corePkg = (await Bun.file(join(root, 'packages/core/package.json')).json()) as {
-  version: string;
-};
-const version = corePkg.version;
+const version = await readCoreVersion();
 
 console.log('→ bun run build:client');
 const build = Bun.spawn(['bun', 'run', 'build:client'], {
@@ -42,8 +33,7 @@ await mkdir(outDir, { recursive: true });
 const tarballs: string[] = [];
 for (const name of PACKAGES) {
   console.log(`→ packing @badui/${name}`);
-  // Expected tarball name from bun pm pack (scoped @badui/foo → badui-foo-VERSION.tgz)
-  const expected = join(outDir, `badui-${name}-${version}.tgz`);
+  const expected = tarballPath(name, version);
   const proc = Bun.spawn(
     ['bun', 'pm', 'pack', '--destination', outDir, '--quiet'],
     {
@@ -70,10 +60,21 @@ console.log(`
 Install outside the monorepo (npm links co-installed file: tarballs):
   npm install ${npmFiles}
 
-Then:
-  bunx badui hello.ts
+Validate publish (no registry upload):
+  bun run publish:dry
 
-Once published to the registry (same versions):
+Publish to npm (requires npm login; order is baked into publish:npm):
+  bun run publish:npm
+
+Or manually, in order:
+  npm publish ./dist-pack/badui-core-${version}.tgz --access public
+  npm publish ./dist-pack/badui-persistence-file-${version}.tgz --access public
+  npm publish ./dist-pack/badui-components-${version}.tgz --access public
+  npm publish ./dist-pack/badui-server-${version}.tgz --access public
+  npm publish ./dist-pack/badui-ui-${version}.tgz --access public
+  npm publish ./dist-pack/badui-cli-${version}.tgz --access public
+
+Once published (same versions):
   bun add @badui/cli @badui/ui
   bunx badui hello.ts
 `);

@@ -2,6 +2,7 @@
   "name": "@badui/cli",
   "version": "0.1.0",
   "description": "badui CLI — run a .ts file or page directory with bundled React client assets",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "badui": "./bin/badui"
@@ -13,11 +14,22 @@
     "bin",
     "src",
     "client-dist",
+    "README.md",
+    "LICENSE",
     "!src/**/*.test.ts"
   ],
   "scripts": {
     "copy-client": "bun scripts/copy-client.ts",
     "prepack": "bun run copy-client"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@badui/core": "workspace:*",

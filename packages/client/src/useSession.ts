@@ -114,6 +114,10 @@ export function useBadUISession(path: string) {
     error: null,
   });
   const wsRef = useRef<WebSocket | null>(null);
+  const pathRef = useRef(path);
+  const userIdRef = useRef(getOrCreateUserId());
+  /** Skip path-driven hello on the first effect run; `onopen` sends the initial hello. */
+  const pathHelloReady = useRef(false);
 
   const send = useCallback((msg: ClientMessage) => {
     const ws = wsRef.current;
@@ -129,15 +133,19 @@ export function useBadUISession(path: string) {
     [send],
   );
 
+  // Durable socket: SPA path changes send `hello` on the same connection so the
+  // client can keep `app` chrome mounted (see stickyShell / ElementRenderer).
   useEffect(() => {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${proto}//${window.location.host}/ws`);
     wsRef.current = ws;
-    const userId = getOrCreateUserId();
+    const userId = userIdRef.current;
 
     ws.onopen = () => {
       setState((s) => ({ ...s, connected: true, error: null }));
-      ws.send(JSON.stringify({ op: 'hello', path, userId } satisfies ClientMessage));
+      ws.send(
+        JSON.stringify({ op: 'hello', path: pathRef.current, userId } satisfies ClientMessage),
+      );
     };
 
     ws.onmessage = (ev) => {
@@ -154,10 +162,9 @@ export function useBadUISession(path: string) {
           return { ...s, tree };
         });
       } else if (msg.op === 'navigate') {
+        // Align with nav `go()`: pushState + popstate → App path → hello below.
         window.history.pushState({}, '', msg.path);
-        ws.send(
-          JSON.stringify({ op: 'hello', path: msg.path, userId } satisfies ClientMessage),
-        );
+        window.dispatchEvent(new PopStateEvent('popstate'));
       } else if (msg.op === 'notify') {
         showToast(msg.message, {
           id: msg.id,
@@ -197,6 +204,24 @@ export function useBadUISession(path: string) {
       ws.close();
       wsRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    pathRef.current = path;
+    if (!pathHelloReady.current) {
+      pathHelloReady.current = true;
+      return;
+    }
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(
+        JSON.stringify({
+          op: 'hello',
+          path,
+          userId: userIdRef.current,
+        } satisfies ClientMessage),
+      );
+    }
   }, [path]);
 
   return { ...state, emit };

@@ -48,7 +48,7 @@ ui.page('/examples/datatable', () => {
       ui.row(() => {
         exampleHeader(
           undefined,
-          'Computed columns, badge cells, confirm / prompt / choose, and toasts.',
+          'Computed columns, badge cells, row grouping, confirm / prompt / choose, and toasts.',
         );
         ui.button('Add task', {
           size: 'sm',
@@ -82,6 +82,7 @@ ui.page('/examples/datatable', () => {
         searchable: true,
         searchPlaceholder: 'Search tasks…',
         selectable: true,
+        groupBy: 'status',
         pageSize: 8,
         pageSizeOptions: [5, 8, 10, 20],
         columns: [

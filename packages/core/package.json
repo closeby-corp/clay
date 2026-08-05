@@ -1,6 +1,8 @@
 {
   "name": "@badui/core",
   "version": "0.1.0",
+  "description": "Core element tree, sessions, and protocol types for BadUI",
+  "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -8,8 +10,19 @@
   },
   "files": [
     "src",
+    "README.md",
+    "LICENSE",
     "!src/**/*.test.ts",
     "!src/**/__fixtures__"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {}
 }

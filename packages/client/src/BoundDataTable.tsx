@@ -137,6 +137,12 @@ type DataTableView = {
   count?: number;
 };
 
+type DataTableGroup = {
+  key: string;
+  label: string;
+  count: number;
+};
+
 type PrimaryAction = { id?: string; label: string };
 
 function hasEvent(props: Record<string, unknown>, name: string): boolean {
@@ -418,6 +424,9 @@ export function BoundDataTable({
   const reorderable = props.reorderable === true;
   const views = (props.views as DataTableView[]) ?? [];
   const activeView = String(props.activeView ?? views[0]?.id ?? '');
+  const groups = (props.groups as DataTableGroup[]) ?? [];
+  const grouped = props.groupBy != null && props.groupBy !== false;
+  const defaultCollapsed = props.defaultCollapsed === true;
   const primaryAction = props.primaryAction as PrimaryAction | null;
   const pageSizeOptions = (props.pageSizeOptions as number[]) ?? [10, 20, 30, 40, 50];
   const sortKey = (props.sortKey as string | null) ?? null;
@@ -435,6 +444,11 @@ export function BoundDataTable({
   const [exportOpen, setExportOpen] = useState(false);
   const [actionsMenuKey, setActionsMenuKey] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    if (!defaultCollapsed || groups.length === 0) return new Set();
+    return new Set(groups.map((g) => g.key));
+  });
+  const groupsKey = groups.map((g) => g.key).join('\0');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tableId = useId();
@@ -443,6 +457,33 @@ export function BoundDataTable({
     () => rows.map((row, i) => String(row[keyField] ?? i)) as UniqueIdentifier[],
     [rows, keyField],
   );
+
+  const visibleRows = useMemo(() => {
+    if (!grouped) return rows;
+    return rows.filter((row) => {
+      const gk = String(row.__groupKey ?? '');
+      return !collapsed.has(gk);
+    });
+  }, [rows, grouped, collapsed]);
+
+  const visibleDataIds = useMemo(
+    () => visibleRows.map((row, i) => String(row[keyField] ?? i)) as UniqueIdentifier[],
+    [visibleRows, keyField],
+  );
+
+  useEffect(() => {
+    setCollapsed((prev) => {
+      const keys = groups.map((g) => g.key);
+      if (defaultCollapsed) {
+        const next = new Set(keys);
+        if (next.size === prev.size && keys.every((k) => prev.has(k))) return prev;
+        return next;
+      }
+      const keySet = new Set(keys);
+      const next = new Set([...prev].filter((k) => keySet.has(k)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [groupsKey, defaultCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps -- groupsKey tracks group identity
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -480,13 +521,25 @@ export function BoundDataTable({
     }
   };
 
+  const toggleGroup = (groupKey: string) => {
+    const next = new Set(collapsed);
+    const willCollapse = !next.has(groupKey);
+    if (willCollapse) next.add(groupKey);
+    else next.delete(groupKey);
+    setCollapsed(next);
+    if (hasEvent(props, 'groupToggle')) {
+      emit(id, 'groupToggle', { groupKey, collapsed: willCollapse });
+    }
+  };
+
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = dataIds.indexOf(active.id);
-    const newIndex = dataIds.indexOf(over.id);
+    const ids = grouped ? visibleDataIds : dataIds;
+    const oldIndex = ids.indexOf(active.id);
+    const newIndex = ids.indexOf(over.id);
     if (oldIndex < 0 || newIndex < 0) return;
-    const reordered = arrayMove([...dataIds], oldIndex, newIndex);
+    const reordered = arrayMove([...ids], oldIndex, newIndex);
     if (hasEvent(props, 'reorder')) {
       emit(id, 'reorder', { orderedKeys: reordered });
     }
@@ -529,6 +582,35 @@ export function BoundDataTable({
     return renderTableCell(content, emit, renderNode);
   };
 
+  type BodyItem =
+    | { kind: 'group'; group: DataTableGroup }
+    | { kind: 'row'; row: Record<string, unknown>; index: number };
+
+  const bodyItems = useMemo((): BodyItem[] => {
+    if (!grouped) {
+      return rows.map((row, index) => ({ kind: 'row' as const, row, index }));
+    }
+    const meta = new Map(groups.map((g) => [g.key, g]));
+    const items: BodyItem[] = [];
+    let lastKey: string | null = null;
+    rows.forEach((row, index) => {
+      const gk = String(row.__groupKey ?? '');
+      if (gk !== lastKey) {
+        items.push({
+          kind: 'group',
+          group: meta.get(gk) ?? { key: gk, label: gk || '(Empty)', count: 0 },
+        });
+        lastKey = gk;
+      }
+      if (!collapsed.has(gk)) {
+        items.push({ kind: 'row', row, index });
+      }
+    });
+    return items;
+  }, [rows, grouped, groups, collapsed]);
+
+  const sortableIds = grouped ? visibleDataIds : dataIds;
+
   const tableBlock = (
     <div className="overflow-hidden rounded-lg border">
       <DndContext
@@ -546,7 +628,8 @@ export function BoundDataTable({
                 <TableHead className="w-8">
                   <Checkbox
                     checked={
-                      rows.length > 0 && rows.every((r, i) => selected.has(String(r[keyField] ?? i)))
+                      sortableIds.length > 0 &&
+                      sortableIds.every((rowId) => selected.has(String(rowId)))
                         ? true
                         : selected.size > 0
                           ? 'indeterminate'
@@ -554,7 +637,7 @@ export function BoundDataTable({
                     }
                     onCheckedChange={(value) => {
                       if (value) {
-                        emitSelection(new Set(dataIds.map(String)));
+                        emitSelection(new Set(sortableIds.map(String)));
                       } else {
                         emitSelection(new Set());
                       }
@@ -625,8 +708,41 @@ export function BoundDataTable({
                 </TableCell>
               </TableRow>
             ) : (
-              <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
-                {rows.map((row, i) => {
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                {bodyItems.map((item) => {
+                  if (item.kind === 'group') {
+                    const isCollapsed = collapsed.has(item.group.key);
+                    return (
+                      <TableRow
+                        key={`group:${item.group.key}`}
+                        className="bg-muted/40 hover:bg-muted/40"
+                      >
+                        <TableCell colSpan={Math.max(colSpan, 1)} className="py-2">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 text-sm font-medium"
+                            onClick={() => toggleGroup(item.group.key)}
+                            aria-expanded={!isCollapsed}
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                            )}
+                            <span>{item.group.label}</span>
+                            <Badge
+                              variant="secondary"
+                              className="h-5 rounded-full px-1.5 font-normal text-muted-foreground"
+                            >
+                              {item.group.count}
+                            </Badge>
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  const { row, index: i } = item;
                   const rowKey = String(row[keyField] ?? i);
                   const isSelected = selected.has(rowKey);
                   return (

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
+import { elementReactKey } from './stickyShell';
 import { BoundAreaChart } from './BoundAreaChart';
 import { BoundBarChart } from './BoundBarChart';
 import { BoundLineChart } from './BoundLineChart';
@@ -940,7 +941,9 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
   const style = props.style;
 
   const renderChildren = () =>
-    children.map((child) => <ElementRenderer key={child.id} node={child} emit={emit} />);
+    children.map((child) => (
+      <ElementRenderer key={elementReactKey(child)} node={child} emit={emit} />
+    ));
 
   switch (type) {
     case 'root':

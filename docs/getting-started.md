@@ -37,6 +37,40 @@ bun add @badui/cli @badui/ui
 # transitive: core, components, server, persistence-file
 ```
 
+### Publishing to npm (maintainers)
+
+Runtime packages are scoped (`@badui/*`) and public (`publishConfig.access: public`). Publish **in dependency order** so the registry can resolve rewritten versions:
+
+1. `@badui/core`
+2. `@badui/persistence-file`
+3. `@badui/components`
+4. `@badui/server`
+5. `@badui/ui`
+6. `@badui/cli`
+
+```bash
+# In the BadUI checkout:
+bun install
+npm login                          # once; needs rights on the @badui scope
+
+bun run publish:dry                # pack + validate + npm publish --dry-run (no upload)
+bun run publish:npm                # pack + validate + real npm publish (same order)
+```
+
+Equivalent manual flow from packed tarballs:
+
+```bash
+bun run pack:publishable
+npm publish ./dist-pack/badui-core-0.1.0.tgz --access public
+npm publish ./dist-pack/badui-persistence-file-0.1.0.tgz --access public
+npm publish ./dist-pack/badui-components-0.1.0.tgz --access public
+npm publish ./dist-pack/badui-server-0.1.0.tgz --access public
+npm publish ./dist-pack/badui-ui-0.1.0.tgz --access public
+npm publish ./dist-pack/badui-cli-0.1.0.tgz --access public
+```
+
+`publish:dry` checks each tarball for rewritten deps (no `workspace:*`), `license` / README / LICENSE, CLI `bin` + `client-dist`, then runs `npm publish --dry-run`. Use `--skip-pack` to reuse an existing `dist-pack/`: `bun scripts/publish-from-pack.ts --dry-run --skip-pack`.
+
 ### Run
 
 ```typescript
@@ -133,6 +167,8 @@ Open:
 |--------|----------------|
 | `bun run build:client` | Vite production build of the React client + copy into `@badui/cli` |
 | `bun run pack:publishable` | `build:client` + pack `@badui/{core,persistence-file,components,server,ui,cli}` → `dist-pack/` |
+| `bun run publish:dry` | Pack + validate tarballs + `npm publish --dry-run` (no registry upload) |
+| `bun run publish:npm` | Pack + validate + `npm publish` in order (requires `npm login`) |
 | `bun run demo` | Start demo server (`main.ts`; expects client already built) |
 | `bun run demo:cli` | Start demo via `badui apps/demo/src/examples --app` |
 | `bun run badui …` | CLI runtime (`@badui/cli`) |
@@ -143,7 +179,8 @@ Open:
 
 - Source packages keep `workspace:*` for the monorepo; `bun pm pack` / publish rewrites them to the package version.
 - `@badui/client` is **private**; only its Vite `dist` is copied into `@badui/cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
-- Root stays `private: true`. Publish order when going to npm: `core` → `persistence-file` → `components` → `server` → `ui` → `cli`.
+- Root stays `private: true`. Each runtime package ships `license`, `README.md`, `LICENSE`, and `publishConfig.access: public`.
+- Publish order: `core` → `persistence-file` → `components` → `server` → `ui` → `cli` (see **Publishing to npm** above).
 
 ## Library mode (multi-page entrypoint)
 

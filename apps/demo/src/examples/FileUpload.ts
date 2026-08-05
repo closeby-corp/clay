@@ -69,6 +69,14 @@ ui.page('/examples/upload', () => {
                       ui.download(file.name, file.type || 'text/plain', text);
                     },
                   });
+                  ui.button('Copy name', {
+                    variant: 'ghost',
+                    size: 'sm',
+                    onClick: () => {
+                      ui.clipboard(file.name);
+                      ui.notify(`Copied ${file.name}`, 'success');
+                    },
+                  });
                   ui.button('Delete', {
                     variant: 'ghost',
                     size: 'sm',

@@ -1,5 +1,5 @@
 import { ui } from '@badui/ui';
-import { exampleHeader, exampleFrame } from '../chrome';
+import { exampleFrame } from '../chrome';
 
 export const pageMeta = {
   label: 'Home',
@@ -8,32 +8,66 @@ export const pageMeta = {
 };
 
 ui.page('/', () => {
-    exampleFrame(() => {
-      ui.column(() => {
-        exampleHeader(
-          undefined,
-          'Server-driven UI for TypeScript — NiceGUI-like API with a React + ShadCN client.',
-        );
-        ui.card(
-          {
-            title: 'Getting started',
-            description:
-              'Pick an example from the sidebar. Patterns cover element refs, bindValue, refreshable regions, and GlobalState.',
-            gap: 3,
-          },
-          () => {
-            ui.label('WebSocket element tree · refreshable · bindValue / bindTextFrom')
-              .classes('text-sm text-muted-foreground');
-            ui.label('Open Kitchen Sink for the full ShadCN component catalog.')
-              .classes('text-sm text-muted-foreground');
-            ui.label('Dashboard shows refreshable stats and a full-chrome DataTable.')
-              .classes('text-sm text-muted-foreground');
-            ui.label('Charts covers area / bar / line / pie / radar / radial — interactive ranges, cards, and live refresh.')
-              .classes('text-sm text-muted-foreground');
-            ui.label('Timer & content shows ui.timer, markdown, html, and image.')
-              .classes('text-sm text-muted-foreground');
-          },
-        );
-      }, { gap: 6 });
-    });
+  exampleFrame(() => {
+    ui.column(() => {
+      ui.hero(
+        {
+          gap: 4,
+          className: 'min-h-[40vh]',
+        },
+        () => {
+          ui.icon('home').classes('size-10 text-muted-foreground');
+          ui.label('BadUI').classes('text-4xl font-semibold tracking-tight');
+          ui.label(
+            'Server-driven UI for TypeScript — NiceGUI-like API with a React + ShadCN client.',
+          ).classes('max-w-md text-sm text-muted-foreground');
+          ui.row(() => {
+            ui.button('Open Feedback demo', {
+              onClick: () => ui.navigate('/examples/feedback'),
+            });
+            ui.button('Kitchen Sink', {
+              variant: 'outline',
+              onClick: () => ui.navigate('/examples/kitchen-sink'),
+            });
+          }, { gap: 2 });
+        },
+      );
+
+      ui.card(
+        {
+          title: 'Explore examples',
+          description: 'SPA links and imperative navigate — pick a pattern from the sidebar too.',
+          gap: 3,
+        },
+        () => {
+          ui.column(() => {
+            ui.row(() => {
+              ui.icon('form-input').classes('size-4 text-muted-foreground');
+              ui.link('Form Demo', '/examples/form-demo');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('layout-dashboard').classes('size-4 text-muted-foreground');
+              ui.link('Overlays', '/examples/overlays');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('help-circle').classes('size-4 text-muted-foreground');
+              ui.link('Feedback', '/examples/feedback');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('chart-area').classes('size-4 text-muted-foreground');
+              ui.link('Charts', '/examples/charts');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('table-2').classes('size-4 text-muted-foreground');
+              ui.link('DataTable', '/examples/datatable');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('upload').classes('size-4 text-muted-foreground');
+              ui.link('File Upload', '/examples/upload');
+            }, { gap: 2 }).classes('items-center');
+          }, { gap: 2 });
+        },
+      );
+    }, { gap: 6 });
+  });
 });

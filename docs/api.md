@@ -84,7 +84,7 @@ ui.run({
 | `title` | `string` | `'BadUI'` | HTML `<title>` |
 | `clientDir` | `string` | `packages/client/dist` | Built Vite assets |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
-| `app` | `AppProps` | | Global dashboard shell; wraps each page on mount |
+| `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate |
 
 Returns `BadUIServer` with `.start()` / `.stop()` / `.port` (`.start()` is already called by `ui.run`).
 
@@ -537,6 +537,9 @@ const table = ui.dataTable(tasks, {
 | `pageSizeOptions` | `number[]` | `[10, 20, 30, 40, 50]` | Footer page-size select |
 | `selectable` | `boolean` | `false` | Row checkboxes + selection events |
 | `reorderable` | `boolean` | `false` | Drag handle to reorder rows |
+| `groupBy` | `string \| (row) => unknown` | | Partition rows into collapsible groups (column key or derived value) |
+| `defaultCollapsed` | `boolean` | `false` | Start with every group collapsed (client-owned) |
+| `onGroupToggle` | `(groupKey, collapsed) => void` | | After a group header is expanded/collapsed |
 | `views` | `DataTableView[]` | | Tabbed views; each may include a row `filter` |
 | `defaultView` | `string` | first view id | Initial active view |
 | `onViewChange` | `(viewId) => void` | | Fires after the active view changes |
@@ -559,6 +562,8 @@ const table = ui.dataTable(tasks, {
 | `filter` | `(row) => boolean` | Optional display lens over source rows while this view is active |
 
 Every view tab shows the same table chrome; switching views applies that view’s `filter` (if any) before search/column filters. Badge counts stay live after `setRows` when `count` is omitted.
+
+When `groupBy` is set, filter/sort run first, then rows are stably partitioned so each group is contiguous. The client renders collapsible group headers (collapse state is client-owned, like selection); `onGroupToggle` fires for app logic. Empty group values show as `(Empty)`.
 
 | Column field | Type | Notes |
 |--------------|------|-------|
@@ -598,7 +603,7 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 | `icon` | Lucide name (`pencil`, `trash-2`, …) from a curated action set |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
-Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `pageSize` / `action` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `primaryAction`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
+Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `pageSize` / `action` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
 
 #### `ui.dialog(props, fn)` / `ui.dialog(fn, props?)`
 
@@ -751,7 +756,7 @@ onClick: async () => {
 | `ui.prompt(message, options?)` | `Promise<string \| null>` | Cancel → `null` |
 | `ui.choose(message, choices, options?)` | `Promise<string \| null>` | `choices` as strings or `{ value, label }` |
 | `ui.notify(message, typeOrOptions?)` | `void` | ShadCN Sonner toast; types `info\|success\|warning\|error` |
-| `ui.navigate(path)` | `void` | Client SPA navigate + WS remount |
+| `ui.navigate(path)` | `void` | Client SPA navigate + same-WS `hello` remount (sticky `app` chrome) |
 | `ui.download(filename, mime, content)` | `void` | Trigger browser download |
 | `ui.clipboard(content)` | `void` | Write text to clipboard |
 | `ui.timer(interval, callback, options?)` | `TimerHandle` | Session-scoped timer; `interval` in **seconds**; `{ once? }`; `.activate()` / `.deactivate()` / `.cancel()` |
@@ -992,7 +997,7 @@ Types: `'info' | 'success' | 'warning' | 'error'`.
 
 ### `navigate(path)`
 
-Tell the client to navigate; client reconnects WS for the new path.
+Tell the client to navigate; client updates the URL and sends `hello` for the new path on the same WebSocket. Matching `app` shell chrome stays mounted; only inset content remounts.
 
 ### `download(filename, mime, content)`
 

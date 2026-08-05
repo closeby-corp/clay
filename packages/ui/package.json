@@ -1,6 +1,8 @@
 {
   "name": "@badui/ui",
   "version": "0.1.0",
+  "description": "NiceGUI-like ui.* facade for BadUI apps",
+  "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -8,9 +10,20 @@
   },
   "files": [
     "src",
+    "README.md",
+    "LICENSE",
     "!src/**/*.test.ts",
     "!src/**/__fixtures__"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "directory": "packages/ui"
+  },
+  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@badui/core": "workspace:*",
     "@badui/components": "workspace:*",

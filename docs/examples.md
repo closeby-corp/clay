@@ -9,18 +9,19 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 
 | Route | File | Patterns shown |
 |-------|------|----------------|
-| `/` | `Home.ts` | Hero copy, `pageMeta` |
+| `/` | `Home.ts` | `ui.hero`, `ui.icon`, `ui.link`, `ui.navigate`, `pageMeta` |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
 | `/examples/chat` | `Chat.ts` | `GlobalState`, async `get`/`set`, multi-session sync |
-| `/examples/upload` | `FileUpload.ts` | `ui.upload`, tab/user storage, `ui.download` |
+| `/examples/upload` | `FileUpload.ts` | `ui.upload`, tab/user storage, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
-| `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, confirm/prompt/choose, toasts |
+| `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, row grouping, confirm/prompt/choose, toasts |
 | `/examples/charts` | `ChartDemo.ts` | `areaChart` / `barChart` / `lineChart` / `pieChart` / `radarChart` / `radialChart` (+ interactive ranges, live refresh) |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
-| `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` (+ radioGroup, date) |
+| `/examples/feedback` | `FeedbackDemo.ts` | `ui.alert`, `ui.spinner`, `ui.progress`, `ui.separator`, `ui.timer` |
+| `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` (+ switch, combobox, radioGroup, date) |
 | `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
-| `/examples/overlays` | `OverlaysDemo.ts` | Sheet, drawer, accordion, collapsible, tooltip, avatar, skeleton |
+| `/examples/overlays` | `OverlaysDemo.ts` | Dialog, sheet, drawer, tabs, accordion, collapsible, tooltip, avatar, skeleton |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
 Each page file exports optional `pageMeta` (`label`, `icon`, `order`) for `ui.navFromPages()`.
@@ -156,6 +157,22 @@ ui.dataTable(docs, {
 ```
 
 Every tab shows the table; the active view’s `filter` lenses rows. Badge counts auto-derive when `count` is omitted.
+
+## Pattern: DataTable grouping
+
+```typescript
+ui.dataTable(tasks, {
+  keyField: 'id',
+  groupBy: 'status', // or (row) => row.owner
+  // defaultCollapsed: true,
+  onGroupToggle: (groupKey, collapsed) => {
+    console.log(groupKey, collapsed ? 'collapsed' : 'expanded');
+  },
+  // …
+});
+```
+
+Filter/sort run first; rows are then stably partitioned into contiguous groups. The client draws collapsible headers; collapse is client-owned (like selection).
 
 ## Styling tip
 

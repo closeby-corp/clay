@@ -402,4 +402,72 @@ describe('DataTableElement', () => {
       (table.props.views as Array<Record<string, unknown>>).every((v) => v.filter === undefined),
     ).toBe(true);
   });
+
+  test('groupBy column key partitions rows and stamps __groupKey', () => {
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 10,
+      groupBy: 'status',
+    });
+    expect(table.props.groupBy).toBe('status');
+    const groups = table.props.groups as Array<{ key: string; label: string; count: number }>;
+    expect(groups.map((g) => ({ key: g.key, count: g.count }))).toEqual([
+      { key: 'done', count: 2 },
+      { key: 'todo', count: 2 },
+      { key: 'in progress', count: 1 },
+    ]);
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.__groupKey)).toEqual([
+      'done',
+      'done',
+      'todo',
+      'todo',
+      'in progress',
+    ]);
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Alpha',
+      'Charlie',
+      'Bravo',
+      'Delta',
+      'Echo',
+    ]);
+  });
+
+  test('groupBy function works and sort applies before grouping', async () => {
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 10,
+      groupBy: (row) => (Number(row.hours) >= 5 ? 'heavy' : 'light'),
+    });
+    expect(table.props.groupBy).toBe(true);
+    await table.handleEvent('sort', { key: 'hours', dir: 'asc' });
+    // sorted then stable-grouped by first appearance in sorted order
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Charlie',
+      'Alpha',
+      'Echo',
+      'Delta',
+      'Bravo',
+    ]);
+    expect(table.props.groups).toEqual([
+      { key: 'light', label: 'light', count: 2 },
+      { key: 'heavy', label: 'heavy', count: 3 },
+    ]);
+  });
+
+  test('groupToggle invokes onGroupToggle', async () => {
+    const seen: Array<{ key: string; collapsed: boolean }> = [];
+    const table = new DataTableElement(rows, {
+      columns,
+      groupBy: 'status',
+      pageSize: 10,
+      onGroupToggle: (groupKey, collapsed) => {
+        seen.push({ key: groupKey, collapsed });
+      },
+    });
+    expect(table.props.events).toEqual(expect.arrayContaining(['groupToggle']));
+    await table.handleEvent('groupToggle', { groupKey: 'done', collapsed: true });
+    expect(seen).toEqual([{ key: 'done', collapsed: true }]);
+  });
 });
