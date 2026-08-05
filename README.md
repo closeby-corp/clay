@@ -100,7 +100,7 @@ App (ui.page / ui.refreshable)
 
 ## Current gaps vs full NiceGUI
 
-Not in the first cut: timers / JS bridge, horizontal scaling, advanced DataTable (selection/edit/group), full control catalog, compile-time reactive `let`.
+Still out: JS bridge, horizontal scaling, advanced DataTable (selection/edit/group), compile-time reactive `let`, browser/general storage + Redis, exotic charts (radar/radial/composed/scatter). In: facade basics, timer / markdown / html / image, **real upload** (`POST /upload` + `ui.upload`), **tab/user storage**, **chart zoo** (`area` / `bar` / `line` / `pie`).
 
 ## License
 

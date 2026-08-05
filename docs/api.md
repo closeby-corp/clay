@@ -148,6 +148,93 @@ Client-side navigation for paths starting with `/`.
 | `variant` | `'default' \| 'destructive'` | `'default'` |
 | `className` | `string` | |
 
+#### `ui.spinner(props?)`
+
+Loading indicator (Lucide spinner).
+
+| Prop | Type |
+|------|------|
+| `className` | `string` |
+
+#### `ui.skeleton(props?)`
+
+Loading placeholder.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `className` | `string` | `'h-4 w-full'` |
+
+#### `ui.avatar(props?)`
+
+| Prop | Type | Default |
+|------|------|---------|
+| `src` | `string` | |
+| `alt` | `string` | `''` |
+| `fallback` | `string` | `'?'` |
+| `size` | `'sm' \| 'default' \| 'lg'` | `'default'` |
+| `className` | `string` | |
+
+#### `ui.tooltip(props, fn)` / `ui.tooltip(fn, props)`
+
+Wraps children in a ShadCN tooltip.
+
+```typescript
+ui.tooltip({ text: 'Edit item', side: 'top' }, () => {
+  ui.button('', { size: 'icon', variant: 'ghost' });
+});
+```
+
+| Prop | Type | Default |
+|------|------|---------|
+| `text` | `string` | required |
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'top'` |
+
+#### `ui.progress(props?)`
+
+| Prop | Type | Default |
+|------|------|---------|
+| `value` | `number` | `0` (0–100) |
+| `className` | `string` | |
+
+#### `ui.separator(props?)`
+
+| Prop | Type | Default |
+|------|------|---------|
+| `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` |
+| `className` | `string` | |
+
+#### `ui.icon(name, props?)`
+
+Curated Lucide icon — same key set as `AppNavItem.icon` (e.g. `home`, `gauge`, `settings`).
+
+| Prop | Type |
+|------|------|
+| `className` | `string` |
+
+#### `ui.markdown(text?, props?)`
+
+Client renders Markdown (`marked`) and sanitizes with DOMPurify. Update with `.setText(...)`.
+
+| Prop | Type |
+|------|------|
+| `className` | `string` |
+
+#### `ui.html(html?, props?)`
+
+Trusted server HTML into a container (same XSS trust model as NiceGUI — only pass HTML you control). Update with `.update({ html })`.
+
+| Prop | Type |
+|------|------|
+| `className` | `string` |
+
+#### `ui.image(src, props?)`
+
+| Prop | Type | Default |
+|------|------|---------|
+| `alt` | `string` | `''` |
+| `width` / `height` | `number \| string` | |
+| `className` | `string` | |
+
 ---
 
 ### Form controls
@@ -187,6 +274,18 @@ Form controls support `bindValue(obj, key)` for two-way binding.
 | `disabled` | `boolean` | `false` |
 | `onChange` | `(checked: boolean) => void` | |
 
+#### `ui.switch(props?)`
+
+Bound boolean toggle (optimistic like checkbox).
+
+| Prop | Type | Default |
+|------|------|---------|
+| `checked` | `boolean` | `false` (stored as element `value`) |
+| `label` | `string` | |
+| `disabled` | `boolean` | `false` |
+| `size` | `'sm' \| 'default'` | `'default'` |
+| `onChange` | `(checked: boolean) => void` | |
+
 #### `ui.select(props)`
 
 | Prop | Type | Required |
@@ -195,6 +294,31 @@ Form controls support `bindValue(obj, key)` for two-way binding.
 | `value` | `string` | defaults to first option |
 | `label` | `string` | |
 | `disabled` | `boolean` | |
+| `onChange` | `(value: string) => void` | |
+
+#### `ui.radioGroup(props)`
+
+Exclusive choice (optimistic like select). Supports `bindValue`.
+
+| Prop | Type | Required |
+|------|------|----------|
+| `options` | `{ value: string; label: string }[]` | yes |
+| `value` | `string` | defaults to first option |
+| `label` | `string` | |
+| `disabled` | `boolean` | |
+| `orientation` | `'horizontal' \| 'vertical'` | `'vertical'` |
+| `onChange` | `(value: string) => void` | |
+
+#### `ui.date(props?)`
+
+Calendar + popover date picker. Value is an ISO date string (`YYYY-MM-DD`). Supports `bindValue`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `value` | `string` | `''` |
+| `label` | `string` | |
+| `placeholder` | `string` | `'Pick a date'` |
+| `disabled` | `boolean` | `false` |
 | `onChange` | `(value: string) => void` | |
 
 #### `ui.slider(props?)`
@@ -230,7 +354,7 @@ ui.stat([
 
 #### `ui.areaChart(props)`
 
-Stacked area chart (Recharts). Optional card chrome via `title` / `description`. Set `interactive: true` with ISO date `xKey` values for 7d / 30d / 90d filtering.
+Stacked area chart (Recharts). Optional card chrome via `title` / `description`. Set `interactive: true` with ISO date `xKey` values for 7d / 30d / 90d filtering. Legend is always shown. Pass `stacked: false` to overlay series instead of stacking (default `true`).
 
 ```typescript
 ui.areaChart({
@@ -239,6 +363,110 @@ ui.areaChart({
   interactive: true,
   data: visitors,
   xKey: 'date',
+  series: [
+    { key: 'mobile', label: 'Mobile' },
+    { key: 'desktop', label: 'Desktop' },
+  ],
+});
+```
+
+#### `ui.barChart(props)`
+
+Bar chart with the same cartesian props as area (`data`, `xKey`, `series`, title/description/height/interactive). Optional `stacked` (default `false`) and `layout: 'vertical' | 'horizontal'` (default `'vertical'` — category on X).
+
+```typescript
+ui.barChart({
+  title: 'Desktop vs mobile',
+  data: monthly,
+  xKey: 'month',
+  series: [
+    { key: 'mobile', label: 'Mobile' },
+    { key: 'desktop', label: 'Desktop' },
+  ],
+  stacked: true,
+  layout: 'horizontal',
+});
+```
+
+#### `ui.lineChart(props)`
+
+Line chart with the same cartesian props as area (including interactive date ranges).
+
+```typescript
+ui.lineChart({
+  title: 'Traffic trend',
+  data: monthly,
+  xKey: 'month',
+  series: [
+    { key: 'mobile', label: 'Mobile' },
+    { key: 'desktop', label: 'Desktop' },
+  ],
+});
+```
+
+#### `ui.pieChart(props)`
+
+Pie or donut chart. Pass either row-wise `nameKey` + `valueKey`, or `series` over a single aggregated row. Set `innerRadius` for a donut. Legend is always shown.
+
+```typescript
+ui.pieChart({
+  title: 'Browser share',
+  data: [
+    { browser: 'Chrome', visitors: 275 },
+    { browser: 'Safari', visitors: 200 },
+  ],
+  nameKey: 'browser',
+  valueKey: 'visitors',
+});
+
+ui.pieChart({
+  title: 'Traffic mix',
+  innerRadius: 60,
+  data: [{ mobile: 320, desktop: 480 }],
+  series: [
+    { key: 'mobile', label: 'Mobile' },
+    { key: 'desktop', label: 'Desktop' },
+  ],
+});
+```
+
+#### `ui.radarChart(props)`
+
+Radar (spider) chart. Pass `angleKey` for polar categories and `series` for each polygon. Optional `fillOpacity` (default `0.6`).
+
+```typescript
+ui.radarChart({
+  title: 'Desktop vs mobile',
+  data: monthly,
+  angleKey: 'month',
+  series: [
+    { key: 'mobile', label: 'Mobile' },
+    { key: 'desktop', label: 'Desktop' },
+  ],
+});
+```
+
+#### `ui.radialChart(props)`
+
+Radial bar chart. Pass either row-wise `nameKey` + `valueKey`, or `series` over a single row (stacked segments). Optional `innerRadius` / `outerRadius`, `startAngle` / `endAngle`, and `centerValue` / `centerLabel` for the ShadCN radial-text pattern.
+
+```typescript
+ui.radialChart({
+  title: 'Browser share',
+  data: [
+    { browser: 'Chrome', visitors: 275 },
+    { browser: 'Safari', visitors: 200 },
+  ],
+  nameKey: 'browser',
+  valueKey: 'visitors',
+});
+
+ui.radialChart({
+  title: 'Traffic mix',
+  endAngle: 180,
+  centerValue: 800,
+  centerLabel: 'Visitors',
+  data: [{ mobile: 320, desktop: 480 }],
   series: [
     { key: 'mobile', label: 'Mobile' },
     { key: 'desktop', label: 'Desktop' },
@@ -384,9 +612,106 @@ dlg.open();
 
 Client emits `close` on backdrop click or Escape. The server always clears `open` on that event.
 
+#### `ui.sheet(props, fn)` / `ui.sheet(fn, props?)`
+
+Server-owned side panel (parallel to dialog). Returns a `SheetElement` with `open()`, `close()`, and `setOpen(boolean)`.
+
+```typescript
+const panel = ui.sheet({ title: 'Filters', side: 'right' }, () => {
+  ui.label('Sheet body');
+  ui.button('Done', { onClick: () => panel.close() });
+});
+panel.open();
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | | Heading |
+| `description` | `string` | | Muted subtitle |
+| `open` | `boolean` | `false` | Visibility |
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'right'` | Edge |
+| `onClose` | `() => void` | | Runs on client `close`, then `open` is cleared |
+
+#### `ui.drawer(props, fn)` / `ui.drawer(fn, props?)`
+
+Server-owned Vaul drawer (mobile-friendly overlay). Same open API as dialog/sheet.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `title` / `description` | `string` | |
+| `open` | `boolean` | `false` |
+| `direction` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'bottom'` |
+| `onClose` | `() => void` | |
+
+#### `ui.tabs(props, fn)` / `ui.tabs(fn, props?)`
+
+Server-owned active tab. Panels are built via `t.tab(...)`.
+
+```typescript
+ui.tabs({ value: 'one', onChange: (v) => console.log(v) }, (t) => {
+  t.tab('one', 'One', () => {
+    ui.label('First panel');
+  });
+  t.tab('two', () => {
+    // label defaults to value
+    ui.label('Second panel');
+  });
+});
+```
+
+| Prop / method | Type | Description |
+|---------------|------|-------------|
+| `value` | `string` | Active tab (defaults to first panel) |
+| `onChange` | `(value: string) => void` | Tab change |
+| `t.tab(value, fn)` | | Panel; label = `value` |
+| `t.tab(value, label, fn)` | | Panel with explicit label |
+| `t.tab(..., { icon? })` | | Optional curated Lucide key |
+
+Supports `bindValue` / `setValue` like other value controls.
+
+#### `ui.accordion(props, fn)` / `ui.accordion(fn, props?)`
+
+Disclosure panels (optimistic `value`).
+
+```typescript
+ui.accordion({ type: 'single' }, (a) => {
+  a.item('faq1', 'What is BadUI?', () => {
+    ui.label('A server-driven UI toolkit.');
+  });
+  a.item('faq2', 'Is it reactive?', () => {
+    ui.label('Yes — bindValue and refreshable.');
+  });
+});
+```
+
+| Prop / method | Type | Description |
+|---------------|------|-------------|
+| `type` | `'single' \| 'multiple'` | Default `'single'` |
+| `value` | `string \| string[]` | Open panel(s); defaults to first item when single |
+| `collapsible` | `boolean` | Single mode: allow collapse (default `true`) |
+| `onChange` | `(value: string \| string[]) => void` | |
+| `a.item(value, fn)` | | Panel; title = `value` |
+| `a.item(value, title, fn)` | | Panel with title |
+
+#### `ui.collapsible(props, fn)` / `ui.collapsible(fn, props?)`
+
+Single expandable section. Open state is stored as element `value` (boolean) for `bindValue`.
+
+```typescript
+ui.collapsible({ title: 'Advanced', open: false }, () => {
+  ui.label('Hidden by default');
+});
+```
+
+| Prop | Type | Default |
+|------|------|---------|
+| `title` | `string` | `'Toggle'` |
+| `open` | `boolean` | `false` |
+| `onChange` | `(open: boolean) => void` | |
+
 ### Imperative helpers
 
-These require an active session (typically inside an async event handler). Confirm / prompt / choose are **async** (WebSocket round-trip). Notify is fire-and-forget.
+These require an active session (typically inside an async event handler). Confirm / prompt / choose are **async** (WebSocket round-trip). Notify / navigate / download / clipboard are fire-and-forget.
 
 ```typescript
 onClick: async () => {
@@ -413,8 +738,48 @@ onClick: async () => {
 | `ui.prompt(message, options?)` | `Promise<string \| null>` | Cancel → `null` |
 | `ui.choose(message, choices, options?)` | `Promise<string \| null>` | `choices` as strings or `{ value, label }` |
 | `ui.notify(message, typeOrOptions?)` | `void` | ShadCN Sonner toast; types `info\|success\|warning\|error` |
+| `ui.navigate(path)` | `void` | Client SPA navigate + WS remount |
+| `ui.download(filename, mime, content)` | `void` | Trigger browser download |
+| `ui.clipboard(content)` | `void` | Write text to clipboard |
+| `ui.timer(interval, callback, options?)` | `TimerHandle` | Session-scoped timer; `interval` in **seconds**; `{ once? }`; `.activate()` / `.deactivate()` / `.cancel()` |
+| `ui.upload(props?)` | `Element` | Multipart HTTP upload; see below |
+| `ui.storage.tab` | | Per-WS-session in-memory map |
+| `ui.storage.user` | | Per-browser-user JSON bag (file-backed) |
 
 `ui.notify` options: `{ type?, duration?, position?, description? }` — `duration: 0` is sticky; `description` is Sonner’s secondary line; positions `top-left` \| `top-right` \| `bottom-left` \| `bottom-right`.
+
+```typescript
+const clock = ui.timer(1, () => label.setText(new Date().toLocaleTimeString()));
+// clock.deactivate(); clock.activate(); clock.cancel();
+ui.timer(2, () => ui.notify('Once'), { once: true });
+```
+
+Timers are cleared on WebSocket session destroy.
+
+#### `ui.upload({ onUpload, accept?, multiple?, label? })`
+
+Opens a file picker. Selected files are posted to `POST /upload` (multipart). The client then emits a WS `upload` event per file with `{ name, size, type, path }` — **not** base64 over the socket. `onUpload` receives that metadata; read the file from `path` on the server if needed.
+
+```typescript
+ui.upload({
+  accept: '.pdf,image/*',
+  multiple: true,
+  onUpload: async (file) => {
+    ui.notify(`Saved ${file.name} → ${file.path}`, 'success');
+  },
+});
+```
+
+#### `ui.storage`
+
+Lightweight NiceGUI-style storage (no browser/general/Redis yet):
+
+| API | Scope | Persistence |
+|-----|--------|-------------|
+| `ui.storage.tab.get/set/delete/clear/has` | Current WebSocket session | In-memory; survives `refreshable` rebuilds; cleared on disconnect |
+| `ui.storage.user.get/set/delete/clear/has` | Stable `userId` from client localStorage (+ cookie) | JSON bag via `createFilePersistence` (default `.badui-user-data`) |
+
+User storage requires the client to send `userId` on `hello` (built-in client does this). Configure via `ui.run({ userStorageDir })` or `userStorageDir: false` for memory-only. Upload directory: `ui.run({ uploadDir: '.badui-uploads' })`.
 
 ---
 
@@ -616,6 +981,14 @@ Types: `'info' | 'success' | 'warning' | 'error'`.
 
 Tell the client to navigate; client reconnects WS for the new path.
 
+### `download(filename, mime, content)`
+
+Ask the client to download a file (base64 or text content as sent over the protocol). Prefer `ui.download` from app code.
+
+### `clipboard(content)`
+
+Ask the client to copy text to the clipboard. Prefer `ui.clipboard` from app code.
+
 ---
 
 ## Direct imports
@@ -637,6 +1010,11 @@ import {
   createMemoryPersistence,
   notify,
   navigate,
+  download,
+  clipboard,
+  storage,
+  timer,
+  TimerHandle,
 } from '@badui/core';
 
 import { BadUIServer } from '@badui/server';

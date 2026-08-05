@@ -37,3 +37,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # badui --reload watch stubs (cleaned up on exit; ignore if left behind)
 _badui-reload-*.ts
 packages/cli/.tmp-*
+
+# runtime data dirs
+.badui-uploads
+.badui-user-data
+.badui-data

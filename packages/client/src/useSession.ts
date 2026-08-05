@@ -90,6 +90,23 @@ export type SessionState = {
   error: string | null;
 };
 
+const USER_ID_KEY = 'badui-user-id';
+
+function getOrCreateUserId(): string {
+  try {
+    let id = localStorage.getItem(USER_ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(USER_ID_KEY, id);
+    }
+    // Mirror to cookie for a NiceGUI-ish durable id (same value as localStorage).
+    document.cookie = `${USER_ID_KEY}=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax`;
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
 export function useBadUISession(path: string) {
   const [state, setState] = useState<SessionState>({
     tree: null,
@@ -116,10 +133,11 @@ export function useBadUISession(path: string) {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${proto}//${window.location.host}/ws`);
     wsRef.current = ws;
+    const userId = getOrCreateUserId();
 
     ws.onopen = () => {
       setState((s) => ({ ...s, connected: true, error: null }));
-      ws.send(JSON.stringify({ op: 'hello', path } satisfies ClientMessage));
+      ws.send(JSON.stringify({ op: 'hello', path, userId } satisfies ClientMessage));
     };
 
     ws.onmessage = (ev) => {
@@ -137,7 +155,9 @@ export function useBadUISession(path: string) {
         });
       } else if (msg.op === 'navigate') {
         window.history.pushState({}, '', msg.path);
-        ws.send(JSON.stringify({ op: 'hello', path: msg.path } satisfies ClientMessage));
+        ws.send(
+          JSON.stringify({ op: 'hello', path: msg.path, userId } satisfies ClientMessage),
+        );
       } else if (msg.op === 'notify') {
         showToast(msg.message, {
           id: msg.id,

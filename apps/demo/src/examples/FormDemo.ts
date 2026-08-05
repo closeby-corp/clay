@@ -20,6 +20,7 @@ ui.page('/examples/form-demo', () => {
       terms: false,
       country: 'us',
       plan: 'free',
+      dueDate: '',
       bio: '',
       color: '#3b82f6',
     });
@@ -76,15 +77,17 @@ ui.page('/examples/form-demo', () => {
               { value: 'japan', label: 'Japan' },
             ],
           }).bindValue(form, 'country');
-          ui.select({
+          ui.radioGroup({
             label: 'Plan',
             value: form.plan,
+            orientation: 'horizontal',
             options: [
               { value: 'free', label: 'Free' },
               { value: 'pro', label: 'Pro' },
               { value: 'enterprise', label: 'Enterprise' },
             ],
           }).bindValue(form, 'plan');
+          ui.date({ label: 'Due date', value: form.dueDate }).bindValue(form, 'dueDate');
           ui.textArea({ label: 'Bio', placeholder: 'Tell us about yourself', rows: 4 }).bindValue(
             form,
             'bio',
@@ -120,6 +123,7 @@ ui.page('/examples/form-demo', () => {
                 form.terms = false;
                 form.country = 'us';
                 form.plan = 'free';
+                form.dueDate = '';
                 form.bio = '';
                 form.color = '#3b82f6';
               },
@@ -147,6 +151,7 @@ ui.page('/examples/form-demo', () => {
               `Terms: ${form.terms}`,
               `Country: ${form.country}`,
               `Plan: ${form.plan}`,
+              `Due date: ${form.dueDate || '—'}`,
               `Bio: ${form.bio || '—'}`,
               `Color: ${form.color}`,
             ];

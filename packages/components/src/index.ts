@@ -77,6 +77,74 @@ export function checkbox(props: CheckboxProps = {}): Element {
   });
 }
 
+export type SwitchProps = {
+  checked?: boolean;
+  label?: string;
+  disabled?: boolean;
+  size?: 'sm' | 'default';
+  className?: string;
+  onChange?: (checked: boolean) => void;
+};
+
+export function switchControl(props: SwitchProps = {}): Element {
+  return new Element('switch', {
+    value: props.checked ?? false,
+    label: props.label,
+    disabled: props.disabled ?? false,
+    size: props.size ?? 'default',
+    className: props.className,
+    onChange: props.onChange,
+  });
+}
+
+export type SpinnerProps = {
+  className?: string;
+};
+
+export function spinner(props: SpinnerProps = {}): Element {
+  return new Element('spinner', {
+    className: props.className,
+  });
+}
+
+export type ProgressProps = {
+  /** 0–100 */
+  value?: number;
+  className?: string;
+};
+
+export function progress(props: ProgressProps = {}): Element {
+  return new Element('progress', {
+    value: props.value ?? 0,
+    className: props.className,
+  });
+}
+
+export type SeparatorProps = {
+  orientation?: 'horizontal' | 'vertical';
+  className?: string;
+};
+
+export function separator(props: SeparatorProps = {}): Element {
+  return new Element('separator', {
+    orientation: props.orientation ?? 'horizontal',
+    className: props.className,
+  });
+}
+
+export type IconProps = {
+  /** Curated Lucide key (same set as `AppNavItem.icon`). */
+  name?: string;
+  className?: string;
+};
+
+export function icon(name: string, props: Omit<IconProps, 'name'> = {}): Element {
+  return new Element('icon', {
+    name,
+    className: props.className,
+  });
+}
+
 export type SelectOption = { value: string; label: string };
 
 export type SelectProps = {
@@ -96,6 +164,113 @@ export function select(props: SelectProps): Element {
     disabled: props.disabled ?? false,
     className: props.className,
     onChange: props.onChange,
+  });
+}
+
+export type RadioGroupOption = { value: string; label: string };
+
+export type RadioGroupProps = {
+  options: RadioGroupOption[];
+  value?: string;
+  label?: string;
+  disabled?: boolean;
+  orientation?: 'horizontal' | 'vertical';
+  className?: string;
+  onChange?: (value: string) => void;
+};
+
+export function radioGroup(props: RadioGroupProps): Element {
+  return new Element('radiogroup', {
+    options: props.options,
+    value: props.value ?? props.options[0]?.value ?? '',
+    label: props.label,
+    disabled: props.disabled ?? false,
+    orientation: props.orientation ?? 'vertical',
+    className: props.className,
+    onChange: props.onChange,
+  });
+}
+
+export type DateProps = {
+  /** ISO date string (`YYYY-MM-DD`) or empty. */
+  value?: string;
+  label?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  onChange?: (value: string) => void;
+};
+
+export function date(props: DateProps = {}): Element {
+  return new Element('date', {
+    value: props.value ?? '',
+    label: props.label,
+    placeholder: props.placeholder ?? 'Pick a date',
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onChange: props.onChange,
+  });
+}
+
+export type TooltipSide = 'top' | 'right' | 'bottom' | 'left';
+
+export type TooltipProps = {
+  text: string;
+  side?: TooltipSide;
+  className?: string;
+};
+
+export function tooltip(fn: () => void, props: TooltipProps): Element;
+export function tooltip(props: TooltipProps, fn: () => void): Element;
+export function tooltip(
+  propsOrFn: TooltipProps | (() => void),
+  fnOrProps: (() => void) | TooltipProps,
+): Element {
+  let props: TooltipProps;
+  let fn: () => void;
+
+  if (typeof propsOrFn === 'function') {
+    fn = propsOrFn;
+    props = fnOrProps as TooltipProps;
+  } else {
+    props = propsOrFn;
+    fn = fnOrProps as () => void;
+  }
+
+  const el = new Element('tooltip', {
+    text: props.text,
+    side: props.side ?? 'top',
+    className: props.className,
+  });
+  withParent(el, fn);
+  return el;
+}
+
+export type AvatarProps = {
+  src?: string;
+  alt?: string;
+  fallback?: string;
+  size?: 'sm' | 'default' | 'lg';
+  className?: string;
+};
+
+export function avatar(props: AvatarProps = {}): Element {
+  return new Element('avatar', {
+    src: props.src,
+    alt: props.alt ?? '',
+    fallback: props.fallback ?? '?',
+    size: props.size ?? 'default',
+    className: props.className,
+  });
+}
+
+export type SkeletonProps = {
+  className?: string;
+};
+
+export function skeleton(props: SkeletonProps = {}): Element {
+  return new Element('skeleton', {
+    className: props.className ?? 'h-4 w-full',
   });
 }
 
@@ -234,12 +409,82 @@ export {
 } from './data-table';
 
 export {
+  type CartesianChartProps,
+  type ChartSeries,
+} from './chart-shared';
+
+export {
   areaChart,
   type AreaChartProps,
   type AreaChartSeries,
 } from './area-chart';
 
+export {
+  barChart,
+  type BarChartProps,
+  type BarChartSeries,
+} from './bar-chart';
+
+export {
+  lineChart,
+  type LineChartProps,
+  type LineChartSeries,
+} from './line-chart';
+
+export {
+  pieChart,
+  type PieChartProps,
+  type PieChartSeries,
+} from './pie-chart';
+
+export {
+  radarChart,
+  type RadarChartProps,
+  type RadarChartSeries,
+} from './radar-chart';
+
+export {
+  radialChart,
+  type RadialChartProps,
+  type RadialChartSeries,
+} from './radial-chart';
+
 export { dialog, DialogElement, type DialogProps } from './dialog';
+
+export {
+  sheet,
+  SheetElement,
+  type SheetProps,
+  type SheetSide,
+} from './sheet';
+
+export {
+  drawer,
+  DrawerElement,
+  type DrawerProps,
+  type DrawerDirection,
+} from './drawer';
+
+export {
+  tabs,
+  TabsElement,
+  type TabsProps,
+  type TabPanelOptions,
+} from './tabs';
+
+export {
+  accordion,
+  AccordionElement,
+  type AccordionProps,
+  type AccordionType,
+  type AccordionItemOptions,
+} from './accordion';
+
+export {
+  collapsible,
+  CollapsibleElement,
+  type CollapsibleProps,
+} from './collapsible';
 
 export {
   confirm,
@@ -342,3 +587,18 @@ export function card(
 }
 
 export { app, type AppNavItem, type AppProps, type AppUser } from './app';
+
+export {
+  markdown,
+  html,
+  image,
+  type MarkdownProps,
+  type HtmlProps,
+  type ImageProps,
+} from './content';
+
+export {
+  upload,
+  type UploadProps,
+  type UploadedFile,
+} from './upload';

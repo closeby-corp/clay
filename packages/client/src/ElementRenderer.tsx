@@ -1,16 +1,25 @@
-import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { lazy, Suspense, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
 import { BoundAreaChart } from './BoundAreaChart';
+import { BoundBarChart } from './BoundBarChart';
+import { BoundLineChart } from './BoundLineChart';
+import { BoundPieChart } from './BoundPieChart';
+import { BoundRadarChart } from './BoundRadarChart';
+import { BoundRadialChart } from './BoundRadialChart';
 import { BoundDataTable } from './BoundDataTable';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
   DialogContent,
@@ -25,8 +34,53 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
-import { TrendingDown, TrendingUp } from 'lucide-react';
+import { CalendarIcon, ChevronDownIcon, TrendingDown, TrendingUp } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
+import { resolveNavIcon } from './shell/types';
+import { MarkdownView } from './MarkdownView';
 
 const KitchenSink = lazy(() => import('./KitchenSink'));
 
@@ -287,6 +341,99 @@ function BoundCheckbox({
   );
 }
 
+function BoundSwitch({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = Boolean(props.checked ?? props.value ?? false);
+  const [checked, setChecked] = useOptimisticValue(serverValue);
+
+  return (
+    <div className={cn('flex items-center gap-2 text-sm', className)} style={asStyle(style)}>
+      <Switch
+        id={`sw-${id}`}
+        checked={checked}
+        disabled={!!props.disabled}
+        size={props.size === 'sm' ? 'sm' : 'default'}
+        onCheckedChange={(next) => {
+          setChecked(next);
+          if (hasEvent(props, 'change')) emit(id, 'change', next);
+          if (hasEvent(props, 'input')) emit(id, 'input', next);
+        }}
+      />
+      {props.label ? (
+        <Label htmlFor={`sw-${id}`} className="font-normal">
+          {String(props.label)}
+        </Label>
+      ) : null}
+    </div>
+  );
+}
+
+function BoundTabs({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  const panels = children.filter((c) => c.type === 'tab');
+  const fallback = String(panels[0]?.props.value ?? '');
+  const serverValue = String(props.value ?? '') || fallback;
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const active = value || fallback;
+
+  return (
+    <Tabs
+      value={active || undefined}
+      onValueChange={(next) => {
+        setValue(next);
+        if (hasEvent(props, 'change')) emit(id, 'change', next);
+        if (hasEvent(props, 'input')) emit(id, 'input', next);
+      }}
+      className={className}
+      style={asStyle(style)}
+    >
+      <TabsList>
+        {panels.map((panel) => {
+          const panelValue = String(panel.props.value ?? '');
+          const Icon = panel.props.icon ? resolveNavIcon(String(panel.props.icon)) : null;
+          return (
+            <TabsTrigger key={panel.id} value={panelValue} className="gap-1.5">
+              {Icon ? <Icon className="size-4 shrink-0" aria-hidden /> : null}
+              {String(panel.props.label ?? panelValue)}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+      {panels.map((panel) => (
+        <TabsContent key={panel.id} value={String(panel.props.value ?? '')} className={cn(panel.props.className as string | undefined)}>
+          {panel.children.map((child) => (
+            <ElementRenderer key={child.id} node={child} emit={emit} />
+          ))}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
 function BoundDialog({
   id,
   props,
@@ -321,6 +468,407 @@ function BoundDialog({
         <div className="flex flex-col gap-4">{children}</div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function BoundRadioGroup({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = String(props.value ?? '');
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const options = (props.options as Array<{ value: string; label: string }>) ?? [];
+  const horizontal = props.orientation === 'horizontal';
+
+  return (
+    <div className={cn('flex w-full flex-col gap-2', className)} style={asStyle(style)}>
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <RadioGroup
+        value={value || undefined}
+        disabled={!!props.disabled}
+        onValueChange={(next) => {
+          setValue(next);
+          if (hasEvent(props, 'change')) emit(id, 'change', next);
+          if (hasEvent(props, 'input')) emit(id, 'input', next);
+        }}
+        className={cn(horizontal ? 'flex flex-wrap gap-4' : 'grid gap-3')}
+      >
+        {options.map((opt) => {
+          const optId = `rg-${id}-${opt.value}`;
+          return (
+            <div key={opt.value} className="flex items-center gap-2">
+              <RadioGroupItem value={opt.value} id={optId} />
+              <Label htmlFor={optId} className="font-normal">
+                {opt.label}
+              </Label>
+            </div>
+          );
+        })}
+      </RadioGroup>
+    </div>
+  );
+}
+
+function parseDateValue(raw: string): Date | undefined {
+  if (!raw) return undefined;
+  try {
+    const d = parseISO(raw.length === 10 ? `${raw}T00:00:00` : raw);
+    return isValid(d) ? d : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function BoundDate({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = String(props.value ?? '');
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const selected = parseDateValue(value);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            id={`date-${id}`}
+            variant="outline"
+            disabled={!!props.disabled}
+            className={cn(
+              'w-full justify-start text-left font-normal',
+              !selected && 'text-muted-foreground',
+            )}
+          >
+            <CalendarIcon className="mr-2 size-4" />
+            {selected ? format(selected, 'PPP') : String(props.placeholder ?? 'Pick a date')}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(day) => {
+              const next = day ? format(day, 'yyyy-MM-dd') : '';
+              setValue(next);
+              setOpen(false);
+              if (hasEvent(props, 'change')) emit(id, 'change', next);
+              if (hasEvent(props, 'input')) emit(id, 'input', next);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function BoundAccordion({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  const panels = children.filter((c) => c.type === 'accordionitem');
+  const type = props.type === 'multiple' ? 'multiple' : 'single';
+  const fallback = String(panels[0]?.props.value ?? '');
+  const serverValue =
+    type === 'multiple'
+      ? Array.isArray(props.value)
+        ? (props.value as string[])
+        : props.value
+          ? [String(props.value)]
+          : []
+      : String(props.value ?? '') || fallback;
+  const [value, setValue] = useOptimisticValue(serverValue);
+
+  const onValueChange = (next: string | string[]) => {
+    setValue(next);
+    if (hasEvent(props, 'change')) emit(id, 'change', next);
+    if (hasEvent(props, 'input')) emit(id, 'input', next);
+  };
+
+  const items = panels.map((panel) => (
+    <AccordionItem
+      key={panel.id}
+      value={String(panel.props.value ?? '')}
+      className={cn(panel.props.className as string | undefined)}
+    >
+      <AccordionTrigger>{String(panel.props.title ?? panel.props.value ?? '')}</AccordionTrigger>
+      <AccordionContent>
+        <div className="flex flex-col gap-2">
+          {panel.children.map((child) => (
+            <ElementRenderer key={child.id} node={child} emit={emit} />
+          ))}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
+  ));
+
+  if (type === 'multiple') {
+    return (
+      <Accordion
+        type="multiple"
+        value={Array.isArray(value) ? value : []}
+        onValueChange={onValueChange}
+        className={className}
+        style={asStyle(style)}
+      >
+        {items}
+      </Accordion>
+    );
+  }
+
+  return (
+    <Accordion
+      type="single"
+      collapsible={props.collapsible !== false}
+      value={(typeof value === 'string' ? value : '') || undefined}
+      onValueChange={onValueChange}
+      className={className}
+      style={asStyle(style)}
+    >
+      {items}
+    </Accordion>
+  );
+}
+
+function BoundCollapsible({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ReactNode;
+}) {
+  const serverOpen = Boolean(props.open ?? props.value ?? false);
+  const [open, setOpen] = useOptimisticValue(serverOpen);
+
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (hasEvent(props, 'change')) emit(id, 'change', next);
+        if (hasEvent(props, 'input')) emit(id, 'input', next);
+      }}
+      className={cn('w-full', className)}
+      style={asStyle(style)}
+    >
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" className="flex w-full items-center justify-between gap-2 px-0">
+          <span>{String(props.title ?? 'Toggle')}</span>
+          <ChevronDownIcon
+            className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')}
+          />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-2 pt-2">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function BoundSheet({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ReactNode;
+}) {
+  const open = !!props.open;
+  const side =
+    props.side === 'top' || props.side === 'bottom' || props.side === 'left' || props.side === 'right'
+      ? props.side
+      : 'right';
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && hasEvent(props, 'close')) emit(id, 'close');
+      }}
+    >
+      <SheetContent side={side} className={className} style={asStyle(style)}>
+        {props.title || props.description ? (
+          <SheetHeader>
+            {props.title ? <SheetTitle>{String(props.title)}</SheetTitle> : null}
+            {props.description ? (
+              <SheetDescription>{String(props.description)}</SheetDescription>
+            ) : null}
+          </SheetHeader>
+        ) : (
+          <SheetTitle className="sr-only">Sheet</SheetTitle>
+        )}
+        <div className="flex flex-col gap-4 px-4 pb-4">{children}</div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function BoundDrawer({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ReactNode;
+}) {
+  const open = !!props.open;
+  const direction =
+    props.direction === 'top' ||
+    props.direction === 'bottom' ||
+    props.direction === 'left' ||
+    props.direction === 'right'
+      ? props.direction
+      : 'bottom';
+
+  return (
+    <Drawer
+      open={open}
+      direction={direction}
+      onOpenChange={(next) => {
+        if (!next && hasEvent(props, 'close')) emit(id, 'close');
+      }}
+    >
+      <DrawerContent className={className} style={asStyle(style)}>
+        {props.title || props.description ? (
+          <DrawerHeader>
+            {props.title ? <DrawerTitle>{String(props.title)}</DrawerTitle> : null}
+            {props.description ? (
+              <DrawerDescription>{String(props.description)}</DrawerDescription>
+            ) : null}
+          </DrawerHeader>
+        ) : (
+          <DrawerTitle className="sr-only">Drawer</DrawerTitle>
+        )}
+        <div className="flex flex-col gap-4 px-4 pb-4">{children}</div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+function BoundUpload({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const label = String(props.label ?? 'Upload');
+  const accept = props.accept ? String(props.accept) : undefined;
+  const multiple = !!props.multiple;
+  const disabled = !!props.disabled || busy;
+
+  return (
+    <div className={cn('flex flex-col gap-1.5', className)} style={asStyle(style)}>
+      <input
+        ref={inputRef}
+        type="file"
+        className="sr-only"
+        accept={accept}
+        multiple={multiple}
+        disabled={disabled}
+        onChange={(e) => {
+          const list = e.target.files;
+          if (!list?.length) return;
+          const run = async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              const fd = new FormData();
+              for (const file of Array.from(list)) {
+                fd.append('files', file);
+              }
+              const res = await fetch('/upload', { method: 'POST', body: fd });
+              const data = (await res.json()) as {
+                files?: Array<{ name: string; size: number; type: string; path: string }>;
+                error?: string;
+              };
+              if (!res.ok) {
+                throw new Error(data.error || `Upload failed (${res.status})`);
+              }
+              for (const file of data.files ?? []) {
+                if (hasEvent(props, 'upload')) emit(id, 'upload', file);
+              }
+            } catch (err) {
+              setError(err instanceof Error ? err.message : String(err));
+            } finally {
+              setBusy(false);
+              if (inputRef.current) inputRef.current.value = '';
+            }
+          };
+          void run();
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+      >
+        {busy ? 'Uploading…' : label}
+      </Button>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </div>
   );
 }
 
@@ -436,6 +984,20 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         </BoundDialog>
       );
 
+    case 'sheet':
+      return (
+        <BoundSheet id={id} props={props} className={className} style={style} emit={emit}>
+          {renderChildren()}
+        </BoundSheet>
+      );
+
+    case 'drawer':
+      return (
+        <BoundDrawer id={id} props={props} className={className} style={style} emit={emit}>
+          {renderChildren()}
+        </BoundDrawer>
+      );
+
     case 'label':
       return (
         <div className={cn('text-base', className)} style={asStyle(style)}>
@@ -468,8 +1030,17 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
     case 'checkbox':
       return <BoundCheckbox id={id} props={props} className={className} style={style} emit={emit} />;
 
+    case 'switch':
+      return <BoundSwitch id={id} props={props} className={className} style={style} emit={emit} />;
+
     case 'select':
       return <BoundSelect id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'radiogroup':
+      return <BoundRadioGroup id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'date':
+      return <BoundDate id={id} props={props} className={className} style={style} emit={emit} />;
 
     case 'slider':
       return <BoundSlider id={id} props={props} className={className} style={style} emit={emit} />;
@@ -514,6 +1085,119 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         >
           <AlertDescription>{String(props.text ?? '')}</AlertDescription>
         </Alert>
+      );
+
+    case 'spinner':
+      return <Spinner className={className} style={asStyle(style)} />;
+
+    case 'skeleton':
+      return <Skeleton className={className} style={asStyle(style)} />;
+
+    case 'avatar': {
+      const size =
+        props.size === 'sm' || props.size === 'lg' ? props.size : 'default';
+      const fallback = String(props.fallback ?? '?');
+      return (
+        <Avatar size={size} className={className} style={asStyle(style)}>
+          {props.src ? (
+            <AvatarImage src={String(props.src)} alt={String(props.alt ?? '')} />
+          ) : null}
+          <AvatarFallback>{fallback}</AvatarFallback>
+        </Avatar>
+      );
+    }
+
+    case 'progress':
+      return (
+        <Progress
+          value={typeof props.value === 'number' ? props.value : Number(props.value) || 0}
+          className={className}
+          style={asStyle(style)}
+        />
+      );
+
+    case 'separator':
+      return (
+        <Separator
+          orientation={props.orientation === 'vertical' ? 'vertical' : 'horizontal'}
+          className={className}
+          style={asStyle(style)}
+        />
+      );
+
+    case 'icon': {
+      const Icon = resolveNavIcon(typeof props.name === 'string' ? props.name : undefined);
+      return <Icon className={cn('size-4', className)} style={asStyle(style)} aria-hidden />;
+    }
+
+    case 'markdown':
+      return (
+        <MarkdownView
+          text={String(props.text ?? '')}
+          className={className}
+          style={asStyle(style)}
+        />
+      );
+
+    case 'html':
+      return (
+        <div
+          className={cn('badui-html', className)}
+          style={asStyle(style)}
+          dangerouslySetInnerHTML={{ __html: String(props.html ?? '') }}
+        />
+      );
+
+    case 'image':
+      return (
+        <img
+          src={String(props.src ?? '')}
+          alt={String(props.alt ?? '')}
+          width={props.width as number | string | undefined}
+          height={props.height as number | string | undefined}
+          className={cn('max-w-full h-auto', className)}
+          style={asStyle(style)}
+        />
+      );
+
+    case 'tabs':
+      return (
+        <BoundTabs id={id} props={props} className={className} style={style} emit={emit} children={children} />
+      );
+
+    case 'accordion':
+      return (
+        <BoundAccordion
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'collapsible':
+      return (
+        <BoundCollapsible id={id} props={props} className={className} style={style} emit={emit}>
+          {renderChildren()}
+        </BoundCollapsible>
+      );
+
+    case 'tooltip':
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={cn('inline-flex', className)} style={asStyle(style)}>
+                {renderChildren()}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side={(props.side as 'top' | 'right' | 'bottom' | 'left') ?? 'top'}>
+              {String(props.text ?? '')}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
 
     case 'stat': {
@@ -590,6 +1274,21 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
     case 'areachart':
       return <BoundAreaChart props={props} className={className} style={style} />;
 
+    case 'barchart':
+      return <BoundBarChart props={props} className={className} style={style} />;
+
+    case 'linechart':
+      return <BoundLineChart props={props} className={className} style={style} />;
+
+    case 'piechart':
+      return <BoundPieChart props={props} className={className} style={style} />;
+
+    case 'radarchart':
+      return <BoundRadarChart props={props} className={className} style={style} />;
+
+    case 'radialchart':
+      return <BoundRadialChart props={props} className={className} style={style} />;
+
     case 'kitchensink':
       return (
         <Suspense
@@ -600,6 +1299,9 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           <KitchenSink />
         </Suspense>
       );
+
+    case 'upload':
+      return <BoundUpload id={id} props={props} className={className} style={style} emit={emit} />;
 
     default:
       return (

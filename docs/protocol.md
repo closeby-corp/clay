@@ -15,8 +15,10 @@ All fields are **camelCase**. Transport: single WebSocket at `/ws`.
 ### `hello`
 
 ```json
-{ "op": "hello", "path": "/examples/counter" }
+{ "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id" }
 ```
+
+Client connects (or remounts after navigate) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user`.
 
 Sent on connect and after client-side navigation.
 

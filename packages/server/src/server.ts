@@ -1,5 +1,7 @@
-import { ClientSession, getRegisteredPaths, type ClientMessage } from '@badui/core';
+import { ClientSession, getRegisteredPaths, storage, type ClientMessage } from '@badui/core';
+import { createFilePersistence } from '@badui/persistence-file';
 import { isAbsolute, join, resolve } from 'path';
+import { handleMultipartUpload } from './upload';
 
 export type BadUIServerConfig = {
   port?: number;
@@ -11,9 +13,22 @@ export type BadUIServerConfig = {
    * Absolute paths, or relative to `process.cwd()`.
    */
   css?: string | string[];
+  /**
+   * Directory for `POST /upload` files.
+   * Absolute or relative to `process.cwd()`. Default: `.badui-uploads`.
+   */
+  uploadDir?: string;
+  /**
+   * Directory for per-user JSON bags (`storage.user`).
+   * Absolute or relative to `process.cwd()`. Default: `.badui-user-data`.
+   * Pass `false` to skip file persistence (in-memory user bags only).
+   */
+  userStorageDir?: string | false;
 };
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
+const DEFAULT_UPLOAD_DIR = '.badui-uploads';
+const DEFAULT_USER_STORAGE_DIR = '.badui-user-data';
 
 function normalizeCssPaths(css?: string | string[]): string[] {
   if (!css) return [];
@@ -22,6 +37,11 @@ function normalizeCssPaths(css?: string | string[]): string[] {
     .map((p) => p.trim())
     .filter(Boolean)
     .map((p) => (isAbsolute(p) ? p : resolve(process.cwd(), p)));
+}
+
+function resolveDir(dir: string | undefined, fallback: string): string {
+  const raw = dir ?? fallback;
+  return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
 }
 
 function spaHtml(title: string, customCssHrefs: string[]): string {
@@ -48,6 +68,8 @@ type ResolvedConfig = {
   title: string;
   clientDir: string;
   cssPaths: string[];
+  uploadDir: string;
+  userStorageDir: string | false;
 };
 
 export class BadUIServer {
@@ -60,7 +82,21 @@ export class BadUIServer {
       title: config.title ?? 'BadUI',
       clientDir: config.clientDir ?? DEFAULT_CLIENT_DIR,
       cssPaths: normalizeCssPaths(config.css),
+      uploadDir: resolveDir(config.uploadDir, DEFAULT_UPLOAD_DIR),
+      userStorageDir:
+        config.userStorageDir === false
+          ? false
+          : resolveDir(
+              typeof config.userStorageDir === 'string' ? config.userStorageDir : undefined,
+              DEFAULT_USER_STORAGE_DIR,
+            ),
     };
+
+    if (this.config.userStorageDir !== false) {
+      storage.configure({
+        persistence: createFilePersistence({ dir: this.config.userStorageDir }),
+      });
+    }
   }
 
   /** Bound listen port (after `start`), or configured port. */
@@ -69,7 +105,7 @@ export class BadUIServer {
   }
 
   start(): ReturnType<typeof Bun.serve> {
-    const { port, title, clientDir, cssPaths } = this.config;
+    const { port, title, clientDir, cssPaths, uploadDir } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
     const html = spaHtml(title, customCssHrefs);
 
@@ -86,6 +122,17 @@ export class BadUIServer {
             return new Response('WebSocket upgrade failed', { status: 400 });
           }
           return undefined as unknown as Response;
+        }
+
+        if (url.pathname === '/upload' && req.method === 'POST') {
+          try {
+            const form = await req.formData();
+            const files = await handleMultipartUpload(form, uploadDir);
+            return Response.json({ files });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return Response.json({ error: message }, { status: 500 });
+          }
         }
 
         if (url.pathname.startsWith('/assets/')) {
@@ -149,6 +196,9 @@ export class BadUIServer {
                 // socket closed
               }
             });
+            if (typeof msg.userId === 'string' && msg.userId) {
+              session.userId = msg.userId;
+            }
             data.session = session;
             session.mount();
             return;

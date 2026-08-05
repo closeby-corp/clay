@@ -14,6 +14,7 @@ import type {
   ToastPosition,
 } from './protocol';
 import { getPageEntry, getPageWrapper } from './page';
+import type { TimerHandle } from './timer';
 
 export type SendFn = (msg: ServerMessage) => void;
 
@@ -27,10 +28,18 @@ export type NotifyOptions = {
 export class ClientSession {
   readonly id: string;
   readonly path: string;
+  /** Stable browser user id from hello (localStorage); used by `storage.user`. */
+  userId: string | null = null;
+  /**
+   * Per-tab (WS session) key/value store. Survives `refreshable` rebuilds;
+   * cleared when the session is destroyed.
+   */
+  readonly tab = new Map<string, unknown>();
   root: Element | null = null;
   isMounted = false;
 
   private elements = new Map<string, Element>();
+  private timers = new Set<TimerHandle>();
   private patches: Patch[] = [];
   private send: SendFn;
   private flushScheduled = false;
@@ -47,6 +56,14 @@ export class ClientSession {
 
   unregister(id: string): void {
     this.elements.delete(id);
+  }
+
+  registerTimer(timer: TimerHandle): void {
+    this.timers.add(timer);
+  }
+
+  unregisterTimer(timer: TimerHandle): void {
+    this.timers.delete(timer);
   }
 
   getElement(id: string): Element | undefined {
@@ -166,8 +183,12 @@ export class ClientSession {
   }
 
   destroy(): void {
+    for (const t of [...this.timers]) t.cancel();
+    this.timers.clear();
     this.root?.destroy();
     this.elements.clear();
+    this.tab.clear();
+    this.userId = null;
     this.isMounted = false;
   }
 }

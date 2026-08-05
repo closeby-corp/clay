@@ -13,12 +13,13 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
 | `/examples/chat` | `Chat.ts` | `GlobalState`, async `get`/`set`, multi-session sync |
-| `/examples/upload` | `FileUpload.ts` | Simple upload UI pattern |
+| `/examples/upload` | `FileUpload.ts` | `ui.upload`, tab/user storage, `ui.download` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, confirm/prompt/choose, toasts |
-| `/examples/charts` | `ChartDemo.ts` | `ui.areaChart` interactive ranges + live refresh |
+| `/examples/charts` | `ChartDemo.ts` | `areaChart` / `barChart` / `lineChart` / `pieChart` / `radarChart` / `radialChart` (+ interactive ranges, live refresh) |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
-| `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` |
+| `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` (+ radioGroup, date) |
+| `/examples/overlays` | `OverlaysDemo.ts` | Sheet, drawer, accordion, collapsible, tooltip, avatar, skeleton |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
 Each page file exports optional `pageMeta` (`label`, `icon`, `order`) for `ui.navFromPages()`.

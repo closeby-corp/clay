@@ -3,35 +3,69 @@ import {
   label as labelFactory,
   input as inputFactory,
   checkbox as checkboxFactory,
+  switchControl as switchFactory,
   select as selectFactory,
+  radioGroup as radioGroupFactory,
+  date as dateFactory,
+  tooltip as tooltipFactory,
+  avatar as avatarFactory,
+  skeleton as skeletonFactory,
   slider as sliderFactory,
   textArea as textAreaFactory,
   link as linkFactory,
   badge as badgeFactory,
   alert as alertFactory,
+  spinner as spinnerFactory,
+  progress as progressFactory,
+  separator as separatorFactory,
+  icon as iconFactory,
   stat as statFactory,
   dataTable as dataTableFactory,
   areaChart as areaChartFactory,
+  barChart as barChartFactory,
+  lineChart as lineChartFactory,
+  pieChart as pieChartFactory,
+  radarChart as radarChartFactory,
+  radialChart as radialChartFactory,
   row as rowFactory,
   column as columnFactory,
   container as containerFactory,
   hero as heroFactory,
   card as cardFactory,
   dialog as dialogFactory,
+  sheet as sheetFactory,
+  drawer as drawerFactory,
+  tabs as tabsFactory,
+  accordion as accordionFactory,
+  collapsible as collapsibleFactory,
   confirm as confirmFactory,
   prompt as promptFactory,
   choose as chooseFactory,
   app as appFactory,
+  markdown as markdownFactory,
+  html as htmlFactory,
+  image as imageFactory,
+  upload as uploadFactory,
   type ButtonProps,
   type LabelProps,
   type InputProps,
   type CheckboxProps,
+  type SwitchProps,
   type SelectProps,
+  type RadioGroupProps,
+  type DateProps,
+  type TooltipProps,
+  type AvatarProps,
+  type SkeletonProps,
   type SliderProps,
   type TextAreaProps,
   type LinkProps,
   type BadgeProps,
   type AlertProps,
+  type SpinnerProps,
+  type ProgressProps,
+  type SeparatorProps,
+  type IconProps,
   type StatItem,
   type DataTableProps,
   type DataTableAction,
@@ -40,8 +74,30 @@ import {
   type TableColumn,
   type AreaChartProps,
   type AreaChartSeries,
+  type BarChartProps,
+  type BarChartSeries,
+  type LineChartProps,
+  type LineChartSeries,
+  type PieChartProps,
+  type PieChartSeries,
+  type RadarChartProps,
+  type RadarChartSeries,
+  type RadialChartProps,
+  type RadialChartSeries,
+  type CartesianChartProps,
+  type ChartSeries,
   type CardProps,
   type DialogProps,
+  type SheetProps,
+  type SheetSide,
+  type DrawerProps,
+  type DrawerDirection,
+  type TabsProps,
+  type TabPanelOptions,
+  type AccordionProps,
+  type AccordionType,
+  type AccordionItemOptions,
+  type CollapsibleProps,
   type ConfirmOptions,
   type PromptOptions,
   type ChooseOptions,
@@ -49,8 +105,18 @@ import {
   type AppProps,
   type AppNavItem,
   type AppUser,
+  type MarkdownProps,
+  type HtmlProps,
+  type ImageProps,
+  type UploadProps,
+  type UploadedFile,
   DataTableElement,
   DialogElement,
+  SheetElement,
+  DrawerElement,
+  TabsElement,
+  AccordionElement,
+  CollapsibleElement,
 } from '@badui/components';
 import {
   Element,
@@ -58,12 +124,19 @@ import {
   page as corePage,
   getPage,
   notify as notifyCore,
+  navigate as navigateCore,
+  download as downloadCore,
+  clipboard as clipboardCore,
+  timer as timerCore,
+  storage as storageCore,
   setPageWrapper,
   type NotifyOptions,
   type NotifyType,
   type PageFn,
   type PageOptions,
   type ToastPosition,
+  type TimerOptions,
+  TimerHandle,
 } from '@badui/core';
 import { BadUIServer, type BadUIServerConfig } from '@badui/server';
 import {
@@ -81,7 +154,31 @@ export type {
   TableColumn,
   AreaChartProps,
   AreaChartSeries,
+  RadarChartProps,
+  RadarChartSeries,
+  RadialChartProps,
+  RadialChartSeries,
   DialogProps,
+  SheetProps,
+  SheetSide,
+  DrawerProps,
+  DrawerDirection,
+  TabsProps,
+  TabPanelOptions,
+  AccordionProps,
+  AccordionType,
+  AccordionItemOptions,
+  CollapsibleProps,
+  SwitchProps,
+  RadioGroupProps,
+  DateProps,
+  TooltipProps,
+  AvatarProps,
+  SkeletonProps,
+  SpinnerProps,
+  ProgressProps,
+  SeparatorProps,
+  IconProps,
   ConfirmOptions,
   PromptOptions,
   ChooseOptions,
@@ -89,14 +186,32 @@ export type {
   AppProps,
   AppNavItem,
   AppUser,
+  MarkdownProps,
+  HtmlProps,
+  ImageProps,
+  UploadProps,
+  UploadedFile,
   NotifyOptions,
   NotifyType,
   ToastPosition,
   PageMeta,
   PageOptions,
   PageFn,
+  TimerOptions,
 };
-export { DataTableElement, DialogElement, loadPages, navFromPages, clearPageMeta };
+export {
+  DataTableElement,
+  DialogElement,
+  SheetElement,
+  DrawerElement,
+  TabsElement,
+  AccordionElement,
+  CollapsibleElement,
+  TimerHandle,
+  loadPages,
+  navFromPages,
+  clearPageMeta,
+};
 
 export function label(text?: string, props?: Omit<LabelProps, 'text'>): Element {
   return labelFactory(text, props);
@@ -114,8 +229,37 @@ export function checkbox(props?: CheckboxProps): Element {
   return checkboxFactory(props);
 }
 
+export function switch_(props?: SwitchProps): Element {
+  return switchFactory(props);
+}
+
+/** Bound boolean toggle (`ui.switch`). */
+export { switch_ as switch };
+
 export function select(props: SelectProps): Element {
   return selectFactory(props);
+}
+
+export function radioGroup(props: RadioGroupProps): Element {
+  return radioGroupFactory(props);
+}
+
+export function date(props?: DateProps): Element {
+  return dateFactory(props);
+}
+
+export function tooltip(fn: () => void, props: TooltipProps): Element;
+export function tooltip(props: TooltipProps, fn: () => void): Element;
+export function tooltip(a: any, b: any): Element {
+  return tooltipFactory(a, b);
+}
+
+export function avatar(props?: AvatarProps): Element {
+  return avatarFactory(props);
+}
+
+export function skeleton(props?: SkeletonProps): Element {
+  return skeletonFactory(props);
 }
 
 export function slider(props?: SliderProps): Element {
@@ -138,6 +282,38 @@ export function alert(message?: string, props?: Omit<AlertProps, 'message'>): El
   return alertFactory(message, props);
 }
 
+export function spinner(props?: SpinnerProps): Element {
+  return spinnerFactory(props);
+}
+
+export function progress(props?: ProgressProps): Element {
+  return progressFactory(props);
+}
+
+export function separator(props?: SeparatorProps): Element {
+  return separatorFactory(props);
+}
+
+export function icon(name: string, props?: Omit<IconProps, 'name'>): Element {
+  return iconFactory(name, props);
+}
+
+export function markdown(text?: string, props?: MarkdownProps): Element {
+  return markdownFactory(text, props);
+}
+
+export function html(content?: string, props?: HtmlProps): Element {
+  return htmlFactory(content, props);
+}
+
+export function image(src: string, props?: ImageProps): Element {
+  return imageFactory(src, props);
+}
+
+export function upload(props?: UploadProps): Element {
+  return uploadFactory(props);
+}
+
 export function stat(items: StatItem[], props?: { className?: string }): Element {
   return statFactory(items, props);
 }
@@ -148,6 +324,26 @@ export function dataTable(data?: unknown, props?: DataTableProps): DataTableElem
 
 export function areaChart(props: AreaChartProps): Element {
   return areaChartFactory(props);
+}
+
+export function barChart(props: BarChartProps): Element {
+  return barChartFactory(props);
+}
+
+export function lineChart(props: LineChartProps): Element {
+  return lineChartFactory(props);
+}
+
+export function pieChart(props: PieChartProps): Element {
+  return pieChartFactory(props);
+}
+
+export function radarChart(props: RadarChartProps): Element {
+  return radarChartFactory(props);
+}
+
+export function radialChart(props: RadialChartProps): Element {
+  return radialChartFactory(props);
 }
 
 export function row(fn: () => void, props?: Parameters<typeof rowFactory>[1]): Element;
@@ -190,6 +386,36 @@ export function dialog(a: any, b?: any): DialogElement {
   return dialogFactory(a, b);
 }
 
+export function sheet(fn: (s: SheetElement) => void, props?: SheetProps): SheetElement;
+export function sheet(props: SheetProps, fn: (s: SheetElement) => void): SheetElement;
+export function sheet(a: any, b?: any): SheetElement {
+  return sheetFactory(a, b);
+}
+
+export function drawer(fn: (d: DrawerElement) => void, props?: DrawerProps): DrawerElement;
+export function drawer(props: DrawerProps, fn: (d: DrawerElement) => void): DrawerElement;
+export function drawer(a: any, b?: any): DrawerElement {
+  return drawerFactory(a, b);
+}
+
+export function tabs(fn: (t: TabsElement) => void, props?: TabsProps): TabsElement;
+export function tabs(props: TabsProps, fn: (t: TabsElement) => void): TabsElement;
+export function tabs(a: any, b?: any): TabsElement {
+  return tabsFactory(a, b);
+}
+
+export function accordion(fn: (a: AccordionElement) => void, props?: AccordionProps): AccordionElement;
+export function accordion(props: AccordionProps, fn: (a: AccordionElement) => void): AccordionElement;
+export function accordion(a: any, b?: any): AccordionElement {
+  return accordionFactory(a, b);
+}
+
+export function collapsible(fn: (c: CollapsibleElement) => void, props?: CollapsibleProps): CollapsibleElement;
+export function collapsible(props: CollapsibleProps, fn: (c: CollapsibleElement) => void): CollapsibleElement;
+export function collapsible(a: any, b?: any): CollapsibleElement {
+  return collapsibleFactory(a, b);
+}
+
 export function confirm(message: string, options?: ConfirmOptions): Promise<boolean> {
   return confirmFactory(message, options);
 }
@@ -209,6 +435,29 @@ export function choose(
 export function notify(message: string, typeOrOptions?: NotifyType | NotifyOptions): void {
   notifyCore(message, typeOrOptions);
 }
+
+export function navigate(path: string): void {
+  navigateCore(path);
+}
+
+export function download(filename: string, mime: string, content: string): void {
+  downloadCore(filename, mime, content);
+}
+
+export function clipboard(content: string): void {
+  clipboardCore(content);
+}
+
+export function timer(
+  interval: number,
+  callback: () => void | Promise<void>,
+  options?: TimerOptions,
+): TimerHandle {
+  return timerCore(interval, callback, options);
+}
+
+/** Tab + user storage (NiceGUI-ish). Prefer `ui.storage`. */
+export const storage = storageCore;
 
 export function refreshable(fn: () => void): RefreshableElement {
   return new RefreshableElement(fn);
@@ -276,15 +525,34 @@ export const ui = {
   button,
   input,
   checkbox,
+  switch: switch_,
   select,
+  radioGroup,
+  date,
+  tooltip,
+  avatar,
+  skeleton,
   slider,
   textArea,
   link,
   badge,
   alert,
+  spinner,
+  progress,
+  separator,
+  icon,
+  markdown,
+  html,
+  image,
+  upload,
   stat,
   dataTable,
   areaChart,
+  barChart,
+  lineChart,
+  pieChart,
+  radarChart,
+  radialChart,
   row,
   column,
   container,
@@ -292,10 +560,20 @@ export const ui = {
   card,
   app,
   dialog,
+  sheet,
+  drawer,
+  tabs,
+  accordion,
+  collapsible,
   confirm,
   prompt,
   choose,
   notify,
+  navigate,
+  download,
+  clipboard,
+  timer,
+  storage,
   refreshable,
   page,
   run,

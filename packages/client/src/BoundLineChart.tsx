@@ -1,4 +1,4 @@
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
+import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import {
   ChartContainer,
   ChartLegend,
@@ -16,7 +16,7 @@ import {
   useInteractiveChartData,
 } from './chart-shared';
 
-export function BoundAreaChart({
+export function BoundLineChart({
   props,
   className,
   style,
@@ -27,7 +27,6 @@ export function BoundAreaChart({
 }) {
   const { data, xKey, series, title, description, interactive, height } =
     parseCartesianProps(props);
-  const stacked = props.stacked !== false;
   const { filteredData, timeRange, setTimeRange } = useInteractiveChartData(
     data,
     xKey,
@@ -37,15 +36,7 @@ export function BoundAreaChart({
 
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
-      <AreaChart accessibilityLayer data={filteredData} margin={{ left: 12, right: 12 }}>
-        <defs>
-          {series.map((s) => (
-            <linearGradient key={s.key} id={`fill-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={`var(--color-${s.key})`} stopOpacity={0.8} />
-              <stop offset="95%" stopColor={`var(--color-${s.key})`} stopOpacity={0.1} />
-            </linearGradient>
-          ))}
-        </defs>
+      <LineChart accessibilityLayer data={filteredData} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={xKey}
@@ -58,25 +49,20 @@ export function BoundAreaChart({
         />
         <ChartTooltip
           cursor={false}
-          content={
-            <ChartTooltipContent
-              indicator="dot"
-              labelFormatter={formatTooltipLabel}
-            />
-          }
+          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
         />
         <ChartLegend content={<ChartLegendContent />} />
         {series.map((s) => (
-          <Area
+          <Line
             key={s.key}
             dataKey={s.key}
-            type="natural"
-            fill={`url(#fill-${s.key})`}
+            type="monotone"
             stroke={`var(--color-${s.key})`}
-            stackId={stacked ? 'a' : undefined}
+            strokeWidth={2}
+            dot={false}
           />
         ))}
-      </AreaChart>
+      </LineChart>
     </ChartContainer>
   );
 

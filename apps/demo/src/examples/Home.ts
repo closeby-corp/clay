@@ -28,7 +28,9 @@ ui.page('/', () => {
               .classes('text-sm text-muted-foreground');
             ui.label('Dashboard shows refreshable stats and a full-chrome DataTable.')
               .classes('text-sm text-muted-foreground');
-            ui.label('Charts covers ui.areaChart — interactive ranges, cards, and live refresh.')
+            ui.label('Charts covers area / bar / line / pie / radar / radial — interactive ranges, cards, and live refresh.')
+              .classes('text-sm text-muted-foreground');
+            ui.label('Timer & content shows ui.timer, markdown, html, and image.')
               .classes('text-sm text-muted-foreground');
           },
         );

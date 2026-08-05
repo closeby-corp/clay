@@ -33,5 +33,5 @@ export type ServerMessage =
   | { op: 'error'; message: string };
 
 export type ClientMessage =
-  | { op: 'hello'; path: string }
+  | { op: 'hello'; path: string; userId?: string }
   | { op: 'event'; id: string; type: string; value?: unknown };

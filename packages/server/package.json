@@ -6,6 +6,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@badui/core": "workspace:*"
+    "@badui/core": "workspace:*",
+    "@badui/persistence-file": "workspace:*"
   }
 }

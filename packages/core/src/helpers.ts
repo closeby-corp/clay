@@ -15,4 +15,12 @@ export function navigate(path: string): void {
   getCurrentSession()?.navigate(path);
 }
 
+export function download(filename: string, mime: string, content: string): void {
+  getCurrentSession()?.download(filename, mime, content);
+}
+
+export function clipboard(content: string): void {
+  getCurrentSession()?.clipboard(content);
+}
+
 export type { NotifyType, ToastPosition };

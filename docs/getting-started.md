@@ -155,7 +155,7 @@ packages/cli/         `badui` binary — file/dir launcher + shipped client-dist
 packages/ui/         NiceGUI-style ui facade (`loadPages`, `navFromPages`, `run`)
 packages/core/       Element tree, session, page wrapper, reactive, GlobalState
 packages/persistence-file/  File-backed PersistenceAdapter for GlobalState
-packages/components/ Element factories (button, input, dataTable, areaChart, …)
+packages/components/ Element factories (button, input, dataTable, areaChart / barChart / lineChart / pieChart / radarChart / radialChart, …)
 packages/client/     React + ShadCN renderer (Sonner toasts, BoundDataTable, …)
 packages/server/     Bun HTTP + WebSocket
 docs/                This documentation

@@ -33,7 +33,21 @@ export {
   type GlobalStateConfigureOptions,
 } from './global-state';
 export { generateId, resetIdSequence } from './utils';
-export { notify, navigate, type NotifyType, type ToastPosition } from './helpers';
+export {
+  notify,
+  navigate,
+  download,
+  clipboard,
+  type NotifyType,
+  type ToastPosition,
+} from './helpers';
+export { timer, TimerHandle, type TimerOptions } from './timer';
+export {
+  storage,
+  type TabStorage,
+  type UserStorage,
+  type StorageConfigureOptions,
+} from './storage';
 export type {
   ElementNode,
   Patch,

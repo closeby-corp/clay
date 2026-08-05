@@ -1,15 +1,12 @@
 import { Element } from '@badui/core';
 import type { CartesianChartProps, ChartSeries } from './chart-shared';
 
-export type AreaChartSeries = ChartSeries;
+export type LineChartSeries = ChartSeries;
 
-export type AreaChartProps = CartesianChartProps & {
-  /** Stack series (default true). */
-  stacked?: boolean;
-};
+export type LineChartProps = CartesianChartProps;
 
-export function areaChart(props: AreaChartProps): Element {
-  return new Element('areachart', {
+export function lineChart(props: LineChartProps): Element {
+  return new Element('linechart', {
     data: props.data,
     xKey: props.xKey,
     series: props.series,
@@ -18,6 +15,5 @@ export function areaChart(props: AreaChartProps): Element {
     description: props.description,
     interactive: props.interactive === true,
     height: props.height,
-    stacked: props.stacked !== false,
   });
 }
