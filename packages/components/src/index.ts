@@ -191,6 +191,30 @@ export function radioGroup(props: RadioGroupProps): Element {
   });
 }
 
+export type ComboboxOption = { value: string; label: string };
+
+export type ComboboxProps = {
+  options: ComboboxOption[];
+  value?: string;
+  label?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  onChange?: (value: string) => void;
+};
+
+export function combobox(props: ComboboxProps): Element {
+  return new Element('combobox', {
+    options: props.options,
+    value: props.value ?? props.options[0]?.value ?? '',
+    label: props.label,
+    placeholder: props.placeholder ?? 'Search…',
+    disabled: props.disabled ?? false,
+    className: props.className,
+    onChange: props.onChange,
+  });
+}
+
 export type DateProps = {
   /** ISO date string (`YYYY-MM-DD`) or empty. */
   value?: string;

@@ -28,7 +28,7 @@ bun run badui hello.ts
 # → http://localhost:3000
 ```
 
-Published `@badui/cli` includes prebuilt client assets — no separate `build:client` for the CLI path after install.
+Outside the monorepo: `bun run pack:publishable` then install the `dist-pack/*.tgz` set (see [Getting started](./getting-started.md)), or `bun add @badui/cli @badui/ui` once published. Shipped CLI includes prebuilt client assets — no separate `build:client` after install.
 
 ```typescript
 // hello.ts

@@ -1,6 +1,7 @@
 {
   "name": "@badui/cli",
   "version": "0.1.0",
+  "description": "badui CLI — run a .ts file or page directory with bundled React client assets",
   "type": "module",
   "bin": {
     "badui": "./bin/badui"
@@ -12,7 +13,7 @@
     "bin",
     "src",
     "client-dist",
-    "package.json"
+    "!src/**/*.test.ts"
   ],
   "scripts": {
     "copy-client": "bun scripts/copy-client.ts",

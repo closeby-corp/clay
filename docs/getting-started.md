@@ -2,10 +2,60 @@
 
 ## Requirements
 
-- [Bun](https://bun.sh/) 1.1+
+- [Bun](https://bun.sh/) 1.1+ (runtime for `badui` and app code)
 - Node-compatible OS (macOS / Linux / WSL)
+- For local tarball installs: npm (links co-installed `file:` packages; Bun may try the registry for rewritten versions)
 
-## Three-line app (`badui`)
+## Outside the monorepo
+
+Consumers import `@badui/ui` and run apps with the `badui` binary from `@badui/cli`. The CLI ships prebuilt Vite assets (`client-dist`); you do **not** need `@badui/client` or a monorepo `build:client`.
+
+### From local packs (this repo)
+
+```bash
+# In the BadUI checkout:
+bun install
+bun run pack:publishable   # build:client + bun pm pack → dist-pack/*.tgz
+# workspace:* is rewritten to real versions inside each tarball
+
+# In your app directory:
+npm install \
+  /path/to/bad-ui/dist-pack/badui-core-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/badui-persistence-file-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/badui-components-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/badui-server-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/badui-ui-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/badui-cli-0.1.0.tgz
+```
+
+Install **all** runtime tarballs together so `@badui/*@0.1.0` resolves from the co-installed packs (they are not on the public registry yet).
+
+### When published to npm
+
+```bash
+bun add @badui/cli @badui/ui
+# transitive: core, components, server, persistence-file
+```
+
+### Run
+
+```typescript
+// hello.ts
+import { ui } from '@badui/ui';
+
+export default function () {
+  ui.label('Hello BadUI');
+  ui.button('Ping', { onClick: () => ui.notify('hi', 'success') });
+}
+```
+
+```bash
+bunx badui hello.ts   # → http://localhost:3000 (opens browser)
+```
+
+`ui.run(() => { … })` also works; CLI `-p` / `--title` / `--app` apply when the entry uses a default export or `ui.page` and lets the CLI start the server.
+
+## Three-line app (`badui`) — monorepo
 
 ```typescript
 // hello.ts
@@ -15,12 +65,6 @@ ui.run(() => {
   ui.label('Hello BadUI');
   ui.button('Ping', { onClick: () => ui.notify('hi', 'success') });
 });
-```
-
-**Published / installed `@badui/cli`:** the package ships prebuilt client assets (`client-dist`). After install you can run:
-
-```bash
-bunx badui hello.ts   # → http://localhost:3000 (opens browser)
 ```
 
 **This monorepo:** build the client once (also copies assets into `@badui/cli` for packaging), then use the workspace CLI:
@@ -88,11 +132,18 @@ Open:
 | Script | What it does |
 |--------|----------------|
 | `bun run build:client` | Vite production build of the React client + copy into `@badui/cli` |
+| `bun run pack:publishable` | `build:client` + pack `@badui/{core,persistence-file,components,server,ui,cli}` → `dist-pack/` |
 | `bun run demo` | Start demo server (`main.ts`; expects client already built) |
 | `bun run demo:cli` | Start demo via `badui apps/demo/src/examples --app` |
 | `bun run badui …` | CLI runtime (`@badui/cli`) |
 | `bun run dev` | Build client, then start demo |
 | `bun test` | Run package tests |
+
+### Packaging notes (maintainers)
+
+- Source packages keep `workspace:*` for the monorepo; `bun pm pack` / publish rewrites them to the package version.
+- `@badui/client` is **private**; only its Vite `dist` is copied into `@badui/cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
+- Root stays `private: true`. Publish order when going to npm: `core` → `persistence-file` → `components` → `server` → `ui` → `cli`.
 
 ## Library mode (multi-page entrypoint)
 
@@ -156,7 +207,7 @@ packages/ui/         NiceGUI-style ui facade (`loadPages`, `navFromPages`, `run`
 packages/core/       Element tree, session, page wrapper, reactive, GlobalState
 packages/persistence-file/  File-backed PersistenceAdapter for GlobalState
 packages/components/ Element factories (button, input, dataTable, areaChart / barChart / lineChart / pieChart / radarChart / radialChart, …)
-packages/client/     React + ShadCN renderer (Sonner toasts, BoundDataTable, …)
+packages/client/     React + ShadCN renderer (Sonner toasts, BoundDataTable, …) — private, not published
 packages/server/     Bun HTTP + WebSocket
 docs/                This documentation
 ```

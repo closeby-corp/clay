@@ -309,6 +309,19 @@ Exclusive choice (optimistic like select). Supports `bindValue`.
 | `orientation` | `'horizontal' \| 'vertical'` | `'vertical'` |
 | `onChange` | `(value: string) => void` | |
 
+#### `ui.combobox(props)`
+
+Searchable select for large option lists (optimistic like select). Supports `bindValue`.
+
+| Prop | Type | Required |
+|------|------|----------|
+| `options` | `{ value: string; label: string }[]` | yes |
+| `value` | `string` | defaults to first option |
+| `label` | `string` | |
+| `placeholder` | `string` | `'Search…'` |
+| `disabled` | `boolean` | |
+| `onChange` | `(value: string) => void` | |
+
 #### `ui.date(props?)`
 
 Calendar + popover date picker. Value is an ISO date string (`YYYY-MM-DD`). Supports `bindValue`.

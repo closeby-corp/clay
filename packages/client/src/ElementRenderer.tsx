@@ -33,6 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
 import { Slider } from '@/components/ui/slider';
 import {
   Tabs,
@@ -514,6 +522,60 @@ function BoundRadioGroup({
           );
         })}
       </RadioGroup>
+    </div>
+  );
+}
+
+type ComboboxOption = { value: string; label: string };
+
+function BoundCombobox({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = String(props.value ?? '');
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const options = (props.options as ComboboxOption[]) ?? [];
+  const selected = options.find((opt) => opt.value === value) ?? null;
+
+  return (
+    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <Combobox
+        items={options}
+        value={selected}
+        disabled={!!props.disabled}
+        onValueChange={(next) => {
+          const nextValue = next?.value ?? '';
+          setValue(nextValue);
+          if (hasEvent(props, 'change')) emit(id, 'change', nextValue);
+          if (hasEvent(props, 'input')) emit(id, 'input', nextValue);
+        }}
+      >
+        <ComboboxInput
+          placeholder={String(props.placeholder ?? 'Search…')}
+          disabled={!!props.disabled}
+          showClear={!!selected}
+        />
+        <ComboboxContent>
+          <ComboboxEmpty>No results.</ComboboxEmpty>
+          <ComboboxList>
+            {(item) => (
+              <ComboboxItem key={item.value} value={item}>
+                {item.label}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
     </div>
   );
 }
@@ -1038,6 +1100,9 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'radiogroup':
       return <BoundRadioGroup id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'combobox':
+      return <BoundCombobox id={id} props={props} className={className} style={style} emit={emit} />;
 
     case 'date':
       return <BoundDate id={id} props={props} className={className} style={style} emit={emit} />;

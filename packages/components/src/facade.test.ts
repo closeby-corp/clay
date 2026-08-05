@@ -37,6 +37,7 @@ import {
   pieChart,
   radarChart,
   radialChart,
+  combobox,
 } from './index';
 
 describe('facade feedback / layout elements', () => {
@@ -66,7 +67,7 @@ describe('facade feedback / layout elements', () => {
   });
 });
 
-describe('radioGroup / date / tooltip', () => {
+describe('radioGroup / combobox / date / tooltip', () => {
   test('radioGroup stores options and value', () => {
     const el = radioGroup({
       options: [
@@ -80,6 +81,23 @@ describe('radioGroup / date / tooltip', () => {
     expect(el.type).toBe('radiogroup');
     expect(el.props.value).toBe('b');
     expect(el.props.orientation).toBe('horizontal');
+    expect(el.props.events).toEqual(expect.arrayContaining(['change']));
+  });
+
+  test('combobox stores options and value', () => {
+    const el = combobox({
+      options: [
+        { value: 'next', label: 'Next.js' },
+        { value: 'nuxt', label: 'Nuxt' },
+      ],
+      value: 'nuxt',
+      placeholder: 'Search frameworks…',
+      onChange: () => {},
+    });
+    expect(el.type).toBe('combobox');
+    expect(el.props.value).toBe('nuxt');
+    expect(el.props.placeholder).toBe('Search frameworks…');
+    expect(el.props.options).toHaveLength(2);
     expect(el.props.events).toEqual(expect.arrayContaining(['change']));
   });
 

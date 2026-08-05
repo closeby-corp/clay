@@ -6,6 +6,7 @@ import {
   switchControl as switchFactory,
   select as selectFactory,
   radioGroup as radioGroupFactory,
+  combobox as comboboxFactory,
   date as dateFactory,
   tooltip as tooltipFactory,
   avatar as avatarFactory,
@@ -53,6 +54,7 @@ import {
   type SwitchProps,
   type SelectProps,
   type RadioGroupProps,
+  type ComboboxProps,
   type DateProps,
   type TooltipProps,
   type AvatarProps,
@@ -171,6 +173,7 @@ export type {
   CollapsibleProps,
   SwitchProps,
   RadioGroupProps,
+  ComboboxProps,
   DateProps,
   TooltipProps,
   AvatarProps,
@@ -242,6 +245,10 @@ export function select(props: SelectProps): Element {
 
 export function radioGroup(props: RadioGroupProps): Element {
   return radioGroupFactory(props);
+}
+
+export function combobox(props: ComboboxProps): Element {
+  return comboboxFactory(props);
 }
 
 export function date(props?: DateProps): Element {
@@ -528,6 +535,7 @@ export const ui = {
   switch: switch_,
   select,
   radioGroup,
+  combobox,
   date,
   tooltip,
   avatar,

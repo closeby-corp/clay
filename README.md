@@ -17,6 +17,18 @@ You write imperative `ui.*` on the server. BadUI owns a per-client element tree 
 
 ## Quick start
 
+**Outside this monorepo** (packed or published packages):
+
+```bash
+# After `bun run pack:publishable` in a BadUI checkout — or once packages are on npm:
+npm install ./dist-pack/badui-*-0.1.0.tgz   # local packs; see docs/getting-started.md
+# bun add @badui/cli @badui/ui               # when published to the registry
+
+bunx badui hello.ts   # ships prebuilt client-dist — no Vite build needed
+```
+
+**This monorepo:**
+
 ```bash
 bun install
 bun run build:client   # Vite → packages/client/dist (+ copy into @badui/cli)
@@ -28,7 +40,7 @@ bun run demo:cli       # same via `badui … --app`
 bun run dev            # build client + start demo
 ```
 
-Installed `@badui/cli` ships prebuilt client assets — consumers can `bunx badui hello.ts` without a monorepo `build:client`. In this repo, run `build:client` once so the workspace CLI / demo have assets to serve.
+`@badui/cli` ships prebuilt client assets. In this repo, run `build:client` (or `pack:publishable`) so the workspace CLI / demo have assets to serve.
 
 ```typescript
 // hello.ts
@@ -92,6 +104,7 @@ App (ui.page / ui.refreshable)
 | Command | Description |
 |---------|-------------|
 | `bun run build:client` | Build the React client (+ copy into `@badui/cli`) |
+| `bun run pack:publishable` | `build:client` + pack runtime packages into `dist-pack/` |
 | `bun run demo` | Start the demo server |
 | `bun run demo:cli` | Demo via `badui … --app` |
 | `bun run badui …` | CLI runtime |
@@ -100,8 +113,10 @@ App (ui.page / ui.refreshable)
 
 ## Current gaps vs full NiceGUI
 
-Still out: JS bridge, horizontal scaling, advanced DataTable (selection/edit/group), compile-time reactive `let`, browser/general storage + Redis, exotic charts (radar/radial/composed/scatter). In: facade basics, timer / markdown / html / image, **real upload** (`POST /upload` + `ui.upload`), **tab/user storage**, **chart zoo** (`area` / `bar` / `line` / `pie`).
+Still out: JS bridge, horizontal scaling, DataTable row grouping, compile-time reactive `let`, browser/general storage + Redis, composed/scatter charts.
+
+In: facade basics, timer / markdown / html / image, **real upload** (`POST /upload` + `ui.upload`), **tab/user storage** (`ui.storage`), **chart zoo** (`area` / `bar` / `line` / `pie` / `radar` / `radial`), DataTable selection/edit, and recent ShadCN wires (radio, date, tooltip, accordion, avatar, skeleton, sheet, drawer).
 
 ## License
 
-Private / unpublished unless otherwise noted.
+Root workspace is private. Runtime packages (`@badui/cli`, `@badui/ui`, …) are packable via `bun run pack:publishable` (not necessarily published to npm yet). `@badui/client` stays private — its build is copied into `@badui/cli`.

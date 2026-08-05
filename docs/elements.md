@@ -14,6 +14,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `switch` | `switch` | ShadCN `Switch` |
 | `select` | `select` | ShadCN `Select` |
 | `radioGroup` | `radiogroup` | ShadCN `RadioGroup` |
+| `combobox` | `combobox` | ShadCN `Combobox` (searchable select) |
 | `date` | `date` | Calendar + Popover date picker (ISO `YYYY-MM-DD`) |
 | `slider` | `slider` | ShadCN `Slider` |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
@@ -62,7 +63,7 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `button` | `click` |
 | `input` / `textarea` | `input`, `change` |
 | `checkbox` / `switch` | `change` (and `input` if bound) |
-| `select` / `slider` / `radioGroup` / `date` | `change` (and `input` if bound for radio/date) |
+| `select` / `slider` / `radioGroup` / `combobox` / `date` | `change` (and `input` if bound for radio/combobox/date) |
 | `tabs` / `accordion` / `collapsible` | `change` |
 | `upload` | `upload` (file metadata + server `path`, not bytes) |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `primaryAction` |
@@ -80,6 +81,7 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `switch`
 - `select`
 - `radioGroup`
+- `combobox`
 - `date`
 - `slider`
 - `tabs`

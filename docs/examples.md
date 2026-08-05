@@ -19,6 +19,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/charts` | `ChartDemo.ts` | `areaChart` / `barChart` / `lineChart` / `pieChart` / `radarChart` / `radialChart` (+ interactive ranges, live refresh) |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` (+ radioGroup, date) |
+| `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
 | `/examples/overlays` | `OverlaysDemo.ts` | Sheet, drawer, accordion, collapsible, tooltip, avatar, skeleton |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 

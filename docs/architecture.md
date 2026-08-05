@@ -10,7 +10,7 @@
 | `@badui/core` | Element tree, session, page wrapper, reactive, protocol, GlobalState + PersistenceAdapter |
 | `@badui/persistence-file` | File-backed `PersistenceAdapter` for `GlobalState.configure` |
 | `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade |
-| `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …) |
+| `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@badui/cli` via `bun run build:client` / `pack:publishable`. |
 | `@badui/compiler` | Stub / retired (old Datastar `let` transform) |
 
 ## Runtime data flow
