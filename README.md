@@ -8,7 +8,8 @@ You write imperative `ui.*` on the server. BadUI owns a per-client element tree 
 
 ## Features
 
-- **NiceGUI-like API** — `ui.page`, `ui.run`, `ui.button`, `ui.refreshable`, `bindValue`, `setText`, `onClick`
+- **NiceGUI-like API** — `ui.page`, `ui.run(root?)`, `ui.button`, `ui.refreshable`, `bindValue`, `setText`, `onClick`
+- **`badui` CLI** — `badui hello.ts` or `badui ./pages --app`
 - **Server-owned element tree** — per-tab sessions; incremental WS patches
 - **React + ShadCN client** — Radix/Tailwind under the hood
 - **camelCase everywhere** on the public API and wire protocol
@@ -18,17 +19,22 @@ You write imperative `ui.*` on the server. BadUI owns a per-client element tree 
 
 ```bash
 bun install
-bun run build:client   # Vite → packages/client/dist
-bun run demo           # http://localhost:4000
+bun run build:client   # Vite → packages/client/dist (+ copy into @badui/cli)
+bun run badui hello.ts # http://localhost:3000
 
-# or
+# Demo app
+bun run demo           # http://localhost:4000
+bun run demo:cli       # same via `badui … --app`
 bun run dev            # build client + start demo
 ```
 
+Installed `@badui/cli` ships prebuilt client assets — consumers can `bunx badui hello.ts` without a monorepo `build:client`. In this repo, run `build:client` once so the workspace CLI / demo have assets to serve.
+
 ```typescript
+// hello.ts
 import { ui } from '@badui/ui';
 
-ui.page('/examples/counter', () => {
+ui.run(() => {
   let count = 0;
   const label = ui.label(`Count: ${count}`);
 
@@ -47,8 +53,6 @@ ui.page('/examples/counter', () => {
     });
   });
 });
-
-ui.run({ port: 4000, title: 'BadUI Demo' });
 ```
 
 ## Documentation
@@ -68,6 +72,7 @@ ui.run({ port: 4000, title: 'BadUI Demo' });
 | Package | Role |
 |---------|------|
 | `@badui/ui` | NiceGUI-style `ui` facade |
+| `@badui/cli` | `badui` runtime — run a file or page directory |
 | `@badui/core` | Element tree, session, reactive, protocol |
 | `@badui/components` | Element factories |
 | `@badui/client` | React + ShadCN renderer |
@@ -86,8 +91,10 @@ App (ui.page / ui.refreshable)
 
 | Command | Description |
 |---------|-------------|
-| `bun run build:client` | Build the React client |
+| `bun run build:client` | Build the React client (+ copy into `@badui/cli`) |
 | `bun run demo` | Start the demo server |
+| `bun run demo:cli` | Demo via `badui … --app` |
+| `bun run badui …` | CLI runtime |
 | `bun run dev` | Build client, then demo |
 | `bun test` | Run package tests |
 

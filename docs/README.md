@@ -8,7 +8,7 @@ You write imperative `ui.*` code on the server. BadUI owns a per-client element 
 
 | Doc | Description |
 |-----|-------------|
-| [Getting started](./getting-started.md) | Install, run the demo, create a page |
+| [Getting started](./getting-started.md) | Install, `badui` CLI, create a page |
 | [Concepts](./concepts.md) | Mental model: sessions, elements, patches, refreshable |
 | [API reference](./api.md) | `ui.*`, `Element` methods, `reactive`, helpers |
 | [Elements](./elements.md) | All element types and props |
@@ -23,18 +23,18 @@ You write imperative `ui.*` code on the server. BadUI owns a per-client element 
 
 ```bash
 bun install
-bun run build:client
-bun run demo
-# → http://localhost:4000
+bun run build:client   # monorepo: build + copy client into @badui/cli
+bun run badui hello.ts
+# → http://localhost:3000
 ```
 
+Published `@badui/cli` includes prebuilt client assets — no separate `build:client` for the CLI path after install.
+
 ```typescript
+// hello.ts
 import { ui } from '@badui/ui';
 
-// pages/home.ts
-export const pageMeta = { label: 'Home', icon: 'house', order: 0 };
-
-ui.page('/', () => {
+ui.run(() => {
   let count = 0;
   const label = ui.label(`Count: ${count}`);
 
@@ -55,16 +55,13 @@ ui.page('/', () => {
 });
 ```
 
-```typescript
-// main.ts
-await ui.loadPages(new URL('./pages', import.meta.url));
+Multi-page with shell:
 
-ui.run({
-  port: 4000,
-  title: 'My App',
-  app: { title: 'My App', nav: ui.navFromPages() },
-});
+```bash
+bun run badui ./pages --app --title "My App"
 ```
+
+Or library-style entry (`loadPages` + `ui.run({ app })`) — see [Getting started](./getting-started.md).
 
 ## Naming
 

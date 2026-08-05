@@ -5,13 +5,26 @@
 | Package | Role |
 |---------|------|
 | `@badui/ui` | App-facing `ui` object: factories, `page`, `loadPages`, `navFromPages`, `run` |
+| `@badui/cli` | `badui` binary: run a `.ts` file or page directory with sane defaults |
 | `@badui/components` | Thin `Element` factories (no HTML strings) |
 | `@badui/core` | Element tree, session, page wrapper, reactive, protocol, GlobalState + PersistenceAdapter |
+| `@badui/persistence-file` | File-backed `PersistenceAdapter` for `GlobalState.configure` |
 | `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade |
 | `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …) |
 | `@badui/compiler` | Stub / retired (old Datastar `let` transform) |
 
 ## Runtime data flow
+
+```
+badui <file|dir> ──► import / loadPages
+        │
+ui.run({ app? }) ──► setPageWrapper(app shell)
+        │
+        ▼
+BadUIServer ──HTTP──► SPA shell (index.html + assets)
+```
+
+Or library entry:
 
 ```
 ui.loadPages(dir) ──► ui.page registrations + pageMeta
@@ -45,7 +58,7 @@ BadUIServer ──HTTP──► SPA shell (index.html + assets)
 3. Page path change → destroy previous session, mount new path
 4. Socket close → `session.destroy()`
 
-Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `GlobalState` when you need a process-wide store. Optional `PersistenceAdapter` (configure at entrypoint) persists keys by default; `{ persist: false }` keeps a key in memory only. Persisted `get()` always reloads from the adapter.
+Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `GlobalState` when you need a process-wide store. Optional `PersistenceAdapter` (configure at entrypoint) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@badui/persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
 
 ## Extending the system
 

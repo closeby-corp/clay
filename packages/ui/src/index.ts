@@ -56,10 +56,12 @@ import {
   Element,
   RefreshableElement,
   page as corePage,
+  getPage,
   notify as notifyCore,
   setPageWrapper,
   type NotifyOptions,
   type NotifyType,
+  type PageFn,
   type PageOptions,
   type ToastPosition,
 } from '@badui/core';
@@ -92,6 +94,7 @@ export type {
   ToastPosition,
   PageMeta,
   PageOptions,
+  PageFn,
 };
 export { DataTableElement, DialogElement, loadPages, navFromPages, clearPageMeta };
 
@@ -220,13 +223,49 @@ export type RunConfig = BadUIServerConfig & {
   app?: AppProps;
 };
 
-export function run(config: RunConfig = {}): BadUIServer {
-  const { app: appProps, ...serverConfig } = config;
+let runCalled = false;
+
+/** Whether `ui.run` has been invoked in this process (used by the `badui` CLI). */
+export function wasRunCalled(): boolean {
+  return runCalled;
+}
+
+/** Test / CLI helper: clear the run-called flag. */
+export function resetRunState(): void {
+  runCalled = false;
+}
+
+/**
+ * Start the BadUI server.
+ *
+ * - `ui.run(config?)` — current pages + optional global shell
+ * - `ui.run(root, config?)` — NiceGUI-style root page: registers `/` if missing, then starts
+ */
+export function run(config?: RunConfig): BadUIServer;
+export function run(root: PageFn, config?: RunConfig): BadUIServer;
+export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {}): BadUIServer {
+  let root: PageFn | undefined;
+  let cfg: RunConfig;
+
+  if (typeof rootOrConfig === 'function') {
+    root = rootOrConfig;
+    cfg = config;
+  } else {
+    cfg = rootOrConfig ?? {};
+  }
+
+  if (root && !getPage('/')) {
+    corePage('/', root);
+  }
+
+  const { app: appProps, ...serverConfig } = cfg;
   if (appProps) {
     setPageWrapper((pageFn) => app(appProps, pageFn));
   } else {
     setPageWrapper(null);
   }
+
+  runCalled = true;
   const server = new BadUIServer(serverConfig);
   server.start();
   return server;

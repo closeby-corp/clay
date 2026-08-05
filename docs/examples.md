@@ -3,7 +3,7 @@
 Demo entry: [`apps/demo/src/main.ts`](../apps/demo/src/main.ts)  
 Pages: [`apps/demo/src/examples/`](../apps/demo/src/examples/) (auto-loaded via `ui.loadPages`)
 
-After `bun run build:client && bun run demo`, open http://localhost:4000.
+After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http://localhost:4000.
 
 ## Catalog
 
@@ -37,6 +37,13 @@ ui.run({
     nav: ui.navFromPages(),
   },
 });
+```
+
+Or via CLI (same pages + shell defaults):
+
+```bash
+bun run demo:cli
+# → badui apps/demo/src/examples --app -p 4000
 ```
 
 ```typescript
@@ -110,7 +117,11 @@ for (const key of Object.keys(form)) {
 
 ```typescript
 // main.ts (optional persistence)
-await GlobalState.configure({ persistence: myAdapter });
+import { createFilePersistence } from '@badui/persistence-file';
+
+await GlobalState.configure({
+  persistence: createFilePersistence({ dir: '.badui-data' }),
+});
 
 const messages = GlobalState.create<ChatMessage[]>('chatMessages', []);
 const online = GlobalState.create<string[]>('onlineUsers', [], { persist: false });

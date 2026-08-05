@@ -63,6 +63,11 @@ export class BadUIServer {
     };
   }
 
+  /** Bound listen port (after `start`), or configured port. */
+  get port(): number {
+    return this.server?.port ?? this.config.port;
+  }
+
   start(): ReturnType<typeof Bun.serve> {
     const { port, title, clientDir, cssPaths } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
@@ -166,7 +171,7 @@ export class BadUIServer {
       },
     });
 
-    console.log(`BadUI server listening on http://localhost:${port}`);
+    console.log(`BadUI server listening on http://localhost:${this.port}`);
     console.log(`Registered pages: ${getRegisteredPaths().join(', ') || '(none)'}`);
     if (cssPaths.length) {
       console.log(`Custom CSS: ${cssPaths.join(', ')}`);

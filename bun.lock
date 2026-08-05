@@ -20,6 +20,17 @@
         "@badui/ui": "workspace:*",
       },
     },
+    "packages/cli": {
+      "name": "@badui/cli",
+      "version": "0.1.0",
+      "bin": {
+        "badui": "./bin/badui",
+      },
+      "dependencies": {
+        "@badui/core": "workspace:*",
+        "@badui/ui": "workspace:*",
+      },
+    },
     "packages/clickhouse": {
       "name": "@badui/clickhouse",
       "version": "0.1.0",
@@ -106,6 +117,13 @@
         "@badui/duckdb": "workspace:*",
       },
     },
+    "packages/persistence-file": {
+      "name": "@badui/persistence-file",
+      "version": "0.1.0",
+      "dependencies": {
+        "@badui/core": "workspace:*",
+      },
+    },
     "packages/server": {
       "name": "@badui/server",
       "version": "0.1.0",
@@ -164,6 +182,8 @@
 
     "@babel/types": ["@babel/types@7.29.7", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA=="],
 
+    "@badui/cli": ["@badui/cli@workspace:packages/cli"],
+
     "@badui/clickhouse": ["@badui/clickhouse@workspace:packages/clickhouse"],
 
     "@badui/client": ["@badui/client@workspace:packages/client"],
@@ -177,6 +197,8 @@
     "@badui/duckdb": ["@badui/duckdb@workspace:packages/duckdb"],
 
     "@badui/kibana": ["@badui/kibana@workspace:packages/kibana"],
+
+    "@badui/persistence-file": ["@badui/persistence-file@workspace:packages/persistence-file"],
 
     "@badui/server": ["@badui/server@workspace:packages/server"],
 

@@ -50,9 +50,17 @@ Build primary `AppNavItem[]` from registered routes + collected `pageMeta` (labe
 export const pageMeta = { label: 'Charts', icon: 'chart-area', order: 90 };
 ```
 
-#### `ui.run(config?)`
+#### `ui.run(root?, config?)`
 
 Start the Bun server. Optional `app` sets a global shell wrapper for every page (unless `shell: false`).
+
+**Root overload** (NiceGUI-style single page): if `/` is not registered yet, `ui.run(() => { … })` registers that function as `/` then starts.
+
+```typescript
+ui.run(() => {
+  ui.label('Hello');
+});
+```
 
 ```typescript
 await ui.loadPages(new URL('./pages', import.meta.url));
@@ -78,7 +86,9 @@ ui.run({
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 | `app` | `AppProps` | | Global dashboard shell; wraps each page on mount |
 
-Returns `BadUIServer` with `.start()` / `.stop()` (`.start()` is already called by `ui.run`).
+Returns `BadUIServer` with `.start()` / `.stop()` / `.port` (`.start()` is already called by `ui.run`).
+
+Prefer the **`badui` CLI** for prototypes: `badui hello.ts` or `badui ./pages --app` (see [Getting started](./getting-started.md)).
 
 Custom CSS is linked as `/assets/custom-0.css`, … after `/assets/index.css`. Use **shadcn-style** theme variables (`--background`, `--primary`, `--sidebar`, `--radius`, …, plus optional `.dark { … }`). Runtime CSS cannot invent new Tailwind utility classes.
 
@@ -535,10 +545,13 @@ Returns an unsubscribe function.
 Process-wide shared state (all sessions). Optional pluggable persistence:
 
 ```typescript
-import { GlobalState, type PersistenceAdapter } from '@badui/core';
+import { GlobalState } from '@badui/core';
+import { createFilePersistence } from '@badui/persistence-file';
 
-// Entrypoint — plug a backend (DuckDB, Redis, …) once:
-await GlobalState.configure({ persistence: myAdapter });
+// Entrypoint — plug a backend once (file adapter ships with BadUI):
+await GlobalState.configure({
+  persistence: createFilePersistence({ dir: '.badui-data' }),
+});
 
 // Persists by default when an adapter is configured:
 const messages = GlobalState.create<Message[]>('chatMessages', []);
@@ -564,7 +577,8 @@ await messages.update((prev) => [...prev, newMessage]);
 | `.set(v)` / `.update(fn)` | `Promise<void>` — save when persisted |
 | `.subscribe(listener)` | Listen for changes |
 | `GlobalState.clearAll()` | Test helper (clears stores + adapter) |
-| `createMemoryPersistence()` | In-memory adapter for tests |
+| `createMemoryPersistence()` | In-memory adapter for tests (`@badui/core`) |
+| `createFilePersistence({ dir })` | File-backed adapter (`@badui/persistence-file`) |
 
 `PersistenceAdapter`:
 
@@ -574,15 +588,9 @@ type PersistenceAdapter = {
   save(key: string, json: string): Promise<void>;
   close?(): Promise<void>;
 };
-
-// Example in-memory adapter (also available as createMemoryPersistence):
-const myAdapter: PersistenceAdapter = {
-  async load(key) { /* … */ return null; },
-  async save(key, json) { /* … */ },
-};
 ```
 
-Ship DuckDB/Redis adapters in your app (or a future package) by implementing this interface; core only provides the contract and `createMemoryPersistence()` for tests.
+`@badui/persistence-file` stores one JSON text file per key under `dir`. Core also provides `createMemoryPersistence()` for tests. Implement the interface yourself for Redis or other backends.
 
 ---
 

@@ -1,0 +1,25 @@
+{
+  "name": "@badui/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "badui": "./bin/badui"
+  },
+  "exports": {
+    ".": "./src/main.ts"
+  },
+  "files": [
+    "bin",
+    "src",
+    "client-dist",
+    "package.json"
+  ],
+  "scripts": {
+    "copy-client": "bun scripts/copy-client.ts",
+    "prepack": "bun run copy-client"
+  },
+  "dependencies": {
+    "@badui/core": "workspace:*",
+    "@badui/ui": "workspace:*"
+  }
+}

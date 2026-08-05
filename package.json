@@ -6,10 +6,12 @@
     "apps/*"
   ],
   "scripts": {
-    "build:client": "bun run --cwd packages/client build",
+    "build:client": "bun run --cwd packages/client build && bun run --cwd packages/cli copy-client",
     "dev": "bun run build:client && bun apps/demo/src/main.ts",
     "demo": "bun apps/demo/src/main.ts",
-    "test": "bun test packages/core packages/ui packages/server packages/components packages/duckdb packages/kibana packages/clickhouse"
+    "demo:cli": "bun packages/cli/bin/badui apps/demo/src/examples --app -p 4000 --title \"BadUI Demo\"",
+    "badui": "bun packages/cli/bin/badui",
+    "test": "bun test packages/core packages/ui packages/server packages/components packages/cli packages/persistence-file packages/duckdb packages/kibana packages/clickhouse"
   },
   "devDependencies": {
     "@types/bun": "latest",

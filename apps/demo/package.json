@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "bun run --cwd ../../packages/client build && bun src/main.ts",
-    "start": "bun src/main.ts"
+    "start": "bun src/main.ts",
+    "cli": "bun ../../packages/cli/bin/badui ./src/examples --app -p 4000 --title \"BadUI Demo\""
   },
   "dependencies": {
     "@badui/core": "workspace:*",
