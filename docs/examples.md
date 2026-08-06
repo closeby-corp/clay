@@ -12,7 +12,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/` | `Home.ts` | `ui.hero`, `ui.icon`, `ui.link`, `ui.navigate`, `pageMeta` |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
-| `/examples/chat` | `Chat.ts` | `GlobalState`, async `get`/`set`, multi-session sync |
+| `/examples/chat` | `Chat.ts` | `ui.storage.app`, async `get`/`set`, multi-session sync |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload`, tab/user storage, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, row grouping, confirm/prompt/choose, toasts; also `ui.table(...).build()` |
@@ -116,18 +116,20 @@ for (const key of Object.keys(form)) {
 }
 ```
 
-## Pattern: shared chat (`GlobalState`)
+## Pattern: shared chat (`ui.storage.app`)
 
 ```typescript
 // main.ts (optional persistence)
 import { createFilePersistence } from '@badui/persistence-file';
+import { storage } from '@badui/core';
+// or: ui.run({ appStorageDir: '.badui-data' })
 
-await GlobalState.configure({
-  persistence: createFilePersistence({ dir: '.badui-data' }),
+storage.configure({
+  app: createFilePersistence({ dir: '.badui-data' }),
 });
 
-const messages = GlobalState.create<ChatMessage[]>('chatMessages', []);
-const online = GlobalState.create<string[]>('onlineUsers', [], { persist: false });
+const messages = ui.storage.app.create<ChatMessage[]>('chatMessages', []);
+const online = ui.storage.app.create<string[]>('onlineUsers', [], { persist: false });
 
 messages.subscribe(() => {
   void list.refresh();

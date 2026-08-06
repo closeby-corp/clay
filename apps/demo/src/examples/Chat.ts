@@ -1,4 +1,3 @@
-import { GlobalState } from '@badui/core';
 import { ui } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
 
@@ -16,15 +15,15 @@ interface ChatMessage {
 }
 
 ui.page('/examples/chat', () => {
-  const messages = GlobalState.create<ChatMessage[]>('chatMessages', []);
-  const onlineUsers = GlobalState.create<string[]>('onlineUsers', [], { persist: false });
+  const messages = ui.storage.app.create<ChatMessage[]>('chatMessages', []);
+  const onlineUsers = ui.storage.app.create<string[]>('onlineUsers', [], { persist: false });
 
   let messageList: ChatMessage[] = [];
   let onlineList: string[] = [];
 
   exampleFrame(() => {
     ui.column(() => {
-      exampleHeader(undefined, 'Shared messages via GlobalState across sessions.');
+      exampleHeader(undefined, 'Shared messages via ui.storage.app across sessions.');
 
       ui.card(
         { title: 'Room', description: 'Messages sync for every connected client.', gap: 4 },

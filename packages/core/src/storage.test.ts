@@ -8,6 +8,7 @@ import {
   runWithSession,
   setCurrentSession,
   storage,
+  type PersistenceAdapter,
 } from '@badui/core';
 
 beforeEach(() => {
@@ -50,7 +51,7 @@ describe('storage.user', () => {
 
   test('persists bag via adapter under user:<id>', async () => {
     const memory = createMemoryPersistence();
-    storage.configure({ persistence: memory });
+    storage.configure({ user: memory });
 
     const session = new ClientSession('/storage-test', () => {});
     session.userId = 'user-abc';
@@ -88,5 +89,147 @@ describe('storage.user', () => {
     } finally {
       setCurrentSession(null);
     }
+  });
+});
+
+describe('storage.app without adapter', () => {
+  test('create is memory-only; get is async', async () => {
+    const count = storage.app.create('count', 0);
+    expect(await count.get()).toBe(0);
+    await count.set(3);
+    expect(await count.get()).toBe(3);
+    await count.update((n) => n + 1);
+    expect(await count.get()).toBe(4);
+  });
+
+  test('same key returns same instance', () => {
+    const a = storage.app.create('x', 1);
+    const b = storage.app.create('x', 99);
+    expect(a).toBe(b);
+  });
+});
+
+describe('storage.app with persistence', () => {
+  test('defaults to persist when adapter configured', async () => {
+    const memory = createMemoryPersistence();
+    storage.configure({ app: memory });
+
+    const messages = storage.app.create<string[]>('chatMessages', []);
+    await messages.set(['hi']);
+    expect(await memory.load('chatMessages')).toBe(JSON.stringify(['hi']));
+  });
+
+  test('opt-out with persist: false does not save', async () => {
+    const memory = createMemoryPersistence();
+    storage.configure({ app: memory });
+
+    const online = storage.app.create<string[]>('online', [], { persist: false });
+    await online.set(['Ada']);
+    expect(await memory.load('online')).toBeNull();
+    expect(await online.get()).toEqual(['Ada']);
+  });
+
+  test('get reloads value written externally to the adapter', async () => {
+    const memory = createMemoryPersistence();
+    storage.configure({ app: memory });
+
+    const store = storage.app.create<number>('n', 0);
+    expect(await store.get()).toBe(0);
+
+    await memory.save('n', JSON.stringify(42));
+    expect(await store.get()).toBe(42);
+  });
+
+  test('get notifies subscribers when adapter value changes', async () => {
+    const memory = createMemoryPersistence();
+    storage.configure({ app: memory });
+
+    const store = storage.app.create<number>('watched', 1);
+    const seen: number[] = [];
+    store.subscribe((v) => seen.push(v));
+
+    await memory.save('watched', JSON.stringify(7));
+    await store.get();
+    expect(seen).toEqual([7]);
+  });
+
+  test('round-trip set then get via adapter', async () => {
+    const memory = createMemoryPersistence();
+    storage.configure({ app: memory });
+
+    const store = storage.app.create<{ a: number }>('obj', { a: 0 });
+    await store.set({ a: 5 });
+
+    storage.clearAll();
+    storage.configure({ app: memory });
+    const again = storage.app.create<{ a: number }>('obj', { a: 0 });
+    expect(await again.get()).toEqual({ a: 5 });
+  });
+
+  test('custom adapter load/save is used', async () => {
+    const writes: Array<{ key: string; json: string }> = [];
+    const adapter: PersistenceAdapter = {
+      async load(key) {
+        const hit = writes.findLast((w) => w.key === key);
+        return hit?.json ?? null;
+      },
+      async save(key, json) {
+        writes.push({ key, json });
+      },
+    };
+    storage.configure({ app: adapter });
+    const s = storage.app.create('k', 'init');
+    await s.set('next');
+    expect(writes).toEqual([{ key: 'k', json: '"next"' }]);
+    expect(await s.get()).toBe('next');
+  });
+});
+
+describe('storage.configure', () => {
+  test('partial configure does not clear the other adapter', async () => {
+    const userMem = createMemoryPersistence();
+    const appMem = createMemoryPersistence();
+
+    storage.configure({ user: userMem });
+    storage.configure({ app: appMem });
+
+    const session = new ClientSession('/storage-test', () => {});
+    session.userId = 'u-merge';
+    session.mount();
+
+    setCurrentSession(session);
+    try {
+      await storage.user.set('theme', 'dark');
+    } finally {
+      setCurrentSession(null);
+    }
+
+    const messages = storage.app.create<string[]>('chatMessages', []);
+    await messages.set(['hi']);
+
+    expect(await userMem.load('user:u-merge')).toBe(JSON.stringify({ theme: 'dark' }));
+    expect(await appMem.load('chatMessages')).toBe(JSON.stringify(['hi']));
+  });
+
+  test('single call with both adapters', async () => {
+    const userMem = createMemoryPersistence();
+    const appMem = createMemoryPersistence();
+    storage.configure({ user: userMem, app: appMem });
+
+    const session = new ClientSession('/storage-test', () => {});
+    session.userId = 'u-both';
+    session.mount();
+
+    setCurrentSession(session);
+    try {
+      await storage.user.set('a', 1);
+    } finally {
+      setCurrentSession(null);
+    }
+
+    await storage.app.create('k', 0).set(9);
+
+    expect(await userMem.load('user:u-both')).toBe(JSON.stringify({ a: 1 }));
+    expect(await appMem.load('k')).toBe('9');
   });
 });

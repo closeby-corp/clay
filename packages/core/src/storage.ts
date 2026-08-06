@@ -1,5 +1,31 @@
 import { getCurrentSession } from './context';
-import type { PersistenceAdapter } from './global-state';
+
+type Listener<T> = (value: T) => void;
+
+/** Pluggable KV backend for persisted storage keys (JSON text). */
+export type PersistenceAdapter = {
+  /** Read one key; `null` means missing. */
+  load(key: string): Promise<string | null>;
+  /** Write one key as JSON text. */
+  save(key: string, json: string): Promise<void>;
+  close?(): Promise<void>;
+};
+
+export type AppStoreCreateOptions = {
+  /**
+   * When an app adapter is configured, defaults to `true`.
+   * Pass `false` to keep the store memory-only.
+   * When no app adapter is configured, always memory-only.
+   */
+  persist?: boolean;
+};
+
+export type StorageConfigureOptions = {
+  /** Persist process-wide app stores (keys as-is). */
+  app?: PersistenceAdapter;
+  /** Persist per-user JSON bags (`user:<id>` keys). */
+  user?: PersistenceAdapter;
+};
 
 export type TabStorage = {
   get<T = unknown>(key: string): T | undefined;
@@ -17,13 +43,122 @@ export type UserStorage = {
   has(key: string): Promise<boolean>;
 };
 
-export type StorageConfigureOptions = {
-  /** Persist per-user JSON bags (`user:<id>` keys). */
-  persistence: PersistenceAdapter;
-};
-
+const appStores = new Map<string, AppStore<unknown>>();
+let appPersistence: PersistenceAdapter | null = null;
 let userPersistence: PersistenceAdapter | null = null;
 const memoryBags = new Map<string, Record<string, unknown>>();
+
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
+/** In-memory PersistenceAdapter for tests and simple embeds. */
+export function createMemoryPersistence(
+  initial?: Map<string, string> | Record<string, string>,
+): PersistenceAdapter {
+  const data = new Map<string, string>(
+    initial instanceof Map ? initial : Object.entries(initial ?? {}),
+  );
+  return {
+    async load(key: string) {
+      return data.has(key) ? data.get(key)! : null;
+    },
+    async save(key: string, json: string) {
+      data.set(key, json);
+    },
+  };
+}
+
+/** Process-wide typed store (all sessions). Created via `storage.app.create`. */
+export class AppStore<T> {
+  private value: T;
+  private listeners = new Set<Listener<T>>();
+  private readonly key: string;
+  private readonly shouldPersist: boolean;
+
+  private constructor(key: string, initial: T, shouldPersist: boolean) {
+    this.key = key;
+    this.value = initial;
+    this.shouldPersist = shouldPersist;
+  }
+
+  static create<T>(
+    key: string,
+    initial: T,
+    options: AppStoreCreateOptions = {},
+  ): AppStore<T> {
+    const existing = appStores.get(key) as AppStore<T> | undefined;
+    if (existing) return existing;
+
+    const shouldPersist = options.persist ?? appPersistence !== null;
+    const state = new AppStore(key, initial, shouldPersist);
+    appStores.set(key, state as AppStore<unknown>);
+    return state;
+  }
+
+  static clearAll(): void {
+    appStores.clear();
+  }
+
+  /**
+   * Read the value. Persisted stores always `load` from the adapter first
+   * so external writers are visible.
+   */
+  async get(): Promise<T> {
+    if (this.shouldPersist && appPersistence) {
+      try {
+        const json = await appPersistence.load(this.key);
+        if (json != null) {
+          const next = JSON.parse(json) as T;
+          if (!valuesEqual(this.value, next)) {
+            this.value = next;
+            this.notify(next);
+          } else {
+            this.value = next;
+          }
+        }
+      } catch (err) {
+        console.error(`[storage.app] load failed for "${this.key}"`, err);
+      }
+    }
+    return this.value;
+  }
+
+  async set(value: T): Promise<void> {
+    this.value = value;
+    this.notify(value);
+    await this.persist(value);
+  }
+
+  async update(fn: (prev: T) => T): Promise<void> {
+    await this.set(fn(this.value));
+  }
+
+  subscribe(listener: Listener<T>): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notify(value: T): void {
+    for (const listener of [...this.listeners]) {
+      listener(value);
+    }
+  }
+
+  private async persist(value: T): Promise<void> {
+    if (!this.shouldPersist || !appPersistence) return;
+    try {
+      await appPersistence.save(this.key, JSON.stringify(value));
+    } catch (err) {
+      console.error(`[storage.app] save failed for "${this.key}"`, err);
+    }
+  }
+}
 
 function tabApi(): TabStorage {
   return {
@@ -115,10 +250,11 @@ const userApi: UserStorage = {
 };
 
 /**
- * Lightweight session storage (NiceGUI-ish `app.storage.tab` / `user`).
+ * Lightweight session storage (NiceGUI-ish `app.storage.tab` / `user` / `app`).
  *
  * - **tab** — in-memory `Map` on the current `ClientSession` (survives `refreshable` rebuilds; cleared on session destroy)
  * - **user** — JSON bag keyed by client `userId` (localStorage), optionally file-backed via `configure`
+ * - **app** — process-wide typed stores shared across sessions; optionally file-backed via `configure`
  */
 export const storage = {
   get tab(): TabStorage {
@@ -126,12 +262,37 @@ export const storage = {
   },
   user: userApi,
 
-  configure(options: StorageConfigureOptions): void {
-    userPersistence = options.persistence;
+  app: {
+    create<T>(
+      key: string,
+      initial: T,
+      options?: AppStoreCreateOptions,
+    ): AppStore<T> {
+      return AppStore.create(key, initial, options);
+    },
+    /** Test helper: clear app stores only (keeps adapters). */
+    clearAll(): void {
+      AppStore.clearAll();
+    },
   },
 
-  /** Test helper: clear adapter + in-memory bags. */
+  /**
+   * Configure persistence adapters. Passing only `app` or only `user`
+   * leaves the other adapter unchanged.
+   */
+  configure(options: StorageConfigureOptions): void {
+    if (options.app !== undefined) {
+      appPersistence = options.app;
+    }
+    if (options.user !== undefined) {
+      userPersistence = options.user;
+    }
+  },
+
+  /** Test helper: clear app stores, user bags, and both adapters. */
   clearAll(): void {
+    AppStore.clearAll();
+    appPersistence = null;
     userPersistence = null;
     memoryBags.clear();
   },

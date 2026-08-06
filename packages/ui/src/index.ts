@@ -491,7 +491,7 @@ export function timer(
   return timerCore(interval, callback, options);
 }
 
-/** Tab + user storage (NiceGUI-ish). Prefer `ui.storage`. */
+/** Tab + user + app storage (NiceGUI-ish). Prefer `ui.storage`. */
 export const storage = storageCore;
 
 export function refreshable(fn: () => void): RefreshableElement {

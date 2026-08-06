@@ -24,6 +24,12 @@ export type BadUIServerConfig = {
    * Pass `false` to skip file persistence (in-memory user bags only).
    */
   userStorageDir?: string | false;
+  /**
+   * Directory for process-wide app stores (`storage.app`).
+   * Absolute or relative to `process.cwd()`. Default: `false` (memory-only).
+   * Pass a string to enable file persistence for app stores.
+   */
+  appStorageDir?: string | false;
 };
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
@@ -70,6 +76,7 @@ type ResolvedConfig = {
   cssPaths: string[];
   uploadDir: string;
   userStorageDir: string | false;
+  appStorageDir: string | false;
 };
 
 export class BadUIServer {
@@ -90,12 +97,22 @@ export class BadUIServer {
               typeof config.userStorageDir === 'string' ? config.userStorageDir : undefined,
               DEFAULT_USER_STORAGE_DIR,
             ),
+      appStorageDir:
+        typeof config.appStorageDir === 'string'
+          ? resolveDir(config.appStorageDir, config.appStorageDir)
+          : false,
     };
 
-    if (this.config.userStorageDir !== false) {
-      storage.configure({
-        persistence: createFilePersistence({ dir: this.config.userStorageDir }),
-      });
+    const app =
+      this.config.appStorageDir !== false
+        ? createFilePersistence({ dir: this.config.appStorageDir })
+        : undefined;
+    const user =
+      this.config.userStorageDir !== false
+        ? createFilePersistence({ dir: this.config.userStorageDir })
+        : undefined;
+    if (app || user) {
+      storage.configure({ app, user });
     }
   }
 

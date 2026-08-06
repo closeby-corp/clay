@@ -12,15 +12,16 @@ function keyToFilename(key: string): string {
 }
 
 /**
- * File-backed PersistenceAdapter: one JSON text file per GlobalState key.
+ * File-backed PersistenceAdapter: one JSON text file per key.
  *
  * @example
  * ```ts
- * import { GlobalState } from '@badui/core';
+ * import { storage } from '@badui/core';
  * import { createFilePersistence } from '@badui/persistence-file';
  *
- * await GlobalState.configure({
- *   persistence: createFilePersistence({ dir: '.badui-data' }),
+ * storage.configure({
+ *   app: createFilePersistence({ dir: '.badui-data' }),
+ *   user: createFilePersistence({ dir: '.badui-user-data' }),
  * });
  * ```
  */

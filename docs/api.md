@@ -4,7 +4,7 @@ All public APIs use **camelCase**. Import the facade from `@badui/ui` for app co
 
 ```typescript
 import { ui } from '@badui/ui';
-import { reactive, subscribe, notify, navigate, GlobalState } from '@badui/core';
+import { reactive, subscribe, notify, navigate, storage } from '@badui/core';
 ```
 
 ---
@@ -864,8 +864,47 @@ Lightweight NiceGUI-style storage (no browser/general/Redis yet):
 |-----|--------|-------------|
 | `ui.storage.tab.get/set/delete/clear/has` | Current WebSocket session | In-memory; survives `refreshable` rebuilds; cleared on disconnect |
 | `ui.storage.user.get/set/delete/clear/has` | Stable `userId` from client localStorage (+ cookie) | JSON bag via `createFilePersistence` (default `.badui-user-data`) |
+| `ui.storage.app.create(key, initial, options?)` | Process-wide typed store (all sessions) | Optional file adapter via `appStorageDir` / `storage.configure({ app })` |
 
-User storage requires the client to send `userId` on `hello` (built-in client does this). Configure via `ui.run({ userStorageDir })` or `userStorageDir: false` for memory-only. Upload directory: `ui.run({ uploadDir: '.badui-uploads' })`.
+User storage requires the client to send `userId` on `hello` (built-in client does this). Configure via `ui.run({ userStorageDir, appStorageDir })` — user defaults to `.badui-user-data`; app defaults to memory-only (`false`). Upload directory: `ui.run({ uploadDir: '.badui-uploads' })`.
+
+```typescript
+const messages = ui.storage.app.create<Message[]>('chatMessages', []);
+const online = ui.storage.app.create<string[]>('onlineUsers', [], { persist: false });
+
+messages.subscribe((list) => {
+  // update UI for this session
+});
+
+await messages.set([...(await messages.get()), newMessage]);
+await messages.update((prev) => [...prev, newMessage]);
+```
+
+`get()` is always async. For **persisted** stores it calls `adapter.load(key)` on every read so other processes’ writes are visible; then updates memory and notifies subscribers if the value changed. `set` / `update` write memory immediately and `await adapter.save` when persisted.
+
+| Method | Description |
+|--------|-------------|
+| `storage.configure({ app?, user? })` | Set persistence adapters (partial updates leave the other unchanged) |
+| `storage.app.create(key, initial, options?)` | Get or create named store; `{ persist?: boolean }` |
+| `.get()` | `Promise<T>` — load from adapter when persisted |
+| `.set(v)` / `.update(fn)` | `Promise<void>` — save when persisted |
+| `.subscribe(listener)` | Listen for changes |
+| `storage.app.clearAll()` | Test helper (clears app stores only) |
+| `storage.clearAll()` | Test helper (clears app stores + user bags + both adapters) |
+| `createMemoryPersistence()` | In-memory adapter for tests (`@badui/core`) |
+| `createFilePersistence({ dir })` | File-backed adapter (`@badui/persistence-file`) |
+
+`PersistenceAdapter`:
+
+```typescript
+type PersistenceAdapter = {
+  load(key: string): Promise<string | null>;
+  save(key: string, json: string): Promise<void>;
+  close?(): Promise<void>;
+};
+```
+
+`@badui/persistence-file` stores one JSON text file per key under `dir`. Core also provides `createMemoryPersistence()` for tests. Implement the interface yourself for Redis or other backends.
 
 ---
 
@@ -991,58 +1030,6 @@ subscribe(form, 'name', () => {
 
 Returns an unsubscribe function.
 
-### `GlobalState`
-
-Process-wide shared state (all sessions). Optional pluggable persistence:
-
-```typescript
-import { GlobalState } from '@badui/core';
-import { createFilePersistence } from '@badui/persistence-file';
-
-// Entrypoint — plug a backend once (file adapter ships with BadUI):
-await GlobalState.configure({
-  persistence: createFilePersistence({ dir: '.badui-data' }),
-});
-
-// Persists by default when an adapter is configured:
-const messages = GlobalState.create<Message[]>('chatMessages', []);
-
-// Opt out of persistence for ephemeral keys:
-const online = GlobalState.create<string[]>('onlineUsers', [], { persist: false });
-
-messages.subscribe((list) => {
-  // update UI for this session
-});
-
-await messages.set([...(await messages.get()), newMessage]);
-await messages.update((prev) => [...prev, newMessage]);
-```
-
-`get()` is always async. For **persisted** stores it calls `adapter.load(key)` on every read so other processes’ writes are visible; then updates memory and notifies subscribers if the value changed. `set` / `update` write memory immediately and `await adapter.save` when persisted.
-
-| Method | Description |
-|--------|-------------|
-| `GlobalState.configure({ persistence })` | Set the process-wide `PersistenceAdapter` |
-| `GlobalState.create(key, initial, options?)` | Get or create named store; `{ persist?: boolean }` |
-| `.get()` | `Promise<T>` — load from adapter when persisted |
-| `.set(v)` / `.update(fn)` | `Promise<void>` — save when persisted |
-| `.subscribe(listener)` | Listen for changes |
-| `GlobalState.clearAll()` | Test helper (clears stores + adapter) |
-| `createMemoryPersistence()` | In-memory adapter for tests (`@badui/core`) |
-| `createFilePersistence({ dir })` | File-backed adapter (`@badui/persistence-file`) |
-
-`PersistenceAdapter`:
-
-```typescript
-type PersistenceAdapter = {
-  load(key: string): Promise<string | null>;
-  save(key: string, json: string): Promise<void>;
-  close?(): Promise<void>;
-};
-```
-
-`@badui/persistence-file` stores one JSON text file per key under `dir`. Core also provides `createMemoryPersistence()` for tests. Implement the interface yourself for Redis or other backends.
-
 ---
 
 ## Helpers (`@badui/core`)
@@ -1092,13 +1079,13 @@ import {
   setPageWrapper,
   reactive,
   subscribe,
-  GlobalState,
+  storage,
+  AppStore,
   createMemoryPersistence,
   notify,
   navigate,
   download,
   clipboard,
-  storage,
   timer,
   TimerHandle,
 } from '@badui/core';

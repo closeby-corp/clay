@@ -7,8 +7,8 @@
 | `@badui/ui` | App-facing `ui` object: factories, `page`, `loadPages`, `navFromPages`, `run` |
 | `@badui/cli` | `badui` binary: run a `.ts` file or page directory with sane defaults |
 | `@badui/components` | Thin `Element` factories (no HTML strings) |
-| `@badui/core` | Element tree, session, page wrapper, reactive, protocol, GlobalState + PersistenceAdapter |
-| `@badui/persistence-file` | File-backed `PersistenceAdapter` for `GlobalState.configure` |
+| `@badui/core` | Element tree, session, page wrapper, reactive, protocol, `storage` (`tab` / `user` / `app`) + PersistenceAdapter |
+| `@badui/persistence-file` | File-backed `PersistenceAdapter` for `storage.configure` |
 | `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade |
 | `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@badui/cli` via `bun run build:client` / `pack:publishable`. |
 | `@badui/compiler` | Stub / retired (old Datastar `let` transform) |
@@ -60,7 +60,7 @@ BadUIServer ──HTTP──► SPA shell (index.html + assets)
 
 On the client, a durable WebSocket + sticky React key for `type: 'app'` keeps sidebar/header mounted across navigate when chrome identity matches; only the inset tree remounts.
 
-Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `GlobalState` when you need a process-wide store. Optional `PersistenceAdapter` (configure at entrypoint) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@badui/persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
+Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `ui.storage.app` when you need a process-wide store. Optional `PersistenceAdapter` (via `storage.configure({ app })` or `ui.run({ appStorageDir })`) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@badui/persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
 
 ## Extending the system
 

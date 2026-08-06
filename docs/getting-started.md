@@ -241,8 +241,8 @@ Use `css` to inject your own `globals.css` after the built client styles — ove
 apps/demo/           Demo pages + server entry (`loadPages` + `ui.run({ app })`)
 packages/cli/         `badui` binary — file/dir launcher + shipped client-dist
 packages/ui/         NiceGUI-style ui facade (`loadPages`, `navFromPages`, `run`)
-packages/core/       Element tree, session, page wrapper, reactive, GlobalState
-packages/persistence-file/  File-backed PersistenceAdapter for GlobalState
+packages/core/       Element tree, session, page wrapper, reactive, storage (tab/user/app)
+packages/persistence-file/  File-backed PersistenceAdapter for storage.configure
 packages/components/ Element factories (button, input, dataTable, areaChart / barChart / lineChart / pieChart / radarChart / radialChart, …)
 packages/client/     React + ShadCN renderer (Sonner toasts, BoundDataTable, …) — private, not published
 packages/server/     Bun HTTP + WebSocket

@@ -25,13 +25,6 @@ export {
   type PageWrapper,
 } from './page';
 export { reactive, subscribe } from './reactive';
-export {
-  GlobalState,
-  createMemoryPersistence,
-  type PersistenceAdapter,
-  type GlobalStateCreateOptions,
-  type GlobalStateConfigureOptions,
-} from './global-state';
 export { generateId, resetIdSequence } from './utils';
 export {
   notify,
@@ -44,6 +37,10 @@ export {
 export { timer, TimerHandle, type TimerOptions } from './timer';
 export {
   storage,
+  AppStore,
+  createMemoryPersistence,
+  type PersistenceAdapter,
+  type AppStoreCreateOptions,
   type TabStorage,
   type UserStorage,
   type StorageConfigureOptions,

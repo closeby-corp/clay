@@ -32,7 +32,7 @@ ui.page('/examples/todo', () => {
 - Register routes with `ui.page(path, fn)` (or `page` from `@badui/core`).
 - On `hello`, the server creates a session, runs the page builder, and sends `mount`.
 - State in local variables (`let count = 0`) is **per session** (per tab), not shared.
-- Use `GlobalState` for process-wide shared data (e.g. chat messages). Configure a `PersistenceAdapter` at the app entrypoint to persist stores (default on when configured; opt out with `{ persist: false }`). `await state.get()` reloads from the adapter when persisted.
+- Use `ui.storage.app` for process-wide shared data (e.g. chat messages). Configure a `PersistenceAdapter` via `storage.configure({ app })` or `ui.run({ appStorageDir })` to persist stores (default on when configured; opt out with `{ persist: false }`). `await state.get()` reloads from the adapter when persisted.
 
 ## Elements
 
