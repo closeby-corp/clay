@@ -235,5 +235,62 @@ ui.page('/examples/charts', () => {
           });
         },
       );
+
+      exampleSection(
+        'Structured chart API',
+        'ui.chart.* mode builders — same Element output as the props APIs above (optional sugar).',
+      );
+      ui.chart
+        .categories(monthly)
+        .x('month')
+        .series(['mobile', 'desktop'])
+        .area({ title: 'Traffic (structured)', stacked: true, height: 220 });
+
+      ui.row(() => {
+        ui.chart.pie
+          .fromRows(
+            [
+              { browser: 'Chrome', visitors: 275 },
+              { browser: 'Safari', visitors: 200 },
+              { browser: 'Firefox', visitors: 187 },
+              { browser: 'Edge', visitors: 173 },
+              { browser: 'Other', visitors: 90 },
+            ],
+            { name: 'browser', value: 'visitors' },
+          )
+          .title('Browser share (structured)')
+          .height(260)
+          .build();
+
+        ui.chart.pie
+          .fromMetrics(
+            { mobile: 320, desktop: 480, tablet: 120 },
+            [
+              { key: 'mobile', label: 'Mobile', color: 'var(--chart-2)' },
+              { key: 'desktop', label: 'Desktop', color: 'var(--chart-1)' },
+              { key: 'tablet', label: 'Tablet', color: 'var(--chart-3)' },
+            ],
+          )
+          .title('Traffic mix (donut)')
+          .height(260)
+          .donut(60);
+      }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
+
+      ui.chart.radial.stackedGauge(
+        { mobile: 320, desktop: 480, tablet: 120 },
+        [
+          { key: 'mobile', label: 'Mobile', color: 'var(--chart-2)' },
+          { key: 'desktop', label: 'Desktop', color: 'var(--chart-1)' },
+          { key: 'tablet', label: 'Tablet', color: 'var(--chart-3)' },
+        ],
+        {
+          title: 'Gauge (structured)',
+          description: 'Bundled center + arc + radius.',
+          height: 260,
+          center: { value: 920, label: 'Visitors' },
+          arc: { end: 180 },
+          radius: { inner: 80, outer: 110 },
+        },
+      );
     }, { gap: 6 });
 });

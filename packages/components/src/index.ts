@@ -628,3 +628,25 @@ export {
   type UploadProps,
   type UploadedFile,
 } from './upload';
+
+export {
+  chart,
+  table,
+  TableBuilder,
+  type CategoriesChartBuilder,
+  type TimeSeriesChartBuilder,
+  type PieRowsBuilder,
+  type PieMetricsBuilder,
+  type RadialRowsBuilder,
+  type RadarBuilder,
+  type SeriesInput,
+  type ChartChromeOpts,
+  type PieRowKeys,
+  type RadialRowKeys,
+  type StackedGaugeOpts,
+  type AreaTerminalOpts,
+  type BarTerminalOpts,
+  type LineTerminalOpts,
+  type PageSizeOptions,
+  type GroupByOptions,
+} from './builders';

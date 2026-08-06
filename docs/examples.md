@@ -15,8 +15,8 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/chat` | `Chat.ts` | `GlobalState`, async `get`/`set`, multi-session sync |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload`, tab/user storage, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
-| `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, row grouping, confirm/prompt/choose, toasts |
-| `/examples/charts` | `ChartDemo.ts` | `areaChart` / `barChart` / `lineChart` / `pieChart` / `radarChart` / `radialChart` (+ interactive ranges, live refresh) |
+| `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, row grouping, confirm/prompt/choose, toasts; also `ui.table(...).build()` |
+| `/examples/charts` | `ChartDemo.ts` | `areaChart` / `barChart` / `lineChart` / `pieChart` / `radarChart` / `radialChart` (+ interactive ranges, live refresh); also `ui.chart.*` |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | `ui.alert`, `ui.spinner`, `ui.progress`, `ui.separator`, `ui.timer` |
 | `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` (+ switch, combobox, radioGroup, date) |

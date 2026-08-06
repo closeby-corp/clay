@@ -164,5 +164,22 @@ ui.page('/examples/datatable', () => {
         },
         { pageSize: 0, searchable: true, searchPlaceholder: 'Search config…' },
       );
+
+      exampleSection(
+        'Structured table API',
+        'ui.table(data) staged builder — same DataTableElement as the props blob above (optional sugar).',
+      );
+      ui.table(tasks.slice(0, 6))
+        .id('id')
+        .columns([
+          { key: 'id', header: 'ID' },
+          { key: 'title', header: 'Title' },
+          { key: 'status', header: 'Status' },
+          { key: 'owner', header: 'Owner' },
+        ])
+        .search('Search…')
+        .groupBy('status')
+        .pageSize(5, { options: [5, 10] })
+        .build();
     }, { gap: 6 });
 });

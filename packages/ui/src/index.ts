@@ -47,6 +47,8 @@ import {
   html as htmlFactory,
   image as imageFactory,
   upload as uploadFactory,
+  chart as chartNamespace,
+  table as tableFactory,
   type ButtonProps,
   type LabelProps,
   type InputProps,
@@ -113,7 +115,15 @@ import {
   type ImageProps,
   type UploadProps,
   type UploadedFile,
+  type SeriesInput,
+  type ChartChromeOpts,
+  type PieRowKeys,
+  type RadialRowKeys,
+  type StackedGaugeOpts,
+  type PageSizeOptions,
+  type GroupByOptions,
   DataTableElement,
+  TableBuilder,
   DialogElement,
   SheetElement,
   DrawerElement,
@@ -196,6 +206,13 @@ export type {
   ImageProps,
   UploadProps,
   UploadedFile,
+  SeriesInput,
+  ChartChromeOpts,
+  PieRowKeys,
+  RadialRowKeys,
+  StackedGaugeOpts,
+  PageSizeOptions,
+  GroupByOptions,
   NotifyOptions,
   NotifyType,
   ToastPosition,
@@ -206,6 +223,7 @@ export type {
 };
 export {
   DataTableElement,
+  TableBuilder,
   DialogElement,
   SheetElement,
   DrawerElement,
@@ -330,6 +348,14 @@ export function stat(items: StatItem[], props?: { className?: string }): Element
 export function dataTable(data?: unknown, props?: DataTableProps): DataTableElement {
   return dataTableFactory(data, props);
 }
+
+/** Staged DataTable builder — optional sugar over `ui.dataTable`. */
+export function table(data?: unknown): TableBuilder {
+  return tableFactory(data);
+}
+
+/** Mode-first chart builders — optional sugar over `ui.areaChart` / `pieChart` / etc. */
+export const chart = chartNamespace;
 
 export function areaChart(props: AreaChartProps): Element {
   return areaChartFactory(props);
@@ -557,6 +583,8 @@ export const ui = {
   upload,
   stat,
   dataTable,
+  table,
+  chart,
   areaChart,
   barChart,
   lineChart,

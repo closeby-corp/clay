@@ -487,6 +487,44 @@ ui.radialChart({
 });
 ```
 
+#### Structured charts (`ui.chart`)
+
+Optional sugar over the props APIs above. Mode-first builders compile to the same `Element` types — legacy `ui.areaChart` / `ui.pieChart` / etc. remain fully supported.
+
+| Entry | Purpose | Compiles to |
+|-------|---------|-------------|
+| `ui.chart.categories(data)` | Cartesian (category axis) | `areaChart` / `barChart` / `lineChart` |
+| `ui.chart.timeSeries(data)` | ISO-date x-axis + 7d/30d/90d filter | `areaChart` / `lineChart` with `interactive: true` |
+| `ui.chart.pie.fromRows(data, keys)` | Many rows, label/value fields | `pieChart` with `nameKey`/`valueKey` |
+| `ui.chart.pie.fromMetrics(row, series)` | One aggregated row | `pieChart` with `series` |
+| `ui.chart.radial.fromRows(data, keys)` | Multi-row radial bars | `radialChart` with `nameKey`/`valueKey` |
+| `ui.chart.radial.stackedGauge(row, series, gauge)` | Gauge recipe | `radialChart` with bundled defaults |
+| `ui.chart.radar(data, angleKey)` | Polar categories | `radarChart` |
+
+```typescript
+ui.chart.categories(monthly)
+  .x('month')
+  .series(['mobile', 'desktop']) // shorthand → { key, label }
+  .area({ title: 'Traffic', stacked: true });
+
+ui.chart.timeSeries(visitors).x('date').series(series).area({ title: 'Visitors' });
+
+ui.chart.pie.fromRows(rows, { name: 'browser', value: 'visitors' }).title('Share').build();
+ui.chart.pie.fromMetrics({ mobile: 320, desktop: 480 }, series).donut(60);
+
+ui.chart.radial.stackedGauge(
+  { mobile: 320, desktop: 480 },
+  series,
+  {
+    center: { value: 800, label: 'Visitors' },
+    arc: { end: 180 },
+    radius: { inner: 80, outer: 110 },
+  },
+);
+
+ui.chart.radar(monthly, 'month').series(series).title('Skills').build();
+```
+
 #### `ui.dataTable(data, props?)`
 
 Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows`.
@@ -604,6 +642,36 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
 Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `pageSize` / `action` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
+
+#### Structured tables (`ui.table`)
+
+Optional sugar over `ui.dataTable`. Staged methods bundle related props; `.build()` calls `dataTable(data, props)` and returns the same `DataTableElement`. Legacy props APIs remain supported.
+
+| Method | Bundles |
+|--------|---------|
+| `.id(keyField)` | `keyField` |
+| `.columns(cols)` | `columns` |
+| `.search(placeholder?)` | `searchable: true`, `searchPlaceholder` |
+| `.pageSize(n, options?)` | `pageSize`, `pageSizeOptions` |
+| `.groupBy(key, opts?)` | `groupBy`, `defaultCollapsed` |
+| `.views(items, defaultId?)` | `views`, `defaultView` |
+| `.rowActions(actions, onAction)` | `actions`, `onAction` |
+| `.detail(fn)` | `detail` (use `detailTrigger` on columns) |
+| `.selectable(onChange?)` | `selectable`, `onSelectionChange` |
+| `.reorderable(onReorder?)` | `reorderable`, `onReorder` |
+| `.export(filename?)` | `exportable: true`, `exportFilename` |
+| `.build()` | returns `DataTableElement` |
+
+```typescript
+ui.table(tasks)
+  .id('id')
+  .columns([...])
+  .search('Search tasks…')
+  .groupBy('status')
+  .pageSize(8, { options: [5, 8, 10, 20] })
+  .rowActions(actions, handleAction)
+  .build();
+```
 
 #### `ui.dialog(props, fn)` / `ui.dialog(fn, props?)`
 
