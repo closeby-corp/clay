@@ -31,7 +31,7 @@ describe('imperative helpers', () => {
     page('/imperative-test', () => {});
   });
 
-  test('confirm resolves true on OK', async () => {
+  test('confirm resolves true on confirm (alertdialog)', async () => {
     const messages: ServerMessage[] = [];
     const session = new ClientSession('/imperative-test', (m) => messages.push(m));
     session.mount();
@@ -39,21 +39,23 @@ describe('imperative helpers', () => {
     const resultPromise = runWithSession(session, () => confirm('Sure?'));
     await Promise.resolve();
 
-    const ok = findButton(session.root!, 'OK');
-    expect(ok).toBeTruthy();
-    await runWithSession(session, () => ok!.handleEvent('click'));
+    const dlg = findByType(session.root!, 'alertdialog')[0];
+    expect(dlg).toBeTruthy();
+    expect(dlg!.props.description).toBe('Sure?');
+    await runWithSession(session, () => dlg!.handleEvent('confirm'));
     expect(await resultPromise).toBe(true);
   });
 
-  test('confirm resolves false on Cancel', async () => {
+  test('confirm resolves false on close (alertdialog)', async () => {
     const session = new ClientSession('/imperative-test', () => {});
     session.mount();
 
     const resultPromise = runWithSession(session, () => confirm('Sure?'));
     await Promise.resolve();
 
-    const cancel = findButton(session.root!, 'Cancel');
-    await runWithSession(session, () => cancel!.handleEvent('click'));
+    const dlg = findByType(session.root!, 'alertdialog')[0];
+    expect(dlg).toBeTruthy();
+    await runWithSession(session, () => dlg!.handleEvent('close'));
     expect(await resultPromise).toBe(false);
   });
 

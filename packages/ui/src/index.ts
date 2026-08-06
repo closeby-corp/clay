@@ -34,6 +34,9 @@ import {
   hero as heroFactory,
   card as cardFactory,
   dialog as dialogFactory,
+  alertDialog as alertDialogFactory,
+  dropdownMenu as dropdownMenuFactory,
+  breadcrumb as breadcrumbFactory,
   sheet as sheetFactory,
   drawer as drawerFactory,
   tabs as tabsFactory,
@@ -93,6 +96,11 @@ import {
   type ChartSeries,
   type CardProps,
   type DialogProps,
+  type AlertDialogProps,
+  type DropdownMenuProps,
+  type DropdownItemOptions,
+  type BreadcrumbItem,
+  type BreadcrumbProps,
   type SheetProps,
   type SheetSide,
   type DrawerProps,
@@ -125,6 +133,8 @@ import {
   DataTableElement,
   TableBuilder,
   DialogElement,
+  AlertDialogElement,
+  DropdownMenuElement,
   SheetElement,
   DrawerElement,
   TabsElement,
@@ -142,6 +152,7 @@ import {
   clipboard as clipboardCore,
   timer as timerCore,
   storage as storageCore,
+  theme as themeCore,
   setPageWrapper,
   type NotifyOptions,
   type NotifyType,
@@ -149,6 +160,7 @@ import {
   type PageOptions,
   type ToastPosition,
   type TimerOptions,
+  type ThemeMode,
   TimerHandle,
 } from '@badui/core';
 import { BadUIServer, type BadUIServerConfig } from '@badui/server';
@@ -173,6 +185,11 @@ export type {
   RadialChartProps,
   RadialChartSeries,
   DialogProps,
+  AlertDialogProps,
+  DropdownMenuProps,
+  DropdownItemOptions,
+  BreadcrumbItem,
+  BreadcrumbProps,
   SheetProps,
   SheetSide,
   DrawerProps,
@@ -216,6 +233,7 @@ export type {
   NotifyOptions,
   NotifyType,
   ToastPosition,
+  ThemeMode,
   PageMeta,
   PageOptions,
   PageFn,
@@ -225,6 +243,8 @@ export {
   DataTableElement,
   TableBuilder,
   DialogElement,
+  AlertDialogElement,
+  DropdownMenuElement,
   SheetElement,
   DrawerElement,
   TabsElement,
@@ -421,6 +441,26 @@ export function dialog(a: any, b?: any): DialogElement {
   return dialogFactory(a, b);
 }
 
+export function alertDialog(props?: AlertDialogProps): AlertDialogElement {
+  return alertDialogFactory(props);
+}
+
+export function dropdownMenu(
+  fn: (m: DropdownMenuElement) => void,
+  props?: DropdownMenuProps,
+): DropdownMenuElement;
+export function dropdownMenu(
+  props: DropdownMenuProps,
+  fn: (m: DropdownMenuElement) => void,
+): DropdownMenuElement;
+export function dropdownMenu(a: any, b?: any): DropdownMenuElement {
+  return dropdownMenuFactory(a, b);
+}
+
+export function breadcrumb(items: BreadcrumbItem[], props?: BreadcrumbProps): Element {
+  return breadcrumbFactory(items, props);
+}
+
 export function sheet(fn: (s: SheetElement) => void, props?: SheetProps): SheetElement;
 export function sheet(props: SheetProps, fn: (s: SheetElement) => void): SheetElement;
 export function sheet(a: any, b?: any): SheetElement {
@@ -493,6 +533,9 @@ export function timer(
 
 /** Tab + user + app storage (NiceGUI-ish). Prefer `ui.storage`. */
 export const storage = storageCore;
+
+/** Server-driven appearance (`light` | `dark` | `system`). */
+export const theme = themeCore;
 
 export function refreshable(fn: () => void): RefreshableElement {
   return new RefreshableElement(fn);
@@ -598,6 +641,9 @@ export const ui = {
   card,
   app,
   dialog,
+  alertDialog,
+  dropdownMenu,
+  breadcrumb,
   sheet,
   drawer,
   tabs,
@@ -612,6 +658,7 @@ export const ui = {
   clipboard,
   timer,
   storage,
+  theme,
   refreshable,
   page,
   run,

@@ -14,7 +14,7 @@
     "demo": "bun apps/demo/src/main.ts",
     "demo:cli": "bun packages/cli/bin/badui apps/demo/src/examples --app -p 4000 --title \"BadUI Demo\"",
     "badui": "bun packages/cli/bin/badui",
-    "test": "bun test packages/core packages/ui packages/server packages/components packages/cli packages/persistence-file packages/duckdb packages/kibana packages/clickhouse packages/client/src/stickyShell.test.ts"
+    "test": "bun test packages/core packages/ui packages/server packages/components packages/cli packages/persistence-file packages/duckdb packages/kibana packages/clickhouse packages/client/src"
   },
   "devDependencies": {
     "@types/bun": "latest",

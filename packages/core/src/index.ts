@@ -34,6 +34,7 @@ export {
   type NotifyType,
   type ToastPosition,
 } from './helpers';
+export { theme, setTheme, getTheme, type ThemeMode } from './theme';
 export { timer, TimerHandle, type TimerOptions } from './timer';
 export {
   storage,

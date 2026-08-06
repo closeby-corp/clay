@@ -698,6 +698,57 @@ dlg.open();
 
 Client emits `close` on backdrop click or Escape. The server always clears `open` on that event.
 
+#### `ui.alertDialog(props?)`
+
+Server-owned confirm / destructive modal. Returns an `AlertDialogElement` with `open()`, `close()`, and `setOpen(boolean)`.
+
+```typescript
+const danger = ui.alertDialog({
+  title: 'Delete item?',
+  description: 'This cannot be undone.',
+  confirmLabel: 'Delete',
+  confirmVariant: 'destructive',
+  onConfirm: () => { /* … */ },
+});
+danger.open();
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | | Heading |
+| `description` | `string` | | Body copy |
+| `confirmLabel` | `string` | `'OK'` | Confirm button |
+| `cancelLabel` | `string` | `'Cancel'` | Cancel button |
+| `confirmVariant` | button variant | `'default'` | Confirm button style |
+| `open` | `boolean` | `false` | Visibility |
+| `onConfirm` | `() => void` | | Confirm click |
+| `onClose` | `() => void` | | Cancel / Escape / backdrop |
+
+`ui.confirm(...)` uses this element under the hood.
+
+#### `ui.dropdownMenu(props, fn)` / `ui.dropdownMenu(fn, props?)`
+
+ShadCN dropdown. Children: `m.item(value, label, opts?)` and `m.separator()`.
+
+```typescript
+ui.dropdownMenu({ label: 'Actions', variant: 'outline' }, (m) => {
+  m.item('edit', 'Edit', { onSelect: () => {} });
+  m.separator();
+  m.item('delete', 'Delete', { variant: 'destructive', onSelect: () => {} });
+});
+```
+
+#### `ui.breadcrumb(items, props?)`
+
+```typescript
+ui.breadcrumb([
+  { label: 'Home', href: '/' },
+  { label: 'Settings' },
+]);
+```
+
+Items with `href` use SPA `pushState` (same as `ui.link`). The last item (or any without `href`) renders as the current page.
+
 #### `ui.sheet(props, fn)` / `ui.sheet(fn, props?)`
 
 Server-owned side panel (parallel to dialog). Returns a `SheetElement` with `open()`, `close()`, and `setOpen(boolean)`.
@@ -820,13 +871,15 @@ onClick: async () => {
 
 | Helper | Returns | Notes |
 |--------|---------|-------|
-| `ui.confirm(message, options?)` | `Promise<boolean>` | Cancel / Escape → `false` |
+| `ui.confirm(message, options?)` | `Promise<boolean>` | Alert dialog; Cancel / Escape → `false` |
 | `ui.prompt(message, options?)` | `Promise<string \| null>` | Cancel → `null` |
 | `ui.choose(message, choices, options?)` | `Promise<string \| null>` | `choices` as strings or `{ value, label }` |
 | `ui.notify(message, typeOrOptions?)` | `void` | ShadCN Sonner toast; types `info\|success\|warning\|error` |
 | `ui.navigate(path)` | `void` | Client SPA navigate + same-WS `hello` remount (sticky `app` chrome) |
 | `ui.download(filename, mime, content)` | `void` | Trigger browser download |
 | `ui.clipboard(content)` | `void` | Write text to clipboard |
+| `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
+| `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |
 | `ui.timer(interval, callback, options?)` | `TimerHandle` | Session-scoped timer; `interval` in **seconds**; `{ once? }`; `.activate()` / `.deactivate()` / `.cancel()` |
 | `ui.upload(props?)` | `Element` | Multipart HTTP upload; see below |
 | `ui.storage.tab` | | Per-WS-session in-memory map |

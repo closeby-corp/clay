@@ -8,8 +8,9 @@ All fields are **camelCase**. Transport: single WebSocket at `/ws`.
 2. Client opens `ws://host/ws` (or `wss://`)
 3. Client sends `{ op: "hello", path: "/examples/todo" }`
 4. Server creates `ClientSession`, runs the page builder, replies `{ op: "mount", sessionId, tree }`
-5. Interaction continues with `event` ↔ `patch` (plus optional `notify` / `navigate`)
+5. Interaction continues with `event` ↔ `patch` (plus optional `notify` / `navigate` / `theme`)
 
+On unexpected socket close, the client reconnects with exponential backoff (500ms → 10s), shows a sticky “Disconnected — reconnecting…” toast, and re-sends `hello` with the current path after open. Matching `app` chrome stays mounted across remounts.
 ## Client → server
 
 ### `hello`
@@ -133,6 +134,18 @@ Client triggers a file download via a temporary Blob URL.
 ```
 
 Client writes `content` with `navigator.clipboard.writeText` (shows an error toast on failure).
+
+### `theme`
+
+```json
+{ "op": "theme", "theme": "dark" }
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `theme` | `light\|dark\|system` | Applied via next-themes; persisted under `badui-theme` |
+
+Sent by `ui.theme.set(...)`.
 
 ### `error`
 

@@ -30,6 +30,7 @@ export type ServerMessage =
   | { op: 'dismissNotify'; id: string }
   | { op: 'download'; filename: string; mime: string; content: string }
   | { op: 'clipboard'; content: string }
+  | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
   | { op: 'error'; message: string };
 
 export type ClientMessage =

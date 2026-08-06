@@ -13,11 +13,41 @@ ui.page('/examples/feedback', () => {
 
   exampleFrame(() => {
     ui.column(() => {
-      exampleHeader(undefined, 'Alerts, spinner, progress, and separators.');
+      exampleHeader(undefined, 'Alerts, spinner, progress, separators, and theme.');
 
       exampleSection('Alerts', 'Default and destructive variants.');
       ui.alert('Heads up — your session is synced over WebSocket.');
       ui.alert('Something went wrong while saving.', { variant: 'destructive' });
+
+      ui.separator();
+
+      exampleSection('Appearance', 'Server-driven theme via ui.theme.set.');
+      ui.row(() => {
+        ui.button('Light', {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => {
+            ui.theme.set('light');
+            ui.notify('Theme: light', 'info');
+          },
+        });
+        ui.button('Dark', {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => {
+            ui.theme.set('dark');
+            ui.notify('Theme: dark', 'info');
+          },
+        });
+        ui.button('System', {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => {
+            ui.theme.set('system');
+            ui.notify('Theme: system', 'info');
+          },
+        });
+      }, { gap: 2 });
 
       ui.separator();
 

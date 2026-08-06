@@ -478,6 +478,26 @@ export {
 export { dialog, DialogElement, type DialogProps } from './dialog';
 
 export {
+  alertDialog,
+  AlertDialogElement,
+  type AlertDialogProps,
+} from './alert-dialog';
+
+export {
+  dropdownMenu,
+  DropdownMenuElement,
+  type DropdownMenuProps,
+  type DropdownItemOptions,
+  type DropdownMenuVariant,
+} from './dropdown-menu';
+
+export {
+  breadcrumb,
+  type BreadcrumbItem,
+  type BreadcrumbProps,
+} from './breadcrumb';
+
+export {
   sheet,
   SheetElement,
   type SheetProps,

@@ -12,11 +12,14 @@ export function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  const banner =
+    connected ? null : tree ? 'Reconnecting…' : 'Connecting…';
+
   return (
     <>
-      {!connected && (
+      {banner && (
         <div className="fixed left-4 top-4 z-50 rounded-md bg-muted px-3 py-1.5 text-xs text-muted-foreground">
-          Connecting…
+          {banner}
         </div>
       )}
       {error && (

@@ -178,6 +178,10 @@ export class ClientSession {
     this.send({ op: 'clipboard', content });
   }
 
+  setTheme(theme: 'light' | 'dark' | 'system'): void {
+    this.send({ op: 'theme', theme });
+  }
+
   navigate(path: string): void {
     this.send({ op: 'navigate', path });
   }

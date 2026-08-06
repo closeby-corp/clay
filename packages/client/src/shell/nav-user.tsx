@@ -2,9 +2,13 @@ import {
   BellIcon,
   CreditCardIcon,
   LogOutIcon,
+  MonitorIcon,
+  MoonIcon,
   MoreVerticalIcon,
+  SunIcon,
   UserCircleIcon,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -22,6 +26,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import type { ShellUser } from './types';
+import { BADUI_THEME_KEY, type ThemeMode } from '../themeBridge';
 
 function initials(name: string) {
   return name
@@ -34,7 +39,17 @@ function initials(name: string) {
 
 export function NavUser({ user }: { user: ShellUser }) {
   const { isMobile } = useSidebar();
+  const { setTheme } = useTheme();
   const fallback = initials(user.name) || 'BU';
+
+  const pickTheme = (theme: ThemeMode) => {
+    try {
+      localStorage.setItem(BADUI_THEME_KEY, theme);
+    } catch {
+      // ignore
+    }
+    setTheme(theme);
+  };
 
   return (
     <SidebarMenu>
@@ -87,6 +102,22 @@ export function NavUser({ user }: { user: ShellUser }) {
               <DropdownMenuItem>
                 <BellIcon />
                 Notifications
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Appearance</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onSelect={() => pickTheme('light')}>
+                <SunIcon />
+                Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => pickTheme('dark')}>
+                <MoonIcon />
+                Dark
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => pickTheme('system')}>
+                <MonitorIcon />
+                System
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

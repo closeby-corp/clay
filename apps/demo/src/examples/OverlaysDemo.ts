@@ -13,8 +13,14 @@ ui.page('/examples/overlays', () => {
       () => {
         exampleHeader(
           undefined,
-          'Dialog, sheet, drawer, tabs, accordion, tooltip, avatar, skeleton.',
+          'Dialog, alert dialog, dropdown, breadcrumb, sheet, drawer, tabs, accordion.',
         );
+
+        ui.breadcrumb([
+          { label: 'Examples', href: '/' },
+          { label: 'Overlays', href: '/examples/overlays' },
+          { label: 'Current' },
+        ]);
 
         ui.row(
           () => {
@@ -27,6 +33,17 @@ ui.page('/examples/overlays', () => {
           },
           { gap: 3 },
         );
+
+        ui.dropdownMenu({ label: 'Actions', variant: 'outline' }, (m) => {
+          m.item('edit', 'Edit', {
+            onSelect: () => ui.notify('Edit selected', 'info'),
+          });
+          m.separator();
+          m.item('delete', 'Delete', {
+            variant: 'destructive',
+            onSelect: () => ui.notify('Delete selected', 'warning'),
+          });
+        });
 
         ui.tabs({ value: 'sheet' }, (t) => {
           t.tab('sheet', 'Sheet', () => {
@@ -78,6 +95,16 @@ ui.page('/examples/overlays', () => {
           },
         );
 
+        const danger = ui.alertDialog({
+          title: 'Delete item?',
+          description: 'This cannot be undone. Continues with the destructive confirm pattern.',
+          confirmLabel: 'Delete',
+          cancelLabel: 'Keep',
+          confirmVariant: 'destructive',
+          open: false,
+          onConfirm: () => ui.notify('Deleted', 'success'),
+        });
+
         const filters = ui.sheet({ title: 'Filters', description: 'Side panel', side: 'right' }, () => {
           ui.label('Pick filters, then close.');
           ui.button('Apply', { onClick: () => filters.close() });
@@ -91,6 +118,10 @@ ui.page('/examples/overlays', () => {
         ui.row(
           () => {
             ui.button('Open dialog', { onClick: () => confirm.open() });
+            ui.button('Open alert', {
+              variant: 'destructive',
+              onClick: () => danger.open(),
+            });
             ui.button('Open sheet', { variant: 'outline', onClick: () => filters.open() });
             ui.button('Open drawer', { variant: 'outline', onClick: () => menu.open() });
           },

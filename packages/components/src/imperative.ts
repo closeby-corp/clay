@@ -1,4 +1,5 @@
 import { Element, getCurrentSession, withParent } from '@badui/core';
+import { AlertDialogElement } from './alert-dialog';
 import { DialogElement } from './dialog';
 
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
@@ -59,14 +60,14 @@ function makeInput(props: {
   });
 }
 
-function detachDialog(dlg: DialogElement): void {
+function detachElement(el: Element): void {
   const session = getCurrentSession();
-  const parent = dlg.parent;
+  const parent = el.parent;
   if (parent) {
-    parent.children = parent.children.filter((c) => c.id !== dlg.id);
-    dlg.parent = null;
+    parent.children = parent.children.filter((c) => c.id !== el.id);
+    el.parent = null;
   }
-  dlg.destroy();
+  el.destroy();
   session?.syncRootChildren();
   session?.flushPatches();
 }
@@ -84,11 +85,39 @@ function runEphemeralDialog<T>(
       if (settled) return;
       settled = true;
       dlg.close();
-      detachDialog(dlg);
+      detachElement(dlg);
       resolve(value);
     };
 
     let dlg!: DialogElement;
+    withParent(session.root, () => {
+      dlg = build(settle);
+    });
+
+    dlg.open();
+    session.syncRootChildren();
+    session.flushPatches();
+  });
+}
+
+function runEphemeralAlertDialog(
+  fallback: boolean,
+  build: (settle: (value: boolean) => void) => AlertDialogElement,
+): Promise<boolean> {
+  const session = getCurrentSession();
+  if (!session?.root) return Promise.resolve(fallback);
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const settle = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      dlg.close();
+      detachElement(dlg);
+      resolve(value);
+    };
+
+    let dlg!: AlertDialogElement;
     withParent(session.root, () => {
       dlg = build(settle);
     });
@@ -105,28 +134,18 @@ export function confirm(message: string, options: ConfirmOptions = {}): Promise<
   const cancelLabel = options.cancelLabel ?? 'Cancel';
   const confirmVariant = options.confirmVariant ?? 'default';
 
-  return runEphemeralDialog(false, (settle) => {
-    const dlg = new DialogElement({
+  return runEphemeralAlertDialog(false, (settle) =>
+    new AlertDialogElement({
       title,
+      description: message,
+      confirmLabel,
+      cancelLabel,
+      confirmVariant,
       open: false,
+      onConfirm: () => settle(true),
       onClose: () => settle(false),
-    });
-    withParent(dlg, () => {
-      makeLabel(message, 'text-muted-foreground');
-      const actions = new Element('row', { gap: 2 });
-      withParent(actions, () => {
-        makeButton(cancelLabel, {
-          variant: 'outline',
-          onClick: () => settle(false),
-        });
-        makeButton(confirmLabel, {
-          variant: confirmVariant,
-          onClick: () => settle(true),
-        });
-      });
-    });
-    return dlg;
-  });
+    }),
+  );
 }
 
 export function prompt(message: string, options: PromptOptions = {}): Promise<string | null> {

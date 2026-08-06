@@ -120,7 +120,7 @@ ui.input({
 });
 ```
 
-The client keeps local optimistic state for inputs, textareas, checkboxes, selects, and sliders so typing/toggling feels instant while the server confirms.
+The client keeps local optimistic state for inputs, textareas, checkboxes, switches, selects, radio groups, comboboxes, dates, sliders, tabs, accordions, collapsibles, and DataTable filter inputs so typing/toggling feels instant while the server confirms.
 
 ## Layout context
 

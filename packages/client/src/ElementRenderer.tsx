@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { lazy, Suspense, useRef, useState, Fragment, type CSSProperties, type ReactNode } from 'react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
 import { elementReactKey } from './stickyShell';
@@ -27,6 +27,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import {
   Select,
   SelectContent,
@@ -477,6 +502,157 @@ function BoundDialog({
         <div className="flex flex-col gap-4">{children}</div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function BoundAlertDialog({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const open = !!props.open;
+  const confirming = useRef(false);
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          if (confirming.current) {
+            confirming.current = false;
+            return;
+          }
+          if (hasEvent(props, 'close')) emit(id, 'close');
+        }
+      }}
+    >
+      <AlertDialogContent className={className} style={asStyle(style)}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{String(props.title ?? 'Confirm')}</AlertDialogTitle>
+          {props.description ? (
+            <AlertDialogDescription>{String(props.description)}</AlertDialogDescription>
+          ) : null}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{String(props.cancelLabel ?? 'Cancel')}</AlertDialogCancel>
+          <AlertDialogAction
+            variant={(props.confirmVariant as any) ?? 'default'}
+            onClick={() => {
+              confirming.current = true;
+              if (hasEvent(props, 'confirm')) emit(id, 'confirm');
+            }}
+          >
+            {String(props.confirmLabel ?? 'OK')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function BoundDropdownMenu({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  void id;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={(props.variant as any) ?? 'outline'}
+          className={className}
+          style={asStyle(style)}
+        >
+          {String(props.label ?? 'Menu')}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {children.map((child) => {
+          if (child.type === 'dropdownseparator') {
+            return <DropdownMenuSeparator key={child.id} />;
+          }
+          if (child.type !== 'dropdownitem') return null;
+          return (
+            <DropdownMenuItem
+              key={child.id}
+              variant={child.props.variant === 'destructive' ? 'destructive' : 'default'}
+              disabled={!!child.props.disabled}
+              onSelect={() => {
+                if (hasEvent(child.props, 'select')) {
+                  emit(child.id, 'select', child.props.value);
+                }
+              }}
+            >
+              {String(child.props.label ?? child.props.value ?? '')}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function BoundBreadcrumb({
+  props,
+  className,
+  style,
+}: {
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+}) {
+  const items = (props.items as Array<{ label: string; href?: string }>) ?? [];
+  return (
+    <Breadcrumb className={className} style={asStyle(style)}>
+      <BreadcrumbList>
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          const href = item.href;
+          const showLink = !!href && !isLast;
+          return (
+            <Fragment key={`${item.label}-${index}`}>
+              {index > 0 ? <BreadcrumbSeparator /> : null}
+              <BreadcrumbItem>
+                {showLink ? (
+                  <BreadcrumbLink
+                    href={href}
+                    onClick={(e) => {
+                      if (href.startsWith('/')) {
+                        e.preventDefault();
+                        window.history.pushState({}, '', href);
+                        window.dispatchEvent(new PopStateEvent('popstate'));
+                      }
+                    }}
+                  >
+                    {item.label}
+                  </BreadcrumbLink>
+                ) : (
+                  <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
+          );
+        })}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }
 
@@ -1048,6 +1224,26 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           {renderChildren()}
         </BoundDialog>
       );
+
+    case 'alertdialog':
+      return (
+        <BoundAlertDialog id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'dropdownmenu':
+      return (
+        <BoundDropdownMenu
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'breadcrumb':
+      return <BoundBreadcrumb props={props} className={className} style={style} />;
 
     case 'sheet':
       return (

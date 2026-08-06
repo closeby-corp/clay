@@ -49,6 +49,9 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `card` | `card` | ShadCN `Card` |
 | `app` | `app` | Dashboard shell (sidebar + inset main); usually via `ui.run({ app })` |
 | `dialog` | `dialog` | Modal overlay (server-owned `open`) |
+| `alertDialog` | `alertdialog` | Confirm/destructive modal (server-owned `open`) |
+| `dropdownMenu` | `dropdownmenu` (+ `dropdownitem` / `dropdownseparator`) | ShadCN dropdown; item `select` events |
+| `breadcrumb` | `breadcrumb` | ShadCN breadcrumb; `href` crumbs use SPA `pushState` |
 | `sheet` | `sheet` | Side panel overlay (server-owned `open`) |
 | `drawer` | `drawer` | Vaul drawer overlay (server-owned `open`) |
 | `refreshable` | `refreshable` | Fragment-like wrapper (`contents`) |
@@ -67,7 +70,8 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `tabs` / `accordion` / `collapsible` | `change` |
 | `upload` | `upload` (file metadata + server `path`, not bytes) |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
-| `dialog` / `sheet` / `drawer` | `close` |
+| `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
+| `dropdownMenu` item | `select` |
 
 Prop names use camelCase (`onClick` → event name `click`).
 
