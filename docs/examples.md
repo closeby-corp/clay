@@ -12,16 +12,16 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/` | `Home.ts` | `ui.hero`, `ui.icon`, `ui.link`, `ui.navigate`, `pageMeta` |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
-| `/examples/chat` | `Chat.ts` | `ui.storage.app`, async `get`/`set`, multi-session sync |
-| `/examples/upload` | `FileUpload.ts` | `ui.upload`, tab/user storage, `ui.download`, `ui.clipboard` |
+| `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
+| `/examples/upload` | `FileUpload.ts` | `ui.upload`, `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
-| `/examples/datatable` | `DataTableDemo.ts` | `value`/`render` cells, row grouping, confirm/prompt/choose, toasts; also `ui.table(...).build()` |
-| `/examples/charts` | `ChartDemo.ts` | `areaChart` / `barChart` / `lineChart` / `pieChart` / `radarChart` / `radialChart` (+ interactive ranges, live refresh); also `ui.chart.*` |
+| `/examples/datatable` | `DataTableDemo.ts` | Primary `ui.table(...).build()`; badges, grouping, confirm/prompt/choose; props `dataTable` sample |
+| `/examples/charts` | `ChartDemo.ts` | Primary `ui.chart.*` (categories / timeSeries / pie / radar / radial); props API sample |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
-| `/examples/feedback` | `FeedbackDemo.ts` | `ui.alert`, `ui.spinner`, `ui.progress`, `ui.separator`, `ui.timer` |
-| `/examples/form-demo` | `FormDemo.ts` | Full form + live summary via `subscribe` (+ switch, combobox, radioGroup, date) |
+| `/examples/feedback` | `FeedbackDemo.ts` | `ui.alert`, `ui.spinner`, `ui.progress`, `ui.separator`, `ui.timer`, `ui.theme.set` |
+| `/examples/form-demo` | `FormDemo.ts` | Full form + `ui.validate` / `.setError` submit gate + live summary via `subscribe` |
 | `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
-| `/examples/overlays` | `OverlaysDemo.ts` | Dialog, sheet, drawer, tabs, accordion, collapsible, tooltip, avatar, skeleton |
+| `/examples/overlays` | `OverlaysDemo.ts` | `ui.breadcrumb`, `ui.dropdownMenu`, `ui.alertDialog`, dialog, sheet, drawer, tabs, accordion |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
 Each page file exports optional `pageMeta` (`label`, `icon`, `order`) for `ui.navFromPages()`.
@@ -100,15 +100,27 @@ ui.button('Add', {
 });
 ```
 
-## Pattern: form + live summary
+## Pattern: form + live summary + validate
 
 ```typescript
 import { ui, reactive, subscribe } from '@badui/ui';
 
 const form = reactive({ name: '', terms: false });
 
-ui.input({ label: 'Name' }).bindValue(form, 'name');
-ui.checkbox({ label: 'Accept terms' }).bindValue(form, 'terms');
+const nameInput = ui.input({ label: 'Name' }).bindValue(form, 'name');
+const termsBox = ui.checkbox({ label: 'Accept terms' }).bindValue(form, 'terms');
+
+ui.button('Submit', {
+  onClick: () => {
+    const ok = ui.validate([
+      { el: nameInput, check: () => (form.name.trim() ? null : 'Name is required') },
+      { el: termsBox, check: () => (form.terms ? null : 'Accept the terms') },
+    ]);
+    if (!ok) return;
+    nameInput.setError(null);
+    termsBox.setError(null);
+  },
+});
 
 const summary = ui.refreshable(() => {
   ui.label(`Name: ${form.name || '—'}`);

@@ -28,20 +28,25 @@ ui.page('/examples/form-demo', () => {
 
     exampleFrame(() => {
       ui.column(() => {
-        exampleHeader(undefined, 'ShadCN controls with bindValue and a live summary.');
+        exampleHeader(
+          undefined,
+          'bindValue + live summary; submit gated by ui.validate (sets .setError on fields).',
+        );
 
       ui.card(
         {
           title: 'Profile',
-          description: 'All fields sync optimistically to the server session.',
+          description:
+            'Name, email, and terms are validated on Submit. Reset (and a successful submit) clear field errors.',
           gap: 4,
         },
         () => {
-          ui.input({ label: 'Name', placeholder: 'Enter your name' }).bindValue(form, 'name');
-          ui.input({ label: 'Email', type: 'email', placeholder: 'you@example.com' }).bindValue(
-            form,
-            'email',
-          );
+          const nameInput = ui
+            .input({ label: 'Name', placeholder: 'Enter your name' })
+            .bindValue(form, 'name');
+          const emailInput = ui
+            .input({ label: 'Email', type: 'email', placeholder: 'you@example.com' })
+            .bindValue(form, 'email');
           ui.input({ label: 'Age', type: 'number', value: form.age }).bindValue(form, 'age');
           ui.slider({
             min: 1,
@@ -66,7 +71,9 @@ ui.page('/examples/form-demo', () => {
             form,
             'notifications',
           );
-          ui.checkbox({ label: 'Accept terms', checked: form.terms }).bindValue(form, 'terms');
+          const termsBox = ui
+            .checkbox({ label: 'Accept terms', checked: form.terms })
+            .bindValue(form, 'terms');
 
           ui.separator();
 
@@ -119,17 +126,45 @@ ui.page('/examples/form-demo', () => {
             'color',
           );
 
+          const clearFieldErrors = () => {
+            nameInput.setError(null);
+            emailInput.setError(null);
+            termsBox.setError(null);
+          };
+
           ui.row(() => {
             ui.button('Submit', {
               onClick: () => {
-                if (!form.terms) {
-                  ui.notify('Please accept the terms', 'warning');
+                const ok = ui.validate([
+                  {
+                    el: nameInput,
+                    check: () => (form.name.trim() ? null : 'Name is required'),
+                  },
+                  {
+                    el: emailInput,
+                    check: () => (/@/.test(form.email) ? null : 'Enter a valid email'),
+                  },
+                  {
+                    el: termsBox,
+                    check: () => (form.terms ? null : 'Accept the terms'),
+                  },
+                ]);
+                if (!ok) {
+                  ui.notify('Fix the highlighted fields', 'warning');
                   return;
                 }
-                ui.notify(`Thanks, ${form.name || 'friend'}!`, {
+                clearFieldErrors();
+                ui.notify(`Thanks, ${form.name}!`, {
                   type: 'success',
                   description: 'Your response was recorded.',
                 });
+              },
+            });
+            ui.button('Force email error', {
+              variant: 'outline',
+              onClick: () => {
+                emailInput.setError('Manual .setError example — clear via Reset or a valid Submit');
+                ui.notify('Called emailInput.setError(…)', 'info');
               },
             });
             ui.button('Reset', {
@@ -150,6 +185,7 @@ ui.page('/examples/form-demo', () => {
                 form.dueDate = '';
                 form.bio = '';
                 form.color = '#3b82f6';
+                clearFieldErrors();
               },
             });
           }, { gap: 2 });

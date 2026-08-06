@@ -25,6 +25,7 @@ export {
   type PageWrapper,
 } from './page';
 export { reactive, subscribe } from './reactive';
+export { validate, type FieldRule } from './validate';
 export { generateId, resetIdSequence } from './utils';
 export {
   notify,

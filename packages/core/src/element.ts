@@ -142,6 +142,18 @@ export class Element {
     return this;
   }
 
+  /** Set or clear field-level validation error (`props.error`). Empty/null clears. */
+  setError(message: string | null | undefined): this {
+    if (message == null || message === '') {
+      delete this.props.error;
+      this.queuePropsPatch({ error: null });
+    } else {
+      this.props.error = message;
+      this.queuePropsPatch({ error: message });
+    }
+    return this;
+  }
+
   getValue(): unknown {
     return this.props.value;
   }

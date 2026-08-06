@@ -241,6 +241,8 @@ Trusted server HTML into a container (same XSS trust model as NiceGUI — only p
 
 Form controls support `bindValue(obj, key)` for two-way binding.
 
+Optional `error?: string` on form controls shows an invalid state on the client (`aria-invalid` + message under the field). Empty/omitted means valid. Prefer `.setError()` / `ui.validate` at submit time over baking errors into the initial props.
+
 #### `ui.input(props?)`
 
 | Prop | Type | Default |
@@ -249,6 +251,7 @@ Form controls support `bindValue(obj, key)` for two-way binding.
 | `placeholder` | `string` | `''` |
 | `type` | `string` | `'text'` (e.g. `email`, `number`, `color`, `password`) |
 | `label` | `string` | |
+| `error` | `string` | |
 | `disabled` | `boolean` | `false` |
 | `className` | `string` | |
 | `onInput` | `(value: string) => void` | |
@@ -261,6 +264,7 @@ Form controls support `bindValue(obj, key)` for two-way binding.
 | `value` | `string` | `''` |
 | `placeholder` | `string` | |
 | `label` | `string` | |
+| `error` | `string` | |
 | `rows` | `number` | `3` |
 | `disabled` | `boolean` | `false` |
 | `onInput` / `onChange` | `(value: string) => void` | |
@@ -271,6 +275,7 @@ Form controls support `bindValue(obj, key)` for two-way binding.
 |------|------|---------|
 | `checked` | `boolean` | `false` (stored as element `value`) |
 | `label` | `string` | |
+| `error` | `string` | |
 | `disabled` | `boolean` | `false` |
 | `onChange` | `(checked: boolean) => void` | |
 
@@ -282,6 +287,7 @@ Bound boolean toggle (optimistic like checkbox).
 |------|------|---------|
 | `checked` | `boolean` | `false` (stored as element `value`) |
 | `label` | `string` | |
+| `error` | `string` | |
 | `disabled` | `boolean` | `false` |
 | `size` | `'sm' \| 'default'` | `'default'` |
 | `onChange` | `(checked: boolean) => void` | |
@@ -293,6 +299,7 @@ Bound boolean toggle (optimistic like checkbox).
 | `options` | `{ value: string; label: string }[]` | yes |
 | `value` | `string` | defaults to first option |
 | `label` | `string` | |
+| `error` | `string` | |
 | `disabled` | `boolean` | |
 | `onChange` | `(value: string) => void` | |
 
@@ -305,6 +312,7 @@ Exclusive choice (optimistic like select). Supports `bindValue`.
 | `options` | `{ value: string; label: string }[]` | yes |
 | `value` | `string` | defaults to first option |
 | `label` | `string` | |
+| `error` | `string` | |
 | `disabled` | `boolean` | |
 | `orientation` | `'horizontal' \| 'vertical'` | `'vertical'` |
 | `onChange` | `(value: string) => void` | |
@@ -319,6 +327,7 @@ Searchable select for large option lists (optimistic like select). Supports `bin
 | `value` | `string` | defaults to first option |
 | `label` | `string` | |
 | `placeholder` | `string` | `'Search…'` |
+| `error` | `string` | |
 | `disabled` | `boolean` | |
 | `onChange` | `(value: string) => void` | |
 
@@ -331,6 +340,7 @@ Calendar + popover date picker. Value is an ISO date string (`YYYY-MM-DD`). Supp
 | `value` | `string` | `''` |
 | `label` | `string` | |
 | `placeholder` | `string` | `'Pick a date'` |
+| `error` | `string` | |
 | `disabled` | `boolean` | `false` |
 | `onChange` | `(value: string) => void` | |
 
@@ -343,9 +353,37 @@ Calendar + popover date picker. Value is an ISO date string (`YYYY-MM-DD`). Supp
 | `step` | `number` | `1` |
 | `value` | `number` | `0` |
 | `label` | `string` | |
+| `error` | `string` | |
 | `showValue` | `boolean` | `false` |
 | `disabled` | `boolean` | `false` |
 | `onChange` | `(value: number) => void` | |
+
+#### `ui.validate(rules)`
+
+Light submit-gate helper. Runs each rule’s `check`, calls `.setError` on the field (clears when `check` returns null/undefined), and returns `true` only if every rule passes. No schema library — keep rules explicit in the handler.
+
+```typescript
+ui.button('Save', {
+  onClick: () => {
+    const ok = ui.validate([
+      { el: nameInput, check: () => (form.name.trim() ? null : 'Name is required') },
+      { el: emailInput, check: () => (/@/.test(form.email) ? null : 'Enter a valid email') },
+      { el: termsBox, check: () => (form.terms ? null : 'Accept the terms') },
+    ]);
+    if (!ok) {
+      ui.notify('Fix the highlighted fields', 'warning');
+      return;
+    }
+    ui.notify('Saved', 'success');
+  },
+});
+```
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `rules` | `{ el: Element; check: () => string \| null \| undefined }[]` | One entry per field |
+
+Also available as `validate` from `@badui/core` / `@badui/ui`.
 
 ---
 
@@ -1047,6 +1085,7 @@ Returned by every `ui.*` factory.
 | `.on(event, handler)` | Register additional event handler |
 | `.setText(text)` | Set `props.text` and patch |
 | `.setValue(value)` / `.set(value)` | Set `props.value` and patch |
+| `.setError(message \| null)` | Set or clear field `props.error` and patch |
 | `.getValue()` / `.get()` | Read `props.value` |
 | `.bindValue(obj, key)` | Two-way bind to reactive object property |
 | `.bindTextFrom(obj, key)` | One-way bind text from object property |

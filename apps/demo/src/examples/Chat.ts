@@ -23,10 +23,17 @@ ui.page('/examples/chat', () => {
 
   exampleFrame(() => {
     ui.column(() => {
-      exampleHeader(undefined, 'Shared messages via ui.storage.app across sessions.');
+      exampleHeader(
+        undefined,
+        'ui.storage.app — shared messages (persisted) and online users ({ persist: false }).',
+      );
 
       ui.card(
-        { title: 'Room', description: 'Messages sync for every connected client.', gap: 4 },
+        {
+          title: 'Room',
+          description: 'App-scoped store syncs every connected client; presence is ephemeral.',
+          gap: 4,
+        },
         () => {
           const presence = ui
             .label('0 online')

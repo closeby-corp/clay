@@ -38,9 +38,32 @@ import {
   radarChart,
   radialChart,
   combobox,
+  input,
+  textArea,
+  checkbox,
+  select,
+  slider,
 } from './index';
 
 describe('facade feedback / layout elements', () => {
+  test('input error prop wires through', () => {
+    const el = input({ label: 'Name', error: 'Required' });
+    expect(el.type).toBe('input');
+    expect(el.props.error).toBe('Required');
+  });
+
+  test('textArea / checkbox / select / slider accept error', () => {
+    expect(textArea({ error: 'Too short' }).props.error).toBe('Too short');
+    expect(checkbox({ error: 'Required' }).props.error).toBe('Required');
+    expect(
+      select({
+        options: [{ value: 'a', label: 'A' }],
+        error: 'Pick one',
+      }).props.error,
+    ).toBe('Pick one');
+    expect(slider({ error: 'Out of range' }).props.error).toBe('Out of range');
+  });
+
   test('switch stores boolean value like checkbox', () => {
     const el = switchControl({ checked: true, label: 'On', onChange: () => {} });
     expect(el.type).toBe('switch');

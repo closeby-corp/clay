@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { FieldError } from '@/components/ui/field';
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -177,6 +178,11 @@ function useOptimisticValue<T>(serverValue: T): [T, (next: T) => void] {
   return [local, setLocal];
 }
 
+function fieldError(props: Record<string, unknown>): string | undefined {
+  const e = props.error;
+  return typeof e === 'string' && e.length > 0 ? e : undefined;
+}
+
 function BoundInput({
   id,
   props,
@@ -192,9 +198,14 @@ function BoundInput({
 }) {
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
       {props.label ? <Label htmlFor={`in-${id}`}>{String(props.label)}</Label> : null}
       <Input
         id={`in-${id}`}
@@ -202,6 +213,7 @@ function BoundInput({
         value={value}
         placeholder={props.placeholder ? String(props.placeholder) : undefined}
         disabled={!!props.disabled}
+        aria-invalid={!!error}
         onChange={(e) => {
           const next = e.target.value;
           setValue(next);
@@ -209,6 +221,7 @@ function BoundInput({
           if (hasEvent(props, 'change')) emit(id, 'change', next);
         }}
       />
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -228,9 +241,14 @@ function BoundTextarea({
 }) {
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
       {props.label ? <Label htmlFor={`ta-${id}`}>{String(props.label)}</Label> : null}
       <Textarea
         id={`ta-${id}`}
@@ -238,6 +256,7 @@ function BoundTextarea({
         placeholder={props.placeholder ? String(props.placeholder) : undefined}
         disabled={!!props.disabled}
         rows={typeof props.rows === 'number' ? props.rows : undefined}
+        aria-invalid={!!error}
         onChange={(e) => {
           const next = e.target.value;
           setValue(next);
@@ -245,6 +264,7 @@ function BoundTextarea({
           if (hasEvent(props, 'change')) emit(id, 'change', next);
         }}
       />
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -265,9 +285,13 @@ function BoundSelect({
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
   const options = (props.options as Array<{ value: string; label: string }>) ?? [];
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)}>
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      data-invalid={error ? true : undefined}
+    >
       {props.label ? <Label>{String(props.label)}</Label> : null}
       <Select
         value={value || undefined}
@@ -277,7 +301,7 @@ function BoundSelect({
           if (hasEvent(props, 'change')) emit(id, 'change', next);
         }}
       >
-        <SelectTrigger style={asStyle(style)}>
+        <SelectTrigger style={asStyle(style)} aria-invalid={!!error}>
           <SelectValue placeholder={String(props.placeholder ?? 'Select…')} />
         </SelectTrigger>
         <SelectContent>
@@ -288,6 +312,7 @@ function BoundSelect({
           ))}
         </SelectContent>
       </Select>
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -310,9 +335,14 @@ function BoundSlider({
   const min = Number(props.min ?? 0);
   const max = Number(props.max ?? 100);
   const step = Number(props.step ?? 1);
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex w-full flex-col gap-2', className)} style={asStyle(style)}>
+    <div
+      className={cn('flex w-full flex-col gap-2', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
       {props.label ? (
         <div className="flex items-center justify-between gap-2">
           <Label>{String(props.label)}</Label>
@@ -327,12 +357,14 @@ function BoundSlider({
         step={step}
         value={[value]}
         disabled={!!props.disabled}
+        aria-invalid={!!error}
         onValueChange={(vals) => {
           const n = vals[0] ?? min;
           setValue(n);
           if (hasEvent(props, 'change')) emit(id, 'change', n);
         }}
       />
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -352,25 +384,34 @@ function BoundCheckbox({
 }) {
   const serverValue = Boolean(props.checked ?? props.value ?? false);
   const [checked, setChecked] = useOptimisticValue(serverValue);
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex items-center gap-2 text-sm', className)} style={asStyle(style)}>
-      <Checkbox
-        id={`cb-${id}`}
-        checked={checked}
-        disabled={!!props.disabled}
-        onCheckedChange={(next) => {
-          const value = next === true;
-          setChecked(value);
-          if (hasEvent(props, 'change')) emit(id, 'change', value);
-          if (hasEvent(props, 'input')) emit(id, 'input', value);
-        }}
-      />
-      {props.label ? (
-        <Label htmlFor={`cb-${id}`} className="font-normal">
-          {String(props.label)}
-        </Label>
-      ) : null}
+    <div
+      className={cn('flex flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      <div className="flex items-center gap-2 text-sm">
+        <Checkbox
+          id={`cb-${id}`}
+          checked={checked}
+          disabled={!!props.disabled}
+          aria-invalid={!!error}
+          onCheckedChange={(next) => {
+            const value = next === true;
+            setChecked(value);
+            if (hasEvent(props, 'change')) emit(id, 'change', value);
+            if (hasEvent(props, 'input')) emit(id, 'input', value);
+          }}
+        />
+        {props.label ? (
+          <Label htmlFor={`cb-${id}`} className="font-normal">
+            {String(props.label)}
+          </Label>
+        ) : null}
+      </div>
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -390,25 +431,34 @@ function BoundSwitch({
 }) {
   const serverValue = Boolean(props.checked ?? props.value ?? false);
   const [checked, setChecked] = useOptimisticValue(serverValue);
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex items-center gap-2 text-sm', className)} style={asStyle(style)}>
-      <Switch
-        id={`sw-${id}`}
-        checked={checked}
-        disabled={!!props.disabled}
-        size={props.size === 'sm' ? 'sm' : 'default'}
-        onCheckedChange={(next) => {
-          setChecked(next);
-          if (hasEvent(props, 'change')) emit(id, 'change', next);
-          if (hasEvent(props, 'input')) emit(id, 'input', next);
-        }}
-      />
-      {props.label ? (
-        <Label htmlFor={`sw-${id}`} className="font-normal">
-          {String(props.label)}
-        </Label>
-      ) : null}
+    <div
+      className={cn('flex flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      <div className="flex items-center gap-2 text-sm">
+        <Switch
+          id={`sw-${id}`}
+          checked={checked}
+          disabled={!!props.disabled}
+          size={props.size === 'sm' ? 'sm' : 'default'}
+          aria-invalid={!!error}
+          onCheckedChange={(next) => {
+            setChecked(next);
+            if (hasEvent(props, 'change')) emit(id, 'change', next);
+            if (hasEvent(props, 'input')) emit(id, 'input', next);
+          }}
+        />
+        {props.label ? (
+          <Label htmlFor={`sw-${id}`} className="font-normal">
+            {String(props.label)}
+          </Label>
+        ) : null}
+      </div>
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -673,13 +723,19 @@ function BoundRadioGroup({
   const [value, setValue] = useOptimisticValue(serverValue);
   const options = (props.options as Array<{ value: string; label: string }>) ?? [];
   const horizontal = props.orientation === 'horizontal';
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex w-full flex-col gap-2', className)} style={asStyle(style)}>
+    <div
+      className={cn('flex w-full flex-col gap-2', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
       {props.label ? <Label>{String(props.label)}</Label> : null}
       <RadioGroup
         value={value || undefined}
         disabled={!!props.disabled}
+        aria-invalid={!!error}
         onValueChange={(next) => {
           setValue(next);
           if (hasEvent(props, 'change')) emit(id, 'change', next);
@@ -699,6 +755,7 @@ function BoundRadioGroup({
           );
         })}
       </RadioGroup>
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -722,9 +779,14 @@ function BoundCombobox({
   const [value, setValue] = useOptimisticValue(serverValue);
   const options = (props.options as ComboboxOption[]) ?? [];
   const selected = options.find((opt) => opt.value === value) ?? null;
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
       {props.label ? <Label>{String(props.label)}</Label> : null}
       <Combobox
         items={options}
@@ -741,6 +803,7 @@ function BoundCombobox({
           placeholder={String(props.placeholder ?? 'Search…')}
           disabled={!!props.disabled}
           showClear={!!selected}
+          aria-invalid={!!error}
         />
         <ComboboxContent>
           <ComboboxEmpty>No results.</ComboboxEmpty>
@@ -753,6 +816,7 @@ function BoundCombobox({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }
@@ -784,9 +848,14 @@ function BoundDate({
   const [value, setValue] = useOptimisticValue(serverValue);
   const selected = parseDateValue(value);
   const [open, setOpen] = useState(false);
+  const error = fieldError(props);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)} style={asStyle(style)}>
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
       {props.label ? <Label>{String(props.label)}</Label> : null}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -794,6 +863,7 @@ function BoundDate({
             id={`date-${id}`}
             variant="outline"
             disabled={!!props.disabled}
+            aria-invalid={!!error}
             className={cn(
               'w-full justify-start text-left font-normal',
               !selected && 'text-muted-foreground',
@@ -817,6 +887,7 @@ function BoundDate({
           />
         </PopoverContent>
       </Popover>
+      {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
 }

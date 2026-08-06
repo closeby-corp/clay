@@ -93,4 +93,37 @@ describe('element tree', () => {
     expect(input.getValue()).toBe('');
     expect(patches).toContainEqual({ op: 'updateProps', id: input.id, props: { value: '' } });
   });
+
+  test('setError queues updateProps and clears with null', async () => {
+    clearPages();
+    setPageWrapper(null);
+    let input!: Element;
+    page('/err', () => {
+      input = new Element('input', { value: '' });
+    });
+
+    const patches: unknown[] = [];
+    const session = new ClientSession('/err', (msg) => {
+      if (msg.op === 'patch') patches.push(...msg.patches);
+    });
+    session.mount();
+
+    input.setError('Required');
+    await Promise.resolve();
+    expect(input.props.error).toBe('Required');
+    expect(patches).toContainEqual({
+      op: 'updateProps',
+      id: input.id,
+      props: { error: 'Required' },
+    });
+
+    input.setError(null);
+    await Promise.resolve();
+    expect(input.props.error).toBeUndefined();
+    expect(patches).toContainEqual({
+      op: 'updateProps',
+      id: input.id,
+      props: { error: null },
+    });
+  });
 });

@@ -155,6 +155,7 @@ import {
   theme as themeCore,
   reactive as reactiveCore,
   subscribe as subscribeCore,
+  validate as validateCore,
   setPageWrapper,
   type NotifyOptions,
   type NotifyType,
@@ -163,6 +164,7 @@ import {
   type ToastPosition,
   type TimerOptions,
   type ThemeMode,
+  type FieldRule,
   TimerHandle,
 } from '@badui/core';
 import { BadUIServer, type BadUIServerConfig } from '@badui/server';
@@ -240,6 +242,7 @@ export type {
   PageOptions,
   PageFn,
   TimerOptions,
+  FieldRule,
 };
 export {
   DataTableElement,
@@ -545,6 +548,11 @@ export const reactive = reactiveCore;
 /** Listen for a reactive property change. Prefer this over importing from `@badui/core`. */
 export const subscribe = subscribeCore;
 
+/** Run field checks, set errors, return true if all pass. Prefer `ui.validate`. */
+export function validate(rules: FieldRule[]): boolean {
+  return validateCore(rules);
+}
+
 export function refreshable(fn: () => void): RefreshableElement {
   return new RefreshableElement(fn);
 }
@@ -669,6 +677,7 @@ export const ui = {
   theme,
   reactive,
   subscribe,
+  validate,
   refreshable,
   page,
   run,

@@ -48,7 +48,7 @@ ui.page('/examples/datatable', () => {
       ui.row(() => {
         exampleHeader(
           undefined,
-          'Computed columns, badge cells, row grouping, confirm / prompt / choose, and toasts.',
+          'ui.table(data) builder — computed columns, badges, grouping, confirm / prompt / choose.',
         );
         ui.button('Add task', {
           size: 'sm',
@@ -77,15 +77,14 @@ ui.page('/examples/datatable', () => {
 
       const statusLabel = ui.label(`${tasks.length} tasks`).classes('text-sm text-muted-foreground');
 
-      table = ui.dataTable(tasks, {
-        keyField: 'id',
-        searchable: true,
-        searchPlaceholder: 'Search tasks…',
-        selectable: true,
-        groupBy: 'status',
-        pageSize: 8,
-        pageSizeOptions: [5, 8, 10, 20],
-        columns: [
+      table = ui
+        .table(tasks)
+        .id('id')
+        .search('Search tasks…')
+        .selectable()
+        .groupBy('status')
+        .pageSize(8, { options: [5, 8, 10, 20] })
+        .columns([
           { key: 'id', header: 'ID' },
           { key: 'title', header: 'Title' },
           {
@@ -107,79 +106,86 @@ ui.page('/examples/datatable', () => {
             render: (row) => `${row.hours}h → $${Number(row.hours) * 50}`,
           },
           { key: 'owner', header: 'Owner' },
-        ],
-        actions: [
-          { id: 'edit', label: 'Rename', icon: 'pencil' },
-          { id: 'status', label: 'Status', icon: 'refresh-cw' },
-          { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
-        ],
-        onAction: async (actionId, row) => {
-          if (actionId === 'delete') {
-            const sure = await ui.confirm(`Delete “${row.title}”? This cannot be undone.`, {
-              title: 'Delete task?',
-              confirmLabel: 'Delete',
-              confirmVariant: 'destructive',
-            });
-            if (!sure) return;
-            tasks = tasks.filter((t) => t.id !== row.id);
-            table.setRows(tasks);
-            statusLabel.setText(`${tasks.length} tasks`);
-            ui.notify('Task deleted', 'success');
-            return;
-          }
+        ])
+        .rowActions(
+          [
+            { id: 'edit', label: 'Rename', icon: 'pencil' },
+            { id: 'status', label: 'Status', icon: 'refresh-cw' },
+            { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
+          ],
+          async (actionId, row) => {
+            if (actionId === 'delete') {
+              const sure = await ui.confirm(`Delete “${row.title}”? This cannot be undone.`, {
+                title: 'Delete task?',
+                confirmLabel: 'Delete',
+                confirmVariant: 'destructive',
+              });
+              if (!sure) return;
+              tasks = tasks.filter((t) => t.id !== row.id);
+              table.setRows(tasks);
+              statusLabel.setText(`${tasks.length} tasks`);
+              ui.notify('Task deleted', 'success');
+              return;
+            }
 
-          if (actionId === 'edit') {
-            const next = await ui.prompt('New title', {
-              title: 'Rename task',
-              defaultValue: String(row.title ?? ''),
-              confirmLabel: 'Save',
-            });
-            if (next == null) return;
-            tasks = tasks.map((t) => (t.id === row.id ? { ...t, title: next } : t));
-            table.setRows(tasks);
-            ui.notify('Task renamed', 'info');
-            return;
-          }
+            if (actionId === 'edit') {
+              const next = await ui.prompt('New title', {
+                title: 'Rename task',
+                defaultValue: String(row.title ?? ''),
+                confirmLabel: 'Save',
+              });
+              if (next == null) return;
+              tasks = tasks.map((t) => (t.id === row.id ? { ...t, title: next } : t));
+              table.setRows(tasks);
+              ui.notify('Task renamed', 'info');
+              return;
+            }
 
-          if (actionId === 'status') {
-            const status = await ui.choose('Set status', ['todo', 'in progress', 'done'], {
-              title: 'Task status',
-            });
-            if (status == null) return;
-            tasks = tasks.map((t) => (t.id === row.id ? { ...t, status } : t));
-            table.setRows(tasks);
-            ui.notify(`Status → ${status}`, 'success');
-          }
-        },
-      });
-
-      exampleSection('Key / value object', 'Pass a plain object and the table shows Key / Value rows.');
-      ui.dataTable(
-        {
-          host: 'localhost',
-          port: 4000,
-          env: 'demo',
-          debug: true,
-          features: { search: true, actions: true },
-        },
-        { pageSize: 0, searchable: true, searchPlaceholder: 'Search config…' },
-      );
+            if (actionId === 'status') {
+              const status = await ui.choose('Set status', ['todo', 'in progress', 'done'], {
+                title: 'Task status',
+              });
+              if (status == null) return;
+              tasks = tasks.map((t) => (t.id === row.id ? { ...t, status } : t));
+              table.setRows(tasks);
+              ui.notify(`Status → ${status}`, 'success');
+            }
+          },
+        )
+        .build();
 
       exampleSection(
-        'Structured table API',
-        'ui.table(data) staged builder — same DataTableElement as the props blob above (optional sugar).',
+        'Key / value object',
+        'ui.table(plainObject) — Key / Value rows with search.',
       );
-      ui.table(tasks.slice(0, 6))
-        .id('id')
-        .columns([
+      ui.table({
+        host: 'localhost',
+        port: 4000,
+        env: 'demo',
+        debug: true,
+        features: { search: true, actions: true },
+      })
+        .pageSize(0)
+        .search('Search config…')
+        .build();
+
+      exampleSection(
+        'Props API (legacy)',
+        'ui.dataTable(data, props) — same DataTableElement as the staged builder.',
+      );
+      ui.dataTable(tasks.slice(0, 6), {
+        keyField: 'id',
+        searchable: true,
+        searchPlaceholder: 'Search…',
+        groupBy: 'status',
+        pageSize: 5,
+        pageSizeOptions: [5, 10],
+        columns: [
           { key: 'id', header: 'ID' },
           { key: 'title', header: 'Title' },
           { key: 'status', header: 'Status' },
           { key: 'owner', header: 'Owner' },
-        ])
-        .search('Search…')
-        .groupBy('status')
-        .pageSize(5, { options: [5, 10] })
-        .build();
+        ],
+      });
     }, { gap: 6 });
 });

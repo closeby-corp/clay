@@ -8,15 +8,15 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 |--------|-------------|------------------|
 | `label` | `label` | Text div |
 | `button` | `button` | ShadCN `Button` |
-| `input` | `input` | ShadCN `Input` (+ optional label) |
-| `textArea` | `textarea` | Native textarea |
-| `checkbox` | `checkbox` | ShadCN `Checkbox` |
-| `switch` | `switch` | ShadCN `Switch` |
-| `select` | `select` | ShadCN `Select` |
-| `radioGroup` | `radiogroup` | ShadCN `RadioGroup` |
-| `combobox` | `combobox` | ShadCN `Combobox` (searchable select) |
-| `date` | `date` | Calendar + Popover date picker (ISO `YYYY-MM-DD`) |
-| `slider` | `slider` | ShadCN `Slider` |
+| `input` | `input` | ShadCN `Input` (+ optional label / `error`) |
+| `textArea` | `textarea` | Native textarea (+ optional `error`) |
+| `checkbox` | `checkbox` | ShadCN `Checkbox` (+ optional `error`) |
+| `switch` | `switch` | ShadCN `Switch` (+ optional `error`) |
+| `select` | `select` | ShadCN `Select` (+ optional `error`) |
+| `radioGroup` | `radiogroup` | ShadCN `RadioGroup` (+ optional `error`) |
+| `combobox` | `combobox` | ShadCN `Combobox` (searchable select; optional `error`) |
+| `date` | `date` | Calendar + Popover date picker (ISO `YYYY-MM-DD`; optional `error`) |
+| `slider` | `slider` | ShadCN `Slider` (+ optional `error`) |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
@@ -94,6 +94,8 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `datatable` (search / column filter inputs)
 
 Server patches still reconcile when `props.value` changes (e.g. `draft.text = ''` after Add).
+
+Field `error` is **server-owned** (via initial props, `.setError`, or `ui.validate`). It is not optimistic — the client shows `props.error` after `updateProps` patches.
 
 ## Styling
 

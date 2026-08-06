@@ -16,13 +16,14 @@ ui.page('/examples/upload', () => {
     ui.column(() => {
       exampleHeader(
         undefined,
-        'Real multipart upload via POST /upload; list kept in tab storage.',
+        'POST /upload; file list in ui.storage.tab, lifetime count in ui.storage.user.',
       );
 
       ui.card(
         {
           title: 'Uploads',
-          description: 'Files land on disk; metadata travels over the WebSocket.',
+          description:
+            'tab = this browser tab’s file list; user = cross-tab upload counter (async get/set).',
           gap: 4,
         },
         () => {

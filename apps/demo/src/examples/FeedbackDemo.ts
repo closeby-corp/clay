@@ -13,7 +13,10 @@ ui.page('/examples/feedback', () => {
 
   exampleFrame(() => {
     ui.column(() => {
-      exampleHeader(undefined, 'Alerts, spinner, progress, separators, and theme.');
+      exampleHeader(
+        undefined,
+        'Alerts, spinner, progress, separators, and ui.theme.set (Appearance).',
+      );
 
       exampleSection('Alerts', 'Default and destructive variants.');
       ui.alert('Heads up — your session is synced over WebSocket.');
@@ -21,7 +24,7 @@ ui.page('/examples/feedback', () => {
 
       ui.separator();
 
-      exampleSection('Appearance', 'Server-driven theme via ui.theme.set.');
+      exampleSection('Appearance', 'ui.theme.set("light" | "dark" | "system") — server pushes theme to the client.');
       ui.row(() => {
         ui.button('Light', {
           variant: 'outline',

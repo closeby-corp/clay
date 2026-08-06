@@ -40,6 +40,8 @@ export type InputProps = {
   placeholder?: string;
   type?: string;
   label?: string;
+  /** Field-level validation message (empty/omitted = valid). */
+  error?: string;
   disabled?: boolean;
   className?: string;
   onInput?: (value: string) => void;
@@ -52,6 +54,7 @@ export function input(props: InputProps = {}): Element {
     placeholder: props.placeholder ?? '',
     type: props.type ?? 'text',
     label: props.label,
+    error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,
     onInput: props.onInput,
@@ -62,6 +65,7 @@ export function input(props: InputProps = {}): Element {
 export type CheckboxProps = {
   checked?: boolean;
   label?: string;
+  error?: string;
   disabled?: boolean;
   className?: string;
   onChange?: (checked: boolean) => void;
@@ -71,6 +75,7 @@ export function checkbox(props: CheckboxProps = {}): Element {
   return new Element('checkbox', {
     value: props.checked ?? false,
     label: props.label,
+    error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,
     onChange: props.onChange,
@@ -80,6 +85,7 @@ export function checkbox(props: CheckboxProps = {}): Element {
 export type SwitchProps = {
   checked?: boolean;
   label?: string;
+  error?: string;
   disabled?: boolean;
   size?: 'sm' | 'default';
   className?: string;
@@ -90,6 +96,7 @@ export function switchControl(props: SwitchProps = {}): Element {
   return new Element('switch', {
     value: props.checked ?? false,
     label: props.label,
+    error: props.error,
     disabled: props.disabled ?? false,
     size: props.size ?? 'default',
     className: props.className,
@@ -151,6 +158,7 @@ export type SelectProps = {
   options: SelectOption[];
   value?: string;
   label?: string;
+  error?: string;
   disabled?: boolean;
   className?: string;
   onChange?: (value: string) => void;
@@ -161,6 +169,7 @@ export function select(props: SelectProps): Element {
     options: props.options,
     value: props.value ?? props.options[0]?.value ?? '',
     label: props.label,
+    error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,
     onChange: props.onChange,
@@ -173,6 +182,7 @@ export type RadioGroupProps = {
   options: RadioGroupOption[];
   value?: string;
   label?: string;
+  error?: string;
   disabled?: boolean;
   orientation?: 'horizontal' | 'vertical';
   className?: string;
@@ -184,6 +194,7 @@ export function radioGroup(props: RadioGroupProps): Element {
     options: props.options,
     value: props.value ?? props.options[0]?.value ?? '',
     label: props.label,
+    error: props.error,
     disabled: props.disabled ?? false,
     orientation: props.orientation ?? 'vertical',
     className: props.className,
@@ -198,6 +209,7 @@ export type ComboboxProps = {
   value?: string;
   label?: string;
   placeholder?: string;
+  error?: string;
   disabled?: boolean;
   className?: string;
   onChange?: (value: string) => void;
@@ -209,6 +221,7 @@ export function combobox(props: ComboboxProps): Element {
     value: props.value ?? props.options[0]?.value ?? '',
     label: props.label,
     placeholder: props.placeholder ?? 'Search…',
+    error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,
     onChange: props.onChange,
@@ -220,6 +233,7 @@ export type DateProps = {
   value?: string;
   label?: string;
   placeholder?: string;
+  error?: string;
   disabled?: boolean;
   className?: string;
   onChange?: (value: string) => void;
@@ -230,6 +244,7 @@ export function date(props: DateProps = {}): Element {
     value: props.value ?? '',
     label: props.label,
     placeholder: props.placeholder ?? 'Pick a date',
+    error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,
     onChange: props.onChange,
@@ -304,6 +319,7 @@ export type SliderProps = {
   step?: number;
   value?: number;
   label?: string;
+  error?: string;
   showValue?: boolean;
   disabled?: boolean;
   className?: string;
@@ -317,6 +333,7 @@ export function slider(props: SliderProps = {}): Element {
     step: props.step ?? 1,
     value: props.value ?? 0,
     label: props.label,
+    error: props.error,
     showValue: props.showValue ?? false,
     disabled: props.disabled ?? false,
     className: props.className,
@@ -328,6 +345,7 @@ export type TextAreaProps = {
   value?: string;
   placeholder?: string;
   label?: string;
+  error?: string;
   rows?: number;
   disabled?: boolean;
   className?: string;
@@ -340,6 +358,7 @@ export function textArea(props: TextAreaProps = {}): Element {
     value: props.value ?? '',
     placeholder: props.placeholder ?? '',
     label: props.label,
+    error: props.error,
     rows: props.rows ?? 3,
     disabled: props.disabled ?? false,
     className: props.className,

@@ -1,5 +1,5 @@
 import { ui } from '@badui/ui';
-import { exampleFrame, exampleHeader } from '../chrome';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
   label: 'Overlays & disclosure',
@@ -13,15 +13,17 @@ ui.page('/examples/overlays', () => {
       () => {
         exampleHeader(
           undefined,
-          'Dialog, alert dialog, dropdown, breadcrumb, sheet, drawer, tabs, accordion.',
+          'ui.breadcrumb, ui.dropdownMenu, ui.alertDialog, plus dialog / sheet / drawer / tabs.',
         );
 
+        exampleSection('Breadcrumb', 'ui.breadcrumb([{ label, href? }, …]).');
         ui.breadcrumb([
           { label: 'Examples', href: '/' },
           { label: 'Overlays', href: '/examples/overlays' },
           { label: 'Current' },
         ]);
 
+        exampleSection('Chrome bits', 'Avatar, tooltip, skeleton.');
         ui.row(
           () => {
             ui.avatar({ src: 'https://github.com/shadcn.png', alt: 'shadcn', fallback: 'CN', size: 'lg' });
@@ -34,6 +36,7 @@ ui.page('/examples/overlays', () => {
           { gap: 3 },
         );
 
+        exampleSection('Dropdown menu', 'ui.dropdownMenu — items, separators, destructive variants.');
         ui.dropdownMenu({ label: 'Actions', variant: 'outline' }, (m) => {
           m.item('edit', 'Edit', {
             onSelect: () => ui.notify('Edit selected', 'info'),
@@ -45,6 +48,7 @@ ui.page('/examples/overlays', () => {
           });
         });
 
+        exampleSection('Tabs', 'Server-owned tab value for sheet / drawer / dialog copy.');
         ui.tabs({ value: 'sheet' }, (t) => {
           t.tab('sheet', 'Sheet', () => {
             ui.label('Side panel for filters and secondary tasks. Server owns open/close.')
@@ -60,6 +64,7 @@ ui.page('/examples/overlays', () => {
           });
         });
 
+        exampleSection('Disclosure', 'Accordion and collapsible.');
         ui.accordion((a) => {
           a.item('one', 'Getting started', () => {
             ui.label('Wire factories → ElementRenderer → ui facade.');
@@ -72,6 +77,11 @@ ui.page('/examples/overlays', () => {
         ui.collapsible({ title: 'Advanced options' }, () => {
           ui.label('Collapsible content stays optimistic on the client.');
         });
+
+        exampleSection(
+          'Modals',
+          'Dialog + ui.alertDialog (confirm pattern) + sheet + drawer — open/close from the server.',
+        );
 
         const confirm = ui.dialog(
           { title: 'Confirm action', open: false },

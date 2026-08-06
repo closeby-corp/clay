@@ -22,7 +22,6 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 ### Quality / DX
 
 - [ ] `strict: true` on remaining server packages (root `tsconfig` is `"strict": false`; `@badui/core` is done)
-- [ ] Light form validation (field errors, submit gate; no full schema framework required)
 - [ ] Auth / trusted identity beyond anonymous `userId` (hooks on `hello` / middleware)
 - [ ] Upload maturity (progress, abort, clearer size/type errors)
 
@@ -36,6 +35,7 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 ## Done (recent)
 
+- Light form validation (`error` prop, `Element.setError`, `ui.validate`, FormDemo submit gate)
 - Re-export `reactive` / `subscribe` from `@badui/ui` (named + on `ui`)
 - `strict: true` for `@badui/core` (package-local tsconfig)
 - Removed retired `@badui/compiler` stub
