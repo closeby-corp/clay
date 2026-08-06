@@ -7,9 +7,16 @@ export type RegisterReactiveLetPluginOptions = {
 
 let registered = false;
 
+function loaderForPath(path: string): 'ts' | 'tsx' {
+  return path.endsWith('tsx') || path.endsWith('jsx') ? 'tsx' : 'ts';
+}
+
 /**
  * Register a Bun `onLoad` plugin that rewrites reactive `let` in TS modules.
  * Safe to call multiple times (no-op after the first successful register).
+ *
+ * Important: Bun's runtime `onLoad` must return an object (contents + loader).
+ * Returning `undefined` throws `Expected module mock to return an object`.
  */
 export function registerReactiveLetPlugin(
   opts: RegisterReactiveLetPluginOptions = {},
@@ -27,22 +34,31 @@ export function registerReactiveLetPlugin(
     name: 'badui-reactive-let',
     setup(build) {
       build.onLoad({ filter: /\.[cm]?[jt]sx?$/ }, async (args) => {
-        if (ignore(args.path)) return;
-        // Avoid transforming our own package / tests in a weird loop
-        if (args.path.includes('/packages/compiler/')) return;
+        const loader = loaderForPath(args.path);
 
         let text: string;
         try {
           text = await Bun.file(args.path).text();
         } catch {
-          return;
+          // Unreadable path — pass an empty module rather than undefined (Bun throws).
+          return { contents: '', loader };
         }
-        if (!mightNeedReactiveLet(text)) return;
+
+        // Pass through: node_modules, our compiler package, or files that need no rewrite.
+        if (
+          ignore(args.path) ||
+          args.path.includes('/packages/compiler/') ||
+          args.path.includes('\\packages\\compiler\\') ||
+          !mightNeedReactiveLet(text)
+        ) {
+          return { contents: text, loader };
+        }
 
         const result = transformReactiveLet(text, args.path);
-        if (!result.transformed) return;
+        if (!result.transformed) {
+          return { contents: text, loader };
+        }
 
-        const loader = args.path.endsWith('tsx') || args.path.endsWith('jsx') ? 'tsx' : 'ts';
         return {
           contents: result.code,
           loader,
