@@ -9,6 +9,7 @@ import {
 import {
   buildSeriesConfig,
   ChartChrome,
+  cssSafeKey,
   formatAxisTick,
   formatTooltipLabel,
   isIsoDate,
@@ -39,12 +40,15 @@ export function BoundAreaChart({
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
       <AreaChart accessibilityLayer data={filteredData} margin={{ left: 12, right: 12 }}>
         <defs>
-          {series.map((s) => (
-            <linearGradient key={s.key} id={`fill-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={`var(--color-${s.key})`} stopOpacity={0.8} />
-              <stop offset="95%" stopColor={`var(--color-${s.key})`} stopOpacity={0.1} />
-            </linearGradient>
-          ))}
+          {series.map((s) => {
+            const key = cssSafeKey(s.key);
+            return (
+              <linearGradient key={key} id={`fill-${key}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={`var(--color-${key})`} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={`var(--color-${key})`} stopOpacity={0.1} />
+              </linearGradient>
+            );
+          })}
         </defs>
         <CartesianGrid vertical={false} />
         <XAxis
@@ -66,16 +70,19 @@ export function BoundAreaChart({
           }
         />
         <ChartLegend content={<ChartLegendContent />} />
-        {series.map((s) => (
-          <Area
-            key={s.key}
-            dataKey={s.key}
-            type="natural"
-            fill={`url(#fill-${s.key})`}
-            stroke={`var(--color-${s.key})`}
-            stackId={stacked ? 'a' : undefined}
-          />
-        ))}
+        {series.map((s) => {
+          const key = cssSafeKey(s.key);
+          return (
+            <Area
+              key={key}
+              dataKey={s.key}
+              type="natural"
+              fill={`url(#fill-${key})`}
+              stroke={`var(--color-${key})`}
+              stackId={stacked ? 'a' : undefined}
+            />
+          );
+        })}
       </AreaChart>
     </ChartContainer>
   );

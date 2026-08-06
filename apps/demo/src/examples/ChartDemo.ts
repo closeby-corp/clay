@@ -143,7 +143,7 @@ ui.page('/examples/charts', () => {
             { key: 'tablet', label: 'Tablet', color: 'var(--chart-3)' },
           ],
         });
-      }, { gap: 4 }).classes('items-stretch');
+      }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
 
       exampleSection(
         'Radar chart',
@@ -196,7 +196,7 @@ ui.page('/examples/charts', () => {
             { key: 'tablet', label: 'Tablet', color: 'var(--chart-3)' },
           ],
         });
-      }, { gap: 4 }).classes('items-stretch');
+      }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
 
       exampleSection(
         'Live refreshable',

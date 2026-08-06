@@ -9,6 +9,7 @@ import {
 import {
   buildSeriesConfig,
   ChartChrome,
+  cssSafeKey,
   type ChartSeries,
 } from './chart-shared';
 
@@ -49,14 +50,17 @@ export function BoundRadarChart({
         <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
         <PolarAngleAxis dataKey={angleKey} />
         <PolarGrid />
-        {series.map((s) => (
-          <Radar
-            key={s.key}
-            dataKey={s.key}
-            fill={`var(--color-${s.key})`}
-            fillOpacity={fillOpacity}
-          />
-        ))}
+        {series.map((s) => {
+          const key = cssSafeKey(s.key);
+          return (
+            <Radar
+              key={key}
+              dataKey={s.key}
+              fill={`var(--color-${key})`}
+              fillOpacity={fillOpacity}
+            />
+          );
+        })}
         {showLegend ? <ChartLegend content={<ChartLegendContent />} /> : null}
       </RadarChart>
     </ChartContainer>

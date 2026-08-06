@@ -9,6 +9,7 @@ import {
 import {
   buildSeriesConfig,
   ChartChrome,
+  cssSafeKey,
   formatAxisTick,
   formatTooltipLabel,
   isIsoDate,
@@ -76,15 +77,18 @@ export function BoundBarChart({
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
         />
         <ChartLegend content={<ChartLegendContent />} />
-        {series.map((s) => (
-          <Bar
-            key={s.key}
-            dataKey={s.key}
-            fill={`var(--color-${s.key})`}
-            radius={4}
-            stackId={stacked ? 'a' : undefined}
-          />
-        ))}
+        {series.map((s) => {
+          const key = cssSafeKey(s.key);
+          return (
+            <Bar
+              key={key}
+              dataKey={s.key}
+              fill={`var(--color-${key})`}
+              radius={4}
+              stackId={stacked ? 'a' : undefined}
+            />
+          );
+        })}
       </BarChart>
     </ChartContainer>
   );

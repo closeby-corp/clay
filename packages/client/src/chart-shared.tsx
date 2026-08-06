@@ -22,6 +22,15 @@ import { cn } from '@/lib/utils';
 export type ChartSeries = { key: string; label: string; color?: string };
 export type TimeRange = '90d' | '30d' | '7d';
 
+/** CSS custom-property–safe key for ChartStyle `--color-${key}`. */
+export function cssSafeKey(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'slice';
+}
+
 export function isIsoDate(value: unknown): boolean {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value);
 }
@@ -29,7 +38,7 @@ export function isIsoDate(value: unknown): boolean {
 export function buildSeriesConfig(series: ChartSeries[]): ChartConfig {
   const config: ChartConfig = {};
   for (const [index, s] of series.entries()) {
-    config[s.key] = {
+    config[cssSafeKey(s.key)] = {
       label: s.label,
       color: s.color ?? `var(--chart-${index + 1})`,
     };
@@ -49,7 +58,8 @@ export function buildPieConfig(
   const config: ChartConfig = {};
   for (const [index, row] of data.entries()) {
     const name = String(row[nameKey] ?? `slice-${index}`);
-    config[name] = {
+    const key = cssSafeKey(name);
+    config[key] = {
       label: name,
       color: `var(--chart-${(index % 5) + 1})`,
     };
@@ -109,7 +119,7 @@ export function ChartChrome({
 
   if (!title && !interactive) {
     return (
-      <div className={cn(className, propsClassName)} style={styleProp}>
+      <div className={cn('w-full min-w-0', className, propsClassName)} style={styleProp}>
         {children}
       </div>
     );
@@ -117,7 +127,7 @@ export function ChartChrome({
 
   return (
     <Card
-      className={cn('@container/card', className, propsClassName)}
+      className={cn('w-full min-w-0 @container/card', className, propsClassName)}
       style={styleProp}
     >
       <CardHeader>

@@ -9,6 +9,7 @@ import {
 import {
   buildSeriesConfig,
   ChartChrome,
+  cssSafeKey,
   formatAxisTick,
   formatTooltipLabel,
   isIsoDate,
@@ -52,16 +53,19 @@ export function BoundLineChart({
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
         />
         <ChartLegend content={<ChartLegendContent />} />
-        {series.map((s) => (
-          <Line
-            key={s.key}
-            dataKey={s.key}
-            type="monotone"
-            stroke={`var(--color-${s.key})`}
-            strokeWidth={2}
-            dot={false}
-          />
-        ))}
+        {series.map((s) => {
+          const key = cssSafeKey(s.key);
+          return (
+            <Line
+              key={key}
+              dataKey={s.key}
+              type="monotone"
+              stroke={`var(--color-${key})`}
+              strokeWidth={2}
+              dot={false}
+            />
+          );
+        })}
       </LineChart>
     </ChartContainer>
   );

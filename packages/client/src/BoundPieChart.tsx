@@ -8,9 +8,9 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import {
-  buildPieConfig,
   buildSeriesConfig,
   ChartChrome,
+  cssSafeKey,
   type ChartSeries,
 } from './chart-shared';
 
@@ -19,10 +19,14 @@ function expandSeriesData(
   series: ChartSeries[],
 ): { rows: Record<string, unknown>[]; nameKey: string; valueKey: string; config: ChartConfig } {
   const row = data[0] ?? {};
-  const rows = series.map((s) => ({
-    name: s.key,
-    value: Number(row[s.key] ?? 0),
-  }));
+  const rows = series.map((s) => {
+    const key = cssSafeKey(s.key);
+    return {
+      name: key,
+      value: Number(row[s.key] ?? 0),
+      fill: `var(--color-${key})`,
+    };
+  });
   return {
     rows,
     nameKey: 'name',
@@ -61,15 +65,28 @@ export function BoundPieChart({
   } else {
     nameKey = String(props.nameKey ?? 'name');
     valueKey = String(props.valueKey ?? 'value');
+    config = {};
     rows = data.map((row, index) => {
-      const name = String(row[nameKey] ?? `slice-${index}`);
-      return { ...row, [nameKey]: name };
+      const label = String(row[nameKey] ?? `slice-${index}`);
+      const key = cssSafeKey(label);
+      config[key] = {
+        label,
+        color: `var(--chart-${(index % 5) + 1})`,
+      };
+      return {
+        ...row,
+        [nameKey]: key,
+        fill: `var(--color-${key})`,
+      };
     });
-    config = buildPieConfig(rows, nameKey);
   }
 
   const chart = (
-    <ChartContainer config={config} className="aspect-auto mx-auto w-full" style={{ height }}>
+    <ChartContainer
+      config={config}
+      className="mx-auto aspect-square w-full max-h-[300px]"
+      style={{ height, minHeight: Math.min(height, 220) }}
+    >
       <PieChart>
         <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey={nameKey} />} />
         <Pie
@@ -81,7 +98,7 @@ export function BoundPieChart({
         >
           {rows.map((row, index) => {
             const name = String(row[nameKey] ?? index);
-            return <Cell key={name} fill={`var(--color-${name})`} />;
+            return <Cell key={name} fill={String(row.fill ?? `var(--color-${name})`)} />;
           })}
         </Pie>
         <ChartLegend

@@ -7,9 +7,9 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import {
-  buildPieConfig,
   buildSeriesConfig,
   ChartChrome,
+  cssSafeKey,
   type ChartSeries,
 } from './chart-shared';
 
@@ -77,21 +77,24 @@ export function BoundRadialChart({
   const outerRadius: number | string =
     typeof props.outerRadius === 'number' || typeof props.outerRadius === 'string'
       ? props.outerRadius
-      : 110;
+      : useSeries
+        ? 130
+        : '80%';
   const innerRadius: number | string =
     typeof props.innerRadius === 'number' || typeof props.innerRadius === 'string'
       ? props.innerRadius
       : useSeries
         ? 80
-        : 30;
+        : '30%';
 
   let chart: ReactNode;
 
   if (useSeries && series) {
     const row = data[0] ?? {};
-    const stacked: Record<string, unknown> = {};
+    // Category field required so Recharts can lay out stacked radial bars.
+    const stacked: Record<string, unknown> = { name: 'total' };
     for (const s of series) {
-      stacked[s.key] = Number(row[s.key] ?? 0);
+      stacked[cssSafeKey(s.key)] = Number(row[s.key] ?? 0);
     }
     const config = buildSeriesConfig(series);
 
@@ -99,7 +102,7 @@ export function BoundRadialChart({
       <ChartContainer
         config={config}
         className="mx-auto aspect-square w-full max-w-[250px]"
-        style={{ height }}
+        style={{ height, minHeight: Math.min(height, 220) }}
       >
         <RadialBarChart
           data={[stacked]}
@@ -115,16 +118,19 @@ export function BoundRadialChart({
             className="first:fill-muted last:fill-background"
           />
           <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-          {series.map((s) => (
-            <RadialBar
-              key={s.key}
-              dataKey={s.key}
-              stackId="a"
-              cornerRadius={5}
-              fill={`var(--color-${s.key})`}
-              className="stroke-transparent stroke-2"
-            />
-          ))}
+          {series.map((s) => {
+            const key = cssSafeKey(s.key);
+            return (
+              <RadialBar
+                key={key}
+                dataKey={key}
+                stackId="a"
+                cornerRadius={5}
+                fill={`var(--color-${key})`}
+                className="stroke-transparent stroke-2"
+              />
+            );
+          })}
           <CenterLabel centerValue={centerValue} centerLabel={centerLabel} />
         </RadialBarChart>
       </ChartContainer>
@@ -132,21 +138,26 @@ export function BoundRadialChart({
   } else {
     const nameKey = String(props.nameKey ?? 'name');
     const valueKey = String(props.valueKey ?? 'value');
+    const config: ChartConfig = {};
     const rows = data.map((row, index) => {
-      const name = String(row[nameKey] ?? `slice-${index}`);
+      const label = String(row[nameKey] ?? `slice-${index}`);
+      const key = cssSafeKey(label);
+      config[key] = {
+        label,
+        color: `var(--chart-${(index % 5) + 1})`,
+      };
       return {
         ...row,
-        [nameKey]: name,
-        fill: `var(--color-${name})`,
+        [nameKey]: key,
+        fill: `var(--color-${key})`,
       };
     });
-    const config: ChartConfig = buildPieConfig(rows, nameKey);
 
     chart = (
       <ChartContainer
         config={config}
         className="mx-auto aspect-square w-full max-w-[250px]"
-        style={{ height }}
+        style={{ height, minHeight: Math.min(height, 220) }}
       >
         <RadialBarChart
           data={rows}
