@@ -52,6 +52,33 @@ describe('element tree', () => {
     expect(patches).toContainEqual({ op: 'updateProps', id: label.id, props: { text: 'bye' } });
   });
 
+  test('bindText updates from compute when reactive deps change', async () => {
+    clearPages();
+    setPageWrapper(null);
+    const model = reactive({ n: 1 });
+    let label!: Element;
+    const patches: unknown[] = [];
+    page('/bind-text', () => {
+      label = new Element('label', { text: '' }).bindText(() => `n=${model.n}`);
+    });
+
+    const session = new ClientSession('/bind-text', (msg) => {
+      if (msg.op === 'patch') patches.push(...msg.patches);
+    });
+    session.mount();
+    expect(label.props.text).toBe('n=1');
+
+    model.n = 2;
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(label.props.text).toBe('n=2');
+    expect(patches).toContainEqual({
+      op: 'updateProps',
+      id: label.id,
+      props: { text: 'n=2' },
+    });
+  });
+
   test('bindValue syncs reactive object', async () => {
     clearPages();
     setPageWrapper(null);

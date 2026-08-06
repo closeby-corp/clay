@@ -72,7 +72,7 @@ function counter() {
     expect(out.code).toBe(src);
   });
 
-  test('skips let after other statements', () => {
+  test('transforms let after other statements', () => {
     const src = `import { ui } from '@badui/ui';
 ui.page('/', () => {
   ui.label('hi');
@@ -81,7 +81,58 @@ ui.page('/', () => {
 });
 `;
     const out = transformReactiveLet(src, 'page.ts');
-    expect(out.transformed).toBe(false);
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['count']);
+    expect(out.code).toContain('ui.state({ count: 0 })');
+    expect(out.code).toContain('ui.auto(');
+    expect(out.code).not.toMatch(/\blet count\b/);
+  });
+
+  test('transforms let inside nested block', () => {
+    const src = `import { ui } from '@badui/ui';
+ui.page('/', () => {
+  ui.label('hi');
+  {
+    let count = 0;
+    ui.label(String(count));
+  }
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['count']);
+    expect(out.code).toContain('ui.state({ count: 0 })');
+    expect(out.code).toMatch(/\.count/);
+    expect(out.code).not.toMatch(/\blet count\b/);
+  });
+
+  test('transforms nested ui callbacks inside page', () => {
+    const src = `import { ui } from '@badui/ui';
+ui.page('/', () => {
+  ui.column(() => {
+    let n = 1;
+    ui.label(String(n));
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['n']);
+    expect(out.code).toContain('ui.state({ n: 1 })');
+  });
+
+  test('accepts undefined / as / parenthesized initializers', () => {
+    const src = `import { ui } from '@badui/ui';
+ui.page('/', () => {
+  let a = undefined;
+  let b = (0);
+  let c = 1 as number;
+  ui.label(String(a) + b + c);
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets.sort()).toEqual(['a', 'b', 'c']);
   });
 
   test('skips destructuring and complex initializers', () => {
@@ -89,6 +140,20 @@ ui.page('/', () => {
 ui.page('/', () => {
   let { x } = obj;
   ui.label('a');
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(false);
+  });
+
+  test('skips duplicate let names across blocks', () => {
+    const src = `import { ui } from '@badui/ui';
+ui.page('/', () => {
+  let count = 0;
+  {
+    let count = 1;
+    ui.label(String(count));
+  }
 });
 `;
     const out = transformReactiveLet(src, 'page.ts');

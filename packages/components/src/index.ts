@@ -28,7 +28,13 @@ export type LabelProps = {
   className?: string;
 };
 
-export function label(text?: string, props: Omit<LabelProps, 'text'> = {}): Element {
+export function label(text?: string | (() => string), props: Omit<LabelProps, 'text'> = {}): Element {
+  if (typeof text === 'function') {
+    return new Element('label', {
+      text: '',
+      className: props.className,
+    }).bindText(text);
+  }
   return new Element('label', {
     text: text ?? '',
     className: props.className,

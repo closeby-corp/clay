@@ -1,6 +1,6 @@
 import { generateId } from './utils';
 import { getCurrentParent, getCurrentSession, withParent } from './context';
-import { subscribe } from './reactive';
+import { subscribe, trackReads } from './reactive';
 import type { ElementNode } from './protocol';
 import type { ClientSession } from './session';
 
@@ -224,6 +224,79 @@ export class Element {
     return this;
   }
 
+  /**
+   * One-way bind text from a compute function. Re-runs when any `state` /
+   * `reactive` property read during compute changes (same tracking as `auto`).
+   */
+  bindText(compute: () => string): this {
+    const depUnsubs: Array<() => void> = [];
+    let queued = false;
+    const sync = () => {
+      for (const unsub of depUnsubs) unsub();
+      depUnsubs.length = 0;
+      let next = '';
+      const deps = trackReads(() => {
+        next = String(compute());
+      });
+      if (this.props.text !== next) {
+        this.props.text = next;
+        this.queuePropsPatch({ text: next });
+      }
+      for (const { target, key } of deps) {
+        depUnsubs.push(
+          subscribe(target, key, () => {
+            if (queued) return;
+            queued = true;
+            queueMicrotask(() => {
+              queued = false;
+              sync();
+            });
+          }),
+        );
+      }
+    };
+    sync();
+    this.unsubs.push(() => {
+      for (const unsub of depUnsubs) unsub();
+      depUnsubs.length = 0;
+    });
+    return this;
+  }
+
+  /**
+   * Copy handlers + serializable props from a freshly built twin, keeping this
+   * element's id. Used by in-place `refresh` to prefer `updateProps` over remount.
+   */
+  protected absorbRebuild(source: Element): void {
+    this.handlers = new Map(source.handlers);
+    this.classList = [...source.classList];
+    this.styleText = source.styleText;
+
+    const patch: Record<string, unknown> = {};
+    const nextProps = { ...source.props };
+    for (const key of Object.keys(this.props)) {
+      if (!(key in nextProps)) {
+        delete this.props[key];
+        patch[key] = null;
+      }
+    }
+    for (const [key, value] of Object.entries(nextProps)) {
+      if (this.props[key] !== value) {
+        this.props[key] = value;
+        if (typeof value !== 'function') patch[key] = value;
+      }
+    }
+    if (Object.keys(patch).length > 0) {
+      this.queuePropsPatch(patch);
+    }
+
+    const oldKids = this.children;
+    const newKids = source.children;
+    for (let i = 0; i < oldKids.length; i++) {
+      oldKids[i]!.absorbRebuild(newKids[i]!);
+    }
+  }
+
   async handleEvent(type: string, value?: unknown): Promise<void> {
     if (value !== undefined && (type === 'input' || type === 'change')) {
       this.props.value = value;
@@ -262,8 +335,32 @@ export class RefreshableElement extends Element {
   }
 
   refresh(): void {
-    this.clearChildren();
+    const previous = this.children;
+    for (const child of previous) {
+      child.parent = null;
+    }
+    this.children = [];
     withParent(this, () => this.builder());
+    const next = this.children;
+
+    if (previous.length > 0 && canReuseElementTree(previous, next)) {
+      for (let i = 0; i < previous.length; i++) {
+        previous[i]!.absorbRebuild(next[i]!);
+      }
+      for (const child of next) {
+        child.parent = null;
+        child.destroy();
+      }
+      this.children = previous;
+      for (const child of previous) {
+        child.parent = this;
+      }
+      return;
+    }
+
+    for (const child of previous) {
+      child.destroy();
+    }
     const session = this.session;
     if (session?.isMounted) {
       session.enqueuePatch({
@@ -273,4 +370,17 @@ export class RefreshableElement extends Element {
       });
     }
   }
+}
+
+/** Same type shape and no nested refreshable/auto roots → safe for in-place props sync. */
+function canReuseElementTree(previous: Element[], next: Element[]): boolean {
+  if (previous.length !== next.length) return false;
+  for (let i = 0; i < previous.length; i++) {
+    const a = previous[i]!;
+    const b = next[i]!;
+    if (a.type !== b.type) return false;
+    if (a instanceof RefreshableElement || b instanceof RefreshableElement) return false;
+    if (!canReuseElementTree(a.children, b.children)) return false;
+  }
+  return true;
 }

@@ -111,8 +111,13 @@ panel.refresh();
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `text` | `string` | Label content (also the first argument) |
+| `text` | `string \| (() => string)` | Label content (also the first argument). A function uses `bindText` — re-runs when tracked `state` / `reactive` reads change |
 | `className` | `string` | Extra classes |
+
+```typescript
+const s = ui.state({ count: 0 });
+ui.label(() => `Count: ${s.count}`);
+```
 
 #### `ui.button(text?, props?)`
 
@@ -1098,9 +1103,10 @@ Returned by every `ui.*` factory.
 | `.getValue()` / `.get()` | Read `props.value` |
 | `.bindValue(obj, key)` | Two-way bind to reactive object property |
 | `.bindTextFrom(obj, key)` | One-way bind text from object property |
+| `.bindText(() => string)` | One-way bind text from a compute fn (tracks `state` reads) |
 | `.update(props?)` | Merge props or replace node |
 | `.add(child)` | Append child element |
-| `.refresh()` | **RefreshableElement only** — rebuild children |
+| `.refresh()` | **RefreshableElement only** — rebuild children (in-place props sync when shape is stable) |
 
 Chaining:
 
@@ -1116,7 +1122,7 @@ ui.label('Title')
 
 Prefer importing from `@badui/ui` (also on `ui.reactive` / `ui.subscribe` / `ui.state` / `ui.auto`). Still exported from `@badui/core`.
 
-Compile-time `let` rewrite (Phase 2 MVP): [`docs/reactive-let.md`](./reactive-let.md) and `@badui/compiler`.
+Compile-time `let` rewrite (Phase 2): [`docs/reactive-let.md`](./reactive-let.md) and `@badui/compiler`.
 
 ### `reactive(target)` / `ui.state(target)`
 
@@ -1131,7 +1137,7 @@ const s = ui.state({ count: 0 }); // alias of reactive
 
 ### `ui.auto(fn)`
 
-Rebuilds the block when `state` / `reactive` properties **read** during `fn` change. Keep mutable state outside the builder.
+Rebuilds the block when `state` / `reactive` properties **read** during `fn` change. Keep mutable state outside the builder. When the child tree shape is unchanged, patches props in place (`updateProps`) instead of remounting via `setChildren`.
 
 ```typescript
 const s = ui.state({ count: 0 });
@@ -1139,6 +1145,16 @@ ui.auto(() => {
   ui.label(`Count: ${s.count}`);
   ui.button('+', { onClick: () => { s.count++; } });
 });
+```
+
+### `ui.label(() => …)`
+
+Computed label without an `auto` wrapper:
+
+```typescript
+const s = ui.state({ count: 0 });
+ui.label(() => `Count: ${s.count}`);
+ui.button('+', { onClick: () => { s.count++; } });
 ```
 
 ### `subscribe(obj, key, listener)`

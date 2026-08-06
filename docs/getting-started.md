@@ -142,7 +142,7 @@ bun run badui ./pages --app --title "My App"
 | `--reactive-let` | Enable compile-time reactive `let` Bun loader (default) |
 | `--no-reactive-let` | Disable the reactive-let plugin |
 
-See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto` and the Phase 2 `let` transform subset.
+See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto`, `ui.label(() => …)`, and the Phase 2 `let` transform.
 
 ## Install and run the demo
 

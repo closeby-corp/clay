@@ -16,8 +16,9 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 - [x] Thin JS bridge (`runJavaScript` / scroll helpers)
 - [x] Browser / client / general storage scopes + Redis adapter (multi-process / horizontal scaling)
-- [x] Compile-time reactive `let` (auto UI updates without manual `setText` / `refresh`) — Phase 1: `ui.state` + `ui.auto`; Phase 2 MVP: `@badui/compiler` + `badui` Bun loader (see [`docs/reactive-let.md`](./docs/reactive-let.md)); finer updates / full NiceGUI parity still Later
+- [x] Compile-time reactive `let` (auto UI updates without manual `setText` / `refresh`) — Phase 1: `ui.state` + `ui.auto` (in-place props sync); Phase 2: `@badui/compiler` + `badui` Bun loader with non-leading / nested-block `let`s (see [`docs/reactive-let.md`](./docs/reactive-let.md)); NiceGUI full parity still Later
 - [x] Composed / scatter charts
+- [x] `ui.label(() => string)` / `Element.bindText` computed-label sugar
 
 ### Quality / DX
 
@@ -36,6 +37,7 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 ## Done (recent)
 
+- Reactive follow-up: `ui.auto` in-place `updateProps` when tree shape is stable; expanded `let` transform (non-leading / nested blocks / more initializers); `ui.label(() => …)` + `bindText`
 - Reactive Phase 2 MVP: `@badui/compiler` transform + `badui --reactive-let` Bun loader (subset `let` → `ui.state` / `ui.auto`)
 - Menubar: submenu, checkbox, radio group; command: `mode: 'inline'`
 - ShadCN: menubar, carousel, command palette, resizable, scroll-area

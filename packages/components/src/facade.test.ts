@@ -43,9 +43,21 @@ import {
   checkbox,
   select,
   slider,
+  label,
 } from './index';
+import { reactive } from '@badui/core';
 
 describe('facade feedback / layout elements', () => {
+  test('label accepts compute fn via bindText', async () => {
+    const s = reactive({ n: 3 });
+    const el = label(() => `n=${s.n}`);
+    expect(el.props.text).toBe('n=3');
+    s.n = 4;
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(el.props.text).toBe('n=4');
+  });
+
   test('input error prop wires through', () => {
     const el = input({ label: 'Name', error: 'Required' });
     expect(el.type).toBe('input');

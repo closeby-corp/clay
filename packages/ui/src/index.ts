@@ -321,7 +321,7 @@ export {
   clearPageMeta,
 };
 
-export function label(text?: string, props?: Omit<LabelProps, 'text'>): Element {
+export function label(text?: string | (() => string), props?: Omit<LabelProps, 'text'>): Element {
   return labelFactory(text, props);
 }
 

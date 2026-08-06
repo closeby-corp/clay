@@ -66,6 +66,7 @@ describe('auto', () => {
     expect(el).toBeInstanceOf(AutoElement);
     expect(labels).toEqual(['Count: 0']);
     expect(el.children[0]?.props.text).toBe('Count: 0');
+    const labelId = el.children[0]!.id;
 
     s.count = 1;
     await Promise.resolve();
@@ -73,6 +74,39 @@ describe('auto', () => {
 
     expect(labels).toEqual(['Count: 0', 'Count: 1']);
     expect(el.children[0]?.props.text).toBe('Count: 1');
+    expect(el.children[0]?.id).toBe(labelId);
+    expect(patches.some((p: any) => p.op === 'updateProps' && p.props?.text === 'Count: 1')).toBe(
+      true,
+    );
+    expect(patches.some((p: any) => p.op === 'setChildren')).toBe(false);
+  });
+
+  test('falls back to setChildren when structure changes', async () => {
+    clearPages();
+    setPageWrapper(null);
+    const s = state({ show: false });
+    let el!: AutoElement;
+
+    page('/auto-struct', () => {
+      el = auto(() => {
+        void s.show;
+        new Element('label', { text: 'a' });
+        if (s.show) new Element('label', { text: 'b' });
+      });
+    });
+
+    const patches: unknown[] = [];
+    const session = new ClientSession('/auto-struct', (msg) => {
+      if (msg.op === 'patch') patches.push(...msg.patches);
+    });
+    session.mount();
+    expect(el.children).toHaveLength(1);
+
+    s.show = true;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(el.children).toHaveLength(2);
     expect(patches.some((p: any) => p.op === 'setChildren')).toBe(true);
   });
 
