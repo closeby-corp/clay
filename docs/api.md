@@ -918,10 +918,16 @@ onClick: async () => {
 | `ui.clipboard(content)` | `void` | Write text to clipboard |
 | `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
 | `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |
+| `ui.runJavaScript(code)` | `void` | Eval trusted snippet in the browser |
+| `ui.scroll.to(opts)` | `void` | Scroll window (`top` / `bottom` / px) |
+| `ui.scroll.intoView(selector, opts?)` | `void` | `Element.scrollIntoView` via selector |
 | `ui.timer(interval, callback, options?)` | `TimerHandle` | Session-scoped timer; `interval` in **seconds**; `{ once? }`; `.activate()` / `.deactivate()` / `.cancel()` |
 | `ui.upload(props?)` | `Element` | Multipart HTTP upload; see below |
 | `ui.storage.tab` | | Per-WS-session in-memory map |
-| `ui.storage.user` | | Per-browser-user JSON bag (file-backed) |
+| `ui.storage.browser` | | Mirrored to client `localStorage` |
+| `ui.storage.client` | | Mirrored to client `sessionStorage` |
+| `ui.storage.user` | | Per-browser-user JSON bag (file/Redis-backed) |
+| `ui.storage.app` | | Process-wide typed stores |
 
 `ui.notify` options: `{ type?, duration?, position?, description? }` — `duration: 0` is sticky; `description` is Sonner’s secondary line; positions `top-left` \| `top-right` \| `bottom-left` \| `bottom-right`.
 
@@ -933,9 +939,9 @@ ui.timer(2, () => ui.notify('Once'), { once: true });
 
 Timers are cleared on WebSocket session destroy.
 
-#### `ui.upload({ onUpload, accept?, multiple?, label? })`
+#### `ui.upload({ onUpload, accept?, multiple?, label?, maxSizeBytes?, abortable?, onProgress?, onError?, onAbort? })`
 
-Opens a file picker. Selected files are posted to `POST /upload` (multipart). The client then emits a WS `upload` event per file with `{ name, size, type, path }` — **not** base64 over the socket. `onUpload` receives that metadata; read the file from `path` on the server if needed.
+Opens a file picker. Selected files are posted to `POST /upload` (multipart) with XHR progress. The client emits WS events: `upload` per file `{ name, size, type, path }`, plus optional `progress` / `error` / `abort`. Client and server enforce `accept` / `maxSizeBytes` when set (`ui.run({ uploadMaxSizeBytes, uploadAccept })` for global server limits).
 
 ```typescript
 ui.upload({
@@ -949,15 +955,17 @@ ui.upload({
 
 #### `ui.storage`
 
-Lightweight NiceGUI-style storage (no browser/general/Redis yet):
+NiceGUI-style storage scopes:
 
 | API | Scope | Persistence |
 |-----|--------|-------------|
 | `ui.storage.tab.get/set/delete/clear/has` | Current WebSocket session | In-memory; survives `refreshable` rebuilds; cleared on disconnect |
-| `ui.storage.user.get/set/delete/clear/has` | Stable `userId` from client localStorage (+ cookie) | JSON bag via `createFilePersistence` (default `.badui-user-data`) |
-| `ui.storage.app.create(key, initial, options?)` | Process-wide typed store (all sessions) | Optional file adapter via `appStorageDir` / `storage.configure({ app })` |
+| `ui.storage.browser.*` | Shared across tabs for the origin | Mirrored to client `localStorage` (hydrated on `hello`) |
+| `ui.storage.client.*` | This browser tab | Mirrored to client `sessionStorage` (hydrated on `hello`) |
+| `ui.storage.user.get/set/delete/clear/has` | Stable `userId` (hello / `resolveUserId`) | JSON bag via file or Redis adapter |
+| `ui.storage.app.create(key, initial, options?)` | Process-wide typed store (all sessions) | Optional file/Redis adapter via `appStorageDir` / `storage.configure({ app })` |
 
-User storage requires the client to send `userId` on `hello` (built-in client does this). Configure via `ui.run({ userStorageDir, appStorageDir })` — user defaults to `.badui-user-data`; app defaults to memory-only (`false`). Upload directory: `ui.run({ uploadDir: '.badui-uploads' })`.
+User storage requires a `userId` on the session. The built-in client sends an anonymous localStorage id on `hello`; override with `ui.run({ resolveUserId })` (e.g. reverse-proxy header). Configure dirs via `ui.run({ userStorageDir, appStorageDir, uploadDir, uploadMaxSizeBytes, uploadAccept })`.
 
 ```typescript
 const messages = ui.storage.app.create<Message[]>('chatMessages', []);
@@ -971,7 +979,7 @@ await messages.set([...(await messages.get()), newMessage]);
 await messages.update((prev) => [...prev, newMessage]);
 ```
 
-`get()` is always async. For **persisted** stores it calls `adapter.load(key)` on every read so other processes’ writes are visible; then updates memory and notifies subscribers if the value changed. `set` / `update` write memory immediately and `await adapter.save` when persisted.
+`get()` is always async for **user** / **app**. For **persisted** app stores it calls `adapter.load(key)` on every read so other processes’ writes are visible; then updates memory and notifies subscribers if the value changed. `set` / `update` write memory immediately and `await adapter.save` when persisted.
 
 | Method | Description |
 |--------|-------------|
@@ -984,6 +992,7 @@ await messages.update((prev) => [...prev, newMessage]);
 | `storage.clearAll()` | Test helper (clears app stores + user bags + both adapters) |
 | `createMemoryPersistence()` | In-memory adapter for tests (`@badui/core`) |
 | `createFilePersistence({ dir })` | File-backed adapter (`@badui/persistence-file`) |
+| `createRedisPersistence({ client, keyPrefix? })` | Redis adapter (`@badui/persistence-redis`) — multi-process app/user bags; keep WS sticky |
 
 `PersistenceAdapter`:
 
@@ -1105,15 +1114,31 @@ ui.label('Title')
 
 ## Reactivity
 
-Prefer importing from `@badui/ui` (also on `ui.reactive` / `ui.subscribe`). Still exported from `@badui/core`.
+Prefer importing from `@badui/ui` (also on `ui.reactive` / `ui.subscribe` / `ui.state` / `ui.auto`). Still exported from `@badui/core`.
 
-### `reactive(target)`
+Compile-time `let` rewrite (Phase 2 MVP): [`docs/reactive-let.md`](./reactive-let.md) and `@badui/compiler`.
+
+### `reactive(target)` / `ui.state(target)`
 
 ```typescript
-import { reactive } from '@badui/ui';
+import { reactive, ui } from '@badui/ui';
 
 const form = reactive({ name: '', agree: false });
 form.name = 'Ada'; // notifies subscribers
+
+const s = ui.state({ count: 0 }); // alias of reactive
+```
+
+### `ui.auto(fn)`
+
+Rebuilds the block when `state` / `reactive` properties **read** during `fn` change. Keep mutable state outside the builder.
+
+```typescript
+const s = ui.state({ count: 0 });
+ui.auto(() => {
+  ui.label(`Count: ${s.count}`);
+  ui.button('+', { onClick: () => { s.count++; } });
+});
 ```
 
 ### `subscribe(obj, key, listener)`

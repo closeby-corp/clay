@@ -1,0 +1,29 @@
+{
+  "name": "@badui/persistence-redis",
+  "version": "0.1.0",
+  "description": "Redis PersistenceAdapter for BadUI storage.app / storage.user",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "!src/**/*.test.ts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "directory": "packages/persistence-redis"
+  },
+  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@badui/core": "workspace:*"
+  }
+}

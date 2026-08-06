@@ -1,7 +1,9 @@
 import { categories } from './categories';
+import { composed } from './composed';
 import { pie } from './pie';
 import { radar } from './radar';
 import { radial } from './radial';
+import { scatter } from './scatter';
 import { timeSeries } from './time-series';
 
 export {
@@ -26,6 +28,8 @@ export {
   type StackedGaugeOpts,
 } from './radial';
 export { RadarBuilder, radar } from './radar';
+export { ScatterBuilder, scatter } from './scatter';
+export { ComposedBuilder, composed, type ComposedTerminalOpts } from './composed';
 export {
   normalizeSeries,
   type SeriesInput,
@@ -33,11 +37,13 @@ export {
   type ChromeState,
 } from './shared';
 
-/** Mode-first chart namespace: `ui.chart.categories` / `timeSeries` / `pie` / `radial` / `radar`. */
+/** Mode-first chart namespace: `ui.chart.categories` / `timeSeries` / `pie` / `radial` / `radar` / `scatter` / `composed`. */
 export const chart = {
   categories,
   timeSeries,
   pie,
   radial,
   radar,
+  scatter,
+  composed,
 };

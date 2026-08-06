@@ -27,10 +27,19 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `separator` | `separator` | ShadCN `Separator` |
 | `icon` | `icon` | Curated Lucide icon (same keys as nav) |
 | `tooltip` | `tooltip` | ShadCN `Tooltip` wrapping children |
+| `hoverCard` | `hovercard` | ShadCN `HoverCard` wrapping children |
+| `popover` | `popover` | ShadCN `Popover` (server-owned `open`) |
+| `inputOtp` | `inputotp` | ShadCN `InputOTP` |
+| `toggleGroup` | `togglegroup` (+ `toggleitem`) | ShadCN `ToggleGroup` |
+| `menubar` | `menubar` (+ `menubarmenu` / `menubarsubmenu` / `menubaritem` / `menubarcheckbox` / `menubarradiogroup` / `menubarradioitem` / `menubarseparator`) | ShadCN `Menubar` (submenu, checkbox, radio) |
+| `carousel` | `carousel` (+ `carouselslide`) | Embla carousel |
+| `command` | `command` (+ `commandgroup` / `commanditem` / `commandseparator`) | Command palette (`mode: 'dialog' \| 'inline'`; dialog owns `open`) |
+| `resizable` | `resizable` (+ `resizablepanel` / `resizablehandle`) | `react-resizable-panels` |
+| `scrollArea` | `scrollarea` | ShadCN `ScrollArea` |
 | `markdown` | `markdown` | Client `marked` + DOMPurify |
 | `html` | `html` | Trusted server HTML (`dangerouslySetInnerHTML`) |
 | `image` | `image` | `<img>` |
-| `upload` | `upload` | File picker → `POST /upload` → WS `upload` event (metadata + server path) |
+| `upload` | `upload` | File picker → `POST /upload` (progress/abort) → WS `upload` / `progress` / `error` / `abort` |
 | `stat` | `stat` | Grid of metric cards |
 | `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive ranges, `stacked?`) |
 | `barChart` | `barchart` | Recharts bar (`stacked?`, `layout?: 'vertical' \| 'horizontal'`) |
@@ -38,6 +47,8 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `pieChart` | `piechart` | Recharts pie/donut (`nameKey`/`valueKey` or `series`, `innerRadius?`) |
 | `radarChart` | `radarchart` | Recharts radar (`angleKey` + `series`, optional `fillOpacity`) |
 | `radialChart` | `radialchart` | Recharts radial bar (`nameKey`/`valueKey` or stacked `series`, optional center text / angles) |
+| `scatterChart` | `scatterchart` | Recharts scatter (`xKey` / `yKey`, optional `seriesKey`) |
+| `composedChart` | `composedchart` | Recharts composed (per-series `type`: bar/line/area) |
 | `dataTable` | `datatable` | Search, filters, views, grouping, selection, reorder, editors, export, sort, pagination, actions, detail drawer |
 | `tabs` | `tabs` (+ child `tab`) | ShadCN `Tabs`; optimistic `value` |
 | `accordion` | `accordion` (+ child `accordionitem`) | ShadCN `Accordion`; optimistic `value` |
@@ -51,6 +62,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `dialog` | `dialog` | Modal overlay (server-owned `open`) |
 | `alertDialog` | `alertdialog` | Confirm/destructive modal (server-owned `open`) |
 | `dropdownMenu` | `dropdownmenu` (+ `dropdownitem` / `dropdownseparator`) | ShadCN dropdown; item `select` events |
+| `contextMenu` | `contextmenu` (+ `contextmenuitem` / `contextmenuseparator`) | ShadCN context menu; item `select` events |
 | `breadcrumb` | `breadcrumb` | ShadCN breadcrumb; `href` crumbs use SPA `pushState` |
 | `sheet` | `sheet` | Side panel overlay (server-owned `open`) |
 | `drawer` | `drawer` | Vaul drawer overlay (server-owned `open`) |
@@ -68,10 +80,14 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `checkbox` / `switch` | `change` (and `input` if bound) |
 | `select` / `slider` / `radioGroup` / `combobox` / `date` | `change` (and `input` if bound for radio/combobox/date) |
 | `tabs` / `accordion` / `collapsible` | `change` |
-| `upload` | `upload` (file metadata + server `path`, not bytes) |
+| `upload` | `upload`, `progress`, `error`, `abort` |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
-| `dropdownMenu` item | `select` |
+| `dropdownMenu` / `contextMenu` / `menubar` item | `select` |
+| `menubar` checkbox | `checkedChange` |
+| `menubar` radio group | `valueChange` |
+| `popover` / `command` (dialog) | `openChange` |
+| `inputOtp` / `toggleGroup` | `change` (`inputOtp` also `complete`) |
 
 Prop names use camelCase (`onClick` → event name `click`).
 

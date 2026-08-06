@@ -28,6 +28,8 @@ import {
   pieChart as pieChartFactory,
   radarChart as radarChartFactory,
   radialChart as radialChartFactory,
+  scatterChart as scatterChartFactory,
+  composedChart as composedChartFactory,
   row as rowFactory,
   column as columnFactory,
   container as containerFactory,
@@ -37,6 +39,16 @@ import {
   alertDialog as alertDialogFactory,
   dropdownMenu as dropdownMenuFactory,
   breadcrumb as breadcrumbFactory,
+  contextMenu as contextMenuFactory,
+  hoverCard as hoverCardFactory,
+  popover as popoverFactory,
+  inputOtp as inputOtpFactory,
+  toggleGroup as toggleGroupFactory,
+  menubar as menubarFactory,
+  carousel as carouselFactory,
+  command as commandFactory,
+  resizable as resizableFactory,
+  scrollArea as scrollAreaFactory,
   sheet as sheetFactory,
   drawer as drawerFactory,
   tabs as tabsFactory,
@@ -92,6 +104,11 @@ import {
   type RadarChartSeries,
   type RadialChartProps,
   type RadialChartSeries,
+  type ScatterChartProps,
+  type ScatterChartSeries,
+  type ComposedChartProps,
+  type ComposedChartSeries,
+  type ComposedSeriesType,
   type CartesianChartProps,
   type ChartSeries,
   type CardProps,
@@ -99,6 +116,30 @@ import {
   type AlertDialogProps,
   type DropdownMenuProps,
   type DropdownItemOptions,
+  type ContextMenuProps,
+  type ContextMenuItemOptions,
+  type HoverCardProps,
+  type HoverCardSide,
+  type PopoverProps,
+  type InputOtpProps,
+  type ToggleGroupProps,
+  type ToggleGroupType,
+  type ToggleItemOptions,
+  type MenubarProps,
+  type MenubarItemOptions,
+  type MenubarCheckboxOptions,
+  type MenubarRadioGroupOptions,
+  type MenubarRadioItemOptions,
+  type CarouselProps,
+  type CarouselOrientation,
+  type CommandProps,
+  type CommandMode,
+  type CommandItemOptions,
+  type ResizableProps,
+  type ResizableOrientation,
+  type ResizablePanelProps,
+  type ResizableHandleProps,
+  type ScrollAreaProps,
   type BreadcrumbItem,
   type BreadcrumbProps,
   type SheetProps,
@@ -123,11 +164,13 @@ import {
   type ImageProps,
   type UploadProps,
   type UploadedFile,
+  type UploadProgress,
   type SeriesInput,
   type ChartChromeOpts,
   type PieRowKeys,
   type RadialRowKeys,
   type StackedGaugeOpts,
+  type ComposedTerminalOpts,
   type PageSizeOptions,
   type GroupByOptions,
   DataTableElement,
@@ -135,6 +178,16 @@ import {
   DialogElement,
   AlertDialogElement,
   DropdownMenuElement,
+  ContextMenuElement,
+  PopoverElement,
+  ToggleGroupElement,
+  MenubarElement,
+  MenubarMenuElement,
+  MenubarRadioGroupElement,
+  CarouselElement,
+  CommandElement,
+  CommandGroupElement,
+  ResizableElement,
   SheetElement,
   DrawerElement,
   TabsElement,
@@ -144,28 +197,35 @@ import {
 import {
   Element,
   RefreshableElement,
+  AutoElement,
   page as corePage,
   getPage,
   notify as notifyCore,
   navigate as navigateCore,
   download as downloadCore,
   clipboard as clipboardCore,
+  runJavaScript as runJavaScriptCore,
+  scroll as scrollCore,
   timer as timerCore,
   storage as storageCore,
   theme as themeCore,
   reactive as reactiveCore,
+  state as stateCore,
   subscribe as subscribeCore,
+  auto as autoCore,
   validate as validateCore,
   setPageWrapper,
   type NotifyOptions,
   type NotifyType,
-  type PageFn,
+  type ScrollToOptions,
+  type ScrollIntoViewOptions,
+  type FieldRule,
   type PageOptions,
+  type PageFn,
   type ToastPosition,
+  TimerHandle,
   type TimerOptions,
   type ThemeMode,
-  type FieldRule,
-  TimerHandle,
 } from '@badui/core';
 import { BadUIServer, type BadUIServerConfig } from '@badui/server';
 import {
@@ -406,6 +466,14 @@ export function radialChart(props: RadialChartProps): Element {
   return radialChartFactory(props);
 }
 
+export function scatterChart(props: ScatterChartProps): Element {
+  return scatterChartFactory(props);
+}
+
+export function composedChart(props: ComposedChartProps): Element {
+  return composedChartFactory(props);
+}
+
 export function row(fn: () => void, props?: Parameters<typeof rowFactory>[1]): Element;
 export function row(props: Parameters<typeof rowFactory>[0], fn: () => void): Element;
 export function row(a: any, b?: any): Element {
@@ -460,6 +528,100 @@ export function dropdownMenu(
 ): DropdownMenuElement;
 export function dropdownMenu(a: any, b?: any): DropdownMenuElement {
   return dropdownMenuFactory(a, b);
+}
+
+export function contextMenu(
+  fn: (m: ContextMenuElement) => void,
+  props?: ContextMenuProps,
+): ContextMenuElement;
+export function contextMenu(
+  props: ContextMenuProps,
+  fn: (m: ContextMenuElement) => void,
+): ContextMenuElement;
+export function contextMenu(a: any, b?: any): ContextMenuElement {
+  return contextMenuFactory(a, b);
+}
+
+export function hoverCard(fn: () => void, props: HoverCardProps): Element;
+export function hoverCard(props: HoverCardProps, fn: () => void): Element;
+export function hoverCard(a: any, b: any): Element {
+  return hoverCardFactory(a, b);
+}
+
+export function popover(fn: (p: PopoverElement) => void, props?: PopoverProps): PopoverElement;
+export function popover(props: PopoverProps, fn: (p: PopoverElement) => void): PopoverElement;
+export function popover(a: any, b?: any): PopoverElement {
+  return popoverFactory(a, b);
+}
+
+export function inputOtp(props?: InputOtpProps): Element {
+  return inputOtpFactory(props);
+}
+
+export function toggleGroup(
+  fn: (g: ToggleGroupElement) => void,
+  props?: ToggleGroupProps,
+): ToggleGroupElement;
+export function toggleGroup(
+  props: ToggleGroupProps,
+  fn: (g: ToggleGroupElement) => void,
+): ToggleGroupElement;
+export function toggleGroup(a: any, b?: any): ToggleGroupElement {
+  return toggleGroupFactory(a, b);
+}
+
+export function menubar(
+  fn: (m: MenubarElement) => void,
+  props?: MenubarProps,
+): MenubarElement;
+export function menubar(
+  props: MenubarProps,
+  fn: (m: MenubarElement) => void,
+): MenubarElement;
+export function menubar(a: any, b?: any): MenubarElement {
+  return menubarFactory(a, b);
+}
+
+export function carousel(
+  fn: (c: CarouselElement) => void,
+  props?: CarouselProps,
+): CarouselElement;
+export function carousel(
+  props: CarouselProps,
+  fn: (c: CarouselElement) => void,
+): CarouselElement;
+export function carousel(a: any, b?: any): CarouselElement {
+  return carouselFactory(a, b);
+}
+
+export function command(
+  fn: (c: CommandElement) => void,
+  props?: CommandProps,
+): CommandElement;
+export function command(
+  props: CommandProps,
+  fn: (c: CommandElement) => void,
+): CommandElement;
+export function command(a: any, b?: any): CommandElement {
+  return commandFactory(a, b);
+}
+
+export function resizable(
+  fn: (r: ResizableElement) => void,
+  props?: ResizableProps,
+): ResizableElement;
+export function resizable(
+  props: ResizableProps,
+  fn: (r: ResizableElement) => void,
+): ResizableElement;
+export function resizable(a: any, b?: any): ResizableElement {
+  return resizableFactory(a, b);
+}
+
+export function scrollArea(fn: () => void, props?: ScrollAreaProps): Element;
+export function scrollArea(props: ScrollAreaProps, fn: () => void): Element;
+export function scrollArea(a: any, b?: any): Element {
+  return scrollAreaFactory(a, b);
 }
 
 export function breadcrumb(items: BreadcrumbItem[], props?: BreadcrumbProps): Element {
@@ -528,6 +690,14 @@ export function clipboard(content: string): void {
   clipboardCore(content);
 }
 
+/** Run trusted JavaScript in the connected browser. */
+export function runJavaScript(code: string): void {
+  runJavaScriptCore(code);
+}
+
+/** Window / element scroll helpers (`ui.scroll.to` / `ui.scroll.intoView`). */
+export const scroll = scrollCore;
+
 export function timer(
   interval: number,
   callback: () => void | Promise<void>,
@@ -545,6 +715,9 @@ export const theme = themeCore;
 /** Proxy that notifies subscribers on property change. Prefer this over importing from `@badui/core`. */
 export const reactive = reactiveCore;
 
+/** Alias for `reactive` — NiceGUI-ish mutable page state. Prefer `ui.state`. */
+export const state = stateCore;
+
 /** Listen for a reactive property change. Prefer this over importing from `@badui/core`. */
 export const subscribe = subscribeCore;
 
@@ -555,6 +728,14 @@ export function validate(rules: FieldRule[]): boolean {
 
 export function refreshable(fn: () => void): RefreshableElement {
   return new RefreshableElement(fn);
+}
+
+/**
+ * Auto-refreshing UI block: rebuilds when `ui.state` / `reactive` values read
+ * during the builder change. Keep state outside the builder.
+ */
+export function auto(fn: () => void): AutoElement {
+  return autoCore(fn);
 }
 
 export function page(path: string, fn: () => void, options?: PageOptions): void {
@@ -650,6 +831,8 @@ export const ui = {
   pieChart,
   radarChart,
   radialChart,
+  scatterChart,
+  composedChart,
   row,
   column,
   container,
@@ -659,6 +842,16 @@ export const ui = {
   dialog,
   alertDialog,
   dropdownMenu,
+  contextMenu,
+  hoverCard,
+  popover,
+  inputOtp,
+  toggleGroup,
+  menubar,
+  carousel,
+  command,
+  resizable,
+  scrollArea,
   breadcrumb,
   sheet,
   drawer,
@@ -672,13 +865,17 @@ export const ui = {
   navigate,
   download,
   clipboard,
+  runJavaScript,
+  scroll,
   timer,
   storage,
   theme,
   reactive,
+  state,
   subscribe,
   validate,
   refreshable,
+  auto,
   page,
   run,
   loadPages,

@@ -8,6 +8,8 @@ import { BoundLineChart } from './BoundLineChart';
 import { BoundPieChart } from './BoundPieChart';
 import { BoundRadarChart } from './BoundRadarChart';
 import { BoundRadialChart } from './BoundRadialChart';
+import { BoundScatterChart } from './BoundScatterChart';
+import { BoundComposedChart } from './BoundComposedChart';
 import { BoundDataTable } from './BoundDataTable';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -45,6 +47,62 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  Menubar,
+  MenubarCheckboxItem,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarRadioGroup,
+  MenubarRadioItem,
+  MenubarSeparator,
+  MenubarSub,
+  MenubarSubContent,
+  MenubarSubTrigger,
+  MenubarTrigger,
+} from '@/components/ui/menubar';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from '@/components/ui/command';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -660,6 +718,526 @@ function BoundDropdownMenu({
   );
 }
 
+function BoundContextMenu({
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className={cn(
+            'inline-flex cursor-context-menu rounded-md border border-dashed px-3 py-2 text-sm',
+            className,
+          )}
+          style={asStyle(style)}
+        >
+          {String(props.label ?? 'Right-click me')}
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {children.map((child) => {
+          if (child.type === 'contextmenuseparator') {
+            return <ContextMenuSeparator key={child.id} />;
+          }
+          if (child.type !== 'contextmenuitem') return null;
+          return (
+            <ContextMenuItem
+              key={child.id}
+              variant={child.props.variant === 'destructive' ? 'destructive' : 'default'}
+              disabled={!!child.props.disabled}
+              onSelect={() => {
+                if (hasEvent(child.props, 'select')) {
+                  emit(child.id, 'select', child.props.value);
+                }
+              }}
+            >
+              {String(child.props.label ?? child.props.value ?? '')}
+            </ContextMenuItem>
+          );
+        })}
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+}
+
+function BoundHoverCard({
+  props,
+  className,
+  style,
+  children,
+}: {
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  children: ReactNode;
+}) {
+  return (
+    <HoverCard>
+      <HoverCardTrigger asChild>
+        <span className={cn('inline-flex', className)} style={asStyle(style)}>
+          {children}
+        </span>
+      </HoverCardTrigger>
+      <HoverCardContent side={(props.side as 'top' | 'right' | 'bottom' | 'left') ?? 'top'}>
+        <p className="text-sm">{String(props.text ?? '')}</p>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+function BoundPopover({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ReactNode;
+}) {
+  const open = !!props.open;
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (hasEvent(props, 'openChange')) emit(id, 'openChange', next);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={className} style={asStyle(style)}>
+          {String(props.label ?? 'Open')}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="flex flex-col gap-3">{children}</PopoverContent>
+    </Popover>
+  );
+}
+
+function BoundInputOtp({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const length = Math.max(1, Math.min(12, Number(props.length ?? 6)));
+  const [value, setValue] = useOptimisticValue(String(props.value ?? ''));
+  const disabled = !!props.disabled;
+
+  return (
+    <div className={cn('flex flex-col gap-1.5', className)} style={asStyle(style)}>
+      <InputOTP
+        maxLength={length}
+        value={value}
+        disabled={disabled}
+        onChange={(next) => {
+          setValue(next);
+          if (hasEvent(props, 'change')) emit(id, 'change', next);
+          if (next.length === length && hasEvent(props, 'complete')) {
+            emit(id, 'complete', next);
+          }
+        }}
+      >
+        <InputOTPGroup>
+          {Array.from({ length }, (_, i) => (
+            <InputOTPSlot key={i} index={i} />
+          ))}
+        </InputOTPGroup>
+      </InputOTP>
+    </div>
+  );
+}
+
+function BoundToggleGroup({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  const type = props.type === 'multiple' ? 'multiple' : 'single';
+  const serverValue = props.value;
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const disabled = !!props.disabled;
+  const items = children.filter((c) => c.type === 'toggleitem');
+
+  return (
+    <ToggleGroup
+      type={type}
+      variant={(props.variant as 'default' | 'outline') ?? 'default'}
+      size={(props.size as 'default' | 'sm' | 'lg') ?? 'default'}
+      value={
+        type === 'multiple'
+          ? (Array.isArray(value) ? value.map(String) : [])
+          : String(value ?? '')
+      }
+      disabled={disabled}
+      className={className}
+      style={asStyle(style)}
+      onValueChange={(next) => {
+        setValue(next);
+        if (hasEvent(props, 'change')) emit(id, 'change', next);
+      }}
+    >
+      {items.map((child) => (
+        <ToggleGroupItem
+          key={child.id}
+          value={String(child.props.value ?? '')}
+          disabled={!!child.props.disabled || disabled}
+        >
+          {String(child.props.label ?? child.props.value ?? '')}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+function renderMenubarChildren(
+  children: ElementNode[],
+  emit: Emit,
+): ReactNode[] {
+  return children.map((child) => {
+    if (child.type === 'menubarseparator') {
+      return <MenubarSeparator key={child.id} />;
+    }
+    if (child.type === 'menubarcheckbox') {
+      return (
+        <MenubarCheckboxItem
+          key={child.id}
+          checked={!!child.props.checked}
+          disabled={!!child.props.disabled}
+          onCheckedChange={(checked) => {
+            if (hasEvent(child.props, 'checkedChange')) {
+              emit(child.id, 'checkedChange', checked);
+            }
+          }}
+        >
+          {String(child.props.label ?? child.props.value ?? '')}
+        </MenubarCheckboxItem>
+      );
+    }
+    if (child.type === 'menubarradiogroup') {
+      return (
+        <MenubarRadioGroup
+          key={child.id}
+          value={child.props.value != null ? String(child.props.value) : undefined}
+          onValueChange={(value) => {
+            if (hasEvent(child.props, 'valueChange')) {
+              emit(child.id, 'valueChange', value);
+            }
+          }}
+        >
+          {child.children
+            .filter((item) => item.type === 'menubarradioitem')
+            .map((item) => (
+              <MenubarRadioItem
+                key={item.id}
+                value={String(item.props.value ?? '')}
+                disabled={!!item.props.disabled}
+              >
+                {String(item.props.label ?? item.props.value ?? '')}
+              </MenubarRadioItem>
+            ))}
+        </MenubarRadioGroup>
+      );
+    }
+    if (child.type === 'menubarsubmenu') {
+      return (
+        <MenubarSub key={child.id}>
+          <MenubarSubTrigger>{String(child.props.label ?? 'More')}</MenubarSubTrigger>
+          <MenubarSubContent>{renderMenubarChildren(child.children, emit)}</MenubarSubContent>
+        </MenubarSub>
+      );
+    }
+    if (child.type !== 'menubaritem') return null;
+    return (
+      <MenubarItem
+        key={child.id}
+        variant={child.props.variant === 'destructive' ? 'destructive' : 'default'}
+        disabled={!!child.props.disabled}
+        onSelect={() => {
+          if (hasEvent(child.props, 'select')) {
+            emit(child.id, 'select', child.props.value);
+          }
+        }}
+      >
+        {String(child.props.label ?? child.props.value ?? '')}
+      </MenubarItem>
+    );
+  });
+}
+
+function BoundMenubar({
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  void props;
+  return (
+    <Menubar className={className} style={asStyle(style)}>
+      {children
+        .filter((c) => c.type === 'menubarmenu')
+        .map((menu) => (
+          <MenubarMenu key={menu.id}>
+            <MenubarTrigger>{String(menu.props.label ?? 'Menu')}</MenubarTrigger>
+            <MenubarContent>{renderMenubarChildren(menu.children, emit)}</MenubarContent>
+          </MenubarMenu>
+        ))}
+    </Menubar>
+  );
+}
+
+function BoundCarousel({
+  props,
+  className,
+  style,
+  children,
+  renderChild,
+}: {
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  children: ElementNode[];
+  renderChild: (node: ElementNode) => ReactNode;
+}) {
+  const slides = children.filter((c) => c.type === 'carouselslide');
+  const showControls = props.controls !== false;
+  return (
+    <Carousel
+      orientation={props.orientation === 'vertical' ? 'vertical' : 'horizontal'}
+      className={cn('w-full max-w-sm', className)}
+      style={asStyle(style)}
+    >
+      <CarouselContent>
+        {slides.map((slide) => (
+          <CarouselItem key={slide.id}>
+            <div className="flex min-h-24 items-center justify-center rounded-md border p-4">
+              {slide.children.map((child) => (
+                <Fragment key={child.id}>{renderChild(child)}</Fragment>
+              ))}
+            </div>
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+      {showControls ? (
+        <>
+          <CarouselPrevious />
+          <CarouselNext />
+        </>
+      ) : null}
+    </Carousel>
+  );
+}
+
+function BoundCommand({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  const inline = props.mode === 'inline';
+  const open = inline ? true : !!props.open;
+
+  const body = (
+    <>
+      <CommandInput placeholder={String(props.placeholder ?? 'Type a command or search…')} />
+      <CommandList style={asStyle(style)}>
+        <CommandEmpty>{String(props.emptyText ?? 'No results found.')}</CommandEmpty>
+        {children.map((child) => {
+          if (child.type === 'commandseparator') {
+            return <CommandSeparator key={child.id} />;
+          }
+          if (child.type !== 'commandgroup') return null;
+          return (
+            <CommandGroup key={child.id} heading={String(child.props.heading ?? '')}>
+              {child.children
+                .filter((item) => item.type === 'commanditem')
+                .map((item) => (
+                  <CommandItem
+                    key={item.id}
+                    value={String(item.props.value ?? item.props.label ?? '')}
+                    disabled={!!item.props.disabled}
+                    onSelect={() => {
+                      if (hasEvent(item.props, 'select')) {
+                        emit(item.id, 'select', item.props.value);
+                      }
+                      if (!inline && hasEvent(props, 'openChange')) {
+                        emit(id, 'openChange', false);
+                      }
+                    }}
+                  >
+                    <span>{String(item.props.label ?? item.props.value ?? '')}</span>
+                    {item.props.shortcut ? (
+                      <CommandShortcut>{String(item.props.shortcut)}</CommandShortcut>
+                    ) : null}
+                  </CommandItem>
+                ))}
+            </CommandGroup>
+          );
+        })}
+      </CommandList>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <Command
+        className={cn(
+          'rounded-md border shadow-sm **:data-[slot=command-input-wrapper]:h-10',
+          className,
+        )}
+      >
+        {body}
+      </Command>
+    );
+  }
+
+  return (
+    <CommandDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (hasEvent(props, 'openChange')) emit(id, 'openChange', next);
+      }}
+      title={String(props.title ?? 'Command Palette')}
+      description={String(props.description ?? 'Search for a command to run…')}
+      className={className}
+    >
+      {body}
+    </CommandDialog>
+  );
+}
+
+function BoundResizable({
+  props,
+  className,
+  style,
+  children,
+  renderChild,
+}: {
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  children: ElementNode[];
+  renderChild: (node: ElementNode) => ReactNode;
+}) {
+  return (
+    <ResizablePanelGroup
+      orientation={props.orientation === 'vertical' ? 'vertical' : 'horizontal'}
+      className={cn('min-h-40 rounded-md border', className)}
+      style={asStyle(style)}
+    >
+      {children.map((child) => {
+        if (child.type === 'resizablehandle') {
+          return (
+            <ResizableHandle
+              key={child.id}
+              withHandle={child.props.withHandle !== false}
+              className={typeof child.props.className === 'string' ? child.props.className : undefined}
+            />
+          );
+        }
+        if (child.type !== 'resizablepanel') return null;
+        return (
+          <ResizablePanel
+            key={child.id}
+            defaultSize={
+              typeof child.props.defaultSize === 'number'
+                ? String(child.props.defaultSize)
+                : typeof child.props.defaultSize === 'string'
+                  ? child.props.defaultSize
+                  : undefined
+            }
+            minSize={
+              typeof child.props.minSize === 'number'
+                ? String(child.props.minSize)
+                : typeof child.props.minSize === 'string'
+                  ? child.props.minSize
+                  : undefined
+            }
+            maxSize={
+              typeof child.props.maxSize === 'number'
+                ? String(child.props.maxSize)
+                : typeof child.props.maxSize === 'string'
+                  ? child.props.maxSize
+                  : undefined
+            }
+            className={cn(
+              'p-3',
+              typeof child.props.className === 'string' ? child.props.className : undefined,
+            )}
+          >
+            {child.children.map((c) => (
+              <Fragment key={c.id}>{renderChild(c)}</Fragment>
+            ))}
+          </ResizablePanel>
+        );
+      })}
+    </ResizablePanelGroup>
+  );
+}
+
+function BoundScrollArea({
+  className,
+  style,
+  children,
+}: {
+  className?: string;
+  style: unknown;
+  children: ReactNode;
+}) {
+  return (
+    <ScrollArea className={cn('h-32 w-full rounded-md border', className)} style={asStyle(style)}>
+      <div className="p-3">{children}</div>
+    </ScrollArea>
+  );
+}
+
 function BoundBreadcrumb({
   props,
   className,
@@ -1121,12 +1699,38 @@ function BoundUpload({
   emit: Emit;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const label = String(props.label ?? 'Upload');
   const accept = props.accept ? String(props.accept) : undefined;
   const multiple = !!props.multiple;
+  const abortable = props.abortable !== false;
+  const maxSizeBytes =
+    typeof props.maxSizeBytes === 'number' && props.maxSizeBytes > 0
+      ? props.maxSizeBytes
+      : undefined;
   const disabled = !!props.disabled || busy;
+
+  const matchesAcceptToken = (file: File): boolean => {
+    if (!accept?.trim()) return true;
+    const tokens = accept
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    const name = file.name.toLowerCase();
+    const type = (file.type || '').toLowerCase();
+    return tokens.some((token) => {
+      if (token.startsWith('.')) return name.endsWith(token);
+      if (token.endsWith('/*')) return type.startsWith(token.slice(0, -1));
+      return type === token;
+    });
+  };
+
+  const abortUpload = () => {
+    xhrRef.current?.abort();
+  };
 
   return (
     <div className={cn('flex flex-col gap-1.5', className)} style={asStyle(style)}>
@@ -1140,43 +1744,110 @@ function BoundUpload({
         onChange={(e) => {
           const list = e.target.files;
           if (!list?.length) return;
-          const run = async () => {
+          const files = Array.from(list);
+
+          for (const file of files) {
+            if (maxSizeBytes != null && file.size > maxSizeBytes) {
+              const msg = `File "${file.name}" is ${file.size} bytes; max allowed is ${maxSizeBytes} bytes`;
+              setError(msg);
+              if (hasEvent(props, 'error')) emit(id, 'error', msg);
+              if (inputRef.current) inputRef.current.value = '';
+              return;
+            }
+            if (!matchesAcceptToken(file)) {
+              const msg =
+                `File "${file.name}" (${file.type || 'unknown type'}) is not an allowed type` +
+                (accept ? ` (accept: ${accept})` : '');
+              setError(msg);
+              if (hasEvent(props, 'error')) emit(id, 'error', msg);
+              if (inputRef.current) inputRef.current.value = '';
+              return;
+            }
+          }
+
+          const run = () => {
             setBusy(true);
             setError(null);
-            try {
-              const fd = new FormData();
-              for (const file of Array.from(list)) {
-                fd.append('files', file);
+            setProgress(0);
+            const fd = new FormData();
+            for (const file of files) {
+              fd.append('files', file);
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhrRef.current = xhr;
+            xhr.open('POST', '/upload');
+            xhr.responseType = 'json';
+            xhr.upload.onprogress = (ev) => {
+              if (!ev.lengthComputable) return;
+              const percent = Math.round((ev.loaded / ev.total) * 100);
+              setProgress(percent);
+              if (hasEvent(props, 'progress')) {
+                emit(id, 'progress', { percent, loaded: ev.loaded, total: ev.total });
               }
-              const res = await fetch('/upload', { method: 'POST', body: fd });
-              const data = (await res.json()) as {
+            };
+            xhr.onload = () => {
+              xhrRef.current = null;
+              setBusy(false);
+              setProgress(null);
+              if (inputRef.current) inputRef.current.value = '';
+              const data = (xhr.response ?? {}) as {
                 files?: Array<{ name: string; size: number; type: string; path: string }>;
                 error?: string;
               };
-              if (!res.ok) {
-                throw new Error(data.error || `Upload failed (${res.status})`);
+              if (xhr.status < 200 || xhr.status >= 300) {
+                const msg = data.error || `Upload failed (${xhr.status})`;
+                setError(msg);
+                if (hasEvent(props, 'error')) emit(id, 'error', msg);
+                return;
               }
               for (const file of data.files ?? []) {
                 if (hasEvent(props, 'upload')) emit(id, 'upload', file);
               }
-            } catch (err) {
-              setError(err instanceof Error ? err.message : String(err));
-            } finally {
+            };
+            xhr.onerror = () => {
+              xhrRef.current = null;
               setBusy(false);
+              setProgress(null);
               if (inputRef.current) inputRef.current.value = '';
-            }
+              const msg = 'Upload failed (network error)';
+              setError(msg);
+              if (hasEvent(props, 'error')) emit(id, 'error', msg);
+            };
+            xhr.onabort = () => {
+              xhrRef.current = null;
+              setBusy(false);
+              setProgress(null);
+              if (inputRef.current) inputRef.current.value = '';
+              if (hasEvent(props, 'abort')) emit(id, 'abort');
+            };
+            xhr.send(fd);
           };
-          void run();
+          run();
         }}
       />
-      <Button
-        type="button"
-        variant="outline"
-        disabled={disabled}
-        onClick={() => inputRef.current?.click()}
-      >
-        {busy ? 'Uploading…' : label}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled}
+          onClick={() => inputRef.current?.click()}
+        >
+          {busy
+            ? progress != null
+              ? `Uploading… ${progress}%`
+              : 'Uploading…'
+            : label}
+        </Button>
+        {busy && abortable ? (
+          <Button type="button" variant="ghost" size="sm" onClick={abortUpload}>
+            Cancel
+          </Button>
+        ) : null}
+      </div>
+      {busy && progress != null ? (
+        <Progress value={progress} className="h-1.5 w-full max-w-xs" />
+      ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -1305,6 +1976,17 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
       return (
         <BoundDropdownMenu
           id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'contextmenu':
+      return (
+        <BoundContextMenu
           props={props}
           className={className}
           style={style}
@@ -1535,6 +2217,87 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         </TooltipProvider>
       );
 
+    case 'hovercard':
+      return (
+        <BoundHoverCard props={props} className={className} style={style}>
+          {renderChildren()}
+        </BoundHoverCard>
+      );
+
+    case 'popover':
+      return (
+        <BoundPopover id={id} props={props} className={className} style={style} emit={emit}>
+          {renderChildren()}
+        </BoundPopover>
+      );
+
+    case 'inputotp':
+      return <BoundInputOtp id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'togglegroup':
+      return (
+        <BoundToggleGroup
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'menubar':
+      return (
+        <BoundMenubar
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'carousel':
+      return (
+        <BoundCarousel
+          props={props}
+          className={className}
+          style={style}
+          children={children}
+          renderChild={(child) => <ElementRenderer node={child} emit={emit} />}
+        />
+      );
+
+    case 'command':
+      return (
+        <BoundCommand
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'resizable':
+      return (
+        <BoundResizable
+          props={props}
+          className={className}
+          style={style}
+          children={children}
+          renderChild={(child) => <ElementRenderer node={child} emit={emit} />}
+        />
+      );
+
+    case 'scrollarea':
+      return (
+        <BoundScrollArea className={className} style={style}>
+          {renderChildren()}
+        </BoundScrollArea>
+      );
+
     case 'stat': {
       type StatItemView = {
         title: string;
@@ -1623,6 +2386,12 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'radialchart':
       return <BoundRadialChart props={props} className={className} style={style} />;
+
+    case 'scatterchart':
+      return <BoundScatterChart props={props} className={className} style={style} />;
+
+    case 'composedchart':
+      return <BoundComposedChart props={props} className={className} style={style} />;
 
     case 'kitchensink':
       return (

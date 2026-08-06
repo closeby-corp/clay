@@ -27,6 +27,7 @@
         "badui": "./bin/badui",
       },
       "dependencies": {
+        "@badui/compiler": "workspace:*",
         "@badui/core": "workspace:*",
         "@badui/ui": "workspace:*",
       },
@@ -91,6 +92,13 @@
         "vite": "^6.1.0",
       },
     },
+    "packages/compiler": {
+      "name": "@badui/compiler",
+      "version": "0.1.0",
+      "dependencies": {
+        "typescript": "^5.0.0",
+      },
+    },
     "packages/components": {
       "name": "@badui/components",
       "version": "0.1.0",
@@ -118,6 +126,13 @@
     },
     "packages/persistence-file": {
       "name": "@badui/persistence-file",
+      "version": "0.1.0",
+      "dependencies": {
+        "@badui/core": "workspace:*",
+      },
+    },
+    "packages/persistence-redis": {
+      "name": "@badui/persistence-redis",
       "version": "0.1.0",
       "dependencies": {
         "@badui/core": "workspace:*",
@@ -188,6 +203,8 @@
 
     "@badui/client": ["@badui/client@workspace:packages/client"],
 
+    "@badui/compiler": ["@badui/compiler@workspace:packages/compiler"],
+
     "@badui/components": ["@badui/components@workspace:packages/components"],
 
     "@badui/core": ["@badui/core@workspace:packages/core"],
@@ -197,6 +214,8 @@
     "@badui/kibana": ["@badui/kibana@workspace:packages/kibana"],
 
     "@badui/persistence-file": ["@badui/persistence-file@workspace:packages/persistence-file"],
+
+    "@badui/persistence-redis": ["@badui/persistence-redis@workspace:packages/persistence-redis"],
 
     "@badui/server": ["@badui/server@workspace:packages/server"],
 

@@ -81,6 +81,19 @@ ui.page('/examples/form-demo', () => {
             form,
             'darkMode',
           );
+
+          ui.label('OTP').classes('text-sm font-medium');
+          ui.inputOtp({
+            length: 6,
+            onComplete: (code) => ui.notify(`OTP complete: ${code}`, 'success'),
+          });
+          ui.label('Range').classes('text-sm font-medium');
+          ui.toggleGroup({ type: 'single', value: 'day' }, (g) => {
+            g.item('day', 'Day');
+            g.item('week', 'Week');
+            g.item('month', 'Month');
+          });
+
           ui.select({
             label: 'Country',
             value: form.country,

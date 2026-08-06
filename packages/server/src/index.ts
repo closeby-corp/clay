@@ -1,2 +1,8 @@
-export { BadUIServer, type BadUIServerConfig } from './server';
-export { handleMultipartUpload, type UploadedFileInfo } from './upload';
+export { BadUIServer, type BadUIServerConfig, type ResolveUserIdContext } from './server';
+export {
+  handleMultipartUpload,
+  matchesAccept,
+  UploadError,
+  type UploadedFileInfo,
+  type UploadHandlerOptions,
+} from './upload';

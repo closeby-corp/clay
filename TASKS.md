@@ -14,27 +14,41 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 ### NiceGUI / scale
 
-- [ ] Thin JS bridge (`runJavaScript` / scroll helpers)
-- [ ] Browser / client / general storage scopes + Redis adapter (multi-process / horizontal scaling)
-- [ ] Compile-time reactive `let` (auto UI updates without manual `setText` / `refresh`)
-- [ ] Composed / scatter charts
+- [x] Thin JS bridge (`runJavaScript` / scroll helpers)
+- [x] Browser / client / general storage scopes + Redis adapter (multi-process / horizontal scaling)
+- [x] Compile-time reactive `let` (auto UI updates without manual `setText` / `refresh`) — Phase 1: `ui.state` + `ui.auto`; Phase 2 MVP: `@badui/compiler` + `badui` Bun loader (see [`docs/reactive-let.md`](./docs/reactive-let.md)); finer updates / full NiceGUI parity still Later
+- [x] Composed / scatter charts
 
 ### Quality / DX
 
-- [ ] `strict: true` on remaining server packages (root `tsconfig` is `"strict": false`; `@badui/core` is done)
-- [ ] Auth / trusted identity beyond anonymous `userId` (hooks on `hello` / middleware)
-- [ ] Upload maturity (progress, abort, clearer size/type errors)
+- [x] `strict: true` on remaining server packages (root `tsconfig` is `"strict": false`; `@badui/core` is done)
+- [x] Auth / trusted identity beyond anonymous `userId` (hooks on `hello` / middleware)
+- [x] Upload maturity (progress, abort, clearer size/type errors)
 
 ### Optional ShadCN wires
 
-- [ ] Context menu, menubar, hover-card / popover, OTP, toggle group, carousel, command palette, resizable, scroll-area
+- [x] Context menu, hover-card / popover, OTP, toggle group
+- [x] Follow-up: menubar, carousel, command palette, resizable, scroll-area
 
 ### Housekeeping
 
-- [ ] Stronger DuckDB / Kibana / ClickHouse demo integration (sidecars exist; UI story is thin)
+- [x] Stronger DuckDB / Kibana / ClickHouse demo integration (sidecars exist; UI story is thin)
 
 ## Done (recent)
 
+- Reactive Phase 2 MVP: `@badui/compiler` transform + `badui --reactive-let` Bun loader (subset `let` → `ui.state` / `ui.auto`)
+- Menubar: submenu, checkbox, radio group; command: `mode: 'inline'`
+- ShadCN: menubar, carousel, command palette, resizable, scroll-area
+- Reactive Phase 1: `ui.state` + `ui.auto` (tracked rebuild; see `docs/reactive-let.md`)
+- Controls demo page (`/examples/controls`)
+- Thin JS bridge (`ui.runJavaScript`, `ui.scroll`) + protocol ops
+- Upload progress / abort / size+type errors; server `uploadMaxSizeBytes` / `uploadAccept`
+- ShadCN: context menu, hover card, popover, OTP, toggle group
+- Scatter + composed charts (`ui.chart.scatter` / `composed`)
+- `storage.browser` / `storage.client` + `@badui/persistence-redis`
+- `resolveUserId` trusted identity hook
+- Package-local `strict: true` for components / server / ui
+- Data clients demo page + reactive-let design stub
 - Light form validation (`error` prop, `Element.setError`, `ui.validate`, FormDemo submit gate)
 - Re-export `reactive` / `subscribe` from `@badui/ui` (named + on `ui`)
 - `strict: true` for `@badui/core` (package-local tsconfig)

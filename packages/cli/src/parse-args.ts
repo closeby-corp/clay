@@ -5,6 +5,8 @@ export type CliArgs = {
   app: boolean;
   open: boolean;
   reload: boolean;
+  /** Register Bun loader for compile-time reactive `let` (default true). */
+  reactiveLet: boolean;
   help: boolean;
 };
 
@@ -21,6 +23,8 @@ Options:
   --open             Open the browser (default)
   --no-open          Do not open the browser
   --reload           Restart on file changes (Bun --watch)
+  --reactive-let     Enable compile-time reactive let (default)
+  --no-reactive-let  Disable reactive-let Bun loader plugin
   -h, --help         Show help
 `;
 
@@ -34,6 +38,7 @@ export function parseArgs(argv: string[]): CliArgs {
     app: false,
     open: true,
     reload: false,
+    reactiveLet: true,
     help: false,
   };
 
@@ -51,6 +56,10 @@ export function parseArgs(argv: string[]): CliArgs {
       args.open = false;
     } else if (a === '--reload') {
       args.reload = true;
+    } else if (a === '--reactive-let') {
+      args.reactiveLet = true;
+    } else if (a === '--no-reactive-let') {
+      args.reactiveLet = false;
     } else if (a === '-p' || a === '--port') {
       const next = argv[++i];
       if (!next || Number.isNaN(Number(next))) {

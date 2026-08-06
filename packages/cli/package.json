@@ -32,6 +32,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@badui/compiler": "workspace:*",
     "@badui/core": "workspace:*",
     "@badui/ui": "workspace:*"
   }

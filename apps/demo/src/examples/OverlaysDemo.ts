@@ -13,7 +13,7 @@ ui.page('/examples/overlays', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.breadcrumb, ui.dropdownMenu, ui.alertDialog, plus dialog / sheet / drawer / tabs.',
+          'ui.breadcrumb, ui.dropdownMenu, ui.contextMenu, hover card / popover, plus dialog / sheet / drawer / tabs.',
         );
 
         exampleSection('Breadcrumb', 'ui.breadcrumb([{ label, href? }, …]).');
@@ -47,6 +47,34 @@ ui.page('/examples/overlays', () => {
             onSelect: () => ui.notify('Delete selected', 'warning'),
           });
         });
+
+        exampleSection('Context menu', 'ui.contextMenu — right-click the dashed trigger.');
+        ui.contextMenu({ label: 'Right-click this target' }, (m) => {
+          m.item('copy', 'Copy', { onSelect: () => ui.notify('Copy', 'info') });
+          m.separator();
+          m.item('remove', 'Remove', {
+            variant: 'destructive',
+            onSelect: () => ui.notify('Remove', 'warning'),
+          });
+        });
+
+        exampleSection('Hover card / popover', 'ui.hoverCard + ui.popover (server-owned open).');
+        ui.row(
+          () => {
+            ui.hoverCard({ text: 'Extra context on hover.', side: 'bottom' }, () => {
+              ui.button('Hover me', { variant: 'outline', size: 'sm' });
+            });
+            const tip = ui.popover({ label: 'Open popover', open: false }, () => {
+              ui.label('Popover body — close from the server or outside click.')
+                .classes('text-sm text-muted-foreground');
+              ui.button('Close', {
+                size: 'sm',
+                onClick: () => tip.close(),
+              });
+            });
+          },
+          { gap: 3 },
+        );
 
         exampleSection('Tabs', 'Server-owned tab value for sheet / drawer / dialog copy.');
         ui.tabs({ value: 'sheet' }, (t) => {

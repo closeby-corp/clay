@@ -77,7 +77,8 @@ function runEphemeralDialog<T>(
   build: (settle: (value: T) => void) => DialogElement,
 ): Promise<T> {
   const session = getCurrentSession();
-  if (!session?.root) return Promise.resolve(fallback);
+  const root = session?.root;
+  if (!session || !root) return Promise.resolve(fallback);
 
   return new Promise<T>((resolve) => {
     let settled = false;
@@ -90,7 +91,7 @@ function runEphemeralDialog<T>(
     };
 
     let dlg!: DialogElement;
-    withParent(session.root, () => {
+    withParent(root, () => {
       dlg = build(settle);
     });
 
@@ -105,7 +106,8 @@ function runEphemeralAlertDialog(
   build: (settle: (value: boolean) => void) => AlertDialogElement,
 ): Promise<boolean> {
   const session = getCurrentSession();
-  if (!session?.root) return Promise.resolve(fallback);
+  const root = session?.root;
+  if (!session || !root) return Promise.resolve(fallback);
 
   return new Promise<boolean>((resolve) => {
     let settled = false;
@@ -118,7 +120,7 @@ function runEphemeralAlertDialog(
     };
 
     let dlg!: AlertDialogElement;
-    withParent(session.root, () => {
+    withParent(root, () => {
       dlg = build(settle);
     });
 

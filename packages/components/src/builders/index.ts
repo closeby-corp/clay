@@ -6,6 +6,8 @@ export type {
   PieMetricsBuilder,
   RadialRowsBuilder,
   RadarBuilder,
+  ScatterBuilder,
+  ComposedBuilder,
   SeriesInput,
   ChartChromeOpts,
   PieRowKeys,
@@ -14,6 +16,7 @@ export type {
   AreaTerminalOpts,
   BarTerminalOpts,
   LineTerminalOpts,
+  ComposedTerminalOpts,
 } from './chart';
 export { table, TableBuilder } from './table';
 export type { PageSizeOptions, GroupByOptions } from './table';

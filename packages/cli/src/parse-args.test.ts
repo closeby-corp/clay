@@ -9,6 +9,7 @@ describe('parseArgs', () => {
       app: false,
       open: true,
       reload: false,
+      reactiveLet: true,
     });
   });
 
@@ -22,8 +23,13 @@ describe('parseArgs', () => {
       app: true,
       open: false,
       reload: true,
+      reactiveLet: true,
       help: false,
     });
+  });
+
+  test('--no-reactive-let', () => {
+    expect(parseArgs(['app.ts', '--no-reactive-let']).reactiveLet).toBe(false);
   });
 
   test('help flag', () => {

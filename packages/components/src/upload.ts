@@ -10,8 +10,15 @@ export type UploadedFile = {
   path: string;
 };
 
+export type UploadProgress = {
+  /** 0–100 */
+  percent: number;
+  loaded: number;
+  total: number;
+};
+
 export type UploadProps = {
-  /** `accept` attribute for the file input (e.g. `image/*,.pdf`). */
+  /** `accept` attribute for the file input (e.g. `image/*,.pdf`). Also validated client-side. */
   accept?: string;
   /** Allow selecting multiple files. */
   multiple?: boolean;
@@ -19,11 +26,21 @@ export type UploadProps = {
   label?: string;
   disabled?: boolean;
   className?: string;
+  /** Reject files larger than this many bytes (client + server). */
+  maxSizeBytes?: number;
+  /** Show abort control while uploading (default true). */
+  abortable?: boolean;
   /**
    * Called once per uploaded file with server-side metadata + path.
    * Large files are not sent over the WebSocket.
    */
   onUpload?: (file: UploadedFile) => void | Promise<void>;
+  /** Called as bytes are sent (XHR progress). */
+  onProgress?: (progress: UploadProgress) => void | Promise<void>;
+  /** Called when the user aborts an in-flight upload. */
+  onAbort?: () => void | Promise<void>;
+  /** Called with a clear error message (size/type/network). */
+  onError?: (message: string) => void | Promise<void>;
 };
 
 export function upload(props: UploadProps = {}): Element {
@@ -33,6 +50,11 @@ export function upload(props: UploadProps = {}): Element {
     label: props.label ?? 'Upload',
     disabled: props.disabled ?? false,
     className: props.className,
+    maxSizeBytes: props.maxSizeBytes,
+    abortable: props.abortable !== false,
     onUpload: props.onUpload,
+    onProgress: props.onProgress,
+    onAbort: props.onAbort,
+    onError: props.onError,
   });
 }

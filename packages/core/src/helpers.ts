@@ -23,4 +23,14 @@ export function clipboard(content: string): void {
   getCurrentSession()?.clipboard(content);
 }
 
+export {
+  runJavaScript,
+  scroll,
+  scrollTo,
+  scrollIntoView,
+  type ScrollBehavior,
+  type ScrollToOptions,
+  type ScrollIntoViewOptions,
+} from './javascript';
+
 export type { NotifyType, ToastPosition };

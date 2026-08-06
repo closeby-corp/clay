@@ -31,8 +31,34 @@ export type ServerMessage =
   | { op: 'download'; filename: string; mime: string; content: string }
   | { op: 'clipboard'; content: string }
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
+  | { op: 'runJavaScript'; code: string }
+  | {
+      op: 'scroll';
+      target: 'window' | 'selector';
+      top?: number | 'top' | 'bottom';
+      left?: number;
+      behavior?: 'auto' | 'smooth';
+      selector?: string;
+      block?: 'start' | 'center' | 'end' | 'nearest';
+      inline?: 'start' | 'center' | 'end' | 'nearest';
+    }
+  | {
+      op: 'clientStorage';
+      scope: 'browser' | 'client';
+      action: 'set' | 'delete' | 'clear';
+      key?: string;
+      value?: unknown;
+    }
   | { op: 'error'; message: string };
 
 export type ClientMessage =
-  | { op: 'hello'; path: string; userId?: string }
+  | {
+      op: 'hello';
+      path: string;
+      userId?: string;
+      /** localStorage bag mirror for `storage.browser`. */
+      browserStorage?: Record<string, unknown>;
+      /** sessionStorage bag mirror for `storage.client`. */
+      clientStorage?: Record<string, unknown>;
+    }
   | { op: 'event'; id: string; type: string; value?: unknown };

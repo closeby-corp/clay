@@ -35,6 +35,14 @@ export class ClientSession {
    * cleared when the session is destroyed.
    */
   readonly tab = new Map<string, unknown>();
+  /**
+   * Mirror of browser `localStorage` bag (`storage.browser`), hydrated on hello.
+   */
+  readonly browser = new Map<string, unknown>();
+  /**
+   * Mirror of tab `sessionStorage` bag (`storage.client`), hydrated on hello.
+   */
+  readonly client = new Map<string, unknown>();
   root: Element | null = null;
   isMounted = false;
 
@@ -182,6 +190,51 @@ export class ClientSession {
     this.send({ op: 'theme', theme });
   }
 
+  runJavaScript(code: string): void {
+    this.send({ op: 'runJavaScript', code });
+  }
+
+  scrollTo(options: {
+    top?: number | 'top' | 'bottom';
+    left?: number;
+    behavior?: 'auto' | 'smooth';
+  } = {}): void {
+    this.send({
+      op: 'scroll',
+      target: 'window',
+      top: options.top,
+      left: options.left,
+      behavior: options.behavior,
+    });
+  }
+
+  scrollIntoView(
+    selector: string,
+    options: {
+      behavior?: 'auto' | 'smooth';
+      block?: 'start' | 'center' | 'end' | 'nearest';
+      inline?: 'start' | 'center' | 'end' | 'nearest';
+    } = {},
+  ): void {
+    this.send({
+      op: 'scroll',
+      target: 'selector',
+      selector,
+      behavior: options.behavior,
+      block: options.block,
+      inline: options.inline,
+    });
+  }
+
+  clientStorage(
+    scope: 'browser' | 'client',
+    action: 'set' | 'delete' | 'clear',
+    key?: string,
+    value?: unknown,
+  ): void {
+    this.send({ op: 'clientStorage', scope, action, key, value });
+  }
+
   navigate(path: string): void {
     this.send({ op: 'navigate', path });
   }
@@ -192,6 +245,8 @@ export class ClientSession {
     this.root?.destroy();
     this.elements.clear();
     this.tab.clear();
+    this.browser.clear();
+    this.client.clear();
     this.userId = null;
     this.isMounted = false;
   }

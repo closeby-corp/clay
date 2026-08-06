@@ -13,15 +13,17 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
-| `/examples/upload` | `FileUpload.ts` | `ui.upload`, `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
+| `/examples/upload` | `FileUpload.ts` | `ui.upload` (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | Primary `ui.table(...).build()`; badges, grouping, confirm/prompt/choose; props `dataTable` sample |
-| `/examples/charts` | `ChartDemo.ts` | Primary `ui.chart.*` (categories / timeSeries / pie / radar / radial); props API sample |
+| `/examples/charts` | `ChartDemo.ts` | `ui.chart.*` including scatter / composed; props API sample |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
-| `/examples/feedback` | `FeedbackDemo.ts` | `ui.alert`, `ui.spinner`, `ui.progress`, `ui.separator`, `ui.timer`, `ui.theme.set` |
-| `/examples/form-demo` | `FormDemo.ts` | Full form + `ui.validate` / `.setError` submit gate + live summary via `subscribe` |
+| `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
+| `/examples/form-demo` | `FormDemo.ts` | Form + validate + OTP + toggle group |
 | `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
-| `/examples/overlays` | `OverlaysDemo.ts` | `ui.breadcrumb`, `ui.dropdownMenu`, `ui.alertDialog`, dialog, sheet, drawer, tabs, accordion |
+| `/examples/overlays` | `OverlaysDemo.ts` | Breadcrumb, dropdown/context menu, hover card, popover, dialog/sheet/drawer |
+| `/examples/controls` | `ControlsDemo.ts` | Menubar (submenu/checkbox/radio), command dialog + inline, carousel, resizable, scroll-area, `ui.state` / `ui.auto` |
+| `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
 Each page file exports optional `pageMeta` (`label`, `icon`, `order`) for `ui.navFromPages()`.

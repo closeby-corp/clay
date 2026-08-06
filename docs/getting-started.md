@@ -139,6 +139,10 @@ bun run badui ./pages --app --title "My App"
 | `--app` | Dashboard shell + nav from discovered pages |
 | `--no-open` | Do not open the browser |
 | `--reload` | Restart on file changes (`bun --watch`) |
+| `--reactive-let` | Enable compile-time reactive `let` Bun loader (default) |
+| `--no-reactive-let` | Disable the reactive-let plugin |
+
+See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto` and the Phase 2 `let` transform subset.
 
 ## Install and run the demo
 

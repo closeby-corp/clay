@@ -38,6 +38,33 @@ describe('handleMultipartUpload', () => {
     expect(files[0]!.path.includes('..')).toBe(false);
     expect(files[0]!.name).toBe('../../etc/passwd');
   });
+
+  test('rejects oversized files with UploadError', async () => {
+    const { UploadError } = await import('./upload');
+    const form = new FormData();
+    form.append('files', new File(['abcdef'], 'big.txt', { type: 'text/plain' }));
+    try {
+      await handleMultipartUpload(form, dir, { maxSizeBytes: 3 });
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(UploadError);
+      expect((err as InstanceType<typeof UploadError>).code).toBe('too_large');
+      expect((err as InstanceType<typeof UploadError>).status).toBe(413);
+    }
+  });
+
+  test('rejects disallowed MIME types', async () => {
+    const { UploadError } = await import('./upload');
+    const form = new FormData();
+    form.append('files', new File(['x'], 'a.exe', { type: 'application/octet-stream' }));
+    try {
+      await handleMultipartUpload(form, dir, { accept: 'image/*,.pdf' });
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(UploadError);
+      expect((err as InstanceType<typeof UploadError>).code).toBe('type_not_allowed');
+    }
+  });
 });
 
 describe('POST /upload integration', () => {

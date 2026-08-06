@@ -53,7 +53,7 @@ ui.page('/examples/charts', () => {
       ui.row(() => {
         exampleHeader(
           undefined,
-          'ui.chart.categories / timeSeries / pie / radar / radial — builders preferred; props APIs still available.',
+          'ui.chart.categories / timeSeries / pie / radar / radial / scatter / composed — builders preferred; props APIs still available.',
         );
         ui.button('Resample monthly', {
           variant: 'outline',
@@ -173,6 +173,45 @@ ui.page('/examples/charts', () => {
           radius: { inner: 80, outer: 110 },
         });
       }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
+
+      exampleSection(
+        'Scatter chart',
+        'ui.chart.scatter(data).x().y().group?().series?().build().',
+      );
+      ui.chart
+        .scatter([
+          { x: 10, y: 30, cohort: 'a' },
+          { x: 20, y: 50, cohort: 'a' },
+          { x: 35, y: 40, cohort: 'b' },
+          { x: 45, y: 70, cohort: 'b' },
+          { x: 55, y: 55, cohort: 'a' },
+          { x: 70, y: 80, cohort: 'b' },
+        ])
+        .x('x')
+        .y('y')
+        .group('cohort')
+        .series([
+          { key: 'a', label: 'Cohort A', color: 'var(--chart-1)' },
+          { key: 'b', label: 'Cohort B', color: 'var(--chart-2)' },
+        ])
+        .title('Scatter by cohort')
+        .description('Points colored by seriesKey / group.')
+        .height(280)
+        .build();
+
+      exampleSection(
+        'Composed chart',
+        'ui.chart.composed(data).x().bars().lines().areas().build().',
+      );
+      ui.chart
+        .composed(monthly)
+        .x('month')
+        .bars([{ key: 'mobile', label: 'Mobile', color: 'var(--chart-2)' }])
+        .lines([{ key: 'desktop', label: 'Desktop', color: 'var(--chart-1)' }])
+        .title('Mobile bars + desktop line')
+        .description('Mixed geometries in one Recharts ComposedChart.')
+        .height(280)
+        .build();
 
       exampleSection(
         'Live refreshable',

@@ -494,6 +494,19 @@ export {
   type RadialChartSeries,
 } from './radial-chart';
 
+export {
+  scatterChart,
+  type ScatterChartProps,
+  type ScatterChartSeries,
+} from './scatter-chart';
+
+export {
+  composedChart,
+  type ComposedChartProps,
+  type ComposedChartSeries,
+  type ComposedSeriesType,
+} from './composed-chart';
+
 export { dialog, DialogElement, type DialogProps } from './dialog';
 
 export {
@@ -509,6 +522,73 @@ export {
   type DropdownItemOptions,
   type DropdownMenuVariant,
 } from './dropdown-menu';
+
+export {
+  contextMenu,
+  ContextMenuElement,
+  type ContextMenuProps,
+  type ContextMenuItemOptions,
+} from './context-menu';
+
+export {
+  hoverCard,
+  popover,
+  PopoverElement,
+  type HoverCardProps,
+  type HoverCardSide,
+  type PopoverProps,
+} from './hover-card';
+
+export { inputOtp, type InputOtpProps } from './input-otp';
+
+export {
+  toggleGroup,
+  ToggleGroupElement,
+  type ToggleGroupProps,
+  type ToggleGroupType,
+  type ToggleGroupVariant,
+  type ToggleGroupSize,
+  type ToggleItemOptions,
+} from './toggle-group';
+
+export {
+  menubar,
+  MenubarElement,
+  MenubarMenuElement,
+  MenubarRadioGroupElement,
+  type MenubarProps,
+  type MenubarItemOptions,
+  type MenubarCheckboxOptions,
+  type MenubarRadioGroupOptions,
+  type MenubarRadioItemOptions,
+} from './menubar';
+
+export {
+  carousel,
+  CarouselElement,
+  type CarouselProps,
+  type CarouselOrientation,
+} from './carousel';
+
+export {
+  command,
+  CommandElement,
+  CommandGroupElement,
+  type CommandProps,
+  type CommandMode,
+  type CommandItemOptions,
+} from './command';
+
+export {
+  resizable,
+  ResizableElement,
+  type ResizableProps,
+  type ResizableOrientation,
+  type ResizablePanelProps,
+  type ResizableHandleProps,
+} from './resizable';
+
+export { scrollArea, type ScrollAreaProps } from './scroll-area';
 
 export {
   breadcrumb,
@@ -666,6 +746,7 @@ export {
   upload,
   type UploadProps,
   type UploadedFile,
+  type UploadProgress,
 } from './upload';
 
 export {
@@ -678,6 +759,8 @@ export {
   type PieMetricsBuilder,
   type RadialRowsBuilder,
   type RadarBuilder,
+  type ScatterBuilder,
+  type ComposedBuilder,
   type SeriesInput,
   type ChartChromeOpts,
   type PieRowKeys,
@@ -686,6 +769,7 @@ export {
   type AreaTerminalOpts,
   type BarTerminalOpts,
   type LineTerminalOpts,
+  type ComposedTerminalOpts,
   type PageSizeOptions,
   type GroupByOptions,
 } from './builders';

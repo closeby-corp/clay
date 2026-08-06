@@ -100,6 +100,8 @@ draft.text = '';
 ```
 
 - `reactive(obj)` — Proxy that notifies subscribers on property change
+- `ui.state(obj)` — alias for `reactive` (prefer in app code)
+- `ui.auto(fn)` — rebuild a region when tracked `state`/`reactive` reads change (see [`reactive-let.md`](./reactive-let.md))
 - `bindValue(obj, key)` — syncs element value ↔ `obj[key]` on `input`/`change`
 - `bindTextFrom(obj, key)` — one-way sync into label text
 - `subscribe(obj, key, fn)` — run a callback when a key changes (e.g. refresh a summary panel)

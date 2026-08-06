@@ -37,6 +37,34 @@ describe('storage.tab', () => {
   });
 });
 
+describe('storage.browser / storage.client', () => {
+  test('mirror maps + push clientStorage ops', () => {
+    const messages: unknown[] = [];
+    const session = new ClientSession('/storage-test', (m) => messages.push(m));
+    session.browser.set('pre', 1);
+    session.mount();
+    messages.length = 0;
+
+    runWithSession(session, () => {
+      expect(storage.browser.get<number>('pre')).toBe(1);
+      storage.browser.set('theme', 'dark');
+      storage.client.set('draft', 'hello');
+      expect(storage.client.get('draft')).toBe('hello');
+      storage.browser.delete('theme');
+      storage.client.clear();
+    });
+
+    expect(messages).toEqual([
+      { op: 'clientStorage', scope: 'browser', action: 'set', key: 'theme', value: 'dark' },
+      { op: 'clientStorage', scope: 'client', action: 'set', key: 'draft', value: 'hello' },
+      { op: 'clientStorage', scope: 'browser', action: 'delete', key: 'theme' },
+      { op: 'clientStorage', scope: 'client', action: 'clear' },
+    ]);
+    expect(session.browser.has('theme')).toBe(false);
+    expect(session.client.size).toBe(0);
+  });
+});
+
 describe('storage.user', () => {
   test('requires userId on the session', async () => {
     const session = new ClientSession('/storage-test', () => {});

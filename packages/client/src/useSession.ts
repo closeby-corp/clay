@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { applyPatch } from './applyPatch';
 import {
+  applyClientStorageOp,
+  applyScrollOp,
+  loadBrowserStorageBag,
+  loadClientStorageBag,
+  runClientJavaScript,
+} from './clientBridge';
+import {
   createReconnectController,
   WS_RECONNECT_TOAST_ID,
 } from './reconnect';
@@ -133,6 +140,18 @@ export function useBadUISession(path: string) {
         toast.dismiss(msg.id);
       } else if (msg.op === 'theme') {
         if (isThemeMode(msg.theme)) applyServerTheme(msg.theme);
+      } else if (msg.op === 'runJavaScript') {
+        try {
+          runClientJavaScript(msg.code);
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'JavaScript failed', {
+            type: 'error',
+          });
+        }
+      } else if (msg.op === 'scroll') {
+        applyScrollOp(msg);
+      } else if (msg.op === 'clientStorage') {
+        applyClientStorageOp(msg);
       } else if (msg.op === 'download') {
         const blob = new Blob([msg.content], { type: msg.mime });
         const url = URL.createObjectURL(blob);
@@ -176,6 +195,8 @@ export function useBadUISession(path: string) {
             op: 'hello',
             path: pathRef.current,
             userId,
+            browserStorage: loadBrowserStorageBag(),
+            clientStorage: loadClientStorageBag(),
           } satisfies ClientMessage),
         );
       };
@@ -229,6 +250,8 @@ export function useBadUISession(path: string) {
           op: 'hello',
           path,
           userId: userIdRef.current,
+          browserStorage: loadBrowserStorageBag(),
+          clientStorage: loadClientStorageBag(),
         } satisfies ClientMessage),
       );
     }

@@ -35,6 +35,15 @@ export type TabStorage = {
   has(key: string): boolean;
 };
 
+/** Sync scope mirrored to the browser (localStorage or sessionStorage). */
+export type BrowserClientStorage = {
+  get<T = unknown>(key: string): T | undefined;
+  set(key: string, value: unknown): void;
+  delete(key: string): boolean;
+  clear(): void;
+  has(key: string): boolean;
+};
+
 export type UserStorage = {
   get<T = unknown>(key: string): Promise<T | undefined>;
   set(key: string, value: unknown): Promise<void>;
@@ -184,6 +193,45 @@ function tabApi(): TabStorage {
   };
 }
 
+function browserClientApi(scope: 'browser' | 'client'): BrowserClientStorage {
+  return {
+    get<T = unknown>(key: string): T | undefined {
+      const session = getCurrentSession();
+      if (!session) return undefined;
+      const bag = scope === 'browser' ? session.browser : session.client;
+      return bag.get(key) as T | undefined;
+    },
+    set(key: string, value: unknown): void {
+      const session = getCurrentSession();
+      if (!session) return;
+      const bag = scope === 'browser' ? session.browser : session.client;
+      bag.set(key, value);
+      session.clientStorage(scope, 'set', key, value);
+    },
+    delete(key: string): boolean {
+      const session = getCurrentSession();
+      if (!session) return false;
+      const bag = scope === 'browser' ? session.browser : session.client;
+      const existed = bag.delete(key);
+      if (existed) session.clientStorage(scope, 'delete', key);
+      return existed;
+    },
+    clear(): void {
+      const session = getCurrentSession();
+      if (!session) return;
+      const bag = scope === 'browser' ? session.browser : session.client;
+      bag.clear();
+      session.clientStorage(scope, 'clear');
+    },
+    has(key: string): boolean {
+      const session = getCurrentSession();
+      if (!session) return false;
+      const bag = scope === 'browser' ? session.browser : session.client;
+      return bag.has(key);
+    },
+  };
+}
+
 function requireUserId(): string {
   const session = getCurrentSession();
   if (!session?.userId) {
@@ -250,15 +298,23 @@ const userApi: UserStorage = {
 };
 
 /**
- * Lightweight session storage (NiceGUI-ish `app.storage.tab` / `user` / `app`).
+ * Lightweight session storage (NiceGUI-ish scopes).
  *
  * - **tab** — in-memory `Map` on the current `ClientSession` (survives `refreshable` rebuilds; cleared on session destroy)
- * - **user** — JSON bag keyed by client `userId` (localStorage), optionally file-backed via `configure`
- * - **app** — process-wide typed stores shared across sessions; optionally file-backed via `configure`
+ * - **browser** — mirrored to client `localStorage` (shared across tabs for the origin)
+ * - **client** — mirrored to client `sessionStorage` (this browser tab only)
+ * - **user** — JSON bag keyed by client `userId` (localStorage id), optionally file/Redis-backed via `configure`
+ * - **app** — process-wide typed stores shared across sessions; optionally file/Redis-backed via `configure`
  */
 export const storage = {
   get tab(): TabStorage {
     return tabApi();
+  },
+  get browser(): BrowserClientStorage {
+    return browserClientApi('browser');
+  },
+  get client(): BrowserClientStorage {
+    return browserClientApi('client');
   },
   user: userApi,
 

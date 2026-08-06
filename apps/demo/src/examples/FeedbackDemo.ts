@@ -54,6 +54,33 @@ ui.page('/examples/feedback', () => {
 
       ui.separator();
 
+      exampleSection(
+        'JS bridge',
+        'ui.runJavaScript / ui.scroll.to / ui.scroll.intoView — thin protocol ops.',
+      );
+      ui.row(() => {
+        ui.button('Scroll bottom', {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => ui.scroll.to({ top: 'bottom', behavior: 'smooth' }),
+        });
+        ui.button('Scroll top', {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => ui.scroll.to({ top: 'top', behavior: 'smooth' }),
+        });
+        ui.button('console.log', {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => {
+            ui.runJavaScript('console.log("[badui]", Date.now())');
+            ui.notify('Logged to browser console', 'info');
+          },
+        });
+      }, { gap: 2 });
+
+      ui.separator();
+
       exampleSection('Spinner', 'Inline loading indicator.');
       ui.row(() => {
         ui.spinner();

@@ -138,6 +138,28 @@ describe('chart builders', () => {
     });
   });
 
+  test('scatter and composed builders', () => {
+    const pts = [
+      { x: 1, y: 2, g: 'a' },
+      { x: 3, y: 4, g: 'b' },
+    ];
+    const scatterEl = chart.scatter(pts).x('x').y('y').group('g').build();
+    expect(scatterEl.type).toBe('scatterchart');
+    expect(scatterEl.props).toMatchObject({ xKey: 'x', yKey: 'y', seriesKey: 'g' });
+
+    const composedEl = chart
+      .composed(data)
+      .x('month')
+      .bars(['mobile'])
+      .lines(['desktop'])
+      .build();
+    expect(composedEl.type).toBe('composedchart');
+    expect((composedEl.props.series as { type?: string }[]).map((s) => s.type)).toEqual([
+      'bar',
+      'line',
+    ]);
+  });
+
   test('radial.fromRows and stackedGauge match radialChart', () => {
     const rows = [{ browser: 'Chrome', visitors: 275 }];
     const byRowsLegacy = radialChart({

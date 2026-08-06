@@ -16,10 +16,10 @@ On unexpected socket close, the client reconnects with exponential backoff (500m
 ### `hello`
 
 ```json
-{ "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id" }
+{ "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "browserStorage": {}, "clientStorage": {} }
 ```
 
-Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user`.
+Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `browserStorage` / `clientStorage` bags hydrate `ui.storage.browser` / `ui.storage.client`.
 
 Sent on connect and after client-side navigation. The React client keeps matching `app` shell chrome mounted across remounts; only inset content is replaced.
 
@@ -146,6 +146,32 @@ Client writes `content` with `navigator.clipboard.writeText` (shows an error toa
 | `theme` | `light\|dark\|system` | Applied via next-themes; persisted under `badui-theme` |
 
 Sent by `ui.theme.set(...)`.
+
+### `runJavaScript`
+
+```json
+{ "op": "runJavaScript", "code": "console.log('hi')" }
+```
+
+Client evaluates the snippet (trusted server-authored code).
+
+### `scroll`
+
+```json
+{ "op": "scroll", "target": "window", "top": "bottom", "behavior": "smooth" }
+```
+
+```json
+{ "op": "scroll", "target": "selector", "selector": "#footer", "block": "start" }
+```
+
+### `clientStorage`
+
+```json
+{ "op": "clientStorage", "scope": "browser", "action": "set", "key": "theme", "value": "dark" }
+```
+
+Updates the client `localStorage` (`browser`) or `sessionStorage` (`client`) bag used by `ui.storage.browser` / `ui.storage.client`.
 
 ### `error`
 

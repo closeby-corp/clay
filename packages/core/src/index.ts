@@ -24,7 +24,8 @@ export {
   type PageEntry,
   type PageWrapper,
 } from './page';
-export { reactive, subscribe } from './reactive';
+export { reactive, state, subscribe, trackReads, type ReactiveDep } from './reactive';
+export { auto, AutoElement } from './auto';
 export { validate, type FieldRule } from './validate';
 export { generateId, resetIdSequence } from './utils';
 export {
@@ -32,8 +33,15 @@ export {
   navigate,
   download,
   clipboard,
+  runJavaScript,
+  scroll,
+  scrollTo,
+  scrollIntoView,
   type NotifyType,
   type ToastPosition,
+  type ScrollBehavior,
+  type ScrollToOptions,
+  type ScrollIntoViewOptions,
 } from './helpers';
 export { theme, setTheme, getTheme, type ThemeMode } from './theme';
 export { timer, TimerHandle, type TimerOptions } from './timer';
@@ -44,6 +52,7 @@ export {
   type PersistenceAdapter,
   type AppStoreCreateOptions,
   type TabStorage,
+  type BrowserClientStorage,
   type UserStorage,
   type StorageConfigureOptions,
 } from './storage';

@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'url';
 import { isAbsolute, resolve } from 'path';
 import { stat } from 'fs/promises';
+import { registerReactiveLetPlugin } from '@badui/compiler/plugin';
 import { getRegisteredPaths } from '@badui/core';
 import { ui, wasRunCalled, resetRunState, type RunConfig } from '@badui/ui';
 import { parseArgs, printUsage } from './parse-args.ts';
@@ -85,6 +86,10 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   }
 
   resetRunState();
+
+  if (args.reactiveLet) {
+    registerReactiveLetPlugin();
+  }
 
   const absEntry = isAbsolute(args.entry) ? args.entry : resolve(process.cwd(), args.entry);
 

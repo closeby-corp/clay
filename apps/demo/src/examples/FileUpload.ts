@@ -37,6 +37,18 @@ ui.page('/examples/upload', () => {
           ui.upload({
             multiple: true,
             label: 'Choose files',
+            accept: 'image/*,.txt,.md,.pdf,.csv',
+            maxSizeBytes: 5 * 1024 * 1024,
+            onProgress: (p) => {
+              // progress also shown on the widget; optional server hook
+              void p;
+            },
+            onError: (message) => {
+              ui.notify(message, 'error');
+            },
+            onAbort: () => {
+              ui.notify('Upload cancelled', 'warning');
+            },
             onUpload: async (file) => {
               files.push(file);
               const count = ((await ui.storage.user.get<number>('uploadCount')) ?? 0) + 1;

@@ -1,7 +1,15 @@
 import { ClientSession, getRegisteredPaths, storage, type ClientMessage } from '@badui/core';
 import { createFilePersistence } from '@badui/persistence-file';
 import { isAbsolute, join, resolve } from 'path';
-import { handleMultipartUpload } from './upload';
+import { handleMultipartUpload, UploadError } from './upload';
+
+export type ResolveUserIdContext = {
+  /** Raw `userId` from the client hello (localStorage), if any. */
+  helloUserId?: string;
+  /** Upgrade request headers (cookie, authorization, …). */
+  headers: Headers;
+  path: string;
+};
 
 export type BadUIServerConfig = {
   port?: number;
@@ -18,6 +26,13 @@ export type BadUIServerConfig = {
    * Absolute or relative to `process.cwd()`. Default: `.badui-uploads`.
    */
   uploadDir?: string;
+  /** Reject uploads larger than this many bytes (server-side). */
+  uploadMaxSizeBytes?: number;
+  /**
+   * Global `accept` filter for `POST /upload` (HTML accept syntax).
+   * Per-widget `accept` is still enforced on the client.
+   */
+  uploadAccept?: string;
   /**
    * Directory for per-user JSON bags (`storage.user`).
    * Absolute or relative to `process.cwd()`. Default: `.badui-user-data`.
@@ -30,6 +45,14 @@ export type BadUIServerConfig = {
    * Pass a string to enable file persistence for app stores.
    */
   appStorageDir?: string | false;
+  /**
+   * Resolve a trusted user id on WebSocket hello (e.g. from a signed cookie
+   * or reverse-proxy header). Return `null`/`undefined` to fall back to the
+   * anonymous localStorage id from the client.
+   */
+  resolveUserId?: (
+    ctx: ResolveUserIdContext,
+  ) => string | null | undefined | Promise<string | null | undefined>;
 };
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
@@ -75,8 +98,11 @@ type ResolvedConfig = {
   clientDir: string;
   cssPaths: string[];
   uploadDir: string;
+  uploadMaxSizeBytes?: number;
+  uploadAccept?: string;
   userStorageDir: string | false;
   appStorageDir: string | false;
+  resolveUserId?: BadUIServerConfig['resolveUserId'];
 };
 
 export class BadUIServer {
@@ -90,6 +116,8 @@ export class BadUIServer {
       clientDir: config.clientDir ?? DEFAULT_CLIENT_DIR,
       cssPaths: normalizeCssPaths(config.css),
       uploadDir: resolveDir(config.uploadDir, DEFAULT_UPLOAD_DIR),
+      uploadMaxSizeBytes: config.uploadMaxSizeBytes,
+      uploadAccept: config.uploadAccept,
       userStorageDir:
         config.userStorageDir === false
           ? false
@@ -101,6 +129,7 @@ export class BadUIServer {
         typeof config.appStorageDir === 'string'
           ? resolveDir(config.appStorageDir, config.appStorageDir)
           : false,
+      resolveUserId: config.resolveUserId,
     };
 
     const app =
@@ -122,7 +151,16 @@ export class BadUIServer {
   }
 
   start(): ReturnType<typeof Bun.serve> {
-    const { port, title, clientDir, cssPaths, uploadDir } = this.config;
+    const {
+      port,
+      title,
+      clientDir,
+      cssPaths,
+      uploadDir,
+      uploadMaxSizeBytes,
+      uploadAccept,
+      resolveUserId,
+    } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
     const html = spaHtml(title, customCssHrefs);
 
@@ -133,7 +171,10 @@ export class BadUIServer {
 
         if (url.pathname === '/ws') {
           const upgraded = server.upgrade(req, {
-            data: { session: null as ClientSession | null },
+            data: {
+              session: null as ClientSession | null,
+              headers: req.headers,
+            },
           });
           if (!upgraded) {
             return new Response('WebSocket upgrade failed', { status: 400 });
@@ -144,9 +185,18 @@ export class BadUIServer {
         if (url.pathname === '/upload' && req.method === 'POST') {
           try {
             const form = await req.formData();
-            const files = await handleMultipartUpload(form, uploadDir);
+            const files = await handleMultipartUpload(form, uploadDir, {
+              maxSizeBytes: uploadMaxSizeBytes,
+              accept: uploadAccept,
+            });
             return Response.json({ files });
           } catch (err) {
+            if (err instanceof UploadError) {
+              return Response.json(
+                { error: err.message, code: err.code },
+                { status: err.status },
+              );
+            }
             const message = err instanceof Error ? err.message : String(err);
             return Response.json({ error: message }, { status: 500 });
           }
@@ -190,7 +240,7 @@ export class BadUIServer {
         });
       },
       websocket: {
-        open(ws) {
+        open(_ws) {
           // wait for hello
         },
         async message(ws, raw) {
@@ -202,7 +252,10 @@ export class BadUIServer {
             return;
           }
 
-          const data = ws.data as { session: ClientSession | null };
+          const data = ws.data as {
+            session: ClientSession | null;
+            headers?: Headers;
+          };
 
           if (msg.op === 'hello') {
             data.session?.destroy();
@@ -213,8 +266,35 @@ export class BadUIServer {
                 // socket closed
               }
             });
-            if (typeof msg.userId === 'string' && msg.userId) {
-              session.userId = msg.userId;
+
+            const helloUserId =
+              typeof msg.userId === 'string' && msg.userId ? msg.userId : undefined;
+            let userId = helloUserId;
+            if (resolveUserId) {
+              try {
+                const trusted = await resolveUserId({
+                  helloUserId,
+                  headers: data.headers ?? new Headers(),
+                  path: msg.path,
+                });
+                if (typeof trusted === 'string' && trusted) {
+                  userId = trusted;
+                }
+              } catch (err) {
+                console.error('[resolveUserId]', err);
+              }
+            }
+            if (userId) session.userId = userId;
+
+            if (msg.browserStorage && typeof msg.browserStorage === 'object') {
+              for (const [k, v] of Object.entries(msg.browserStorage)) {
+                session.browser.set(k, v);
+              }
+            }
+            if (msg.clientStorage && typeof msg.clientStorage === 'object') {
+              for (const [k, v] of Object.entries(msg.clientStorage)) {
+                session.client.set(k, v);
+              }
             }
             data.session = session;
             session.mount();
