@@ -91,10 +91,6 @@
         "vite": "^6.1.0",
       },
     },
-    "packages/compiler": {
-      "name": "@badui/compiler",
-      "version": "0.1.0",
-    },
     "packages/components": {
       "name": "@badui/components",
       "version": "0.1.0",
@@ -191,8 +187,6 @@
     "@badui/clickhouse": ["@badui/clickhouse@workspace:packages/clickhouse"],
 
     "@badui/client": ["@badui/client@workspace:packages/client"],
-
-    "@badui/compiler": ["@badui/compiler@workspace:packages/compiler"],
 
     "@badui/components": ["@badui/components@workspace:packages/components"],
 

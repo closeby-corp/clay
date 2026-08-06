@@ -60,7 +60,7 @@ describe('storage.user', () => {
     setCurrentSession(session);
     try {
       await storage.user.set('theme', 'dark');
-      expect(await storage.user.get('theme')).toBe('dark');
+      expect(await storage.user.get<string>('theme')).toBe('dark');
       expect(await storage.user.has('theme')).toBe(true);
     } finally {
       setCurrentSession(null);

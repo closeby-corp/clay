@@ -21,11 +21,10 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 ### Quality / DX
 
-- [ ] `strict: true` on server packages (root `tsconfig` is currently `"strict": false`)
+- [ ] `strict: true` on remaining server packages (root `tsconfig` is `"strict": false`; `@badui/core` is done)
 - [ ] Light form validation (field errors, submit gate; no full schema framework required)
 - [ ] Auth / trusted identity beyond anonymous `userId` (hooks on `hello` / middleware)
 - [ ] Upload maturity (progress, abort, clearer size/type errors)
-- [ ] Re-export `reactive` / `subscribe` from `@badui/ui` (avoid dual-import with `@badui/core`)
 
 ### Optional ShadCN wires
 
@@ -33,11 +32,13 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 ### Housekeeping
 
-- [ ] Delete or revive `@badui/compiler` (empty deprecated stub)
 - [ ] Stronger DuckDB / Kibana / ClickHouse demo integration (sidecars exist; UI story is thin)
 
 ## Done (recent)
 
+- Re-export `reactive` / `subscribe` from `@badui/ui` (named + on `ui`)
+- `strict: true` for `@badui/core` (package-local tsconfig)
+- Removed retired `@badui/compiler` stub
 - WebSocket auto-reconnect with backoff + reconnect toasts
 - `ui.dropdownMenu` / `ui.alertDialog` / `ui.breadcrumb`; `ui.confirm` → alert dialog
 - `ui.theme.set` / `ui.theme.get` + protocol `theme` op

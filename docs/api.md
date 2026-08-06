@@ -3,8 +3,8 @@
 All public APIs use **camelCase**. Import the facade from `@badui/ui` for app code.
 
 ```typescript
-import { ui } from '@badui/ui';
-import { reactive, subscribe, notify, navigate, storage } from '@badui/core';
+import { ui, reactive, subscribe } from '@badui/ui';
+// Still available from core: import { reactive, subscribe } from '@badui/core';
 ```
 
 ---
@@ -1064,11 +1064,15 @@ ui.label('Title')
 
 ---
 
-## Reactivity (`@badui/core`)
+## Reactivity
+
+Prefer importing from `@badui/ui` (also on `ui.reactive` / `ui.subscribe`). Still exported from `@badui/core`.
 
 ### `reactive(target)`
 
 ```typescript
+import { reactive } from '@badui/ui';
+
 const form = reactive({ name: '', agree: false });
 form.name = 'Ada'; // notifies subscribers
 ```
@@ -1076,6 +1080,8 @@ form.name = 'Ada'; // notifies subscribers
 ### `subscribe(obj, key, listener)`
 
 ```typescript
+import { subscribe } from '@badui/ui';
+
 subscribe(form, 'name', () => {
   summary.refresh();
 });
@@ -1142,6 +1148,9 @@ import {
   timer,
   TimerHandle,
 } from '@badui/core';
+
+// App code prefers the facade (includes reactive / subscribe):
+import { ui, reactive, subscribe } from '@badui/ui';
 
 import { BadUIServer } from '@badui/server';
 import { button, input /* … */ } from '@badui/components';

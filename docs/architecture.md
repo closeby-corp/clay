@@ -11,7 +11,8 @@
 | `@badui/persistence-file` | File-backed `PersistenceAdapter` for `storage.configure` |
 | `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade |
 | `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@badui/cli` via `bun run build:client` / `pack:publishable`. |
-| `@badui/compiler` | Stub / retired (old Datastar `let` transform) |
+
+`@badui/compiler` (old Datastar `let` transform) was removed; compile-time reactive `let` remains a Later backlog item.
 
 ## Runtime data flow
 

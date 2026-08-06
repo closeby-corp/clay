@@ -179,7 +179,7 @@ describe('ClientSession hello userId + storage.user', () => {
     next.mount();
 
     await runWithSession(next, async () => {
-      expect(await storage.user.get('theme')).toBe('dark');
+      expect(await storage.user.get<string>('theme')).toBe('dark');
     });
   });
 });

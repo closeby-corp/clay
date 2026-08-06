@@ -86,7 +86,7 @@ list.refresh(); // rebuilds children and sends setChildren
 Two-way bind form controls to a reactive object:
 
 ```typescript
-import { reactive } from '@badui/core';
+import { ui, reactive } from '@badui/ui';
 
 const draft = reactive({ text: '' });
 const input = ui.input({ placeholder: '…' });

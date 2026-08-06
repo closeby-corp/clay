@@ -153,6 +153,8 @@ import {
   timer as timerCore,
   storage as storageCore,
   theme as themeCore,
+  reactive as reactiveCore,
+  subscribe as subscribeCore,
   setPageWrapper,
   type NotifyOptions,
   type NotifyType,
@@ -537,6 +539,12 @@ export const storage = storageCore;
 /** Server-driven appearance (`light` | `dark` | `system`). */
 export const theme = themeCore;
 
+/** Proxy that notifies subscribers on property change. Prefer this over importing from `@badui/core`. */
+export const reactive = reactiveCore;
+
+/** Listen for a reactive property change. Prefer this over importing from `@badui/core`. */
+export const subscribe = subscribeCore;
+
 export function refreshable(fn: () => void): RefreshableElement {
   return new RefreshableElement(fn);
 }
@@ -659,6 +667,8 @@ export const ui = {
   timer,
   storage,
   theme,
+  reactive,
+  subscribe,
   refreshable,
   page,
   run,

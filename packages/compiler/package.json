@@ -1,7 +1,0 @@
-{
-  "name": "@badui/compiler",
-  "version": "0.1.0",
-  "description": "Retired — reactive let→Datastar transform. Not used by the NiceGUI+React runtime.",
-  "main": "src/index.ts",
-  "private": true
-}

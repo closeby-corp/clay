@@ -79,6 +79,8 @@ Use `setText` / `setValue` when the node identity stays the same.
 ## Pattern: todo list (refreshable + bindValue)
 
 ```typescript
+import { ui, reactive } from '@badui/ui';
+
 const draft = reactive({ text: '' });
 const input = ui.input({ placeholder: 'What needs to be done?' });
 input.bindValue(draft, 'text');
@@ -101,6 +103,8 @@ ui.button('Add', {
 ## Pattern: form + live summary
 
 ```typescript
+import { ui, reactive, subscribe } from '@badui/ui';
+
 const form = reactive({ name: '', terms: false });
 
 ui.input({ label: 'Name' }).bindValue(form, 'name');
