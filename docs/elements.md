@@ -36,6 +36,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `command` | `command` (+ `commandgroup` / `commanditem` / `commandseparator`) | Command palette (`mode: 'dialog' \| 'inline'`; dialog owns `open`) |
 | `resizable` | `resizable` (+ `resizablepanel` / `resizablehandle`) | `react-resizable-panels` |
 | `scrollArea` | `scrollarea` | ShadCN `ScrollArea` |
+| `keybind` | `keybind` | Headless `window` `keydown` chord listener (`return null`) |
 | `markdown` | `markdown` | Client `marked` + DOMPurify |
 | `html` | `html` | Trusted server HTML (`dangerouslySetInnerHTML`) |
 | `image` | `image` | `<img>` |
@@ -88,6 +89,7 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `menubar` radio group | `valueChange` |
 | `popover` / `command` (dialog) | `openChange` |
 | `inputOtp` / `toggleGroup` | `change` (`inputOtp` also `complete`) |
+| `keybind` | `press` |
 
 Prop names use camelCase (`onClick` → event name `click`).
 

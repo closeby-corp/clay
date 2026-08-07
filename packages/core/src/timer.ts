@@ -109,6 +109,10 @@ export class TimerHandle {
   }
 }
 
+/**
+ * Start a session-scoped timer. `interval` is in **seconds**.
+ * Prefer `ui.timer`. Cleared on session destroy.
+ */
 export function timer(
   interval: number,
   callback: () => void | Promise<void>,

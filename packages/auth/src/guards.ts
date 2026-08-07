@@ -1,5 +1,6 @@
 import { getCurrentSession } from '@badui/core';
 
+/** Options for {@link createAuthGuards}. */
 export type AuthGuardsOptions<TUser> = {
   /** Resolve the signed-in user for the current session (sync). */
   getUser: () => TUser | null;
@@ -18,9 +19,23 @@ export type AuthGuardsOptions<TUser> = {
 };
 
 /**
- * Framework-flavored authz helpers (page builders still call these for real enforcement).
+ * Authz helpers for page builders — call inside `ui.page` for real enforcement
+ * (nav `roles` meta is UX-only).
+ *
+ * @example
+ * ```ts
+ * const { requireAuth, requireRole } = createAuthGuards({
+ *   getUser: () => loadUser(),
+ *   onUnauthenticated: () => ui.navigate('/login'),
+ * });
+ * ui.page('/admin', () => {
+ *   if (!requireRole('admin')) return;
+ *   // …
+ * });
+ * ```
  */
 export function createAuthGuards<TUser>(options: AuthGuardsOptions<TUser>) {
+  /** Return the signed-in user, or navigate away and return `null`. */
   function requireAuth(): TUser | null {
     const user = options.getUser();
     if (!user) {
@@ -38,6 +53,10 @@ export function createAuthGuards<TUser>(options: AuthGuardsOptions<TUser>) {
     return user;
   }
 
+  /**
+   * Require auth and at least one of `role`. Returns `null` (no navigate) when
+   * the user lacks the role — handle UI yourself.
+   */
   function requireRole(
     role: string | string[],
     opts?: {

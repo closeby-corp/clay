@@ -14,11 +14,18 @@ export type ResolveUserIdContext = {
   helloUserId?: string;
   /** Upgrade request headers (cookie, authorization, …). */
   headers: Headers;
+  /** SPA path from the hello message. */
   path: string;
 };
 
+/**
+ * Config for {@link BadUIServer} / `ui.run`.
+ * Auth, session timeouts, uploads, and storage directories live here.
+ */
 export type BadUIServerConfig = {
+  /** Listen port. Default `3000`. */
   port?: number;
+  /** HTML `<title>`. Default `"BadUI"`. */
   title?: string;
   /** Absolute or workspace-relative path to built client assets. */
   clientDir?: string;
@@ -173,6 +180,10 @@ function expireSession(data: WsData, expiredPath: string): void {
   data.session = null;
 }
 
+/**
+ * HTTP + WebSocket server for BadUI apps.
+ * Prefer `ui.run(config)` which constructs and starts this.
+ */
 export class BadUIServer {
   private config: ResolvedConfig;
   private server: ReturnType<typeof Bun.serve> | null = null;

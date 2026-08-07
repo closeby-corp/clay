@@ -42,6 +42,7 @@ export function scrollIntoView(
   session.scrollIntoView(selector, options);
 }
 
+/** Scroll helpers (`ui.scroll.to` / `ui.scroll.intoView`). */
 export const scroll = {
   to: scrollTo,
   intoView: scrollIntoView,

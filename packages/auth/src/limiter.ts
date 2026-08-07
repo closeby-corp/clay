@@ -1,3 +1,4 @@
+/** Options for {@link createLoginLimiter}. */
 export type LoginLimiterOptions = {
   /** Max failed attempts in the window before lockout. Default 5. */
   maxAttempts?: number;
@@ -7,6 +8,7 @@ export type LoginLimiterOptions = {
   lockoutMs?: number;
 };
 
+/** Result of `LoginLimiter.check` / `.fail`. */
 export type LoginAttemptResult =
   | { ok: true }
   | { ok: false; retryAfterMs: number; attempts: number };

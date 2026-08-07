@@ -596,6 +596,8 @@ export {
 
 export { scrollArea, type ScrollAreaProps } from './scroll-area';
 
+export { keybind, type KeybindProps } from './keybind';
+
 export {
   breadcrumb,
   type BreadcrumbItem,

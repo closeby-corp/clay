@@ -18,13 +18,19 @@ import type { TimerHandle } from './timer';
 
 export type SendFn = (msg: ServerMessage) => void;
 
+/** Options for `ui.notify` when not using a bare type string. */
 export type NotifyOptions = {
+  /** Toast variant. Default `'info'`. */
   type?: NotifyType;
+  /** Auto-dismiss duration in ms. */
   duration?: number;
+  /** Screen corner for the toast. */
   position?: ToastPosition;
+  /** Secondary line under the message. */
   description?: string;
 };
 
+/** Idle / absolute WS session expiry (from `ui.run` session*Ms options). */
 export type SessionTimeoutConfig = {
   /** Sign out after this much idle time (ms) since last event. */
   idleMs?: number;

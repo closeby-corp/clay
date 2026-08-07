@@ -33,7 +33,7 @@ ui.page('/examples/controls', () => {
       () => {
         exampleHeader(
           undefined,
-          'Menubar, command palette, carousel, resizable, scroll area — plus ui.state / ui.auto.',
+          'Menubar, command palette, carousel, resizable, scroll area, keybinds — plus ui.state / ui.auto.',
         );
 
         exampleSection('Menubar', 'ui.menubar — submenus, checkbox, and radio items.');
@@ -126,6 +126,22 @@ ui.page('/examples/controls', () => {
             ui.label(`Row ${i}`).classes('text-sm');
           }
         });
+
+        exampleSection(
+          'Keybinds',
+          'ui.keybind — headless chords (⌘/Ctrl+K opens the palette above; ⌘/Ctrl+S toasts).',
+        );
+        ui.keybind({
+          keys: 'mod+k',
+          onPress: () => palette.open(),
+        });
+        ui.keybind({
+          keys: 'mod+s',
+          onPress: () => ui.notify('Saved (keybind)', 'success'),
+        });
+        ui.label('Try ⌘K / Ctrl+K or ⌘S / Ctrl+S (ignored while typing in inputs).').classes(
+          'text-sm text-muted-foreground',
+        );
 
         exampleSection(
           'Reactive auto',

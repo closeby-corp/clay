@@ -1,14 +1,22 @@
 import { getCurrentSession, storage } from '@badui/core';
 
+/** One row in the in-app audit log (`auditRecord` / `listAuditRecords`). */
 export type AuditEntry = {
+  /** Stable id (`audit_<ts>_<seq>`). */
   id: string;
+  /** Epoch ms when recorded. */
   at: number;
+  /** Who performed the action (`session.userId` unless overridden). */
   actor: string | null;
+  /** Short action name (e.g. `"user.login"`). */
   action: string;
+  /** Optional resource id / path. */
   target?: string;
+  /** Optional structured payload. */
   details?: Record<string, unknown>;
 };
 
+/** Options for {@link auditRecord}. */
 export type AuditRecordOptions = {
   /** App storage key. Default `auditLog`. */
   storeKey?: string;
@@ -55,6 +63,7 @@ export async function auditRecord(
   }
 }
 
+/** Read the audit log from `ui.storage.app` (newest first). Default key `auditLog`. */
 export async function listAuditRecords(
   options?: { storeKey?: string },
 ): Promise<AuditEntry[]> {
@@ -63,6 +72,7 @@ export async function listAuditRecords(
   return store.get();
 }
 
+/** Empty the audit log store. Default key `auditLog`. */
 export async function clearAuditRecords(
   options?: { storeKey?: string },
 ): Promise<void> {

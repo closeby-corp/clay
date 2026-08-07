@@ -93,6 +93,7 @@ export function state<T extends object>(initial: T): T {
   return reactive(initial);
 }
 
+/** Listen for changes to `obj[key]` on a reactive proxy. Returns an unsubscribe fn. */
 export function subscribe(obj: object, key: string, listener: Listener): () => void {
   const set = ensureKeyListeners(obj, key);
   set.add(listener);

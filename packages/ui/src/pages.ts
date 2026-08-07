@@ -7,8 +7,16 @@ import {
 } from '@badui/core';
 import type { AppNavItem } from '@badui/components';
 
+/**
+ * Optional metadata for a registered page — used by `navFromPages` / `loadPages`.
+ * Export as `pageMeta` from a page module, or pass via `attachPageMeta`.
+ *
+ * @see docs/api.md — page discovery & nav
+ */
 export type PageMeta = {
+  /** Sidebar / nav label. Default: title-cased last path segment (`/` → `"Home"`). */
   label?: string;
+  /** Lucide icon name for nav. Default `"boxes"`. */
   icon?: string;
   /** Lower sorts first. Default `100`. Path `/` is forced to `0`. */
   order?: number;
@@ -24,10 +32,12 @@ export type PageMeta = {
 
 const pageMetaByPath = new Map<string, PageMeta>();
 
+/** Clear all collected page meta (does not unregister routes). */
 export function clearPageMeta(): void {
   pageMetaByPath.clear();
 }
 
+/** Meta attached for a registered path, if any. */
 export function getPageMeta(path: string): PageMeta | undefined {
   return pageMetaByPath.get(path);
 }
@@ -91,6 +101,7 @@ export async function loadPages(dir: string | URL): Promise<string[]> {
   return loaded;
 }
 
+/** Filter roles when building nav from page meta (`navFromPages`). */
 export type NavFromPagesOptions = {
   /** Single viewer role (sugar for `roles: [role]`). */
   role?: string;
@@ -98,7 +109,16 @@ export type NavFromPagesOptions = {
   roles?: string[];
 };
 
-/** Build primary sidebar nav from registered pages + collected `pageMeta`. */
+/**
+ * Build primary sidebar nav from registered pages + collected `pageMeta`.
+ * Filters by `nav: false` and optional role overlap; sorts by `order` then path.
+ *
+ * @example
+ * ```ts
+ * const nav = ui.navFromPages({ role: user.role });
+ * ui.app({ nav }, () => ui.label('Home'));
+ * ```
+ */
 export function navFromPages(opts?: NavFromPagesOptions): AppNavItem[] {
   const viewer = new Set<string>();
   if (opts?.role) viewer.add(opts.role);

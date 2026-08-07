@@ -27,6 +27,7 @@ export type StorageConfigureOptions = {
   user?: PersistenceAdapter;
 };
 
+/** Per-tab (WS session) key/value — survives `refreshable`; cleared on session destroy. */
 export type TabStorage = {
   get<T = unknown>(key: string): T | undefined;
   set(key: string, value: unknown): void;
@@ -44,6 +45,7 @@ export type BrowserClientStorage = {
   has(key: string): boolean;
 };
 
+/** Async per-user JSON bag keyed by session `userId` (optionally file-backed). */
 export type UserStorage = {
   get<T = unknown>(key: string): Promise<T | undefined>;
   set(key: string, value: unknown): Promise<void>;

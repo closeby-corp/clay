@@ -5,7 +5,7 @@ const KEY_LEN = 32;
 const DIGEST = 'sha256';
 
 /**
- * Hash a password with PBKDF2-HMAC-SHA256.
+ * Hash a password with PBKDF2-HMAC-SHA256 (default 100_000 iterations).
  * Stored format: `pbkdf2$iterations$saltB64$hashB64`.
  */
 export function hashPassword(

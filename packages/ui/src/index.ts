@@ -49,6 +49,7 @@ import {
   command as commandFactory,
   resizable as resizableFactory,
   scrollArea as scrollAreaFactory,
+  keybind as keybindFactory,
   sheet as sheetFactory,
   drawer as drawerFactory,
   tabs as tabsFactory,
@@ -140,6 +141,7 @@ import {
   type ResizablePanelProps,
   type ResizableHandleProps,
   type ScrollAreaProps,
+  type KeybindProps,
   type BreadcrumbItem,
   type BreadcrumbProps,
   type SheetProps,
@@ -272,6 +274,7 @@ export type {
   AccordionType,
   AccordionItemOptions,
   CollapsibleProps,
+  KeybindProps,
   SwitchProps,
   RadioGroupProps,
   ComboboxProps,
@@ -331,22 +334,27 @@ export {
   attachPageMeta,
 };
 
+/** Text label. Prefer `ui.label`. See {@link LabelProps}. */
 export function label(text?: string | (() => string), props?: Omit<LabelProps, 'text'>): Element {
   return labelFactory(text, props);
 }
 
+/** Clickable button. Prefer `ui.button`. See {@link ButtonProps}. */
 export function button(text?: string, props?: Omit<ButtonProps, 'text'>): Element {
   return buttonFactory(text, props);
 }
 
+/** Text input. Prefer `ui.input`. See {@link InputProps}. */
 export function input(props?: InputProps): Element {
   return inputFactory(props);
 }
 
+/** Checkbox control. Prefer `ui.checkbox`. See {@link CheckboxProps}. */
 export function checkbox(props?: CheckboxProps): Element {
   return checkboxFactory(props);
 }
 
+/** Bound boolean toggle. Prefer `ui.switch`. See {@link SwitchProps}. */
 export function switch_(props?: SwitchProps): Element {
   return switchFactory(props);
 }
@@ -354,92 +362,114 @@ export function switch_(props?: SwitchProps): Element {
 /** Bound boolean toggle (`ui.switch`). */
 export { switch_ as switch };
 
+/** Select dropdown. Prefer `ui.select`. See {@link SelectProps}. */
 export function select(props: SelectProps): Element {
   return selectFactory(props);
 }
 
+/** Radio group. Prefer `ui.radioGroup`. See {@link RadioGroupProps}. */
 export function radioGroup(props: RadioGroupProps): Element {
   return radioGroupFactory(props);
 }
 
+/** Searchable combobox. Prefer `ui.combobox`. See {@link ComboboxProps}. */
 export function combobox(props: ComboboxProps): Element {
   return comboboxFactory(props);
 }
 
+/** Date picker. Prefer `ui.date`. See {@link DateProps}. */
 export function date(props?: DateProps): Element {
   return dateFactory(props);
 }
 
+/** Tooltip around content (`fn` or props-first). Prefer `ui.tooltip`. See {@link TooltipProps}. */
 export function tooltip(fn: () => void, props: TooltipProps): Element;
 export function tooltip(props: TooltipProps, fn: () => void): Element;
 export function tooltip(a: any, b: any): Element {
   return tooltipFactory(a, b);
 }
 
+/** Avatar image/fallback. Prefer `ui.avatar`. See {@link AvatarProps}. */
 export function avatar(props?: AvatarProps): Element {
   return avatarFactory(props);
 }
 
+/** Loading placeholder. Prefer `ui.skeleton`. See {@link SkeletonProps}. */
 export function skeleton(props?: SkeletonProps): Element {
   return skeletonFactory(props);
 }
 
+/** Range slider. Prefer `ui.slider`. See {@link SliderProps}. */
 export function slider(props?: SliderProps): Element {
   return sliderFactory(props);
 }
 
+/** Multi-line text input. Prefer `ui.textArea`. See {@link TextAreaProps}. */
 export function textArea(props?: TextAreaProps): Element {
   return textAreaFactory(props);
 }
 
+/** Anchor / client navigate link. Prefer `ui.link`. See {@link LinkProps}. */
 export function link(text: string, href: string, props?: Omit<LinkProps, 'href' | 'text'>): Element {
   return linkFactory(text, href, props);
 }
 
+/** Small status badge. Prefer `ui.badge`. See {@link BadgeProps}. */
 export function badge(text?: string, props?: Omit<BadgeProps, 'text'>): Element {
   return badgeFactory(text, props);
 }
 
+/** Inline alert banner. Prefer `ui.alert`. See {@link AlertProps}. */
 export function alert(message?: string, props?: Omit<AlertProps, 'message'>): Element {
   return alertFactory(message, props);
 }
 
+/** Loading spinner. Prefer `ui.spinner`. See {@link SpinnerProps}. */
 export function spinner(props?: SpinnerProps): Element {
   return spinnerFactory(props);
 }
 
+/** Progress bar (`value` 0–100). Prefer `ui.progress`. See {@link ProgressProps}. */
 export function progress(props?: ProgressProps): Element {
   return progressFactory(props);
 }
 
+/** Horizontal/vertical rule. Prefer `ui.separator`. See {@link SeparatorProps}. */
 export function separator(props?: SeparatorProps): Element {
   return separatorFactory(props);
 }
 
+/** Lucide icon by name. Prefer `ui.icon`. See {@link IconProps}. */
 export function icon(name: string, props?: Omit<IconProps, 'name'>): Element {
   return iconFactory(name, props);
 }
 
+/** Render markdown to HTML. Prefer `ui.markdown`. See {@link MarkdownProps}. */
 export function markdown(text?: string, props?: MarkdownProps): Element {
   return markdownFactory(text, props);
 }
 
+/** Raw HTML (trusted). Prefer `ui.html`. See {@link HtmlProps}. */
 export function html(content?: string, props?: HtmlProps): Element {
   return htmlFactory(content, props);
 }
 
+/** Image element. Prefer `ui.image`. See {@link ImageProps}. */
 export function image(src: string, props?: ImageProps): Element {
   return imageFactory(src, props);
 }
 
+/** File upload control (`POST /upload`). Prefer `ui.upload`. See {@link UploadProps}. */
 export function upload(props?: UploadProps): Element {
   return uploadFactory(props);
 }
 
+/** Stat strip (label/value items). Prefer `ui.stat`. */
 export function stat(items: StatItem[], props?: { className?: string }): Element {
   return statFactory(items, props);
 }
 
+/** Data grid with sort/filter/actions. Prefer `ui.dataTable`. See {@link DataTableProps}. */
 export function dataTable(data?: unknown, props?: DataTableProps): DataTableElement {
   return dataTableFactory(data, props);
 }
@@ -452,82 +482,99 @@ export function table(data?: unknown): TableBuilder {
 /** Mode-first chart builders — optional sugar over `ui.areaChart` / `pieChart` / etc. */
 export const chart = chartNamespace;
 
+/** Area chart. Prefer `ui.areaChart`. See {@link AreaChartProps}. */
 export function areaChart(props: AreaChartProps): Element {
   return areaChartFactory(props);
 }
 
+/** Bar chart. Prefer `ui.barChart`. See {@link BarChartProps}. */
 export function barChart(props: BarChartProps): Element {
   return barChartFactory(props);
 }
 
+/** Line chart. Prefer `ui.lineChart`. See {@link LineChartProps}. */
 export function lineChart(props: LineChartProps): Element {
   return lineChartFactory(props);
 }
 
+/** Pie / donut chart. Prefer `ui.pieChart`. See {@link PieChartProps}. */
 export function pieChart(props: PieChartProps): Element {
   return pieChartFactory(props);
 }
 
+/** Radar chart. Prefer `ui.radarChart`. See {@link RadarChartProps}. */
 export function radarChart(props: RadarChartProps): Element {
   return radarChartFactory(props);
 }
 
+/** Radial / gauge chart. Prefer `ui.radialChart`. See {@link RadialChartProps}. */
 export function radialChart(props: RadialChartProps): Element {
   return radialChartFactory(props);
 }
 
+/** Scatter chart. Prefer `ui.scatterChart`. See {@link ScatterChartProps}. */
 export function scatterChart(props: ScatterChartProps): Element {
   return scatterChartFactory(props);
 }
 
+/** Composed multi-geometry chart. Prefer `ui.composedChart`. See {@link ComposedChartProps}. */
 export function composedChart(props: ComposedChartProps): Element {
   return composedChartFactory(props);
 }
 
+/** Horizontal flex row (`fn` or props-first). Prefer `ui.row`. */
 export function row(fn: () => void, props?: Parameters<typeof rowFactory>[1]): Element;
 export function row(props: Parameters<typeof rowFactory>[0], fn: () => void): Element;
 export function row(a: any, b?: any): Element {
   return rowFactory(a, b);
 }
 
+/** Vertical flex column (`fn` or props-first). Prefer `ui.column`. */
 export function column(fn: () => void, props?: Parameters<typeof columnFactory>[1]): Element;
 export function column(props: Parameters<typeof columnFactory>[0], fn: () => void): Element;
 export function column(a: any, b?: any): Element {
   return columnFactory(a, b);
 }
 
+/** Layout container (`fn` or props-first). Prefer `ui.container`. */
 export function container(fn: () => void, props?: Parameters<typeof containerFactory>[1]): Element;
 export function container(props: Parameters<typeof containerFactory>[0], fn: () => void): Element;
 export function container(a: any, b?: any): Element {
   return containerFactory(a, b);
 }
 
+/** Hero section (`fn` or props-first). Prefer `ui.hero`. */
 export function hero(fn: () => void, props?: Parameters<typeof heroFactory>[1]): Element;
 export function hero(props: Parameters<typeof heroFactory>[0], fn: () => void): Element;
 export function hero(a: any, b?: any): Element {
   return heroFactory(a, b);
 }
 
+/** Card with optional header/footer (`fn` or props-first). Prefer `ui.card`. See {@link CardProps}. */
 export function card(fn: (card: Element) => void, props?: CardProps): Element;
 export function card(props: CardProps, fn: (card: Element) => void): Element;
 export function card(a: any, b?: any): Element {
   return cardFactory(a, b);
 }
 
+/** App shell (sidebar + header). Prefer `ui.app`, or pass via `ui.run({ app })`. See {@link AppProps}. */
 export function app(props: AppProps, fn: () => void): Element {
   return appFactory(props, fn);
 }
 
+/** Modal dialog (`fn` or props-first). Prefer `ui.dialog`. See {@link DialogProps}. */
 export function dialog(fn: (dlg: DialogElement) => void, props?: DialogProps): DialogElement;
 export function dialog(props: DialogProps, fn: (dlg: DialogElement) => void): DialogElement;
 export function dialog(a: any, b?: any): DialogElement {
   return dialogFactory(a, b);
 }
 
+/** Alert / confirm dialog. Prefer `ui.alertDialog`. See {@link AlertDialogProps}. */
 export function alertDialog(props?: AlertDialogProps): AlertDialogElement {
   return alertDialogFactory(props);
 }
 
+/** Dropdown menu (`fn` or props-first). Prefer `ui.dropdownMenu`. See {@link DropdownMenuProps}. */
 export function dropdownMenu(
   fn: (m: DropdownMenuElement) => void,
   props?: DropdownMenuProps,
@@ -540,6 +587,7 @@ export function dropdownMenu(a: any, b?: any): DropdownMenuElement {
   return dropdownMenuFactory(a, b);
 }
 
+/** Right-click context menu. Prefer `ui.contextMenu`. See {@link ContextMenuProps}. */
 export function contextMenu(
   fn: (m: ContextMenuElement) => void,
   props?: ContextMenuProps,
@@ -552,22 +600,26 @@ export function contextMenu(a: any, b?: any): ContextMenuElement {
   return contextMenuFactory(a, b);
 }
 
+/** Hover card (`fn` or props-first). Prefer `ui.hoverCard`. See {@link HoverCardProps}. */
 export function hoverCard(fn: () => void, props: HoverCardProps): Element;
 export function hoverCard(props: HoverCardProps, fn: () => void): Element;
 export function hoverCard(a: any, b: any): Element {
   return hoverCardFactory(a, b);
 }
 
+/** Popover (`fn` or props-first). Prefer `ui.popover`. See {@link PopoverProps}. */
 export function popover(fn: (p: PopoverElement) => void, props?: PopoverProps): PopoverElement;
 export function popover(props: PopoverProps, fn: (p: PopoverElement) => void): PopoverElement;
 export function popover(a: any, b?: any): PopoverElement {
   return popoverFactory(a, b);
 }
 
+/** One-time-password / digit inputs. Prefer `ui.inputOtp`. See {@link InputOtpProps}. */
 export function inputOtp(props?: InputOtpProps): Element {
   return inputOtpFactory(props);
 }
 
+/** Toggle button group. Prefer `ui.toggleGroup`. See {@link ToggleGroupProps}. */
 export function toggleGroup(
   fn: (g: ToggleGroupElement) => void,
   props?: ToggleGroupProps,
@@ -580,6 +632,7 @@ export function toggleGroup(a: any, b?: any): ToggleGroupElement {
   return toggleGroupFactory(a, b);
 }
 
+/** Menubar. Prefer `ui.menubar`. See {@link MenubarProps}. */
 export function menubar(
   fn: (m: MenubarElement) => void,
   props?: MenubarProps,
@@ -592,6 +645,7 @@ export function menubar(a: any, b?: any): MenubarElement {
   return menubarFactory(a, b);
 }
 
+/** Carousel. Prefer `ui.carousel`. See {@link CarouselProps}. */
 export function carousel(
   fn: (c: CarouselElement) => void,
   props?: CarouselProps,
@@ -604,6 +658,7 @@ export function carousel(a: any, b?: any): CarouselElement {
   return carouselFactory(a, b);
 }
 
+/** Command palette / searchable list. Prefer `ui.command`. See {@link CommandProps}. */
 export function command(
   fn: (c: CommandElement) => void,
   props?: CommandProps,
@@ -616,6 +671,7 @@ export function command(a: any, b?: any): CommandElement {
   return commandFactory(a, b);
 }
 
+/** Resizable split panes. Prefer `ui.resizable`. See {@link ResizableProps}. */
 export function resizable(
   fn: (r: ResizableElement) => void,
   props?: ResizableProps,
@@ -628,54 +684,82 @@ export function resizable(a: any, b?: any): ResizableElement {
   return resizableFactory(a, b);
 }
 
+/** Scrollable region (`fn` or props-first). Prefer `ui.scrollArea`. See {@link ScrollAreaProps}. */
 export function scrollArea(fn: () => void, props?: ScrollAreaProps): Element;
 export function scrollArea(props: ScrollAreaProps, fn: () => void): Element;
 export function scrollArea(a: any, b?: any): Element {
   return scrollAreaFactory(a, b);
 }
 
+/**
+ * Headless keyboard chord listener. Prefer `ui.keybind`. See {@link KeybindProps}.
+ *
+ * @example
+ * ```ts
+ * ui.keybind({
+ *   keys: 'mod+s',
+ *   onPress: async () => {
+ *     await save();
+ *     ui.notify('Saved', 'success');
+ *   },
+ * });
+ * ```
+ */
+export function keybind(props: KeybindProps): Element {
+  return keybindFactory(props);
+}
+
+/** Breadcrumb trail. Prefer `ui.breadcrumb`. See {@link BreadcrumbProps}. */
 export function breadcrumb(items: BreadcrumbItem[], props?: BreadcrumbProps): Element {
   return breadcrumbFactory(items, props);
 }
 
+/** Side sheet panel. Prefer `ui.sheet`. See {@link SheetProps}. */
 export function sheet(fn: (s: SheetElement) => void, props?: SheetProps): SheetElement;
 export function sheet(props: SheetProps, fn: (s: SheetElement) => void): SheetElement;
 export function sheet(a: any, b?: any): SheetElement {
   return sheetFactory(a, b);
 }
 
+/** Drawer panel. Prefer `ui.drawer`. See {@link DrawerProps}. */
 export function drawer(fn: (d: DrawerElement) => void, props?: DrawerProps): DrawerElement;
 export function drawer(props: DrawerProps, fn: (d: DrawerElement) => void): DrawerElement;
 export function drawer(a: any, b?: any): DrawerElement {
   return drawerFactory(a, b);
 }
 
+/** Tabs. Prefer `ui.tabs`. See {@link TabsProps}. */
 export function tabs(fn: (t: TabsElement) => void, props?: TabsProps): TabsElement;
 export function tabs(props: TabsProps, fn: (t: TabsElement) => void): TabsElement;
 export function tabs(a: any, b?: any): TabsElement {
   return tabsFactory(a, b);
 }
 
+/** Accordion. Prefer `ui.accordion`. See {@link AccordionProps}. */
 export function accordion(fn: (a: AccordionElement) => void, props?: AccordionProps): AccordionElement;
 export function accordion(props: AccordionProps, fn: (a: AccordionElement) => void): AccordionElement;
 export function accordion(a: any, b?: any): AccordionElement {
   return accordionFactory(a, b);
 }
 
+/** Collapsible section. Prefer `ui.collapsible`. See {@link CollapsibleProps}. */
 export function collapsible(fn: (c: CollapsibleElement) => void, props?: CollapsibleProps): CollapsibleElement;
 export function collapsible(props: CollapsibleProps, fn: (c: CollapsibleElement) => void): CollapsibleElement;
 export function collapsible(a: any, b?: any): CollapsibleElement {
   return collapsibleFactory(a, b);
 }
 
+/** Confirm dialog; resolves `true`/`false`. Prefer `ui.confirm`. See {@link ConfirmOptions}. */
 export function confirm(message: string, options?: ConfirmOptions): Promise<boolean> {
   return confirmFactory(message, options);
 }
 
+/** Prompt dialog; resolves string or `null` if cancelled. Prefer `ui.prompt`. See {@link PromptOptions}. */
 export function prompt(message: string, options?: PromptOptions): Promise<string | null> {
   return promptFactory(message, options);
 }
 
+/** Multi-choice dialog; resolves choice id or `null`. Prefer `ui.choose`. See {@link ChooseOptions}. */
 export function choose(
   message: string,
   choices: ChooseOption[],
@@ -684,10 +768,12 @@ export function choose(
   return chooseFactory(message, choices, options);
 }
 
+/** Toast notification. Prefer `ui.notify`. See {@link NotifyOptions}. */
 export function notify(message: string, typeOrOptions?: NotifyType | NotifyOptions): void {
   notifyCore(message, typeOrOptions);
 }
 
+/** Client SPA navigate. Prefer `ui.navigate`. */
 export function navigate(path: string): void {
   navigateCore(path);
 }
@@ -715,10 +801,12 @@ export function clearAuthSession(options?: { path?: string }): void {
   clearAuthSessionCore(options);
 }
 
+/** Trigger a browser file download. Prefer `ui.download`. */
 export function download(filename: string, mime: string, content: string): void {
   downloadCore(filename, mime, content);
 }
 
+/** Copy text to the client clipboard. Prefer `ui.clipboard`. */
 export function clipboard(content: string): void {
   clipboardCore(content);
 }
@@ -731,6 +819,10 @@ export function runJavaScript(code: string): void {
 /** Window / element scroll helpers (`ui.scroll.to` / `ui.scroll.intoView`). */
 export const scroll = scrollCore;
 
+/**
+ * Session-scoped timer. Interval is in **seconds**. Prefer `ui.timer`.
+ * See {@link TimerOptions}.
+ */
 export function timer(
   interval: number,
   callback: () => void | Promise<void>,
@@ -759,6 +851,7 @@ export function validate(rules: FieldRule[]): boolean {
   return validateCore(rules);
 }
 
+/** Manually refreshable block — call `.refresh()` to rebuild. Prefer `ui.refreshable`. */
 export function refreshable(fn: () => void): RefreshableElement {
   return new RefreshableElement(fn);
 }
@@ -771,10 +864,18 @@ export function auto(fn: () => void): AutoElement {
   return autoCore(fn);
 }
 
+/**
+ * Register a route builder. Prefer `ui.page`.
+ * See {@link PageOptions} (`shell: false` skips the global `ui.run({ app })` wrapper).
+ */
 export function page(path: string, fn: () => void, options?: PageOptions): void {
   corePage(path, fn, options);
 }
 
+/**
+ * Server + run options for `ui.run`.
+ * Extends {@link BadUIServerConfig} (port, auth, storage, uploads, session timeouts).
+ */
 export type RunConfig = BadUIServerConfig & {
   /** Global dashboard shell; wraps every page unless `ui.page(..., { shell: false })`. */
   app?: AppProps;
@@ -885,6 +986,7 @@ export const ui = {
   command,
   resizable,
   scrollArea,
+  keybind,
   breadcrumb,
   sheet,
   drawer,

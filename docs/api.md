@@ -919,6 +919,30 @@ ui.collapsible({ title: 'Advanced', open: false }, () => {
 | `open` | `boolean` | `false` |
 | `onChange` | `(open: boolean) => void` | |
 
+#### `ui.keybind(props)`
+
+Headless keyboard chord listener. Renders nothing; while the node is in the tree the client listens on `window` `keydown`, matches a chord, and emits `press` → `onPress`.
+
+```typescript
+ui.keybind({
+  keys: 'mod+s', // or ['mod+s', 'ctrl+s']
+  onPress: async () => {
+    await save();
+    ui.notify('Saved', 'success');
+  },
+});
+```
+
+| Prop | Type | Default |
+|------|------|---------|
+| `keys` | `string \| string[]` | required — `+`-joined tokens, case-insensitive |
+| `enabled` | `boolean` | `true` |
+| `preventDefault` | `boolean` | `true` |
+| `ignoreInput` | `boolean` | `true` — skip when focus is in `input` / `textarea` / `select` / `contenteditable` |
+| `onPress` | `() => void \| Promise<void>` | |
+
+**Chord tokens:** modifiers `mod` (Meta on macOS, Ctrl elsewhere), `ctrl`/`control`, `meta`/`cmd`/`command`, `alt`/`option`, `shift`; key letter/digit, `escape`/`esc`, `enter`/`return`, `space`, `tab`, arrow names (`up`/`arrowup`, …), or a single printable char (`?`, `/`). Sequences (`g` then `g`) are not supported.
+
 ### Imperative helpers
 
 These require an active session (typically inside an async event handler). Confirm / prompt / choose are **async** (WebSocket round-trip). Notify / navigate / download / clipboard are fire-and-forget.

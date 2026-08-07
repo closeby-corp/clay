@@ -1,7 +1,8 @@
-import { lazy, Suspense, useRef, useState, Fragment, type CSSProperties, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, Fragment, type CSSProperties, type ReactNode } from 'react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
 import { elementReactKey } from './stickyShell';
+import { chordList, isEditableTarget, matchesChord } from './keybind';
 import { BoundAreaChart } from './BoundAreaChart';
 import { BoundBarChart } from './BoundBarChart';
 import { BoundLineChart } from './BoundLineChart';
@@ -191,6 +192,42 @@ const widthClass: Record<string, string> = {
 function hasEvent(props: Record<string, unknown>, name: string): boolean {
   const events = props.events as string[] | undefined;
   return !!events?.includes(name);
+}
+
+function KeybindListener({
+  id,
+  props,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  emit: Emit;
+}) {
+  const keys = props.keys;
+  const enabled = props.enabled !== false;
+  const preventDefault = props.preventDefault !== false;
+  const ignoreInput = props.ignoreInput !== false;
+  const canPress = hasEvent(props, 'press');
+  const keysKey = Array.isArray(keys) ? keys.join('\0') : String(keys ?? '');
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const chords = chordList(keys);
+    if (chords.length === 0) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (ignoreInput && isEditableTarget(e.target)) return;
+      if (!chords.some((chord) => matchesChord(e, chord))) return;
+      if (preventDefault) e.preventDefault();
+      if (canPress) emit(id, 'press');
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [id, emit, enabled, preventDefault, ignoreInput, canPress, keys, keysKey]);
+
+  return null;
 }
 
 const gapMap: Record<number, string> = {
@@ -2297,6 +2334,9 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           {renderChildren()}
         </BoundScrollArea>
       );
+
+    case 'keybind':
+      return <KeybindListener id={id} props={props} emit={emit} />;
 
     case 'stat': {
       type StatItemView = {

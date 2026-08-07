@@ -1,6 +1,7 @@
 import { getCurrentSession } from '@badui/core';
 import { signAuthToken } from './auth-cookie';
 
+/** Runtime config for signed auth cookies (set by BadUIServer when `authSecret` is set). */
 export type AuthSessionRuntimeConfig = {
   secret: string;
   /** Cookie / token max age in ms (for signing + verify). */
@@ -16,13 +17,15 @@ export function configureAuthSession(config: AuthSessionRuntimeConfig | null): v
   runtime = config;
 }
 
+/** Current auth-session runtime (set when `authSecret` is configured), or `null`. */
 export function getAuthSessionConfig(): AuthSessionRuntimeConfig | null {
   return runtime;
 }
 
 /**
  * Issue a signed auth token and instruct the client to POST `/auth/session`,
- * optionally navigate, then soft-reconnect so `hello` sees the cookie.
+ * optionally navigate (`options.path`), then soft-reconnect so `hello` sees the cookie.
+ * Requires `ui.run({ authSecret })`.
  */
 export function establishAuthSession(
   userId: string,
@@ -38,7 +41,8 @@ export function establishAuthSession(
 }
 
 /**
- * Instruct the client to DELETE `/auth/session`, optionally navigate, then soft-reconnect.
+ * Instruct the client to DELETE `/auth/session`, optionally navigate
+ * (`options.path`), then soft-reconnect.
  */
 export function clearAuthSession(options?: { path?: string }): void {
   getCurrentSession()?.authSession('clear', { path: options?.path });
