@@ -235,7 +235,7 @@ export function useBadUISession(path: string) {
         };
         void write();
       } else if (msg.op === 'error') {
-        setState((s) => ({ ...s, error: msg.message }));
+        showToast(msg.message, { type: 'error' });
       }
     };
 
@@ -269,7 +269,7 @@ export function useBadUISession(path: string) {
 
       ws.onclose = () => {
         if (wsRef.current === ws) wsRef.current = null;
-        setState((s) => ({ ...s, connected: false }));
+        setState((s) => ({ ...s, connected: false, error: null }));
         if (controller.isDisposed()) return;
         if (!softReconnect) {
           clearOutageToastTimer();
@@ -286,7 +286,9 @@ export function useBadUISession(path: string) {
       };
 
       ws.onerror = () => {
-        setState((s) => ({ ...s, error: 'WebSocket error', connected: false }));
+        // Browsers fire error then close on routine drops (--reload); the chip
+        // covers reconnect UX — avoid a sticky "WebSocket error" banner.
+        setState((s) => ({ ...s, connected: false }));
       };
     };
 
