@@ -1,4 +1,4 @@
-import { ui, reactive, subscribe } from '@badui/ui';
+import { ui, subscribe } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {
@@ -7,37 +7,45 @@ export const pageMeta = {
   order: 80,
 };
 
-ui.page('/examples/form-demo', () => {
-    const form = reactive({
-      name: '',
-      email: '',
-      age: '25',
-      rating: 5,
-      satisfaction: 75,
-      subscribe: true,
-      notifications: false,
-      darkMode: false,
-      terms: false,
-      country: 'us',
-      timezone: 'utc',
-      plan: 'free',
-      dueDate: '',
-      bio: '',
-      color: '#3b82f6',
-    });
+const DRAFT_KEY = 'formDemo';
 
-    exampleFrame(() => {
-      ui.column(() => {
-        exampleHeader(
-          undefined,
-          'bindValue + live summary; submit gated by ui.validate (sets .setError on fields).',
-        );
+const defaults = {
+  name: '',
+  email: '',
+  age: '25',
+  rating: 5,
+  satisfaction: 75,
+  subscribe: true,
+  notifications: false,
+  darkMode: false,
+  terms: false,
+  country: 'us',
+  timezone: 'utc',
+  plan: 'free',
+  dueDate: '',
+  bio: '',
+  color: '#3b82f6',
+};
+
+function resetForm(form: typeof defaults): void {
+  Object.assign(form, defaults);
+}
+
+ui.page('/examples/form-demo', () => {
+  const form = ui.draft(DRAFT_KEY, defaults);
+
+  exampleFrame(() => {
+    ui.column(() => {
+      exampleHeader(
+        undefined,
+        'bindValue + live summary; draft survives reconnect / --reload. Submit gated by ui.validate.',
+      );
 
       ui.card(
         {
           title: 'Profile',
           description:
-            'Name, email, and terms are validated on Submit. Reset (and a successful submit) clear field errors.',
+            'Name, email, and terms are validated on Submit. Reset (and a successful submit) clear field errors and the saved draft.',
           gap: 4,
         },
         () => {
@@ -167,7 +175,10 @@ ui.page('/examples/form-demo', () => {
                   return;
                 }
                 clearFieldErrors();
-                ui.notify(`Thanks, ${form.name}!`, {
+                const name = form.name.trim();
+                resetForm(form);
+                ui.draft.clear(DRAFT_KEY);
+                ui.notify(`Thanks, ${name}!`, {
                   type: 'success',
                   description: 'Your response was recorded.',
                 });
@@ -183,21 +194,8 @@ ui.page('/examples/form-demo', () => {
             ui.button('Reset', {
               variant: 'outline',
               onClick: () => {
-                form.name = '';
-                form.email = '';
-                form.age = '25';
-                form.rating = 5;
-                form.satisfaction = 75;
-                form.subscribe = true;
-                form.notifications = false;
-                form.darkMode = false;
-                form.terms = false;
-                form.country = 'us';
-                form.timezone = 'utc';
-                form.plan = 'free';
-                form.dueDate = '';
-                form.bio = '';
-                form.color = '#3b82f6';
+                resetForm(form);
+                ui.draft.clear(DRAFT_KEY);
                 clearFieldErrors();
               },
             });
@@ -240,6 +238,6 @@ ui.page('/examples/form-demo', () => {
       for (const key of Object.keys(form)) {
         subscribe(form, key, () => summary.refresh());
       }
-      }, { gap: 6 });
-    });
+    }, { gap: 6 });
+  });
 });

@@ -344,7 +344,6 @@ export {
   attachPageMeta,
   importFresh,
   resetPageDiscovery,
-  draft,
 };
 
 /** Text label. Prefer `ui.label`. See {@link LabelProps}. */

@@ -26,6 +26,11 @@ export {
 } from './page';
 export { reactive, state, subscribe, trackReads, type ReactiveDep } from './reactive';
 export { auto, AutoElement } from './auto';
+export {
+  draft,
+  type DraftStorage,
+  type DraftOptions,
+} from './draft';
 export { validate, type FieldRule } from './validate';
 export { generateId, resetIdSequence } from './utils';
 export {
