@@ -53,62 +53,69 @@ ui.page(
                 'Demo accounts: Alice (administrator) or Bob (member). Password for both: password. Alice must change password on first sign-in.',
               ).classes('text-sm text-muted-foreground');
 
+              const signIn = async () => {
+                const ok = ui.validate([
+                  {
+                    el: usernameInput,
+                    check: () =>
+                      form.username.trim() ? null : 'Enter your username',
+                  },
+                  {
+                    el: passwordInput,
+                    check: () => (form.password ? null : 'Enter your password'),
+                  },
+                ]);
+                if (!ok) {
+                  ui.notify('Fix the highlighted fields', 'warning');
+                  return;
+                }
+
+                const key = form.username.trim().toLowerCase();
+                const limitKey = `login:${key}`;
+                const gate = loginLimiter.check(limitKey);
+                if (!gate.ok) {
+                  const secs = Math.ceil(gate.retryAfterMs / 1000);
+                  passwordInput.setError(`Too many attempts — try again in ${secs}s`);
+                  ui.notify('Sign in temporarily locked', 'error');
+                  return;
+                }
+
+                const account = DEMO_ACCOUNTS[key];
+                if (!account || !verifyDemoPassword(key, form.password)) {
+                  const failed = loginLimiter.fail(limitKey);
+                  passwordInput.setError('Incorrect username or password');
+                  if (!failed.ok && failed.retryAfterMs > 0) {
+                    ui.notify('Too many failed attempts — locked out', 'error');
+                  } else {
+                    ui.notify('Sign in failed', 'error');
+                  }
+                  return;
+                }
+
+                loginLimiter.success(limitKey);
+                usernameInput.setError(null);
+                passwordInput.setError(null);
+
+                void auditRecord('login', { actor: key });
+                await setSessionUser({
+                  username: key,
+                  name: account.name,
+                  role: account.role,
+                  mustChangePassword: account.mustChangePassword,
+                });
+                ui.notify(`Welcome, ${account.name}`, {
+                  type: 'success',
+                  description: roleLabel(account.role),
+                });
+              }
+
               ui.button('Sign in', {
-                onClick: async () => {
-                  const ok = ui.validate([
-                    {
-                      el: usernameInput,
-                      check: () =>
-                        form.username.trim() ? null : 'Enter your username',
-                    },
-                    {
-                      el: passwordInput,
-                      check: () => (form.password ? null : 'Enter your password'),
-                    },
-                  ]);
-                  if (!ok) {
-                    ui.notify('Fix the highlighted fields', 'warning');
-                    return;
-                  }
-
-                  const key = form.username.trim().toLowerCase();
-                  const limitKey = `login:${key}`;
-                  const gate = loginLimiter.check(limitKey);
-                  if (!gate.ok) {
-                    const secs = Math.ceil(gate.retryAfterMs / 1000);
-                    passwordInput.setError(`Too many attempts — try again in ${secs}s`);
-                    ui.notify('Sign in temporarily locked', 'error');
-                    return;
-                  }
-
-                  const account = DEMO_ACCOUNTS[key];
-                  if (!account || !verifyDemoPassword(key, form.password)) {
-                    const failed = loginLimiter.fail(limitKey);
-                    passwordInput.setError('Incorrect username or password');
-                    if (!failed.ok && failed.retryAfterMs > 0) {
-                      ui.notify('Too many failed attempts — locked out', 'error');
-                    } else {
-                      ui.notify('Sign in failed', 'error');
-                    }
-                    return;
-                  }
-
-                  loginLimiter.success(limitKey);
-                  usernameInput.setError(null);
-                  passwordInput.setError(null);
-
-                  void auditRecord('login', { actor: key });
-                  await setSessionUser({
-                    username: key,
-                    name: account.name,
-                    role: account.role,
-                    mustChangePassword: account.mustChangePassword,
-                  });
-                  ui.notify(`Welcome, ${account.name}`, {
-                    type: 'success',
-                    description: roleLabel(account.role),
-                  });
-                },
+                onClick: signIn,
+              });
+              ui.keybind({
+                keys: 'enter',
+                ignoreInput: false, // important — default true skips inputs
+                onPress: () => void signIn(),
               });
             },
           );

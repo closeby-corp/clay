@@ -47,6 +47,7 @@ ui.page('/examples/timer-content', () => {
             onClick: () => {
               clock.cancel();
               ui.notify('Timer cancelled', 'warning');
+              console.log('Timer cancelled');
             },
           });
         }, { gap: 2 });
