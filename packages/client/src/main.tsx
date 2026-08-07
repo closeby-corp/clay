@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { App } from './App';
 import { ThemeSync } from './ThemeSync';
 import { BADUI_THEME_KEY } from './themeBridge';
+import '@domternal/theme';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(

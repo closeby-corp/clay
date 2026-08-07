@@ -755,9 +755,24 @@ export {
 export {
   upload,
   type UploadProps,
+  type UploadVariant,
   type UploadedFile,
   type UploadProgress,
 } from './upload';
+
+export { rating, type RatingProps } from './rating';
+export { colorPicker, type ColorPickerProps } from './color-picker';
+export { tags, type TagsProps, type TagsOption } from './tags';
+export { codeBlock, type CodeBlockProps } from './code-block';
+export { tree, type TreeProps, type TreeNode } from './tree';
+export { editor, type EditorProps, type EditorFormat } from './editor';
+export {
+  kanban,
+  type KanbanProps,
+  type KanbanColumn,
+  type KanbanCard,
+  type KanbanCardMovePayload,
+} from './kanban';
 
 export {
   chart,

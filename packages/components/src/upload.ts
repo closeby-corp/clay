@@ -17,13 +17,17 @@ export type UploadProgress = {
   total: number;
 };
 
+export type UploadVariant = 'button' | 'dropzone';
+
 export type UploadProps = {
   /** `accept` attribute for the file input (e.g. `image/*,.pdf`). Also validated client-side. */
   accept?: string;
   /** Allow selecting multiple files. */
   multiple?: boolean;
-  /** Button label. */
+  /** Button label (also used as dropzone hint). */
   label?: string;
+  /** `button` (default) or drag-and-drop `dropzone` shell. Same POST /upload pipeline. */
+  variant?: UploadVariant;
   disabled?: boolean;
   className?: string;
   /** Reject files larger than this many bytes (client + server). */
@@ -48,6 +52,7 @@ export function upload(props: UploadProps = {}): Element {
     accept: props.accept ?? '',
     multiple: props.multiple ?? false,
     label: props.label ?? 'Upload',
+    variant: props.variant === 'dropzone' ? 'dropzone' : 'button',
     disabled: props.disabled ?? false,
     className: props.className,
     maxSizeBytes: props.maxSizeBytes,

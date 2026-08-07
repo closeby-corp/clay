@@ -64,6 +64,13 @@ import {
   html as htmlFactory,
   image as imageFactory,
   upload as uploadFactory,
+  rating as ratingFactory,
+  colorPicker as colorPickerFactory,
+  tags as tagsFactory,
+  codeBlock as codeBlockFactory,
+  tree as treeFactory,
+  editor as editorFactory,
+  kanban as kanbanFactory,
   chart as chartNamespace,
   table as tableFactory,
   type ButtonProps,
@@ -167,8 +174,22 @@ import {
   type HtmlProps,
   type ImageProps,
   type UploadProps,
+  type UploadVariant,
   type UploadedFile,
   type UploadProgress,
+  type RatingProps,
+  type ColorPickerProps,
+  type TagsProps,
+  type TagsOption,
+  type CodeBlockProps,
+  type TreeProps,
+  type TreeNode,
+  type EditorProps,
+  type EditorFormat,
+  type KanbanProps,
+  type KanbanColumn,
+  type KanbanCard,
+  type KanbanCardMovePayload,
   type SeriesInput,
   type ChartChromeOpts,
   type PieRowKeys,
@@ -305,7 +326,21 @@ export type {
   HtmlProps,
   ImageProps,
   UploadProps,
+  UploadVariant,
   UploadedFile,
+  RatingProps,
+  ColorPickerProps,
+  TagsProps,
+  TagsOption,
+  CodeBlockProps,
+  TreeProps,
+  TreeNode,
+  EditorProps,
+  EditorFormat,
+  KanbanProps,
+  KanbanColumn,
+  KanbanCard,
+  KanbanCardMovePayload,
   SeriesInput,
   ChartChromeOpts,
   PieRowKeys,
@@ -474,6 +509,41 @@ export function image(src: string, props?: ImageProps): Element {
 /** File upload control (`POST /upload`). Prefer `ui.upload`. See {@link UploadProps}. */
 export function upload(props?: UploadProps): Element {
   return uploadFactory(props);
+}
+
+/** Star rating control. Prefer `ui.rating`. See {@link RatingProps}. */
+export function rating(props?: RatingProps): Element {
+  return ratingFactory(props);
+}
+
+/** Hex color picker. Prefer `ui.colorPicker`. See {@link ColorPickerProps}. */
+export function colorPicker(props?: ColorPickerProps): Element {
+  return colorPickerFactory(props);
+}
+
+/** Multi-tag chip input. Prefer `ui.tags`. See {@link TagsProps}. */
+export function tags(props?: TagsProps): Element {
+  return tagsFactory(props);
+}
+
+/** Read-only syntax-highlighted code block (Shiki). Prefer `ui.codeBlock`. See {@link CodeBlockProps}. */
+export function codeBlock(props: CodeBlockProps): Element {
+  return codeBlockFactory(props);
+}
+
+/** Nested tree with selection + expand. Prefer `ui.tree`. See {@link TreeProps}. */
+export function tree(props: TreeProps): Element {
+  return treeFactory(props);
+}
+
+/** Rich text editor (Domternal). Prefer `ui.editor`. See {@link EditorProps}. */
+export function editor(props?: EditorProps): Element {
+  return editorFactory(props);
+}
+
+/** Kanban board with cross-column card drag. Prefer `ui.kanban`. See {@link KanbanProps}. */
+export function kanban(props: KanbanProps): Element {
+  return kanbanFactory(props);
 }
 
 /** Stat strip (label/value items). Prefer `ui.stat`. */
@@ -997,6 +1067,13 @@ export const ui = {
   html,
   image,
   upload,
+  rating,
+  colorPicker,
+  tags,
+  codeBlock,
+  tree,
+  editor,
+  kanban,
   stat,
   dataTable,
   table,

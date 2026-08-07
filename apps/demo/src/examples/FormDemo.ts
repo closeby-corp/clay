@@ -24,6 +24,7 @@ const defaults = {
   plan: 'free',
   dueDate: '',
   bio: '',
+  tags: [] as string[],
   color: '#3b82f6',
 };
 
@@ -56,12 +57,10 @@ ui.page('/examples/form-demo', () => {
             .input({ label: 'Email', type: 'email', placeholder: 'you@example.com' })
             .bindValue(form, 'email');
           ui.input({ label: 'Age', type: 'number', value: form.age }).bindValue(form, 'age');
-          ui.slider({
-            min: 1,
+          ui.rating({
             max: 10,
             value: form.rating,
             label: 'Rating',
-            showValue: true,
           }).bindValue(form, 'rating');
           ui.slider({
             min: 0,
@@ -71,6 +70,18 @@ ui.page('/examples/form-demo', () => {
             label: 'Satisfaction %',
             showValue: true,
           }).bindValue(form, 'satisfaction');
+          ui.tags({
+            label: 'Interests',
+            value: form.tags,
+            placeholder: 'Add interest…',
+            options: [
+              { value: 'design', label: 'Design' },
+              { value: 'engineering', label: 'Engineering' },
+              { value: 'product', label: 'Product' },
+              { value: 'ops', label: 'Ops' },
+            ],
+            creatable: true,
+          }).bindValue(form, 'tags');
           ui.checkbox({ label: 'Subscribe to newsletter', checked: form.subscribe }).bindValue(
             form,
             'subscribe',
@@ -142,10 +153,7 @@ ui.page('/examples/form-demo', () => {
             form,
             'bio',
           );
-          ui.input({ label: 'Favorite color', type: 'color', value: form.color }).bindValue(
-            form,
-            'color',
-          );
+          ui.colorPicker({ label: 'Favorite color', value: form.color }).bindValue(form, 'color');
 
           const clearFieldErrors = () => {
             nameInput.setError(null);
@@ -226,6 +234,7 @@ ui.page('/examples/form-demo', () => {
               `Plan: ${form.plan}`,
               `Due date: ${form.dueDate || '—'}`,
               `Bio: ${form.bio || '—'}`,
+              `Tags: ${form.tags.length ? form.tags.join(', ') : '—'}`,
               `Color: ${form.color}`,
             ];
             for (const line of lines) {

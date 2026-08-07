@@ -12,6 +12,11 @@ import { BoundRadialChart } from './BoundRadialChart';
 import { BoundScatterChart } from './BoundScatterChart';
 import { BoundComposedChart } from './BoundComposedChart';
 import { BoundDataTable } from './BoundDataTable';
+import { BoundCodeBlock } from './BoundCodeBlock';
+import { BoundTree } from './BoundTree';
+import { BoundEditor } from './BoundEditor';
+import { BoundKanban } from './BoundKanban';
+import { useOptimisticValue } from './useOptimisticValue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -172,7 +177,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, ChevronDownIcon, TrendingDown, TrendingUp } from 'lucide-react';
+import { CalendarIcon, ChevronDownIcon, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
@@ -262,16 +267,6 @@ function asStyle(style: unknown): CSSProperties | undefined {
     return out as CSSProperties;
   }
   return style as CSSProperties;
-}
-
-function useOptimisticValue<T>(serverValue: T): [T, (next: T) => void] {
-  const [local, setLocal] = useState(serverValue);
-  const prev = useRef(serverValue);
-  if (prev.current !== serverValue) {
-    prev.current = serverValue;
-    setLocal(serverValue);
-  }
-  return [local, setLocal];
 }
 
 function fieldError(props: Record<string, unknown>): string | undefined {
@@ -460,6 +455,360 @@ function BoundSlider({
           if (hasEvent(props, 'change')) emit(id, 'change', n);
         }}
       />
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+function BoundRating({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const max = Math.max(1, Math.floor(Number(props.max ?? 5)));
+  const serverValue = Math.min(max, Math.max(0, Number(props.value ?? 0)));
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const [hover, setHover] = useState<number | null>(null);
+  const error = fieldError(props);
+  const disabled = !!props.disabled;
+  const display = hover ?? value;
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? (
+        <div className="flex items-center justify-between gap-2">
+          <Label>{String(props.label)}</Label>
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {value}/{max}
+          </span>
+        </div>
+      ) : null}
+      <div
+        className="flex items-center gap-0.5"
+        onMouseLeave={() => setHover(null)}
+        role="radiogroup"
+        aria-label={props.label ? String(props.label) : 'Rating'}
+      >
+        {Array.from({ length: max }, (_, i) => {
+          const n = i + 1;
+          const filled = n <= display;
+          return (
+            <button
+              key={n}
+              type="button"
+              role="radio"
+              aria-checked={value === n}
+              disabled={disabled}
+              className={cn(
+                'rounded-sm p-0.5 text-amber-500 transition-colors disabled:opacity-50',
+                !disabled && 'hover:scale-105',
+              )}
+              onMouseEnter={() => {
+                if (!disabled) setHover(n);
+              }}
+              onClick={() => {
+                const next = value === n ? 0 : n;
+                setValue(next);
+                if (hasEvent(props, 'change')) emit(id, 'change', next);
+              }}
+            >
+              <Star className={cn('size-5', filled ? 'fill-current' : 'fill-transparent text-muted-foreground')} />
+            </button>
+          );
+        })}
+      </div>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+const COLOR_SWATCHES = [
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#64748b',
+  '#0f172a',
+  '#ffffff',
+  '#f8fafc',
+];
+
+function normalizeHex(raw: string): string | null {
+  const s = raw.trim();
+  const withHash = s.startsWith('#') ? s : `#${s}`;
+  if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(withHash)) {
+    const [, a, b, c] = withHash;
+    return `#${a}${a}${b}${b}${c}${c}`.toLowerCase();
+  }
+  return null;
+}
+
+function BoundColorPicker({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = String(props.value ?? '#3b82f6');
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const [draft, setDraft] = useState(serverValue);
+  const prevServer = useRef(serverValue);
+  if (prevServer.current !== serverValue) {
+    prevServer.current = serverValue;
+    setDraft(serverValue);
+  }
+  const error = fieldError(props);
+  const disabled = !!props.disabled;
+
+  const commit = (next: string) => {
+    const hex = normalizeHex(next) ?? next;
+    setValue(hex);
+    setDraft(hex);
+    if (hasEvent(props, 'change')) emit(id, 'change', hex);
+  };
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <div className="flex items-center gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={disabled}
+              className={cn(
+                'inline-flex size-9 shrink-0 items-center justify-center rounded-md border shadow-xs disabled:opacity-50',
+              )}
+              style={{ backgroundColor: normalizeHex(value) ?? value }}
+              aria-label="Open color picker"
+            />
+          </PopoverTrigger>
+          <PopoverContent className="w-64 space-y-3" align="start">
+            <div className="grid grid-cols-6 gap-1.5">
+              {COLOR_SWATCHES.map((c, i) => (
+                <button
+                  key={`${c}-${i}`}
+                  type="button"
+                  className={cn(
+                    'size-7 rounded-md border',
+                    (normalizeHex(value) ?? value).toLowerCase() === c.toLowerCase() &&
+                      'ring-2 ring-ring ring-offset-1',
+                  )}
+                  style={{ backgroundColor: c }}
+                  onClick={() => commit(c)}
+                  aria-label={c}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={normalizeHex(value) ?? '#000000'}
+                disabled={disabled}
+                className="h-9 w-12 cursor-pointer rounded border bg-transparent p-0.5"
+                onChange={(e) => commit(e.target.value)}
+              />
+              <Input
+                value={draft}
+                disabled={disabled}
+                placeholder="#000000"
+                className="font-mono text-sm"
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  const hex = normalizeHex(e.target.value);
+                  if (hex) commit(hex);
+                }}
+                onBlur={() => {
+                  const hex = normalizeHex(draft);
+                  if (hex) commit(hex);
+                  else setDraft(value);
+                }}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+        <Input
+          value={draft}
+          disabled={disabled}
+          aria-invalid={!!error}
+          className="font-mono text-sm"
+          onChange={(e) => {
+            setDraft(e.target.value);
+            const hex = normalizeHex(e.target.value);
+            if (hex) commit(hex);
+          }}
+          onBlur={() => {
+            const hex = normalizeHex(draft);
+            if (hex) commit(hex);
+            else setDraft(value);
+          }}
+        />
+      </div>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+function BoundTags({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = (Array.isArray(props.value) ? props.value : []) as string[];
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const [text, setText] = useState('');
+  const error = fieldError(props);
+  const disabled = !!props.disabled;
+  const creatable = props.creatable !== false;
+  const options = (Array.isArray(props.options) ? props.options : []) as Array<{
+    value: string;
+    label: string;
+  }>;
+  const placeholder = String(props.placeholder ?? 'Add tag…');
+
+  const commit = (next: string[]) => {
+    setValue(next);
+    if (hasEvent(props, 'change')) emit(id, 'change', next);
+  };
+
+  const addTag = (raw: string) => {
+    const tag = raw.trim();
+    if (!tag || value.includes(tag)) {
+      setText('');
+      return;
+    }
+    const inOptions = options.some((o) => o.value === tag || o.label === tag);
+    const resolved =
+      options.find((o) => o.label === tag)?.value ??
+      options.find((o) => o.value === tag)?.value ??
+      tag;
+    if (!creatable && !inOptions) {
+      setText('');
+      return;
+    }
+    if (value.includes(resolved)) {
+      setText('');
+      return;
+    }
+    commit([...value, resolved]);
+    setText('');
+  };
+
+  const suggestions =
+    text.trim().length > 0
+      ? options.filter(
+          (o) =>
+            !value.includes(o.value) &&
+            (o.label.toLowerCase().includes(text.toLowerCase()) ||
+              o.value.toLowerCase().includes(text.toLowerCase())),
+        )
+      : [];
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <div
+        className={cn(
+          'flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border bg-transparent px-2 py-1.5',
+          disabled && 'opacity-50',
+          error && 'border-destructive',
+        )}
+      >
+        {value.map((tag) => {
+          const label = options.find((o) => o.value === tag)?.label ?? tag;
+          return (
+            <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+              {label}
+              {!disabled ? (
+                <button
+                  type="button"
+                  className="rounded-full p-0.5 hover:bg-muted"
+                  aria-label={`Remove ${label}`}
+                  onClick={() => commit(value.filter((t) => t !== tag))}
+                >
+                  <X className="size-3" />
+                </button>
+              ) : null}
+            </Badge>
+          );
+        })}
+        <input
+          value={text}
+          disabled={disabled}
+          placeholder={value.length === 0 ? placeholder : ''}
+          className="min-w-[6rem] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ',') {
+              e.preventDefault();
+              addTag(text);
+            } else if (e.key === 'Backspace' && text === '' && value.length > 0) {
+              commit(value.slice(0, -1));
+            }
+          }}
+          onBlur={() => {
+            if (text.trim()) addTag(text);
+          }}
+        />
+      </div>
+      {suggestions.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {suggestions.slice(0, 8).map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              disabled={disabled}
+              className="rounded-md border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                addTag(o.value);
+              }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
@@ -1741,10 +2090,12 @@ function BoundUpload({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const label = String(props.label ?? 'Upload');
   const accept = props.accept ? String(props.accept) : undefined;
   const multiple = !!props.multiple;
   const abortable = props.abortable !== false;
+  const variant = props.variant === 'dropzone' ? 'dropzone' : 'button';
   const maxSizeBytes =
     typeof props.maxSizeBytes === 'number' && props.maxSizeBytes > 0
       ? props.maxSizeBytes
@@ -1770,100 +2121,183 @@ function BoundUpload({
     xhrRef.current?.abort();
   };
 
+  const startUpload = (files: File[]) => {
+    if (!files.length) return;
+
+    for (const file of files) {
+      if (maxSizeBytes != null && file.size > maxSizeBytes) {
+        const msg = `File "${file.name}" is ${file.size} bytes; max allowed is ${maxSizeBytes} bytes`;
+        setError(msg);
+        if (hasEvent(props, 'error')) emit(id, 'error', msg);
+        if (inputRef.current) inputRef.current.value = '';
+        return;
+      }
+      if (!matchesAcceptToken(file)) {
+        const msg =
+          `File "${file.name}" (${file.type || 'unknown type'}) is not an allowed type` +
+          (accept ? ` (accept: ${accept})` : '');
+        setError(msg);
+        if (hasEvent(props, 'error')) emit(id, 'error', msg);
+        if (inputRef.current) inputRef.current.value = '';
+        return;
+      }
+    }
+
+    setBusy(true);
+    setError(null);
+    setProgress(0);
+    const fd = new FormData();
+    for (const file of files) {
+      fd.append('files', file);
+    }
+
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open('POST', '/upload');
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (ev) => {
+      if (!ev.lengthComputable) return;
+      const percent = Math.round((ev.loaded / ev.total) * 100);
+      setProgress(percent);
+      if (hasEvent(props, 'progress')) {
+        emit(id, 'progress', { percent, loaded: ev.loaded, total: ev.total });
+      }
+    };
+    xhr.onload = () => {
+      xhrRef.current = null;
+      setBusy(false);
+      setProgress(null);
+      if (inputRef.current) inputRef.current.value = '';
+      const data = (xhr.response ?? {}) as {
+        files?: Array<{ name: string; size: number; type: string; path: string }>;
+        error?: string;
+      };
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const msg = data.error || `Upload failed (${xhr.status})`;
+        setError(msg);
+        if (hasEvent(props, 'error')) emit(id, 'error', msg);
+        return;
+      }
+      for (const file of data.files ?? []) {
+        if (hasEvent(props, 'upload')) emit(id, 'upload', file);
+      }
+    };
+    xhr.onerror = () => {
+      xhrRef.current = null;
+      setBusy(false);
+      setProgress(null);
+      if (inputRef.current) inputRef.current.value = '';
+      const msg = 'Upload failed (network error)';
+      setError(msg);
+      if (hasEvent(props, 'error')) emit(id, 'error', msg);
+    };
+    xhr.onabort = () => {
+      xhrRef.current = null;
+      setBusy(false);
+      setProgress(null);
+      if (inputRef.current) inputRef.current.value = '';
+      if (hasEvent(props, 'abort')) emit(id, 'abort');
+    };
+    xhr.send(fd);
+  };
+
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      className="sr-only"
+      accept={accept}
+      multiple={multiple}
+      disabled={disabled}
+      onChange={(e) => {
+        const list = e.target.files;
+        if (!list?.length) return;
+        startUpload(Array.from(list));
+      }}
+    />
+  );
+
+  const progressUi =
+    busy && progress != null ? (
+      <Progress value={progress} className="h-1.5 w-full max-w-xs" />
+    ) : null;
+
+  const abortUi =
+    busy && abortable ? (
+      <Button type="button" variant="ghost" size="sm" onClick={abortUpload}>
+        Cancel
+      </Button>
+    ) : null;
+
+  if (variant === 'dropzone') {
+    return (
+      <div className={cn('flex flex-col gap-1.5', className)} style={asStyle(style)}>
+        {fileInput}
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            'flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-center transition-colors',
+            dragOver && !disabled
+              ? 'border-primary bg-primary/5'
+              : 'border-muted-foreground/25 hover:border-muted-foreground/50',
+            disabled && 'cursor-not-allowed opacity-50',
+          )}
+          onClick={() => inputRef.current?.click()}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!disabled) setDragOver(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!disabled) setDragOver(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragOver(false);
+            if (disabled) return;
+            const list = e.dataTransfer.files;
+            if (!list?.length) return;
+            startUpload(Array.from(list));
+          }}
+        >
+          <UploadIcon className="size-8 text-muted-foreground" aria-hidden />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">
+              {busy
+                ? progress != null
+                  ? `Uploading… ${progress}%`
+                  : 'Uploading…'
+                : dragOver
+                  ? 'Drop files here'
+                  : label}
+            </p>
+            {!busy ? (
+              <p className="text-xs text-muted-foreground">
+                Drag and drop, or click to browse
+                {accept ? ` · ${accept}` : ''}
+              </p>
+            ) : null}
+          </div>
+          {abortUi}
+        </button>
+        {progressUi}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </div>
+    );
+  }
+
   return (
     <div className={cn('flex flex-col gap-1.5', className)} style={asStyle(style)}>
-      <input
-        ref={inputRef}
-        type="file"
-        className="sr-only"
-        accept={accept}
-        multiple={multiple}
-        disabled={disabled}
-        onChange={(e) => {
-          const list = e.target.files;
-          if (!list?.length) return;
-          const files = Array.from(list);
-
-          for (const file of files) {
-            if (maxSizeBytes != null && file.size > maxSizeBytes) {
-              const msg = `File "${file.name}" is ${file.size} bytes; max allowed is ${maxSizeBytes} bytes`;
-              setError(msg);
-              if (hasEvent(props, 'error')) emit(id, 'error', msg);
-              if (inputRef.current) inputRef.current.value = '';
-              return;
-            }
-            if (!matchesAcceptToken(file)) {
-              const msg =
-                `File "${file.name}" (${file.type || 'unknown type'}) is not an allowed type` +
-                (accept ? ` (accept: ${accept})` : '');
-              setError(msg);
-              if (hasEvent(props, 'error')) emit(id, 'error', msg);
-              if (inputRef.current) inputRef.current.value = '';
-              return;
-            }
-          }
-
-          const run = () => {
-            setBusy(true);
-            setError(null);
-            setProgress(0);
-            const fd = new FormData();
-            for (const file of files) {
-              fd.append('files', file);
-            }
-
-            const xhr = new XMLHttpRequest();
-            xhrRef.current = xhr;
-            xhr.open('POST', '/upload');
-            xhr.responseType = 'json';
-            xhr.upload.onprogress = (ev) => {
-              if (!ev.lengthComputable) return;
-              const percent = Math.round((ev.loaded / ev.total) * 100);
-              setProgress(percent);
-              if (hasEvent(props, 'progress')) {
-                emit(id, 'progress', { percent, loaded: ev.loaded, total: ev.total });
-              }
-            };
-            xhr.onload = () => {
-              xhrRef.current = null;
-              setBusy(false);
-              setProgress(null);
-              if (inputRef.current) inputRef.current.value = '';
-              const data = (xhr.response ?? {}) as {
-                files?: Array<{ name: string; size: number; type: string; path: string }>;
-                error?: string;
-              };
-              if (xhr.status < 200 || xhr.status >= 300) {
-                const msg = data.error || `Upload failed (${xhr.status})`;
-                setError(msg);
-                if (hasEvent(props, 'error')) emit(id, 'error', msg);
-                return;
-              }
-              for (const file of data.files ?? []) {
-                if (hasEvent(props, 'upload')) emit(id, 'upload', file);
-              }
-            };
-            xhr.onerror = () => {
-              xhrRef.current = null;
-              setBusy(false);
-              setProgress(null);
-              if (inputRef.current) inputRef.current.value = '';
-              const msg = 'Upload failed (network error)';
-              setError(msg);
-              if (hasEvent(props, 'error')) emit(id, 'error', msg);
-            };
-            xhr.onabort = () => {
-              xhrRef.current = null;
-              setBusy(false);
-              setProgress(null);
-              if (inputRef.current) inputRef.current.value = '';
-              if (hasEvent(props, 'abort')) emit(id, 'abort');
-            };
-            xhr.send(fd);
-          };
-          run();
-        }}
-      />
+      {fileInput}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
@@ -1877,15 +2311,9 @@ function BoundUpload({
               : 'Uploading…'
             : label}
         </Button>
-        {busy && abortable ? (
-          <Button type="button" variant="ghost" size="sm" onClick={abortUpload}>
-            Cancel
-          </Button>
-        ) : null}
+        {abortUi}
       </div>
-      {busy && progress != null ? (
-        <Progress value={progress} className="h-1.5 w-full max-w-xs" />
-      ) : null}
+      {progressUi}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -2099,6 +2527,27 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'slider':
       return <BoundSlider id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'rating':
+      return <BoundRating id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'colorPicker':
+      return <BoundColorPicker id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'tags':
+      return <BoundTags id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'codeBlock':
+      return <BoundCodeBlock id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'tree':
+      return <BoundTree id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'editor':
+      return <BoundEditor id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'kanban':
+      return <BoundKanban id={id} props={props} className={className} style={style} emit={emit} />;
 
     case 'link':
       return (

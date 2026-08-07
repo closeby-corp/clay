@@ -393,6 +393,92 @@ Calendar + popover date picker. Value is an ISO date string (`YYYY-MM-DD`). Supp
 | `disabled` | `boolean` | `false` |
 | `onChange` | `(value: number) => void` | |
 
+#### `ui.rating(props?)`
+
+Star rating control. Supports `bindValue`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `value` | `number` | `0` |
+| `max` | `number` | `5` |
+| `label` | `string` | |
+| `error` | `string` | |
+| `disabled` | `boolean` | `false` |
+| `onChange` | `(value: number) => void` | |
+
+#### `ui.colorPicker(props?)`
+
+Hex color picker (swatches + native color input + text field). Supports `bindValue`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `value` | `string` | `'#3b82f6'` |
+| `label` | `string` | |
+| `error` | `string` | |
+| `disabled` | `boolean` | `false` |
+| `onChange` | `(value: string) => void` | |
+
+#### `ui.tags(props?)`
+
+Multi-tag chip input. Supports `bindValue` (value is `string[]`).
+
+| Prop | Type | Default |
+|------|------|---------|
+| `value` | `string[]` | `[]` |
+| `options` | `{ value: string; label: string }[]` | `[]` |
+| `creatable` | `boolean` | `true` |
+| `label` | `string` | |
+| `placeholder` | `string` | `'Add tag…'` |
+| `error` | `string` | |
+| `disabled` | `boolean` | `false` |
+| `onChange` | `(value: string[]) => void` | |
+
+#### `ui.codeBlock(props)`
+
+Read-only syntax-highlighted code (Shiki on the client).
+
+| Prop | Type | Default |
+|------|------|---------|
+| `code` | `string` | required |
+| `language` | `string` | `'text'` |
+| `showCopy` | `boolean` | `true` |
+
+#### `ui.tree(props)`
+
+Nested tree with selection and expand/collapse. Optimistic `selected` / `expanded`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `nodes` | `{ id: string; label: string; children?: … }[]` | required |
+| `selected` | `string` | `''` |
+| `expanded` | `string[]` | `[]` |
+| `disabled` | `boolean` | `false` |
+| `onSelect` | `(id: string) => void` | |
+| `onExpand` | `(expanded: string[]) => void` | |
+
+#### `ui.editor(props?)`
+
+Rich text editor powered by Domternal (classic toolbar + bubble menu, StarterKit). Supports `bindValue`. Wire `value` is HTML by default, or Markdown when `format: 'markdown'`. Client debounces `change` (~200ms) and flushes on blur; server echoes that match the last emitted value do not reset the caret.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `value` | `string` | `''` |
+| `format` | `'html' \| 'markdown'` | `'html'` |
+| `placeholder` | `string` | |
+| `disabled` | `boolean` | `false` |
+| `onChange` | `(value: string) => void` | |
+
+#### `ui.kanban(props)`
+
+Kanban board with cross-column card drag (`@dnd-kit`). Client reorders optimistically; emits `cardMove` once per drop with a coarse payload. Server should update `columns` (e.g. via `ui.auto` / `updateProps`) as the source of truth. Out of v1: card edit drawers, swimlanes, persistence helpers, multiplayer cursors.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `columns` | `{ id, title, cards: { id, title, description? }[] }[]` | required |
+| `disabled` | `boolean` | `false` |
+| `onCardMove` | `(payload: { cardId, fromColumnId, toColumnId, index }) => void` | |
+| `onCardClick` | `(cardId: string) => void` | |
+
 #### `ui.validate(rules)`
 
 Light submit-gate helper. Runs each rule’s `check`, calls `.setError` on the field (clears when `check` returns null/undefined), and returns `true` only if every rule passes. No schema library — keep rules explicit in the handler.
@@ -1013,9 +1099,9 @@ ui.timer(2, () => ui.notify('Once'), { once: true });
 
 Timers are cleared on WebSocket session destroy.
 
-#### `ui.upload({ onUpload, accept?, multiple?, label?, maxSizeBytes?, abortable?, onProgress?, onError?, onAbort? })`
+#### `ui.upload({ onUpload, accept?, multiple?, label?, variant?, maxSizeBytes?, abortable?, onProgress?, onError?, onAbort? })`
 
-Opens a file picker. Selected files are posted to `POST /upload` (multipart) with XHR progress. The client emits WS events: `upload` per file `{ name, size, type, path }`, plus optional `progress` / `error` / `abort`. Client and server enforce `accept` / `maxSizeBytes` when set (`ui.run({ uploadMaxSizeBytes, uploadAccept })` for global server limits).
+Opens a file picker (`variant: 'button'`, default) or a drag-and-drop shell (`variant: 'dropzone'`). Selected files are posted to `POST /upload` (multipart) with XHR progress. The client emits WS events: `upload` per file `{ name, size, type, path }`, plus optional `progress` / `error` / `abort`. Client and server enforce `accept` / `maxSizeBytes` when set (`ui.run({ uploadMaxSizeBytes, uploadAccept })` for global server limits).
 
 ```typescript
 ui.upload({
@@ -1023,6 +1109,15 @@ ui.upload({
   multiple: true,
   onUpload: async (file) => {
     ui.notify(`Saved ${file.name} → ${file.path}`, 'success');
+  },
+});
+
+ui.upload({
+  variant: 'dropzone',
+  label: 'Drop files here',
+  multiple: true,
+  onUpload: async (file) => {
+    ui.notify(`Saved ${file.name}`, 'success');
   },
 });
 ```

@@ -58,6 +58,29 @@ ui.page('/examples/upload', () => {
             },
           });
 
+          ui.separator();
+          ui.label('Dropzone variant').classes('text-sm font-medium');
+          ui.upload({
+            variant: 'dropzone',
+            multiple: true,
+            label: 'Drop files here',
+            accept: 'image/*,.txt,.md,.pdf,.csv',
+            maxSizeBytes: 5 * 1024 * 1024,
+            onError: (message) => {
+              ui.notify(message, 'error');
+            },
+            onAbort: () => {
+              ui.notify('Upload cancelled', 'warning');
+            },
+            onUpload: async (file) => {
+              files.push(file);
+              const count = ((await ui.storage.user.get<number>('uploadCount')) ?? 0) + 1;
+              await ui.storage.user.set('uploadCount', count);
+              ui.notify(`Uploaded ${file.name} (lifetime uploads: ${count})`, 'success');
+              persist();
+            },
+          });
+
           listUi = ui.refreshable(() => {
             if (files.length === 0) {
               ui.label('No files uploaded yet.').classes(

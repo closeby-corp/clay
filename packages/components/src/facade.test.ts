@@ -31,6 +31,13 @@ import {
   html,
   image,
   upload,
+  rating,
+  colorPicker,
+  tags,
+  codeBlock,
+  tree,
+  editor,
+  kanban,
   areaChart,
   barChart,
   lineChart,
@@ -303,7 +310,107 @@ describe('upload', () => {
     expect(el.props.accept).toBe('.pdf,image/*');
     expect(el.props.multiple).toBe(true);
     expect(el.props.label).toBe('Pick');
+    expect(el.props.variant).toBe('button');
     expect(el.props.events).toEqual(expect.arrayContaining(['upload']));
+  });
+
+  test('dropzone variant', () => {
+    const el = upload({ variant: 'dropzone', label: 'Drop' });
+    expect(el.props.variant).toBe('dropzone');
+    expect(el.props.label).toBe('Drop');
+  });
+});
+
+describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () => {
+  test('rating wires value/max and change', () => {
+    const el = rating({ value: 3, max: 5, label: 'Stars', onChange: () => {} });
+    expect(el.type).toBe('rating');
+    expect(el.props).toMatchObject({ value: 3, max: 5, label: 'Stars' });
+    expect(el.props.events).toEqual(expect.arrayContaining(['change']));
+  });
+
+  test('colorPicker wires hex value', () => {
+    const el = colorPicker({ value: '#ff0000', onChange: () => {} });
+    expect(el.type).toBe('colorPicker');
+    expect(el.props.value).toBe('#ff0000');
+    expect(el.props.events).toEqual(expect.arrayContaining(['change']));
+  });
+
+  test('tags wires array value and options', () => {
+    const el = tags({
+      value: ['a'],
+      options: [{ value: 'a', label: 'A' }],
+      creatable: false,
+      onChange: () => {},
+    });
+    expect(el.type).toBe('tags');
+    expect(el.props.value).toEqual(['a']);
+    expect(el.props.creatable).toBe(false);
+    expect(el.props.events).toEqual(expect.arrayContaining(['change']));
+  });
+
+  test('codeBlock is display-only', () => {
+    const el = codeBlock({ code: 'const x = 1', language: 'ts', showCopy: false });
+    expect(el.type).toBe('codeBlock');
+    expect(el.props).toMatchObject({ code: 'const x = 1', language: 'ts', showCopy: false });
+    expect(el.props.events ?? []).toEqual([]);
+  });
+
+  test('tree wires nodes and select/expand', () => {
+    const el = tree({
+      nodes: [{ id: 'root', label: 'Root', children: [{ id: 'child', label: 'Child' }] }],
+      selected: 'root',
+      expanded: ['root'],
+      onSelect: () => {},
+      onExpand: () => {},
+    });
+    expect(el.type).toBe('tree');
+    expect(el.props.selected).toBe('root');
+    expect(el.props.expanded).toEqual(['root']);
+    expect(el.props.events).toEqual(expect.arrayContaining(['select', 'expand']));
+  });
+
+  test('editor wires value/format and change', () => {
+    const el = editor({
+      value: '<p>Hi</p>',
+      format: 'html',
+      placeholder: 'Write…',
+      onChange: () => {},
+    });
+    expect(el.type).toBe('editor');
+    expect(el.props).toMatchObject({
+      value: '<p>Hi</p>',
+      format: 'html',
+      placeholder: 'Write…',
+    });
+    expect(el.props.events).toEqual(expect.arrayContaining(['change']));
+  });
+
+  test('editor defaults format to html', () => {
+    const el = editor({ value: '# md', format: 'markdown', onChange: () => {} });
+    expect(el.props.format).toBe('markdown');
+    const el2 = editor({ value: '<p>x</p>' });
+    expect(el2.props.format).toBe('html');
+    expect(el2.props.value).toBe('<p>x</p>');
+  });
+
+  test('kanban wires columns and cardMove/cardClick', () => {
+    const columns = [
+      {
+        id: 'todo',
+        title: 'Todo',
+        cards: [{ id: 'c1', title: 'One', description: 'desc' }],
+      },
+      { id: 'done', title: 'Done', cards: [] },
+    ];
+    const el = kanban({
+      columns,
+      onCardMove: () => {},
+      onCardClick: () => {},
+    });
+    expect(el.type).toBe('kanban');
+    expect(el.props.columns).toEqual(columns);
+    expect(el.props.events).toEqual(expect.arrayContaining(['cardMove', 'cardClick']));
   });
 });
 

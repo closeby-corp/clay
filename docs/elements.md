@@ -17,6 +17,13 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `combobox` | `combobox` | ShadCN `Combobox` (searchable select; optional `error`) |
 | `date` | `date` | Calendar + Popover date picker (ISO `YYYY-MM-DD`; optional `error`) |
 | `slider` | `slider` | ShadCN `Slider` (+ optional `error`) |
+| `rating` | `rating` | Star rating (`value` / `max`; optional `error`) |
+| `colorPicker` | `colorPicker` | Hex color picker (swatches + native input; optional `error`) |
+| `tags` | `tags` | Multi-tag chip input (`options?`, `creatable?`; optional `error`) |
+| `codeBlock` | `codeBlock` | Read-only Shiki-highlighted code (`language?`, `showCopy?`) |
+| `tree` | `tree` | Nested tree (`nodes`, `selected?`, `expanded?`) |
+| `editor` | `editor` | Domternal rich text (`format?: 'html' \| 'markdown'`) |
+| `kanban` | `kanban` | Board (`columns` with cards; cross-column drag) |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
@@ -41,7 +48,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `markdown` | `markdown` | Client `marked` + DOMPurify |
 | `html` | `html` | Trusted server HTML (`dangerouslySetInnerHTML`) |
 | `image` | `image` | `<img>` |
-| `upload` | `upload` | File picker → `POST /upload` (progress/abort) → WS `upload` / `progress` / `error` / `abort` |
+| `upload` | `upload` | File picker / dropzone → `POST /upload` (progress/abort) → WS `upload` / `progress` / `error` / `abort` |
 | `stat` | `stat` | Grid of metric cards |
 | `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive ranges, `stacked?`) |
 | `barChart` | `barchart` | Recharts bar (`stacked?`, `layout?: 'vertical' \| 'horizontal'`) |
@@ -80,8 +87,10 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `button` | `click` |
 | `input` / `textarea` | `input`, `change` |
 | `checkbox` / `switch` | `change` (and `input` if bound) |
-| `select` / `slider` / `radioGroup` / `combobox` / `date` | `change` (and `input` if bound for radio/combobox/date) |
+| `select` / `slider` / `rating` / `colorPicker` / `tags` / `radioGroup` / `combobox` / `date` / `editor` | `change` (and `input` if bound for radio/combobox/date/editor) |
 | `tabs` / `accordion` / `collapsible` | `change` |
+| `tree` | `select`, `expand` |
+| `kanban` | `cardMove`, `cardClick` |
 | `upload` | `upload`, `progress`, `error`, `abort` |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
@@ -107,6 +116,12 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `combobox`
 - `date`
 - `slider`
+- `rating`
+- `colorPicker`
+- `tags`
+- `tree` (`selected` / `expanded`)
+- `editor`
+- `kanban` (`columns` while dragging)
 - `tabs`
 - `accordion`
 - `collapsible`
