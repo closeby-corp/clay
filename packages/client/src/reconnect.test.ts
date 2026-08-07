@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   createReconnectController,
   reconnectDelayMs,
+  WS_OUTAGE_TOAST_AFTER_MS,
   WS_RECONNECT_MAX_MS,
 } from './reconnect';
 
@@ -14,6 +15,11 @@ describe('reconnectDelayMs', () => {
     expect(reconnectDelayMs(4)).toBe(8000);
     expect(reconnectDelayMs(5)).toBe(WS_RECONNECT_MAX_MS);
     expect(reconnectDelayMs(6)).toBe(WS_RECONNECT_MAX_MS);
+  });
+
+  test('outage toast delay is longer than the first reconnect attempts', () => {
+    expect(WS_OUTAGE_TOAST_AFTER_MS).toBeGreaterThan(reconnectDelayMs(0));
+    expect(WS_OUTAGE_TOAST_AFTER_MS).toBeGreaterThanOrEqual(reconnectDelayMs(2));
   });
 });
 

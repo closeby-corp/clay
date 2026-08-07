@@ -4,6 +4,12 @@ export const WS_RECONNECT_TOAST_ID = 'badui-ws';
 export const WS_RECONNECT_BASE_MS = 500;
 export const WS_RECONNECT_MAX_MS = 10_000;
 
+/**
+ * Delay before showing a disconnect toast. Short drops (e.g. `--reload`) only
+ * use the BadUI status chip; longer outages escalate to a sticky toast.
+ */
+export const WS_OUTAGE_TOAST_AFTER_MS = 4_000;
+
 /** Exponential backoff: 500ms → 1s → 2s → … capped at 10s. */
 export function reconnectDelayMs(attempt: number): number {
   return Math.min(WS_RECONNECT_BASE_MS * 2 ** Math.max(0, attempt), WS_RECONNECT_MAX_MS);

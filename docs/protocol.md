@@ -10,7 +10,7 @@ All fields are **camelCase**. Transport: single WebSocket at `/ws`.
 4. Server creates `ClientSession`, runs the page builder, replies `{ op: "mount", sessionId, tree }`
 5. Interaction continues with `event` ↔ `patch` (plus optional `notify` / `navigate` / `theme`)
 
-On unexpected socket close, the client reconnects with exponential backoff (500ms → 10s), shows a sticky “Disconnected — reconnecting…” toast, and re-sends `hello` with the current path after open. Matching `app` chrome stays mounted across remounts.
+On unexpected socket close, the client reconnects with exponential backoff (500ms → 10s) and shows a corner **BadUI** status chip (`reloading` / brief `ready`). A sticky “Disconnected — reconnecting…” toast appears only if the outage lasts longer than ~4s. Matching `app` chrome stays mounted across remounts.
 ## Client → server
 
 ### `hello`

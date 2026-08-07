@@ -241,6 +241,8 @@ import {
   navFromPages,
   clearPageMeta,
   attachPageMeta,
+  importFresh,
+  resetPageDiscovery,
   type PageMeta,
   type NavFromPagesOptions,
 } from './pages';
@@ -332,6 +334,8 @@ export {
   navFromPages,
   clearPageMeta,
   attachPageMeta,
+  importFresh,
+  resetPageDiscovery,
 };
 
 /** Text label. Prefer `ui.label`. See {@link LabelProps}. */

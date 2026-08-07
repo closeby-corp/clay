@@ -22,7 +22,8 @@ Options:
   --app              Wrap pages in the app shell with navFromPages()
   --open             Open the browser (default)
   --no-open          Do not open the browser
-  --reload           Restart on file changes (Bun --watch)
+  --reload           Restart on file changes (Bun --watch); opens browser once;
+                     prints ↻ on each reload and re-imports pages with a cache bust
   --reactive-let     Enable compile-time reactive let (default)
   --no-reactive-let  Disable reactive-let Bun loader plugin
   -h, --help         Show help

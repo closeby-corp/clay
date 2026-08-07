@@ -1,10 +1,16 @@
-import { pathToFileURL } from 'url';
 import { isAbsolute, join, resolve } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { stat } from 'fs/promises';
 import { registerReactiveLetPlugin } from '@badui/compiler/plugin';
 import { getRegisteredPaths } from '@badui/core';
-import { ui, wasRunCalled, resetRunState, type RunConfig } from '@badui/ui';
+import {
+  ui,
+  wasRunCalled,
+  resetRunState,
+  importFresh,
+  resetPageDiscovery,
+  type RunConfig,
+} from '@badui/ui';
 import { parseArgs, printUsage } from './parse-args.ts';
 import { openBrowser, resolveBundledClientDir, resolveTitle } from './helpers.ts';
 import { maybeReload } from './reload.ts';
@@ -48,8 +54,24 @@ function ensureStarted(config: RunConfig): ReturnType<typeof ui.run> | null {
   return ui.run(config);
 }
 
+/** Open once under `--reload` (marker path from parent); always open otherwise. */
+export function shouldOpenBrowser(openFlag: boolean): boolean {
+  if (!openFlag) return false;
+  if (process.env.BADUI_RELOAD_CHILD !== '1') return true;
+  const marker = process.env.BADUI_RELOAD_OPEN_MARKER;
+  if (!marker) return true;
+  if (existsSync(marker)) return false;
+  try {
+    writeFileSync(marker, `${Date.now()}\n`);
+  } catch {
+    // still open; worst case a second tab on races
+  }
+  return true;
+}
+
 async function loadEntryFile(absPath: string): Promise<void> {
-  const mod = (await import(pathToFileURL(absPath).href)) as {
+  resetPageDiscovery();
+  const mod = (await importFresh(absPath)) as {
     default?: unknown;
   };
 
@@ -80,7 +102,7 @@ export async function applyDirRunConfig(
   for (const name of ['_run.ts', '_run.tsx'] as const) {
     const path = join(absDir, name);
     if (!existsSync(path)) continue;
-    const mod = (await import(pathToFileURL(path).href)) as {
+    const mod = (await importFresh(path)) as {
       configureRun?: (config: RunConfig) => RunConfig;
     };
     if (typeof mod.configureRun === 'function') {
@@ -88,6 +110,44 @@ export async function applyDirRunConfig(
     }
   }
   return base;
+}
+
+function isAddrInUse(err: unknown): boolean {
+  const e = err as { code?: string; message?: string };
+  return (
+    e?.code === 'EADDRINUSE' ||
+    (typeof e?.message === 'string' && e.message.includes('EADDRINUSE'))
+  );
+}
+
+async function startServerWithRetry(
+  config: RunConfig,
+  attempts = 25,
+  delayMs = 40,
+): Promise<ReturnType<typeof ui.run>> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    resetRunState();
+    try {
+      const server = ensureStarted(config);
+      if (server) return server;
+      // Entry already called ui.run() during import.
+      if (wasRunCalled()) {
+        throw new Error(
+          'ui.run() was already called by the entry module; CLI cannot start a second server. Remove ui.run from page modules when using the CLI.',
+        );
+      }
+      throw new Error('Failed to start BadUI server (ensureStarted returned null).');
+    } catch (err) {
+      lastErr = err;
+      if (isAddrInUse(err) && i < attempts - 1) {
+        await Bun.sleep(delayMs);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {
@@ -107,7 +167,12 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     process.exit(args.help ? 0 : 1);
   }
 
+  if (process.env.BADUI_RELOAD_CHILD === '1') {
+    console.log('↻ badui: reloading…');
+  }
+
   resetRunState();
+  resetPageDiscovery();
 
   if (args.reactiveLet) {
     registerReactiveLetPlugin();
@@ -151,17 +216,26 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     config = await applyDirRunConfig(absEntry, config);
   }
 
-  let server: ReturnType<typeof ui.run> | null = null;
+  // Entry modules that call ui.run() themselves — nothing left for the CLI to do.
+  if (wasRunCalled()) {
+    const url = `http://localhost:${args.port}`;
+    if (shouldOpenBrowser(args.open)) {
+      openBrowser(url);
+    }
+    return;
+  }
+
+  let server: ReturnType<typeof ui.run>;
   try {
-    server = ensureStarted(config);
+    server = await startServerWithRetry(config);
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     process.exit(1);
   }
 
-  const port = server?.port ?? args.port;
+  const port = server.port;
   const url = `http://localhost:${port}`;
-  if (args.open) {
+  if (shouldOpenBrowser(args.open)) {
     openBrowser(url);
   }
 }

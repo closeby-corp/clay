@@ -10,6 +10,7 @@ import {
 } from './clientBridge';
 import {
   createReconnectController,
+  WS_OUTAGE_TOAST_AFTER_MS,
   WS_RECONNECT_TOAST_ID,
 } from './reconnect';
 import { applyServerTheme, isThemeMode } from './themeBridge';
@@ -112,6 +113,15 @@ export function useBadUISession(path: string) {
     const userId = userIdRef.current;
     /** Skip disconnect toast for intentional soft-reconnect (auth cookie refresh). */
     let softReconnect = false;
+    /** Escalate to toast only after a prolonged outage (short --reload drops use the chip). */
+    let outageToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearOutageToastTimer = () => {
+      if (outageToastTimer != null) {
+        clearTimeout(outageToastTimer);
+        outageToastTimer = null;
+      }
+    };
 
     const applyPath = (nextPath: string) => {
       pathRef.current = nextPath;
@@ -236,18 +246,12 @@ export function useBadUISession(path: string) {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        const wasReconnect = everOpened.current;
-        const wasSoft = softReconnect;
         softReconnect = false;
         everOpened.current = true;
         controller.resetAttempt();
+        clearOutageToastTimer();
+        toast.dismiss(WS_RECONNECT_TOAST_ID);
         setState((s) => ({ ...s, connected: true, error: null }));
-        if (wasReconnect && !wasSoft) {
-          toast.dismiss(WS_RECONNECT_TOAST_ID);
-          toast.success('Reconnected');
-        } else if (wasSoft) {
-          toast.dismiss(WS_RECONNECT_TOAST_ID);
-        }
         ws.send(
           JSON.stringify({
             op: 'hello',
@@ -266,11 +270,15 @@ export function useBadUISession(path: string) {
         setState((s) => ({ ...s, connected: false }));
         if (controller.isDisposed()) return;
         if (!softReconnect) {
-          showToast('Disconnected — reconnecting…', {
-            id: WS_RECONNECT_TOAST_ID,
-            type: 'warning',
-            duration: 0,
-          });
+          clearOutageToastTimer();
+          outageToastTimer = setTimeout(() => {
+            outageToastTimer = null;
+            showToast('Disconnected — reconnecting…', {
+              id: WS_RECONNECT_TOAST_ID,
+              type: 'warning',
+              duration: 0,
+            });
+          }, WS_OUTAGE_TOAST_AFTER_MS);
         }
         controller.scheduleReconnect(connect);
       };
@@ -284,6 +292,7 @@ export function useBadUISession(path: string) {
 
     return () => {
       controller.dispose();
+      clearOutageToastTimer();
       const ws = wsRef.current;
       wsRef.current = null;
       if (ws) {

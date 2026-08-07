@@ -1,4 +1,4 @@
-import { watch, unlinkSync, utimesSync, type FSWatcher } from 'fs';
+import { watch, unlinkSync, writeFileSync, type FSWatcher } from 'fs';
 import { isAbsolute, join, dirname, resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { stat } from 'fs/promises';
@@ -22,6 +22,11 @@ export function reloadStubFileName(pid = process.pid): string {
   return `_badui-reload-${pid}.ts`;
 }
 
+/** Marker so reload children open the browser only on the first start. */
+export function reloadOpenMarkerFileName(pid = process.pid): string {
+  return `_badui-reload-opened-${pid}`;
+}
+
 /** Stub that re-invokes the CLI under `bun --watch` with the user's project as cwd. */
 export function buildReloadStubSource(cliPath: string, filteredArgv: string[]): string {
   const cliUrl = JSON.stringify(pathToFileURL(cliPath).href);
@@ -30,6 +35,14 @@ export function buildReloadStubSource(cliPath: string, filteredArgv: string[]): 
 const { main } = await import(${cliUrl});
 await main(${argvLit});
 `;
+}
+
+/**
+ * Bun `--watch` ignores mtime-only updates (`utimes` / `touch`). Rewrite stub
+ * contents so the child process actually restarts.
+ */
+export function writeReloadStubNudge(stubPath: string, baseSource: string, now = Date.now()): void {
+  writeFileSync(stubPath, `${baseSource}\n// badui-reload-nudge ${now}\n`);
 }
 
 /**
@@ -44,12 +57,13 @@ export function buildReloadChildCommand(
 }
 
 /**
- * For directory entries, nudge the stub when files change so new page modules
- * (not yet in the import graph) still trigger a Bun --watch restart.
+ * For directory entries, rewrite the stub when files change so Bun `--watch`
+ * restarts (dynamic page imports alone are not reliably watched).
  */
 export function watchDirectoryForNewModules(
   absDir: string,
   stubPath: string,
+  getStubSource: () => string,
   debounceMs = 50,
 ): FSWatcher {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -58,8 +72,7 @@ export function watchDirectoryForNewModules(
     clearTimeout(timer);
     timer = setTimeout(() => {
       try {
-        const now = new Date();
-        utimesSync(stubPath, now, now);
+        writeReloadStubNudge(stubPath, getStubSource());
       } catch {
         // stub may be mid-replace during shutdown
       }
@@ -109,12 +122,19 @@ export async function maybeReload(
   const isDirectory = entryStat.isDirectory();
   const watchRoot = resolveWatchRoot(absEntry, isDirectory);
   const stubPath = join(watchRoot, reloadStubFileName());
+  const openMarkerPath = join(watchRoot, reloadOpenMarkerFileName());
   // Absolute entry so the child resolves correctly regardless of stub location.
   const filtered = filterReloadArgv(argv).map((a) => (a === entry ? absEntry : a));
   const execPath = opts.execPath ?? process.execPath;
-  const childEnv = { ...process.env, ...opts.env, BADUI_RELOAD_CHILD: '1' };
+  const childEnv = {
+    ...process.env,
+    ...opts.env,
+    BADUI_RELOAD_CHILD: '1',
+    BADUI_RELOAD_OPEN_MARKER: openMarkerPath,
+  };
 
-  await Bun.write(stubPath, buildReloadStubSource(opts.cliPath, filtered));
+  const stubSource = () => buildReloadStubSource(opts.cliPath, filtered);
+  writeReloadStubNudge(stubPath, stubSource(), 0);
 
   let dirWatcher: FSWatcher | undefined;
   const cleanup = () => {
@@ -124,10 +144,15 @@ export async function maybeReload(
     } catch {
       // already removed
     }
+    try {
+      unlinkSync(openMarkerPath);
+    } catch {
+      // first run may never have opened
+    }
   };
 
   if (isDirectory) {
-    dirWatcher = watchDirectoryForNewModules(absEntry, stubPath);
+    dirWatcher = watchDirectoryForNewModules(absEntry, stubPath, stubSource);
   }
 
   const child = Bun.spawn(buildReloadChildCommand(execPath, stubPath), {

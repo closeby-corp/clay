@@ -145,7 +145,7 @@ bun run badui ./pages --app --title "My App"
 | `-t, --title` | HTML / shell title |
 | `--app` | Dashboard shell + nav from discovered pages |
 | `--no-open` | Do not open the browser |
-| `--reload` | Restart on file changes (`bun --watch`) |
+| `--reload` | Restart on file changes (`bun --watch`); opens the browser once; prints `↻ badui: reloading…` and re-imports pages (clears `require.cache`) |
 | `--reactive-let` | Enable compile-time reactive `let` Bun loader (default) |
 | `--no-reactive-let` | Disable the reactive-let plugin |
 

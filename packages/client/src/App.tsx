@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useBadUISession } from './useSession';
 import { ElementRenderer } from './ElementRenderer';
+import { ConnectionStatus } from './ConnectionStatus';
 
 export function App() {
   const [path, setPath] = useState(window.location.pathname || '/');
@@ -12,16 +13,9 @@ export function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const banner =
-    connected ? null : tree ? 'Reconnecting…' : 'Connecting…';
-
   return (
     <>
-      {banner && (
-        <div className="fixed left-4 top-4 z-50 rounded-md bg-muted px-3 py-1.5 text-xs text-muted-foreground">
-          {banner}
-        </div>
-      )}
+      <ConnectionStatus connected={connected} hasTree={tree != null} />
       {error && (
         <div className="fixed left-4 top-4 z-50 rounded-md bg-destructive px-3 py-2 text-sm text-destructive-foreground">
           {error}

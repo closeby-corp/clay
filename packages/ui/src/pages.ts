@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { join } from 'path';
 import {
   clearPages,
@@ -6,6 +6,25 @@ import {
   type PageFn,
 } from '@badui/core';
 import type { AppNavItem } from '@badui/components';
+
+/**
+ * Dynamic `import` that forces Bun to re-execute the module.
+ * Query-string cache busting is ignored by Bun; clear `require.cache` instead
+ * so `--reload` / repeated `loadPages` re-run top-level `ui.page(...)`.
+ */
+export async function importFresh(absPath: string): Promise<unknown> {
+  const href = pathToFileURL(absPath).href;
+  try {
+    // Bun populates require.cache for ESM too (key = absolute path).
+    if (typeof require !== 'undefined' && require.cache) {
+      delete require.cache[absPath];
+      delete require.cache[href];
+    }
+  } catch {
+    // ignore
+  }
+  return import(href);
+}
 
 /**
  * Optional metadata for a registered page — used by `navFromPages` / `loadPages`.
@@ -72,20 +91,24 @@ function shouldSkipPageFile(relativePath: string): boolean {
 
 /**
  * Dynamically import page modules under `dir`.
- * Each module should call `ui.page` once; optional `pageMeta` is attached to the new path.
+ * Clears prior registrations first, then fresh-imports each module (cache-busted)
+ * so `--reload` picks up edits. Each module should call `ui.page` once; optional
+ * `pageMeta` is attached to the new path.
  */
 export async function loadPages(dir: string | URL): Promise<string[]> {
   const absDir = typeof dir === 'string' ? dir : fileURLToPath(dir);
   const glob = new Bun.Glob('**/*.{ts,tsx}');
   const files = [...glob.scanSync({ cwd: absDir })].filter((f) => !shouldSkipPageFile(f)).sort();
 
-  const before = new Set(getRegisteredPaths());
+  clearPages();
+  clearPageMeta();
+
   const loaded: string[] = [];
 
   for (const relative of files) {
     const fullPath = join(absDir, relative);
     const pathsBefore = new Set(getRegisteredPaths());
-    const mod = (await import(fullPath)) as { pageMeta?: PageMeta };
+    const mod = (await importFresh(fullPath)) as { pageMeta?: PageMeta };
     const added = getRegisteredPaths().filter((p) => !pathsBefore.has(p));
     if (added.length === 1 && mod.pageMeta) {
       pageMetaByPath.set(added[0]!, mod.pageMeta);
@@ -93,9 +116,7 @@ export async function loadPages(dir: string | URL): Promise<string[]> {
       // Ambiguous: attach meta to all newly registered paths
       for (const p of added) pageMetaByPath.set(p, mod.pageMeta);
     }
-    for (const p of added) {
-      if (!before.has(p)) loaded.push(p);
-    }
+    for (const p of added) loaded.push(p);
   }
 
   return loaded;

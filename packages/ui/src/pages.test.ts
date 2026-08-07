@@ -80,4 +80,12 @@ describe('loadPages + navFromPages', () => {
     );
     expect(navFromPages().map((n) => n.href)).not.toContain('/examples/admin-only');
   });
+
+  test('loadPages clears prior registrations before re-import', async () => {
+    page('/stale', () => {});
+    expect(getRegisteredPaths()).toContain('/stale');
+    await loadPages(fixturesPages);
+    expect(getRegisteredPaths()).not.toContain('/stale');
+    expect(getRegisteredPaths()).toContain('/');
+  });
 });
