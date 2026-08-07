@@ -10,7 +10,7 @@ export {
   withDetached,
   clearParentStack,
 } from './context';
-export { ClientSession, type SendFn, type NotifyOptions } from './session';
+export { ClientSession, type SendFn, type NotifyOptions, type SessionTimeoutConfig } from './session';
 export {
   page,
   getPage,
@@ -31,6 +31,7 @@ export { generateId, resetIdSequence } from './utils';
 export {
   notify,
   navigate,
+  reconnect,
   download,
   clipboard,
   runJavaScript,

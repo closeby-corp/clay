@@ -86,6 +86,7 @@ ui.run(() => {
 | `@badui/ui` | NiceGUI-style `ui` facade |
 | `@badui/cli` | `badui` runtime — run a file or page directory |
 | `@badui/core` | Element tree, session, reactive, protocol |
+| `@badui/auth` | Optional password hash, login limiter, guards, audit |
 | `@badui/components` | Element factories |
 | `@badui/client` | React + ShadCN renderer |
 | `@badui/server` | Bun HTTP + WebSocket |
@@ -121,7 +122,7 @@ In: facade basics, timer / markdown / html / image, **real upload** (`POST /uplo
 
 ## Publishing
 
-Maintainers: `bun run publish:dry` validates packs; `bun run publish:npm` publishes in order `core` → `persistence-file` → `components` → `server` → `ui` → `cli`. Details in [docs/getting-started.md](./docs/getting-started.md#publishing-to-npm-maintainers).
+Maintainers: `bun run publish:dry` validates packs; `bun run publish:npm` publishes in order `core` → `auth` → `compiler` → `persistence-file` → `components` → `server` → `ui` → `cli`. Details in [docs/getting-started.md](./docs/getting-started.md#publishing-to-npm-maintainers).
 
 ## License
 

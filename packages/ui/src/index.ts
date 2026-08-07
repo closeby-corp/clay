@@ -202,6 +202,7 @@ import {
   getPage,
   notify as notifyCore,
   navigate as navigateCore,
+  reconnect as reconnectCore,
   download as downloadCore,
   clipboard as clipboardCore,
   runJavaScript as runJavaScriptCore,
@@ -227,12 +228,19 @@ import {
   type TimerOptions,
   type ThemeMode,
 } from '@badui/core';
-import { BadUIServer, type BadUIServerConfig } from '@badui/server';
+import {
+  BadUIServer,
+  type BadUIServerConfig,
+  establishAuthSession as establishAuthSessionCore,
+  clearAuthSession as clearAuthSessionCore,
+} from '@badui/server';
 import {
   loadPages,
   navFromPages,
   clearPageMeta,
+  attachPageMeta,
   type PageMeta,
+  type NavFromPagesOptions,
 } from './pages';
 
 export type {
@@ -299,6 +307,7 @@ export type {
   ToastPosition,
   ThemeMode,
   PageMeta,
+  NavFromPagesOptions,
   PageOptions,
   PageFn,
   TimerOptions,
@@ -319,6 +328,7 @@ export {
   loadPages,
   navFromPages,
   clearPageMeta,
+  attachPageMeta,
 };
 
 export function label(text?: string | (() => string), props?: Omit<LabelProps, 'text'>): Element {
@@ -682,6 +692,29 @@ export function navigate(path: string): void {
   navigateCore(path);
 }
 
+/** Soft-reconnect so the next hello includes updated cookies. */
+export function reconnect(): void {
+  reconnectCore();
+}
+
+/**
+ * Set the HttpOnly auth cookie (via client `POST /auth/session`) and soft-reconnect.
+ * Requires `ui.run({ authSecret })`.
+ */
+export function establishAuthSession(
+  userId: string,
+  options?: { path?: string },
+): void {
+  establishAuthSessionCore(userId, options);
+}
+
+/**
+ * Clear the auth cookie (via client `DELETE /auth/session`) and soft-reconnect.
+ */
+export function clearAuthSession(options?: { path?: string }): void {
+  clearAuthSessionCore(options);
+}
+
 export function download(filename: string, mime: string, content: string): void {
   downloadCore(filename, mime, content);
 }
@@ -863,6 +896,9 @@ export const ui = {
   choose,
   notify,
   navigate,
+  reconnect,
+  establishAuthSession,
+  clearAuthSession,
   download,
   clipboard,
   runJavaScript,

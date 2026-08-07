@@ -26,6 +26,9 @@ Options:
   --reactive-let     Enable compile-time reactive let (default)
   --no-reactive-let  Disable reactive-let Bun loader plugin
   -h, --help         Show help
+
+Directory entries may include optional _run.ts exporting configureRun(base)
+to merge into ui.run (skipped by loadPages).
 `;
 
 export function printUsage(): void {

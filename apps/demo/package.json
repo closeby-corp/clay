@@ -11,6 +11,7 @@
     "@badui/server": "workspace:*",
     "@badui/components": "workspace:*",
     "@badui/ui": "workspace:*",
+    "@badui/auth": "workspace:*",
     "@badui/client": "workspace:*"
   }
 }

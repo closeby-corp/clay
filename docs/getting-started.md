@@ -21,6 +21,8 @@ bun run pack:publishable   # build:client + bun pm pack → dist-pack/*.tgz
 # In your app directory:
 npm install \
   /path/to/bad-ui/dist-pack/badui-core-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/badui-auth-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/badui-compiler-0.1.0.tgz \
   /path/to/bad-ui/dist-pack/badui-persistence-file-0.1.0.tgz \
   /path/to/bad-ui/dist-pack/badui-components-0.1.0.tgz \
   /path/to/bad-ui/dist-pack/badui-server-0.1.0.tgz \
@@ -35,6 +37,7 @@ Install **all** runtime tarballs together so `@badui/*@0.1.0` resolves from the 
 ```bash
 bun add @badui/cli @badui/ui
 # transitive: core, components, server, persistence-file
+# optional: bun add @badui/auth
 ```
 
 ### Publishing to npm (maintainers)
@@ -42,11 +45,13 @@ bun add @badui/cli @badui/ui
 Runtime packages are scoped (`@badui/*`) and public (`publishConfig.access: public`). Publish **in dependency order** so the registry can resolve rewritten versions:
 
 1. `@badui/core`
-2. `@badui/persistence-file`
-3. `@badui/components`
-4. `@badui/server`
-5. `@badui/ui`
-6. `@badui/cli`
+2. `@badui/auth`
+3. `@badui/compiler`
+4. `@badui/persistence-file`
+5. `@badui/components`
+6. `@badui/server`
+7. `@badui/ui`
+8. `@badui/cli`
 
 ```bash
 # In the BadUI checkout:
@@ -62,6 +67,8 @@ Equivalent manual flow from packed tarballs:
 ```bash
 bun run pack:publishable
 npm publish ./dist-pack/badui-core-0.1.0.tgz --access public
+npm publish ./dist-pack/badui-auth-0.1.0.tgz --access public
+npm publish ./dist-pack/badui-compiler-0.1.0.tgz --access public
 npm publish ./dist-pack/badui-persistence-file-0.1.0.tgz --access public
 npm publish ./dist-pack/badui-components-0.1.0.tgz --access public
 npm publish ./dist-pack/badui-server-0.1.0.tgz --access public
@@ -171,11 +178,11 @@ Open:
 | Script | What it does |
 |--------|----------------|
 | `bun run build:client` | Vite production build of the React client + copy into `@badui/cli` |
-| `bun run pack:publishable` | `build:client` + pack `@badui/{core,persistence-file,components,server,ui,cli}` → `dist-pack/` |
+| `bun run pack:publishable` | `build:client` + pack `@badui/{core,auth,compiler,persistence-file,components,server,ui,cli}` → `dist-pack/` |
 | `bun run publish:dry` | Pack + validate tarballs + `npm publish --dry-run` (no registry upload) |
 | `bun run publish:npm` | Pack + validate + `npm publish` in order (requires `npm login`) |
 | `bun run demo` | Start demo server (`main.ts`; expects client already built) |
-| `bun run demo:cli` | Start demo via `badui apps/demo/src/examples --app` |
+| `bun run demo:cli` | Start demo via `badui apps/demo/src/examples --app` (loads `_run.ts` auth config) |
 | `bun run badui …` | CLI runtime (`@badui/cli`) |
 | `bun run dev` | Build client, then start demo |
 | `bun test` | Run package tests |
@@ -185,7 +192,7 @@ Open:
 - Source packages keep `workspace:*` for the monorepo; `bun pm pack` / publish rewrites them to the package version.
 - `@badui/client` is **private**; only its Vite `dist` is copied into `@badui/cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
 - Root stays `private: true`. Each runtime package ships `license`, `README.md`, `LICENSE`, and `publishConfig.access: public`.
-- Publish order: `core` → `persistence-file` → `components` → `server` → `ui` → `cli` (see **Publishing to npm** above).
+- Publish order: `core` → `auth` → `compiler` → `persistence-file` → `components` → `server` → `ui` → `cli` (see **Publishing to npm** above).
 
 ## Library mode (multi-page entrypoint)
 
@@ -247,6 +254,7 @@ apps/demo/           Demo pages + server entry (`loadPages` + `ui.run({ app })`)
 packages/cli/         `badui` binary — file/dir launcher + shipped client-dist
 packages/ui/         NiceGUI-style ui facade (`loadPages`, `navFromPages`, `run`)
 packages/core/       Element tree, session, page wrapper, reactive, storage (tab/user/app)
+packages/auth/       Optional password hash, login limiter, requireAuth / requireRole, audit
 packages/persistence-file/  File-backed PersistenceAdapter for storage.configure
 packages/components/ Element factories (button, input, dataTable, areaChart / barChart / lineChart / pieChart / radarChart / radialChart, …)
 packages/client/     React + ShadCN renderer (Sonner toasts, BoundDataTable, …) — private, not published

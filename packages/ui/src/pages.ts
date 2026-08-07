@@ -14,6 +14,12 @@ export type PageMeta = {
   order?: number;
   /** When `false`, omit from `navFromPages()` (route still registers). Default `true`. */
   nav?: boolean;
+  /**
+   * If set, `navFromPages({ role })` / `navFromPages({ roles })` only includes this
+   * item when the viewer has at least one matching role. Omit = visible to everyone.
+   * UX only — still call `requireRole` in the page builder.
+   */
+  roles?: string[];
 };
 
 const pageMetaByPath = new Map<string, PageMeta>();
@@ -24,6 +30,11 @@ export function clearPageMeta(): void {
 
 export function getPageMeta(path: string): PageMeta | undefined {
   return pageMetaByPath.get(path);
+}
+
+/** Attach or replace meta for a registered path (tests / advanced wiring). */
+export function attachPageMeta(path: string, meta: PageMeta): void {
+  pageMetaByPath.set(path, meta);
 }
 
 function titleCaseSegment(segment: string): string {
@@ -80,8 +91,21 @@ export async function loadPages(dir: string | URL): Promise<string[]> {
   return loaded;
 }
 
+export type NavFromPagesOptions = {
+  /** Single viewer role (sugar for `roles: [role]`). */
+  role?: string;
+  /** Viewer roles — page is shown if it has no `roles` meta, or any overlap. */
+  roles?: string[];
+};
+
 /** Build primary sidebar nav from registered pages + collected `pageMeta`. */
-export function navFromPages(): AppNavItem[] {
+export function navFromPages(opts?: NavFromPagesOptions): AppNavItem[] {
+  const viewer = new Set<string>();
+  if (opts?.role) viewer.add(opts.role);
+  if (opts?.roles) {
+    for (const r of opts.roles) viewer.add(r);
+  }
+
   const paths = getRegisteredPaths();
   const ranked = paths
     .map((href) => {
@@ -93,9 +117,15 @@ export function navFromPages(): AppNavItem[] {
         icon: meta.icon ?? 'boxes',
         order,
         nav: meta.nav !== false,
+        roles: meta.roles,
       };
     })
-    .filter((item) => item.nav);
+    .filter((item) => {
+      if (!item.nav) return false;
+      if (!item.roles || item.roles.length === 0) return true;
+      if (viewer.size === 0) return false;
+      return item.roles.some((r) => viewer.has(r));
+    });
   ranked.sort((a, b) => a.order - b.order || a.href.localeCompare(b.href));
   return ranked.map(({ href, label, icon }) => ({ href, label, icon }));
 }

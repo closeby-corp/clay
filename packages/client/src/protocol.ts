@@ -49,6 +49,13 @@ export type ServerMessage =
       key?: string;
       value?: unknown;
     }
+  | { op: 'reconnect' }
+  | {
+      op: 'authSession';
+      action: 'establish' | 'clear';
+      token?: string;
+      path?: string;
+    }
   | { op: 'error'; message: string };
 
 export type ClientMessage =

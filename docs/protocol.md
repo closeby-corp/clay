@@ -81,6 +81,26 @@ Sent on connect and after client-side navigation. The React client keeps matchin
 
 Client updates history (`pushState` + `popstate`) and sends a new `hello` on the same WebSocket. Matching `app` chrome stays mounted on the client; inset content remounts.
 
+### `reconnect`
+
+```json
+{ "op": "reconnect" }
+```
+
+Client closes the socket and reconnects (picks up updated HttpOnly cookies on the next upgrade). Used after auth cookie changes when a full soft-reconnect is requested without going through `authSession`.
+
+### `authSession`
+
+```json
+{ "op": "authSession", "action": "establish", "token": "signed…", "path": "/account" }
+```
+
+```json
+{ "op": "authSession", "action": "clear", "path": "/login" }
+```
+
+Client `POST`s / `DELETE`s `/auth/session` (credentials included), optionally updates the SPA path, then soft-reconnects so the next `hello` sees the cookie. Requires `ui.run({ authSecret })`.
+
 ### `notify`
 
 ```json

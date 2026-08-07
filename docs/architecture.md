@@ -9,7 +9,8 @@
 | `@badui/components` | Thin `Element` factories (no HTML strings) |
 | `@badui/core` | Element tree, session, page wrapper, reactive, protocol, `storage` (`tab` / `user` / `app`) + PersistenceAdapter |
 | `@badui/persistence-file` | File-backed `PersistenceAdapter` for `storage.configure` |
-| `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade |
+| `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade, `/auth/session`, session timeouts |
+| `@badui/auth` | Optional helpers: password hash, login limiter, `requireAuth` / `requireRole`, `auditRecord` |
 | `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@badui/cli` via `bun run build:client` / `pack:publishable`. |
 
 `@badui/compiler` (old Datastar `let` transform) was removed; compile-time reactive `let` remains a Later backlog item.

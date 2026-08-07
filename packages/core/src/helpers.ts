@@ -15,6 +15,11 @@ export function navigate(path: string): void {
   getCurrentSession()?.navigate(path);
 }
 
+/** Soft-reconnect the WebSocket so the next hello includes updated cookies. */
+export function reconnect(): void {
+  getCurrentSession()?.reconnect();
+}
+
 export function download(filename: string, mime: string, content: string): void {
   getCurrentSession()?.download(filename, mime, content);
 }

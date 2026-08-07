@@ -20,48 +20,55 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
 | `/examples/form-demo` | `FormDemo.ts` | Form + validate + OTP + toggle group |
-| `/examples/auth` | `Auth.ts` (+ login/admin) | Sign-in, account home, role-gated admin, access denied |
+| `/examples/auth` | `Auth.ts` (+ login/admin/change-password) | Signed cookie session, hashed passwords, login lockout, role-gated admin + audit log |
 | `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
 | `/examples/overlays` | `OverlaysDemo.ts` | Breadcrumb, dropdown/context menu, hover card, popover, dialog/sheet/drawer |
 | `/examples/controls` | `ControlsDemo.ts` | Menubar (submenu/checkbox/radio), command dialog + inline, carousel, resizable, scroll-area, `ui.state` / `ui.auto` |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
-Each page file exports optional `pageMeta` (`label`, `icon`, `order`, optional `nav: false`) for `ui.navFromPages()`.
+Each page file exports optional `pageMeta` (`label`, `icon`, `order`, optional `nav: false`, optional `roles`) for `ui.navFromPages()`.
 
 ## Pattern: sign in → account → admin (or access denied)
 
 Try the journey as an end user (sidebar **Account**, or `/examples/auth` while logged out):
 
-1. **Sign in** (`/examples/auth/login`, no app shell) with **Alice** (administrator) or **Bob** (member), password `password`.
-2. **My account** shows name + role; Preferences save per browser; **Open admin console** is always visible.
-3. As **Bob**, admin shows **Access denied** → back to account. As **Alice**, the admin console lists signed-in people and can **Sign everyone else out** (confirm dialog).
-4. **Sign out** returns to Sign in; visiting Account/Admin while signed out redirects to Sign in.
+1. **Sign in** (`/examples/auth/login`, no app shell) with **Alice** (administrator) or **Bob** (member), password `password`. Alice is prompted to **change password** once.
+2. **My account** shows name + role; Preferences save per signed-in user id; **Open admin console** is always visible on the account page.
+3. As **Bob**, sidebar hides **Admin** (`pageMeta.roles`); opening `/examples/auth/admin` shows **Access denied**. As **Alice**, Admin appears in nav; the console lists signed-in people, can **Sign everyone else out**, and shows an **audit log**.
+4. **Sign out** clears the HttpOnly auth cookie and soft-reconnects; visiting Account/Admin while signed out redirects to Sign in.
+5. Kill the WebSocket / refresh — cookie identity keeps you signed in. Idle timeout (`sessionIdleMs` on `ui.run`) signs out.
 
-Demo helpers live in `_auth.ts` (skipped by `loadPages`): session map in `ui.storage.app` keyed by hello `userId`, plus `requireAuth` / `requireRole`.
+Helpers live in `_auth.ts` (skipped by `loadPages`): `@badui/auth` password hash + login limiter, cookie session via `ui.establishAuthSession`, online roster in `ui.storage.app`, plus `requireAuth` / `requireRole`.
 
 ## Pattern: app entry + discovered pages
 
 ```typescript
-// main.ts
+// main.ts — or shared demo-run.ts used by CLI `_run.ts`
 await ui.loadPages(new URL('./examples', import.meta.url));
 
 ui.run({
   port: 4000,
   title: 'BadUI Demo',
+  authSecret: process.env.BADUI_AUTH_SECRET ?? '…',
   app: {
     title: 'BadUI',
-    nav: ui.navFromPages(),
+    get nav() {
+      // role-aware; see apps/demo/src/demo-run.ts
+      return ui.navFromPages(/* { role } */);
+    },
   },
 });
 ```
 
-Or via CLI (same pages + shell defaults):
+Or via CLI (same pages + shell; demo auth from `examples/_run.ts`):
 
 ```bash
 bun run demo:cli
 # → badui apps/demo/src/examples --app -p 4000
 ```
+
+Directory mode looks for optional `_run.ts` exporting `configureRun(base)` so `demo:cli` gets the same `authSecret` / session timeouts / role-aware nav as `bun run demo`.
 
 ```typescript
 // examples/Counter.ts

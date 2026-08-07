@@ -135,7 +135,6 @@ ui.page('/examples/auth', () => {
               onClick: async () => {
                 await clearSessionUser();
                 ui.notify('Signed out', 'info');
-                ui.navigate(LOGIN_PATH);
               },
             });
           },
@@ -145,10 +144,10 @@ ui.page('/examples/auth', () => {
           ui.column(
             () => {
               ui.label(
-                'Sign-in maps your browser\'s anonymous hello userId to a demo profile in ui.storage.app (no cookie round-trip). Preferences use ui.storage.user for the same browser id.',
+                'Sign-in issues a signed HttpOnly cookie via POST /auth/session, then soft-reconnects so WebSocket hello trusts resolveUserId from that cookie. Reconnects stay signed in.',
               ).classes('text-sm text-muted-foreground');
               ui.label(
-                'Production apps usually trust identity via ui.run({ resolveUserId }) on new connections (proxy headers / cookies), then authorize from that id.',
+                'Optional sessionIdleMs / sessionAbsoluteMs on ui.run expire idle sessions (clear cookie + redirect). The admin roster is a separate ui.storage.app map of who is online.',
               ).classes('text-sm text-muted-foreground');
             },
             { gap: 2 },

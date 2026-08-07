@@ -1,6 +1,12 @@
-import { ClientSession, getRegisteredPaths, storage, type ClientMessage } from '@badui/core';
+import { ClientSession, getRegisteredPaths, runWithSession, setCurrentSession, storage, type ClientMessage } from '@badui/core';
 import { createFilePersistence } from '@badui/persistence-file';
 import { isAbsolute, join, resolve } from 'path';
+import {
+  handleAuthSessionDelete,
+  handleAuthSessionPost,
+  resolveUserIdFromAuthCookie,
+} from './auth-cookie';
+import { clearAuthSession, configureAuthSession } from './auth-session';
 import { handleMultipartUpload, UploadError } from './upload';
 
 export type ResolveUserIdContext = {
@@ -49,15 +55,43 @@ export type BadUIServerConfig = {
    * Resolve a trusted user id on WebSocket hello (e.g. from a signed cookie
    * or reverse-proxy header). Return `null`/`undefined` to fall back to the
    * anonymous localStorage id from the client.
+   *
+   * When `authSecret` is set and this is omitted, defaults to
+   * {@link resolveUserIdFromAuthCookie}.
    */
   resolveUserId?: (
     ctx: ResolveUserIdContext,
   ) => string | null | undefined | Promise<string | null | undefined>;
+  /**
+   * HMAC secret for signed auth cookies (`POST`/`DELETE /auth/session`).
+   * Enables `establishAuthSession` / `clearAuthSession` and, when
+   * `resolveUserId` is omitted, cookie-based identity on hello.
+   */
+  authSecret?: string;
+  /** Auth cookie Max-Age in seconds. Default 12 hours. */
+  authCookieMaxAgeSec?: number;
+  /**
+   * Sign out after this many ms without client events.
+   * Optional — omit to disable idle expiry.
+   */
+  sessionIdleMs?: number;
+  /**
+   * Sign out after this many ms since WebSocket hello.
+   * Optional — omit to disable absolute expiry.
+   */
+  sessionAbsoluteMs?: number;
+  /**
+   * SPA path after session idle/absolute expiry (clears auth cookie).
+   * Default `/`.
+   */
+  sessionExpiredPath?: string;
 };
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
 const DEFAULT_UPLOAD_DIR = '.badui-uploads';
 const DEFAULT_USER_STORAGE_DIR = '.badui-user-data';
+const DEFAULT_AUTH_MAX_AGE_SEC = 12 * 60 * 60;
+const SESSION_EXPIRY_CHECK_MS = 1_000;
 
 function normalizeCssPaths(css?: string | string[]): string[] {
   if (!css) return [];
@@ -103,13 +137,58 @@ type ResolvedConfig = {
   userStorageDir: string | false;
   appStorageDir: string | false;
   resolveUserId?: BadUIServerConfig['resolveUserId'];
+  authSecret?: string;
+  authCookieMaxAgeSec: number;
+  sessionIdleMs?: number;
+  sessionAbsoluteMs?: number;
+  sessionExpiredPath: string;
 };
+
+type WsData = {
+  session: ClientSession | null;
+  headers?: Headers;
+  expiryTimer?: ReturnType<typeof setInterval> | null;
+};
+
+function clearExpiryTimer(data: WsData): void {
+  if (data.expiryTimer) {
+    clearInterval(data.expiryTimer);
+    data.expiryTimer = null;
+  }
+}
+
+function expireSession(data: WsData, expiredPath: string): void {
+  clearExpiryTimer(data);
+  const session = data.session;
+  if (!session) return;
+  runWithSession(session, () => {
+    try {
+      clearAuthSession({ path: expiredPath });
+    } catch {
+      session.authSession('clear', { path: expiredPath });
+    }
+  });
+  setCurrentSession(null);
+  session.destroy();
+  data.session = null;
+}
 
 export class BadUIServer {
   private config: ResolvedConfig;
   private server: ReturnType<typeof Bun.serve> | null = null;
 
   constructor(config: BadUIServerConfig = {}) {
+    const authSecret = config.authSecret;
+    const authCookieMaxAgeSec = config.authCookieMaxAgeSec ?? DEFAULT_AUTH_MAX_AGE_SEC;
+    const sessionExpiredPath = config.sessionExpiredPath ?? '/';
+
+    let resolveUserId = config.resolveUserId;
+    if (authSecret && !resolveUserId) {
+      resolveUserId = resolveUserIdFromAuthCookie(authSecret, {
+        maxAgeMs: authCookieMaxAgeSec * 1000,
+      });
+    }
+
     this.config = {
       port: config.port ?? 3000,
       title: config.title ?? 'BadUI',
@@ -129,8 +208,23 @@ export class BadUIServer {
         typeof config.appStorageDir === 'string'
           ? resolveDir(config.appStorageDir, config.appStorageDir)
           : false,
-      resolveUserId: config.resolveUserId,
+      resolveUserId,
+      authSecret,
+      authCookieMaxAgeSec,
+      sessionIdleMs: config.sessionIdleMs,
+      sessionAbsoluteMs: config.sessionAbsoluteMs,
+      sessionExpiredPath,
     };
+
+    if (authSecret) {
+      configureAuthSession({
+        secret: authSecret,
+        maxAgeMs: authCookieMaxAgeSec * 1000,
+        expiredPath: sessionExpiredPath,
+      });
+    } else {
+      configureAuthSession(null);
+    }
 
     const app =
       this.config.appStorageDir !== false
@@ -160,9 +254,15 @@ export class BadUIServer {
       uploadMaxSizeBytes,
       uploadAccept,
       resolveUserId,
+      authSecret,
+      authCookieMaxAgeSec,
+      sessionIdleMs,
+      sessionAbsoluteMs,
+      sessionExpiredPath,
     } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
     const html = spaHtml(title, customCssHrefs);
+    const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
     this.server = Bun.serve({
       port,
@@ -174,12 +274,26 @@ export class BadUIServer {
             data: {
               session: null as ClientSession | null,
               headers: req.headers,
-            },
+              expiryTimer: null,
+            } satisfies WsData,
           });
           if (!upgraded) {
             return new Response('WebSocket upgrade failed', { status: 400 });
           }
           return undefined as unknown as Response;
+        }
+
+        if (url.pathname === '/auth/session' && authSecret) {
+          if (req.method === 'POST') {
+            return handleAuthSessionPost(req, {
+              secret: authSecret,
+              maxAgeSec: authCookieMaxAgeSec,
+            });
+          }
+          if (req.method === 'DELETE') {
+            return handleAuthSessionDelete();
+          }
+          return new Response('Method not allowed', { status: 405 });
         }
 
         if (url.pathname === '/upload' && req.method === 'POST') {
@@ -252,12 +366,10 @@ export class BadUIServer {
             return;
           }
 
-          const data = ws.data as {
-            session: ClientSession | null;
-            headers?: Headers;
-          };
+          const data = ws.data as WsData;
 
           if (msg.op === 'hello') {
+            clearExpiryTimer(data);
             data.session?.destroy();
             const session = new ClientSession(msg.path, (out) => {
               try {
@@ -266,6 +378,13 @@ export class BadUIServer {
                 // socket closed
               }
             });
+
+            if (hasTimeouts) {
+              session.timeouts = {
+                idleMs: sessionIdleMs,
+                absoluteMs: sessionAbsoluteMs,
+              };
+            }
 
             const helloUserId =
               typeof msg.userId === 'string' && msg.userId ? msg.userId : undefined;
@@ -298,10 +417,23 @@ export class BadUIServer {
             }
             data.session = session;
             session.mount();
+
+            if (hasTimeouts) {
+              data.expiryTimer = setInterval(() => {
+                const current = data.session;
+                if (!current || !current.isExpired()) return;
+                expireSession(data, sessionExpiredPath);
+              }, SESSION_EXPIRY_CHECK_MS);
+            }
             return;
           }
 
           if (data.session) {
+            if (data.session.isExpired()) {
+              expireSession(data, sessionExpiredPath);
+              return;
+            }
+            data.session.touch();
             // Do not await: allow concurrent events so await ui.confirm/prompt/choose can resolve
             void data.session.handleMessage(msg).catch((err: unknown) => {
               console.error(err);
@@ -311,7 +443,8 @@ export class BadUIServer {
           }
         },
         close(ws) {
-          const data = ws.data as { session: ClientSession | null };
+          const data = ws.data as WsData;
+          clearExpiryTimer(data);
           data.session?.destroy();
           data.session = null;
         },
@@ -323,10 +456,14 @@ export class BadUIServer {
     if (cssPaths.length) {
       console.log(`Custom CSS: ${cssPaths.join(', ')}`);
     }
+    if (authSecret) {
+      console.log('Auth session routes: POST/DELETE /auth/session');
+    }
     return this.server;
   }
 
   stop(): void {
+    configureAuthSession(null);
     this.server?.stop();
     this.server = null;
   }

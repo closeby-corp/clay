@@ -3,9 +3,11 @@ import { join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { clearPages, getRegisteredPaths, setPageWrapper } from '@badui/core';
 import { ui, resetRunState, wasRunCalled } from '@badui/ui';
+import { applyDirRunConfig } from './main.ts';
 
 const fixtures = join(fileURLToPath(new URL('.', import.meta.url)), '../fixtures');
 const pagesFixture = join(fixtures, 'pages');
+const pagesWithRunFixture = join(fixtures, 'pages-with-run');
 
 beforeEach(() => {
   clearPages();
@@ -48,5 +50,23 @@ describe('badui CLI entry shapes', () => {
     } finally {
       server.stop();
     }
+  });
+
+  test('applyDirRunConfig merges _run.ts configureRun', async () => {
+    const merged = await applyDirRunConfig(pagesWithRunFixture, {
+      port: 4000,
+      title: 'T',
+      clientDir: '/tmp/client',
+    });
+    expect(merged.authSecret).toBe('fixture-auth-secret');
+    expect(merged.sessionExpiredPath).toBe('/login');
+    expect(merged.port).toBe(4000);
+    expect(merged.clientDir).toBe('/tmp/client');
+  });
+
+  test('applyDirRunConfig is a no-op without _run.ts', async () => {
+    const base = { port: 3000, title: 'X' };
+    const merged = await applyDirRunConfig(pagesFixture, base);
+    expect(merged).toEqual(base);
   });
 });

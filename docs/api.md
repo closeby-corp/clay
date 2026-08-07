@@ -49,7 +49,10 @@ Build primary `AppNavItem[]` from registered routes + collected `pageMeta` (labe
 ```typescript
 export const pageMeta = { label: 'Charts', icon: 'chart-area', order: 90 };
 // export const pageMeta = { nav: false }; // route only
+// export const pageMeta = { label: 'Admin', roles: ['admin'] }; // nav UX filter
 ```
+
+`ui.navFromPages({ role })` / `ui.navFromPages({ roles })` hides items whose `pageMeta.roles` do not overlap (omit `roles` on meta = visible to everyone). Nav filtering is UX only — still call `requireRole` in the page builder.
 
 #### `ui.run(root?, config?)`
 
@@ -86,6 +89,32 @@ ui.run({
 | `clientDir` | `string` | `packages/client/dist` | Built Vite assets |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 | `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate |
+| `authSecret` | `string` | | Enables signed auth cookies (`POST`/`DELETE /auth/session`), `ui.establishAuthSession` / `ui.clearAuthSession`, and default `resolveUserId` from the cookie |
+| `authCookieMaxAgeSec` | `number` | `43200` (12h) | Auth cookie Max-Age |
+| `sessionIdleMs` | `number` | | Optional: clear auth + redirect after this idle time |
+| `sessionAbsoluteMs` | `number` | | Optional: clear auth + redirect after this time since hello |
+| `sessionExpiredPath` | `string` | `'/'` | SPA path after idle/absolute expiry |
+| `resolveUserId` | `(ctx) => …` | cookie helper when `authSecret` set | Trusted identity on WebSocket hello |
+
+#### Auth cookie recipe
+
+```typescript
+ui.run({
+  authSecret: process.env.BADUI_AUTH_SECRET!,
+  sessionIdleMs: 30 * 60 * 1000,
+  sessionAbsoluteMs: 12 * 60 * 60 * 1000,
+  sessionExpiredPath: '/login',
+});
+
+// On successful login (server event handler):
+ui.establishAuthSession(userId, { path: '/account' });
+// → client POSTs signed token to /auth/session, then soft-reconnects so hello sees the cookie
+
+// On logout:
+ui.clearAuthSession({ path: '/login' });
+```
+
+Password hashing, login rate limits, and `requireAuth` / `requireRole` live in optional `@badui/auth`. See `/examples/auth`.
 
 Returns `BadUIServer` with `.start()` / `.stop()` / `.port` (`.start()` is already called by `ui.run`).
 
@@ -971,7 +1000,7 @@ NiceGUI-style storage scopes:
 | `ui.storage.user.get/set/delete/clear/has` | Stable `userId` (hello / `resolveUserId`) | JSON bag via file or Redis adapter |
 | `ui.storage.app.create(key, initial, options?)` | Process-wide typed store (all sessions) | Optional file/Redis adapter via `appStorageDir` / `storage.configure({ app })` |
 
-User storage requires a `userId` on the session. The built-in client sends an anonymous localStorage id on `hello`; override with `ui.run({ resolveUserId })` (e.g. reverse-proxy header). For a demo that maps that anonymous id to a signed-in profile (plus roles), see `/examples/auth`. Configure dirs via `ui.run({ userStorageDir, appStorageDir, uploadDir, uploadMaxSizeBytes, uploadAccept })`.
+User storage requires a `userId` on the session. The built-in client sends an anonymous localStorage id on `hello`; override with `ui.run({ resolveUserId })` or `ui.run({ authSecret })` (signed cookie via `POST /auth/session` + soft-reconnect). For a full Account demo (hash, lockout, roles, audit), see `/examples/auth`. Configure dirs via `ui.run({ userStorageDir, appStorageDir, uploadDir, uploadMaxSizeBytes, uploadAccept })`.
 
 ```typescript
 const messages = ui.storage.app.create<Message[]>('chatMessages', []);

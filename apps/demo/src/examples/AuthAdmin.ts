@@ -1,3 +1,4 @@
+import { auditRecord, listAuditRecords, clearAuditRecords } from '@badui/auth';
 import { ui } from '@badui/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
 import {
@@ -14,9 +15,12 @@ import {
   type SessionUser,
 } from './_auth';
 
-/** Hidden from sidebar — Account is the single nav entry. */
+/** Admin-only nav entry (UX filter via pageMeta.roles; page still calls requireRole). */
 export const pageMeta = {
-  nav: false as const,
+  label: 'Admin',
+  icon: 'shield',
+  order: 74,
+  roles: ['admin'],
 };
 
 function accessDenied(user: SessionUser | null): void {
@@ -44,6 +48,14 @@ function accessDenied(user: SessionUser | null): void {
   });
 }
 
+function formatAuditTime(at: number): string {
+  try {
+    return new Date(at).toLocaleString();
+  } catch {
+    return String(at);
+  }
+}
+
 ui.page('/examples/auth/admin', () => {
   const signedIn = requireAuth();
   if (!signedIn) return;
@@ -55,13 +67,14 @@ ui.page('/examples/auth/admin', () => {
   }
 
   let roster = listSignedInUsers();
+  let auditRows: Awaited<ReturnType<typeof listAuditRecords>> = [];
 
   exampleFrame(() => {
     ui.column(
       () => {
         exampleHeader(
           'Admin console',
-          'Manage who is signed in to this demo workspace.',
+          'Manage who is signed in and review recent admin actions.',
         );
 
         const rosterUi = ui.refreshable(() => {
@@ -104,6 +117,56 @@ ui.page('/examples/auth/admin', () => {
           rosterUi.refresh();
         });
 
+        const auditUi = ui.refreshable(() => {
+          ui.card(
+            {
+              title: 'Audit log',
+              description: 'Recent privileged actions in this demo process.',
+              gap: 3,
+            },
+            () => {
+              if (auditRows.length === 0) {
+                ui.label('No audit events yet.').classes(
+                  'text-sm text-muted-foreground',
+                );
+                return;
+              }
+              ui.column(
+                () => {
+                  for (const row of auditRows.slice(0, 20)) {
+                    ui.row(
+                      () => {
+                        ui.column(
+                          () => {
+                            ui.label(row.action).classes('text-sm font-medium');
+                            ui.label(
+                              [
+                                row.actor ?? 'unknown',
+                                row.target ? `→ ${row.target}` : null,
+                                formatAuditTime(row.at),
+                              ]
+                                .filter(Boolean)
+                                .join(' · '),
+                            ).classes('text-xs text-muted-foreground');
+                          },
+                          { gap: 0 },
+                        );
+                      },
+                      { gap: 2 },
+                    );
+                  }
+                },
+                { gap: 2 },
+              );
+            },
+          );
+        });
+
+        void (async () => {
+          auditRows = await listAuditRecords();
+          auditUi.refresh();
+        })();
+
         const revokeDialog = ui.alertDialog({
           title: 'Sign everyone else out?',
           description:
@@ -114,6 +177,11 @@ ui.page('/examples/auth/admin', () => {
           open: false,
           onConfirm: async () => {
             const removed = await signEveryoneElseOut();
+            await auditRecord('sign_everyone_else_out', {
+              details: { removed },
+            });
+            auditRows = await listAuditRecords();
+            auditUi.refresh();
             ui.notify(
               removed === 0
                 ? 'No other sessions to clear'
@@ -134,6 +202,18 @@ ui.page('/examples/auth/admin', () => {
               variant: 'destructive',
               onClick: () => revokeDialog.open(),
             });
+            ui.button('Clear audit log', {
+              variant: 'outline',
+              onClick: async () => {
+                const ok = await ui.confirm('Clear the demo audit log?');
+                if (!ok) return;
+                await clearAuditRecords();
+                await auditRecord('audit_cleared');
+                auditRows = await listAuditRecords();
+                auditUi.refresh();
+                ui.notify('Audit log cleared', 'info');
+              },
+            });
           },
         );
 
@@ -148,7 +228,6 @@ ui.page('/examples/auth/admin', () => {
               onClick: async () => {
                 await clearSessionUser();
                 ui.notify('Signed out', 'info');
-                ui.navigate(LOGIN_PATH);
               },
             });
           },

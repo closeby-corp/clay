@@ -1,10 +1,13 @@
+import { auditRecord } from '@badui/auth';
 import { ui, reactive } from '@badui/ui';
 import {
   ACCOUNT_PATH,
   DEMO_ACCOUNTS,
   getSessionUser,
+  loginLimiter,
   roleLabel,
   setSessionUser,
+  verifyDemoPassword,
 } from './_auth';
 
 /** Hidden from sidebar — Account is the single nav entry. */
@@ -47,7 +50,7 @@ ui.page(
                 .bindValue(form, 'password');
 
               ui.label(
-                'Demo accounts: Alice (administrator) or Bob (member). Password for both: password.',
+                'Demo accounts: Alice (administrator) or Bob (member). Password for both: password. Alice must change password on first sign-in.',
               ).classes('text-sm text-muted-foreground');
 
               ui.button('Sign in', {
@@ -69,26 +72,42 @@ ui.page(
                   }
 
                   const key = form.username.trim().toLowerCase();
-                  const account = DEMO_ACCOUNTS[key];
-                  if (!account || account.password !== form.password) {
-                    passwordInput.setError('Incorrect username or password');
-                    ui.notify('Sign in failed', 'error');
+                  const limitKey = `login:${key}`;
+                  const gate = loginLimiter.check(limitKey);
+                  if (!gate.ok) {
+                    const secs = Math.ceil(gate.retryAfterMs / 1000);
+                    passwordInput.setError(`Too many attempts — try again in ${secs}s`);
+                    ui.notify('Sign in temporarily locked', 'error');
                     return;
                   }
 
+                  const account = DEMO_ACCOUNTS[key];
+                  if (!account || !verifyDemoPassword(key, form.password)) {
+                    const failed = loginLimiter.fail(limitKey);
+                    passwordInput.setError('Incorrect username or password');
+                    if (!failed.ok && failed.retryAfterMs > 0) {
+                      ui.notify('Too many failed attempts — locked out', 'error');
+                    } else {
+                      ui.notify('Sign in failed', 'error');
+                    }
+                    return;
+                  }
+
+                  loginLimiter.success(limitKey);
                   usernameInput.setError(null);
                   passwordInput.setError(null);
 
+                  void auditRecord('login', { actor: key });
                   await setSessionUser({
                     username: key,
                     name: account.name,
                     role: account.role,
+                    mustChangePassword: account.mustChangePassword,
                   });
                   ui.notify(`Welcome, ${account.name}`, {
                     type: 'success',
                     description: roleLabel(account.role),
                   });
-                  ui.navigate(ACCOUNT_PATH);
                 },
               });
             },

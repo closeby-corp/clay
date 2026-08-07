@@ -49,6 +49,19 @@ export type ServerMessage =
       key?: string;
       value?: unknown;
     }
+  /** Soft-reconnect: client closes WS and reconnects (picks up new cookies). */
+  | { op: 'reconnect' }
+  /**
+   * Establish or clear the HttpOnly auth cookie via HTTP, then soft-reconnect.
+   * `establish` requires a server-signed `token`; client POSTs it to `/auth/session`.
+   */
+  | {
+      op: 'authSession';
+      action: 'establish' | 'clear';
+      token?: string;
+      /** Optional SPA path after cookie update (before reconnect). */
+      path?: string;
+    }
   | { op: 'error'; message: string };
 
 export type ClientMessage =

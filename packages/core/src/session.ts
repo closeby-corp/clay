@@ -25,11 +25,24 @@ export type NotifyOptions = {
   description?: string;
 };
 
+export type SessionTimeoutConfig = {
+  /** Sign out after this much idle time (ms) since last event. */
+  idleMs?: number;
+  /** Sign out after this much time (ms) since session create / hello. */
+  absoluteMs?: number;
+};
+
 export class ClientSession {
   readonly id: string;
   readonly path: string;
   /** Stable browser user id from hello (localStorage); used by `storage.user`. */
   userId: string | null = null;
+  /** Wall-clock time when this WS session was created (hello). */
+  readonly createdAt: number;
+  /** Last successful client event (or hello). */
+  lastActivityAt: number;
+  /** Optional idle / absolute timeouts (from `ui.run`). */
+  timeouts: SessionTimeoutConfig | null = null;
   /**
    * Per-tab (WS session) key/value store. Survives `refreshable` rebuilds;
    * cleared when the session is destroyed.
@@ -56,6 +69,21 @@ export class ClientSession {
     this.id = generateId('session');
     this.path = path;
     this.send = send;
+    this.createdAt = Date.now();
+    this.lastActivityAt = this.createdAt;
+  }
+
+  touch(): void {
+    this.lastActivityAt = Date.now();
+  }
+
+  /** True when idle or absolute timeout has elapsed. */
+  isExpired(now = Date.now()): boolean {
+    const t = this.timeouts;
+    if (!t) return false;
+    if (t.absoluteMs != null && now - this.createdAt >= t.absoluteMs) return true;
+    if (t.idleMs != null && now - this.lastActivityAt >= t.idleMs) return true;
+    return false;
   }
 
   register(el: Element): void {
@@ -237,6 +265,26 @@ export class ClientSession {
 
   navigate(path: string): void {
     this.send({ op: 'navigate', path });
+  }
+
+  /** Ask the client to close and reopen the WebSocket (cookie refresh). */
+  reconnect(): void {
+    this.send({ op: 'reconnect' });
+  }
+
+  /**
+   * Ask the client to establish/clear the auth cookie over HTTP, then soft-reconnect.
+   */
+  authSession(
+    action: 'establish' | 'clear',
+    options?: { token?: string; path?: string },
+  ): void {
+    this.send({
+      op: 'authSession',
+      action,
+      token: options?.token,
+      path: options?.path,
+    });
   }
 
   destroy(): void {

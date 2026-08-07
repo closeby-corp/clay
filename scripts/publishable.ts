@@ -2,7 +2,7 @@
  * Shared publishable package list and helpers for pack / dry-run / publish.
  *
  * Order matters for registry publish (deps first):
- *   core → compiler → persistence-file → components → server → ui → cli
+ *   core → auth → compiler → persistence-file → components → server → ui → cli
  *
  * `@badui/client` stays private; Vite output ships inside `@badui/cli` as `client-dist`.
  */
@@ -14,6 +14,7 @@ export const outDir = join(root, 'dist-pack');
 /** Runtime packages consumers need for `badui hello.ts` (client is bundled into cli). */
 export const PACKAGES = [
   'core',
+  'auth',
   'compiler',
   'persistence-file',
   'components',

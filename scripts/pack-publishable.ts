@@ -67,12 +67,7 @@ Publish to npm (requires npm login; order is baked into publish:npm):
   bun run publish:npm
 
 Or manually, in order:
-  npm publish ./dist-pack/badui-core-${version}.tgz --access public
-  npm publish ./dist-pack/badui-persistence-file-${version}.tgz --access public
-  npm publish ./dist-pack/badui-components-${version}.tgz --access public
-  npm publish ./dist-pack/badui-server-${version}.tgz --access public
-  npm publish ./dist-pack/badui-ui-${version}.tgz --access public
-  npm publish ./dist-pack/badui-cli-${version}.tgz --access public
+  ${PACKAGES.map((p) => `npm publish ./dist-pack/badui-${p}-${version}.tgz --access public`).join('\n  ')}
 
 Once published (same versions):
   bun add @badui/cli @badui/ui

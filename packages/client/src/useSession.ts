@@ -110,6 +110,56 @@ export function useBadUISession(path: string) {
   useEffect(() => {
     const controller = createReconnectController();
     const userId = userIdRef.current;
+    /** Skip disconnect toast for intentional soft-reconnect (auth cookie refresh). */
+    let softReconnect = false;
+
+    const applyPath = (nextPath: string) => {
+      pathRef.current = nextPath;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({}, '', nextPath);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    };
+
+    const softClose = () => {
+      softReconnect = true;
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+
+    const handleAuthSession = async (msg: {
+      action: 'establish' | 'clear';
+      token?: string;
+      path?: string;
+    }) => {
+      try {
+        if (msg.action === 'establish') {
+          if (!msg.token) throw new Error('authSession establish missing token');
+          const res = await fetch('/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ token: msg.token }),
+          });
+          if (!res.ok) {
+            throw new Error(`auth session failed (${res.status})`);
+          }
+        } else {
+          await fetch('/auth/session', {
+            method: 'DELETE',
+            credentials: 'same-origin',
+          });
+        }
+        if (msg.path) applyPath(msg.path);
+        softClose();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Auth session failed', {
+          type: 'error',
+        });
+      }
+    };
 
     const handleMessage = (ev: MessageEvent) => {
       const msg = JSON.parse(String(ev.data)) as ServerMessage;
@@ -128,6 +178,10 @@ export function useBadUISession(path: string) {
         // Align with nav `go()`: pushState + popstate → App path → hello below.
         window.history.pushState({}, '', msg.path);
         window.dispatchEvent(new PopStateEvent('popstate'));
+      } else if (msg.op === 'reconnect') {
+        softClose();
+      } else if (msg.op === 'authSession') {
+        void handleAuthSession(msg);
       } else if (msg.op === 'notify') {
         showToast(msg.message, {
           id: msg.id,
@@ -183,12 +237,16 @@ export function useBadUISession(path: string) {
 
       ws.onopen = () => {
         const wasReconnect = everOpened.current;
+        const wasSoft = softReconnect;
+        softReconnect = false;
         everOpened.current = true;
         controller.resetAttempt();
         setState((s) => ({ ...s, connected: true, error: null }));
-        if (wasReconnect) {
+        if (wasReconnect && !wasSoft) {
           toast.dismiss(WS_RECONNECT_TOAST_ID);
           toast.success('Reconnected');
+        } else if (wasSoft) {
+          toast.dismiss(WS_RECONNECT_TOAST_ID);
         }
         ws.send(
           JSON.stringify({
@@ -207,11 +265,13 @@ export function useBadUISession(path: string) {
         if (wsRef.current === ws) wsRef.current = null;
         setState((s) => ({ ...s, connected: false }));
         if (controller.isDisposed()) return;
-        showToast('Disconnected — reconnecting…', {
-          id: WS_RECONNECT_TOAST_ID,
-          type: 'warning',
-          duration: 0,
-        });
+        if (!softReconnect) {
+          showToast('Disconnected — reconnecting…', {
+            id: WS_RECONNECT_TOAST_ID,
+            type: 'warning',
+            duration: 0,
+          });
+        }
         controller.scheduleReconnect(connect);
       };
 

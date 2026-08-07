@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'url';
-import { isAbsolute, resolve } from 'path';
+import { isAbsolute, join, resolve } from 'path';
+import { existsSync } from 'fs';
 import { stat } from 'fs/promises';
 import { registerReactiveLetPlugin } from '@badui/compiler/plugin';
 import { getRegisteredPaths } from '@badui/core';
@@ -68,6 +69,27 @@ async function loadEntryDir(absDir: string): Promise<void> {
   }
 }
 
+/**
+ * Optional `_run.ts` / `_run.tsx` next to a page directory (skipped by `loadPages`).
+ * Export `configureRun(base) => RunConfig` to merge auth / shell / etc. into CLI defaults.
+ */
+export async function applyDirRunConfig(
+  absDir: string,
+  base: RunConfig,
+): Promise<RunConfig> {
+  for (const name of ['_run.ts', '_run.tsx'] as const) {
+    const path = join(absDir, name);
+    if (!existsSync(path)) continue;
+    const mod = (await import(pathToFileURL(path).href)) as {
+      configureRun?: (config: RunConfig) => RunConfig;
+    };
+    if (typeof mod.configureRun === 'function') {
+      return mod.configureRun(base);
+    }
+  }
+  return base;
+}
+
 export async function main(argv = process.argv.slice(2)): Promise<void> {
   if (await maybeReload(argv, { cliPath: import.meta.path })) return;
 
@@ -120,11 +142,14 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     process.exit(1);
   }
 
-  const config = buildRunConfig({
+  let config = buildRunConfig({
     port: args.port,
     title,
     app: args.app,
   });
+  if (isDir) {
+    config = await applyDirRunConfig(absEntry, config);
+  }
 
   let server: ReturnType<typeof ui.run> | null = null;
   try {
