@@ -9,6 +9,21 @@ import {
 import { clearAuthSession, configureAuthSession } from './auth-session';
 import { handleMultipartUpload, UploadError } from './upload';
 
+/** JSON-serializable values only (skip functions / circular / exotic objects). */
+function isJsonSafeStorageValue(value: unknown): boolean {
+  if (value === null) return true;
+  const t = typeof value;
+  if (t === 'string' || t === 'boolean') return true;
+  if (t === 'number') return Number.isFinite(value);
+  if (t !== 'object') return false;
+  try {
+    JSON.stringify(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type ResolveUserIdContext = {
   /** Raw `userId` from the client hello (localStorage), if any. */
   helloUserId?: string;
@@ -424,6 +439,11 @@ export class BadUIServer {
             if (msg.clientStorage && typeof msg.clientStorage === 'object') {
               for (const [k, v] of Object.entries(msg.clientStorage)) {
                 session.client.set(k, v);
+              }
+            }
+            if (msg.tabStorage && typeof msg.tabStorage === 'object') {
+              for (const [k, v] of Object.entries(msg.tabStorage)) {
+                if (isJsonSafeStorageValue(v)) session.tab.set(k, v);
               }
             }
             data.session = session;

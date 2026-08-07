@@ -44,7 +44,7 @@ export type ServerMessage =
     }
   | {
       op: 'clientStorage';
-      scope: 'browser' | 'client';
+      scope: 'browser' | 'client' | 'tab';
       action: 'set' | 'delete' | 'clear';
       key?: string;
       value?: unknown;
@@ -65,5 +65,6 @@ export type ClientMessage =
       userId?: string;
       browserStorage?: Record<string, unknown>;
       clientStorage?: Record<string, unknown>;
+      tabStorage?: Record<string, unknown>;
     }
   | { op: 'event'; id: string; type: string; value?: unknown };

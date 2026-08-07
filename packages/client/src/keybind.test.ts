@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
   chordList,
+  formatChordDisplay,
+  formatChordSegments,
   isEditableTarget,
   matchesChord,
   normalizeEventKey,
@@ -90,6 +92,29 @@ describe('chordList', () => {
     expect(chordList(['mod+s', 'ctrl+s'])).toEqual(['mod+s', 'ctrl+s']);
     expect(chordList('')).toEqual([]);
     expect(chordList(null)).toEqual([]);
+  });
+});
+
+describe('formatChordDisplay', () => {
+  test('mod+k glyphs on Apple vs elsewhere', () => {
+    expect(formatChordSegments('mod+k', { isApple: true })).toEqual(['⌘', 'K']);
+    expect(formatChordSegments('mod+k', { isApple: false })).toEqual(['Ctrl', 'K']);
+  });
+
+  test('shift, alt, and named keys', () => {
+    expect(formatChordSegments('shift+?', { isApple: true })).toEqual(['⇧', '?']);
+    expect(formatChordSegments('option+up', { isApple: true })).toEqual(['⌥', '↑']);
+    expect(formatChordSegments('alt+up', { isApple: false })).toEqual(['Alt', '↑']);
+    expect(formatChordSegments('esc', { isApple: true })).toEqual(['Esc']);
+    expect(formatChordSegments('cmd+return', { isApple: true })).toEqual(['⌘', '↵']);
+  });
+
+  test('multiple alternate chords', () => {
+    expect(formatChordDisplay(['mod+k', 'ctrl+k'], { isApple: true })).toEqual([
+      ['⌘', 'K'],
+      ['Ctrl', 'K'],
+    ]);
+    expect(formatChordDisplay('mod+s', { isApple: false })).toEqual([['Ctrl', 'S']]);
   });
 });
 

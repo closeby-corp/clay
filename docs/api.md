@@ -943,6 +943,21 @@ ui.keybind({
 
 **Chord tokens:** modifiers `mod` (Meta on macOS, Ctrl elsewhere), `ctrl`/`control`, `meta`/`cmd`/`command`, `alt`/`option`, `shift`; key letter/digit, `escape`/`esc`, `enter`/`return`, `space`, `tab`, arrow names (`up`/`arrowup`, …), or a single printable char (`?`, `/`). Sequences (`g` then `g`) are not supported.
 
+#### `ui.kbd(keys | props)`
+
+Display-only keyboard chord glyphs (ShadCN `Kbd` / `KbdGroup`). Does not listen for keydowns — pair with `ui.keybind` for behavior. Uses the same chord token grammar; `mod` renders as `⌘` on Apple platforms and `Ctrl` elsewhere.
+
+```typescript
+ui.kbd('mod+k');
+ui.kbd({ keys: 'mod+s', className: 'ml-1' });
+ui.kbd(['mod+k', 'ctrl+k']); // alternate chords, separated by /
+```
+
+| Prop | Type | Default |
+|------|------|---------|
+| `keys` | `string \| string[]` | required |
+| `className` | `string` | |
+
 ### Imperative helpers
 
 These require an active session (typically inside an async event handler). Confirm / prompt / choose are **async** (WebSocket round-trip). Notify / navigate / download / clipboard are fire-and-forget.
@@ -982,7 +997,7 @@ onClick: async () => {
 | `ui.scroll.intoView(selector, opts?)` | `void` | `Element.scrollIntoView` via selector |
 | `ui.timer(interval, callback, options?)` | `TimerHandle` | Session-scoped timer; `interval` in **seconds**; `{ once? }`; `.activate()` / `.deactivate()` / `.cancel()` |
 | `ui.upload(props?)` | `Element` | Multipart HTTP upload; see below |
-| `ui.storage.tab` | | Per-WS-session in-memory map |
+| `ui.storage.tab` | | Per-browser-tab map (sessionStorage mirror) |
 | `ui.storage.browser` | | Mirrored to client `localStorage` |
 | `ui.storage.client` | | Mirrored to client `sessionStorage` |
 | `ui.storage.user` | | Per-browser-user JSON bag (file/Redis-backed) |
@@ -1018,7 +1033,7 @@ NiceGUI-style storage scopes:
 
 | API | Scope | Persistence |
 |-----|--------|-------------|
-| `ui.storage.tab.get/set/delete/clear/has` | Current WebSocket session | In-memory; survives `refreshable` rebuilds; cleared on disconnect |
+| `ui.storage.tab.get/set/delete/clear/has` | This browser tab | Mirrored to client `sessionStorage` (`badui-tab-storage`); hydrated on `hello`; survives reconnect / navigate-hello; not cleared on disconnect — only via `tab.clear()` or tab close |
 | `ui.storage.browser.*` | Shared across tabs for the origin | Mirrored to client `localStorage` (hydrated on `hello`) |
 | `ui.storage.client.*` | This browser tab | Mirrored to client `sessionStorage` (hydrated on `hello`) |
 | `ui.storage.user.get/set/delete/clear/has` | Stable `userId` (hello / `resolveUserId`) | JSON bag via file or Redis adapter |

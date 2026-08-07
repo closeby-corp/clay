@@ -44,7 +44,7 @@ export type ServerMessage =
     }
   | {
       op: 'clientStorage';
-      scope: 'browser' | 'client';
+      scope: 'browser' | 'client' | 'tab';
       action: 'set' | 'delete' | 'clear';
       key?: string;
       value?: unknown;
@@ -73,5 +73,7 @@ export type ClientMessage =
       browserStorage?: Record<string, unknown>;
       /** sessionStorage bag mirror for `storage.client`. */
       clientStorage?: Record<string, unknown>;
+      /** sessionStorage bag mirror for `storage.tab` (survives reconnect / navigate-hello). */
+      tabStorage?: Record<string, unknown>;
     }
   | { op: 'event'; id: string; type: string; value?: unknown };

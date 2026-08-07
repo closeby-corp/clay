@@ -6,6 +6,7 @@ import {
   applyScrollOp,
   loadBrowserStorageBag,
   loadClientStorageBag,
+  loadTabStorageBag,
   runClientJavaScript,
 } from './clientBridge';
 import {
@@ -259,6 +260,7 @@ export function useBadUISession(path: string) {
             userId,
             browserStorage: loadBrowserStorageBag(),
             clientStorage: loadClientStorageBag(),
+            tabStorage: loadTabStorageBag(),
           } satisfies ClientMessage),
         );
       };
@@ -321,6 +323,7 @@ export function useBadUISession(path: string) {
           userId: userIdRef.current,
           browserStorage: loadBrowserStorageBag(),
           clientStorage: loadClientStorageBag(),
+          tabStorage: loadTabStorageBag(),
         } satisfies ClientMessage),
       );
     }

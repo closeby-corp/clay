@@ -119,3 +119,60 @@ export function chordList(keys: unknown): string[] {
   if (typeof keys === 'string' && keys.trim()) return [keys];
   return [];
 }
+
+const KEY_DISPLAY: Record<string, string> = {
+  escape: 'Esc',
+  enter: '↵',
+  space: 'Space',
+  tab: 'Tab',
+  arrowup: '↑',
+  arrowdown: '↓',
+  arrowleft: '←',
+  arrowright: '→',
+};
+
+function formatKeyToken(token: string, isApple: boolean): string {
+  if (token === 'mod') return isApple ? '⌘' : 'Ctrl';
+  if (token === 'ctrl' || token === 'control') return 'Ctrl';
+  if (token === 'meta' || token === 'cmd' || token === 'command') return '⌘';
+  if (token === 'alt' || token === 'option') return isApple ? '⌥' : 'Alt';
+  if (token === 'shift') return '⇧';
+
+  const key = normalizeKeyToken(token);
+  if (KEY_DISPLAY[key]) return KEY_DISPLAY[key];
+  if (key.length === 1) return key.toUpperCase();
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+export type ChordDisplayOptions = {
+  /** Override platform detection (tests). Default: Apple user agents. */
+  isApple?: boolean;
+};
+
+/**
+ * Format one chord (`mod+s`) into display segments (`['⌘','S']` on Apple).
+ * Token order matches the chord string.
+ */
+export function formatChordSegments(
+  chord: string,
+  opts: ChordDisplayOptions = {},
+): string[] {
+  const isApple = opts.isApple ?? isApplePlatform();
+  return chord
+    .toLowerCase()
+    .split('+')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((part) => formatKeyToken(part, isApple));
+}
+
+/**
+ * Format chord string(s) into platform-aware glyph segments per chord.
+ * e.g. `formatChordDisplay('mod+k')` → `[['⌘','K']]` on Apple.
+ */
+export function formatChordDisplay(
+  keys: string | string[],
+  opts: ChordDisplayOptions = {},
+): string[][] {
+  return chordList(keys).map((chord) => formatChordSegments(chord, opts));
+}

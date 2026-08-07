@@ -1,6 +1,7 @@
-/** Prefixes for BadUI browser/client storage scopes in Web Storage. */
+/** Prefixes for BadUI browser/client/tab storage scopes in Web Storage. */
 export const BADUI_BROWSER_STORAGE_KEY = 'badui-browser-storage';
 export const BADUI_CLIENT_STORAGE_KEY = 'badui-client-storage';
+export const BADUI_TAB_STORAGE_KEY = 'badui-tab-storage';
 
 function readBag(storage: Storage, key: string): Record<string, unknown> {
   try {
@@ -40,8 +41,16 @@ export function loadClientStorageBag(): Record<string, unknown> {
   }
 }
 
+export function loadTabStorageBag(): Record<string, unknown> {
+  try {
+    return readBag(sessionStorage, BADUI_TAB_STORAGE_KEY);
+  } catch {
+    return {};
+  }
+}
+
 export function applyClientStorageOp(msg: {
-  scope: 'browser' | 'client';
+  scope: 'browser' | 'client' | 'tab';
   action: 'set' | 'delete' | 'clear';
   key?: string;
   value?: unknown;
@@ -49,7 +58,11 @@ export function applyClientStorageOp(msg: {
   try {
     const store = msg.scope === 'browser' ? localStorage : sessionStorage;
     const bagKey =
-      msg.scope === 'browser' ? BADUI_BROWSER_STORAGE_KEY : BADUI_CLIENT_STORAGE_KEY;
+      msg.scope === 'browser'
+        ? BADUI_BROWSER_STORAGE_KEY
+        : msg.scope === 'tab'
+          ? BADUI_TAB_STORAGE_KEY
+          : BADUI_CLIENT_STORAGE_KEY;
     if (msg.action === 'clear') {
       store.removeItem(bagKey);
       return;

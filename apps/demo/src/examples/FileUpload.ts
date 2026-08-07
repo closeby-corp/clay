@@ -16,14 +16,14 @@ ui.page('/examples/upload', () => {
     ui.column(() => {
       exampleHeader(
         undefined,
-        'POST /upload; file list in ui.storage.tab, lifetime count in ui.storage.user.',
+        'POST /upload; file list in ui.storage.tab (survives reconnect), lifetime count in ui.storage.user.',
       );
 
       ui.card(
         {
           title: 'Uploads',
           description:
-            'tab = this browser tab’s file list; user = cross-tab upload counter (async get/set).',
+            'tab = this browser tab’s file list (sessionStorage; survives reload); user = cross-tab upload counter (async get/set).',
           gap: 4,
         },
         () => {

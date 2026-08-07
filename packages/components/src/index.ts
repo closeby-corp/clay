@@ -598,6 +598,8 @@ export { scrollArea, type ScrollAreaProps } from './scroll-area';
 
 export { keybind, type KeybindProps } from './keybind';
 
+export { kbd, type KbdProps } from './kbd';
+
 export {
   breadcrumb,
   type BreadcrumbItem,

@@ -129,7 +129,7 @@ ui.page('/examples/controls', () => {
 
         exampleSection(
           'Keybinds',
-          'ui.keybind — headless chords (⌘/Ctrl+K opens the palette above; ⌘/Ctrl+S toasts).',
+          'ui.keybind — headless chords; ui.kbd shows platform-aware glyphs.',
         );
         ui.keybind({
           keys: 'mod+k',
@@ -139,9 +139,13 @@ ui.page('/examples/controls', () => {
           keys: 'mod+s',
           onPress: () => ui.notify('Saved (keybind)', 'success'),
         });
-        ui.label('Try ⌘K / Ctrl+K or ⌘S / Ctrl+S (ignored while typing in inputs).').classes(
-          'text-sm text-muted-foreground',
-        );
+        ui.row({ className: 'items-center gap-2 flex-wrap' }, () => {
+          ui.label('Try').classes('text-sm text-muted-foreground');
+          ui.kbd('mod+k');
+          ui.label('or').classes('text-sm text-muted-foreground');
+          ui.kbd('mod+s');
+          ui.label('(ignored while typing in inputs).').classes('text-sm text-muted-foreground');
+        });
 
         exampleSection(
           'Reactive auto',

@@ -35,6 +35,38 @@ describe('storage.tab', () => {
     session.destroy();
     expect(session.tab.size).toBe(0);
   });
+
+  test('write-through pushes clientStorage ops with scope tab', () => {
+    const messages: unknown[] = [];
+    const session = new ClientSession('/storage-test', (m) => messages.push(m));
+    session.mount();
+    messages.length = 0;
+
+    runWithSession(session, () => {
+      storage.tab.set('draft', { n: 1 });
+      storage.tab.delete('draft');
+      storage.tab.set('x', 2);
+      storage.tab.clear();
+    });
+
+    expect(messages).toEqual([
+      { op: 'clientStorage', scope: 'tab', action: 'set', key: 'draft', value: { n: 1 } },
+      { op: 'clientStorage', scope: 'tab', action: 'delete', key: 'draft' },
+      { op: 'clientStorage', scope: 'tab', action: 'set', key: 'x', value: 2 },
+      { op: 'clientStorage', scope: 'tab', action: 'clear' },
+    ]);
+    expect(session.tab.size).toBe(0);
+  });
+
+  test('hydrate from map values used after hello-style seed', () => {
+    const session = new ClientSession('/storage-test', () => {});
+    session.tab.set('files', [{ name: 'a.txt' }]);
+    session.mount();
+
+    runWithSession(session, () => {
+      expect(storage.tab.get<{ name: string }[]>('files')).toEqual([{ name: 'a.txt' }]);
+    });
+  });
 });
 
 describe('storage.browser / storage.client', () => {

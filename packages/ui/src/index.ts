@@ -50,6 +50,7 @@ import {
   resizable as resizableFactory,
   scrollArea as scrollAreaFactory,
   keybind as keybindFactory,
+  kbd as kbdFactory,
   sheet as sheetFactory,
   drawer as drawerFactory,
   tabs as tabsFactory,
@@ -142,6 +143,7 @@ import {
   type ResizableHandleProps,
   type ScrollAreaProps,
   type KeybindProps,
+  type KbdProps,
   type BreadcrumbItem,
   type BreadcrumbProps,
   type SheetProps,
@@ -277,6 +279,7 @@ export type {
   AccordionItemOptions,
   CollapsibleProps,
   KeybindProps,
+  KbdProps,
   SwitchProps,
   RadioGroupProps,
   ComboboxProps,
@@ -713,6 +716,23 @@ export function keybind(props: KeybindProps): Element {
   return keybindFactory(props);
 }
 
+/**
+ * Display-only keyboard chord glyphs. Prefer `ui.kbd`. See {@link KbdProps}.
+ * Pair with `ui.keybind` for the actual listener.
+ *
+ * @example
+ * ```ts
+ * ui.kbd('mod+k');
+ * ui.kbd({ keys: 'mod+s', className: 'ml-1' });
+ * ui.kbd(['mod+k', 'ctrl+k']);
+ * ```
+ */
+export function kbd(keys: string | string[], props?: Omit<KbdProps, 'keys'>): Element;
+export function kbd(props: KbdProps): Element;
+export function kbd(a: any, b?: any): Element {
+  return kbdFactory(a, b);
+}
+
 /** Breadcrumb trail. Prefer `ui.breadcrumb`. See {@link BreadcrumbProps}. */
 export function breadcrumb(items: BreadcrumbItem[], props?: BreadcrumbProps): Element {
   return breadcrumbFactory(items, props);
@@ -991,6 +1011,7 @@ export const ui = {
   resizable,
   scrollArea,
   keybind,
+  kbd,
   breadcrumb,
   sheet,
   drawer,

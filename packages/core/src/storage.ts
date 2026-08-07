@@ -27,7 +27,7 @@ export type StorageConfigureOptions = {
   user?: PersistenceAdapter;
 };
 
-/** Per-tab (WS session) key/value — survives `refreshable`; cleared on session destroy. */
+/** Per-browser-tab key/value — mirrored to sessionStorage; survives reconnect. */
 export type TabStorage = {
   get<T = unknown>(key: string): T | undefined;
   set(key: string, value: unknown): void;
@@ -182,12 +182,20 @@ function tabApi(): TabStorage {
       const session = getCurrentSession();
       if (!session) return;
       session.tab.set(key, value);
+      session.clientStorage('tab', 'set', key, value);
     },
     delete(key: string): boolean {
-      return getCurrentSession()?.tab.delete(key) ?? false;
+      const session = getCurrentSession();
+      if (!session) return false;
+      const existed = session.tab.delete(key);
+      if (existed) session.clientStorage('tab', 'delete', key);
+      return existed;
     },
     clear(): void {
-      getCurrentSession()?.tab.clear();
+      const session = getCurrentSession();
+      if (!session) return;
+      session.tab.clear();
+      session.clientStorage('tab', 'clear');
     },
     has(key: string): boolean {
       return getCurrentSession()?.tab.has(key) ?? false;
@@ -302,7 +310,9 @@ const userApi: UserStorage = {
 /**
  * Lightweight session storage (NiceGUI-ish scopes).
  *
- * - **tab** — in-memory `Map` on the current `ClientSession` (survives `refreshable` rebuilds; cleared on session destroy)
+ * - **tab** — in-memory `Map` on the current `ClientSession`, mirrored to client
+ *   `sessionStorage` (`badui-tab-storage`); survives reconnect / navigate-hello;
+ *   cleared via `tab.clear()` or when the browser tab closes (sessionStorage lifetime)
  * - **browser** — mirrored to client `localStorage` (shared across tabs for the origin)
  * - **client** — mirrored to client `sessionStorage` (this browser tab only)
  * - **user** — JSON bag keyed by client `userId` (localStorage id), optionally file/Redis-backed via `configure`

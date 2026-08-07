@@ -50,8 +50,9 @@ export class ClientSession {
   /** Optional idle / absolute timeouts (from `ui.run`). */
   timeouts: SessionTimeoutConfig | null = null;
   /**
-   * Per-tab (WS session) key/value store. Survives `refreshable` rebuilds;
-   * cleared when the session is destroyed.
+   * Per-browser-tab key/value store. Survives `refreshable` rebuilds and is
+   * rehydrated from `hello.tabStorage` (client sessionStorage bag) on reconnect
+   * / navigate-hello. In-memory map is cleared when the session is destroyed.
    */
   readonly tab = new Map<string, unknown>();
   /**
@@ -261,7 +262,7 @@ export class ClientSession {
   }
 
   clientStorage(
-    scope: 'browser' | 'client',
+    scope: 'browser' | 'client' | 'tab',
     action: 'set' | 'delete' | 'clear',
     key?: string,
     value?: unknown,

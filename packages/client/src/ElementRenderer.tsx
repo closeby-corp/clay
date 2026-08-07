@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, Fragment, type CSSProperti
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
 import { elementReactKey } from './stickyShell';
-import { chordList, isEditableTarget, matchesChord } from './keybind';
+import { chordList, formatChordDisplay, isEditableTarget, matchesChord } from './keybind';
 import { BoundAreaChart } from './BoundAreaChart';
 import { BoundBarChart } from './BoundBarChart';
 import { BoundLineChart } from './BoundLineChart';
@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field';
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
@@ -2337,6 +2338,27 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'keybind':
       return <KeybindListener id={id} props={props} emit={emit} />;
+
+    case 'kbd': {
+      const chords = formatChordDisplay(props.keys as string | string[]);
+      if (chords.length === 0) return null;
+      return (
+        <KbdGroup className={className} style={asStyle(style)}>
+          {chords.map((segments, chordIndex) => (
+            <Fragment key={chordIndex}>
+              {chordIndex > 0 ? (
+                <span className="px-0.5 text-muted-foreground/60" aria-hidden>
+                  /
+                </span>
+              ) : null}
+              {segments.map((segment, segmentIndex) => (
+                <Kbd key={`${chordIndex}-${segmentIndex}`}>{segment}</Kbd>
+              ))}
+            </Fragment>
+          ))}
+        </KbdGroup>
+      );
+    }
 
     case 'stat': {
       type StatItemView = {

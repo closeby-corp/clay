@@ -16,10 +16,10 @@ On unexpected socket close, the client reconnects with exponential backoff (500m
 ### `hello`
 
 ```json
-{ "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "browserStorage": {}, "clientStorage": {} }
+{ "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "browserStorage": {}, "clientStorage": {}, "tabStorage": {} }
 ```
 
-Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `browserStorage` / `clientStorage` bags hydrate `ui.storage.browser` / `ui.storage.client`.
+Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`.
 
 Sent on connect and after client-side navigation. The React client keeps matching `app` shell chrome mounted across remounts; only inset content is replaced.
 
@@ -191,7 +191,7 @@ Client evaluates the snippet (trusted server-authored code).
 { "op": "clientStorage", "scope": "browser", "action": "set", "key": "theme", "value": "dark" }
 ```
 
-Updates the client `localStorage` (`browser`) or `sessionStorage` (`client`) bag used by `ui.storage.browser` / `ui.storage.client`.
+Updates the client Web Storage bag used by `ui.storage.browser` (`localStorage`), `ui.storage.client` (`sessionStorage`), or `ui.storage.tab` (`sessionStorage`, key `badui-tab-storage`). Write-through keeps the bag warm for the next `hello`.
 
 ### `error`
 

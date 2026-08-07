@@ -37,6 +37,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `resizable` | `resizable` (+ `resizablepanel` / `resizablehandle`) | `react-resizable-panels` |
 | `scrollArea` | `scrollarea` | ShadCN `ScrollArea` |
 | `keybind` | `keybind` | Headless `window` `keydown` chord listener (`return null`) |
+| `kbd` | `kbd` | Display-only chord glyphs (`Kbd` / `KbdGroup`; same tokens as `keybind`) |
 | `markdown` | `markdown` | Client `marked` + DOMPurify |
 | `html` | `html` | Trusted server HTML (`dangerouslySetInnerHTML`) |
 | `image` | `image` | `<img>` |

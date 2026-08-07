@@ -238,4 +238,89 @@ describe('WebSocket session protocol', () => {
       ws.close();
     }
   });
+
+  test('hello tabStorage hydrates ui.storage.tab', async () => {
+    page('/ws-tab', () => {
+      const label = new Element('label', {
+        text: String(storage.tab.get<string>('resume') ?? 'missing'),
+      });
+      void label;
+    });
+
+    badui = new BadUIServer({
+      port: 0,
+      uploadDir: dir,
+      userStorageDir: false,
+      clientDir: dir,
+    });
+    badui.start();
+
+    const ws = await openWs(badui.port);
+    try {
+      const mountP = waitForMessage(ws, (m) => m.op === 'mount');
+      send(ws, {
+        op: 'hello',
+        path: '/ws-tab',
+        tabStorage: { resume: 'from-bag' },
+      });
+      const mount = await mountP;
+      if (mount.op !== 'mount') return;
+      const label = findByType(mount.tree, 'label')[0]!;
+      expect(label.props.text).toBe('from-bag');
+
+      const remountP = waitForMessage(ws, (m) => m.op === 'mount');
+      send(ws, {
+        op: 'hello',
+        path: '/ws-tab',
+        tabStorage: { resume: 'after-reconnect' },
+      });
+      const remount = await remountP;
+      if (remount.op !== 'mount') return;
+      expect(findByType(remount.tree, 'label')[0]!.props.text).toBe('after-reconnect');
+    } finally {
+      ws.close();
+    }
+  });
+
+  test('storage.tab.set write-through sends clientStorage scope tab', async () => {
+    page('/ws-tab-write', () => {
+      new Element('button', {
+        text: 'save',
+        onClick: () => {
+          storage.tab.set('k', 'v');
+        },
+      });
+    });
+
+    badui = new BadUIServer({
+      port: 0,
+      uploadDir: dir,
+      userStorageDir: false,
+      clientDir: dir,
+    });
+    badui.start();
+
+    const ws = await openWs(badui.port);
+    try {
+      const mountP = waitForMessage(ws, (m) => m.op === 'mount');
+      send(ws, { op: 'hello', path: '/ws-tab-write' });
+      const mount = await mountP;
+      if (mount.op !== 'mount') return;
+      const btn = findByType(mount.tree, 'button')[0]!;
+
+      const storageOp = waitForMessage(
+        ws,
+        (m) =>
+          m.op === 'clientStorage' &&
+          m.scope === 'tab' &&
+          m.action === 'set' &&
+          m.key === 'k' &&
+          m.value === 'v',
+      );
+      send(ws, { op: 'event', id: btn.id, type: 'click' });
+      await storageOp;
+    } finally {
+      ws.close();
+    }
+  });
 });
