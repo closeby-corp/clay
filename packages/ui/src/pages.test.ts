@@ -27,6 +27,7 @@ describe('loadPages + navFromPages', () => {
     expect(getRegisteredPaths().sort()).toEqual([
       '/',
       '/examples/alpha',
+      '/examples/hidden',
       '/examples/zeta',
     ]);
 

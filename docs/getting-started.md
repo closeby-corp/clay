@@ -166,6 +166,7 @@ Open:
 - http://localhost:4000/examples/counter
 - http://localhost:4000/examples/todo
 - http://localhost:4000/examples/form-demo
+- http://localhost:4000/examples/auth
 
 | Script | What it does |
 |--------|----------------|

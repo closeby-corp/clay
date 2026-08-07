@@ -20,13 +20,25 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
 | `/examples/form-demo` | `FormDemo.ts` | Form + validate + OTP + toggle group |
+| `/examples/auth` | `Auth.ts` (+ login/admin) | Sign-in, account home, role-gated admin, access denied |
 | `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
 | `/examples/overlays` | `OverlaysDemo.ts` | Breadcrumb, dropdown/context menu, hover card, popover, dialog/sheet/drawer |
 | `/examples/controls` | `ControlsDemo.ts` | Menubar (submenu/checkbox/radio), command dialog + inline, carousel, resizable, scroll-area, `ui.state` / `ui.auto` |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
-Each page file exports optional `pageMeta` (`label`, `icon`, `order`) for `ui.navFromPages()`.
+Each page file exports optional `pageMeta` (`label`, `icon`, `order`, optional `nav: false`) for `ui.navFromPages()`.
+
+## Pattern: sign in → account → admin (or access denied)
+
+Try the journey as an end user (sidebar **Account**, or `/examples/auth` while logged out):
+
+1. **Sign in** (`/examples/auth/login`, no app shell) with **Alice** (administrator) or **Bob** (member), password `password`.
+2. **My account** shows name + role; Preferences save per browser; **Open admin console** is always visible.
+3. As **Bob**, admin shows **Access denied** → back to account. As **Alice**, the admin console lists signed-in people and can **Sign everyone else out** (confirm dialog).
+4. **Sign out** returns to Sign in; visiting Account/Admin while signed out redirects to Sign in.
+
+Demo helpers live in `_auth.ts` (skipped by `loadPages`): session map in `ui.storage.app` keyed by hello `userId`, plus `requireAuth` / `requireRole`.
 
 ## Pattern: app entry + discovered pages
 

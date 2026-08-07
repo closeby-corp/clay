@@ -12,6 +12,8 @@ export type PageMeta = {
   icon?: string;
   /** Lower sorts first. Default `100`. Path `/` is forced to `0`. */
   order?: number;
+  /** When `false`, omit from `navFromPages()` (route still registers). Default `true`. */
+  nav?: boolean;
 };
 
 const pageMetaByPath = new Map<string, PageMeta>();
@@ -81,16 +83,19 @@ export async function loadPages(dir: string | URL): Promise<string[]> {
 /** Build primary sidebar nav from registered pages + collected `pageMeta`. */
 export function navFromPages(): AppNavItem[] {
   const paths = getRegisteredPaths();
-  const ranked = paths.map((href) => {
-    const meta = pageMetaByPath.get(href) ?? {};
-    const order = href === '/' ? 0 : (meta.order ?? 100);
-    return {
-      href,
-      label: meta.label ?? labelFromPath(href),
-      icon: meta.icon ?? 'boxes',
-      order,
-    };
-  });
+  const ranked = paths
+    .map((href) => {
+      const meta = pageMetaByPath.get(href) ?? {};
+      const order = href === '/' ? 0 : (meta.order ?? 100);
+      return {
+        href,
+        label: meta.label ?? labelFromPath(href),
+        icon: meta.icon ?? 'boxes',
+        order,
+        nav: meta.nav !== false,
+      };
+    })
+    .filter((item) => item.nav);
   ranked.sort((a, b) => a.order - b.order || a.href.localeCompare(b.href));
   return ranked.map(({ href, label, icon }) => ({ href, label, icon }));
 }

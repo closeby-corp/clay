@@ -44,10 +44,11 @@ await ui.loadPages(new URL('./pages', import.meta.url));
 
 #### `ui.navFromPages()`
 
-Build primary `AppNavItem[]` from registered routes + collected `pageMeta` (label/icon/order). Home `/` sorts first; others by `order` (default `100`) then path. Missing meta falls back to a title-cased path segment and icon `'boxes'`.
+Build primary `AppNavItem[]` from registered routes + collected `pageMeta` (label/icon/order). Home `/` sorts first; others by `order` (default `100`) then path. Missing meta falls back to a title-cased path segment and icon `'boxes'`. Set `nav: false` to register a route without a sidebar item (e.g. login/admin under Account).
 
 ```typescript
 export const pageMeta = { label: 'Charts', icon: 'chart-area', order: 90 };
+// export const pageMeta = { nav: false }; // route only
 ```
 
 #### `ui.run(root?, config?)`
@@ -970,7 +971,7 @@ NiceGUI-style storage scopes:
 | `ui.storage.user.get/set/delete/clear/has` | Stable `userId` (hello / `resolveUserId`) | JSON bag via file or Redis adapter |
 | `ui.storage.app.create(key, initial, options?)` | Process-wide typed store (all sessions) | Optional file/Redis adapter via `appStorageDir` / `storage.configure({ app })` |
 
-User storage requires a `userId` on the session. The built-in client sends an anonymous localStorage id on `hello`; override with `ui.run({ resolveUserId })` (e.g. reverse-proxy header). Configure dirs via `ui.run({ userStorageDir, appStorageDir, uploadDir, uploadMaxSizeBytes, uploadAccept })`.
+User storage requires a `userId` on the session. The built-in client sends an anonymous localStorage id on `hello`; override with `ui.run({ resolveUserId })` (e.g. reverse-proxy header). For a demo that maps that anonymous id to a signed-in profile (plus roles), see `/examples/auth`. Configure dirs via `ui.run({ userStorageDir, appStorageDir, uploadDir, uploadMaxSizeBytes, uploadAccept })`.
 
 ```typescript
 const messages = ui.storage.app.create<Message[]>('chatMessages', []);

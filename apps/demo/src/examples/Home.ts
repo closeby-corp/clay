@@ -42,6 +42,10 @@ ui.page('/', () => {
         () => {
           ui.column(() => {
             ui.row(() => {
+              ui.icon('lock').classes('size-4 text-muted-foreground');
+              ui.link('Account', '/examples/auth');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
               ui.icon('form-input').classes('size-4 text-muted-foreground');
               ui.link('Form Demo', '/examples/form-demo');
             }, { gap: 2 }).classes('items-center');
