@@ -1204,6 +1204,21 @@ form.name = 'Ada'; // notifies subscribers
 const s = ui.state({ count: 0 }); // alias of reactive
 ```
 
+### `ui.draft(key, defaults, opts?)`
+
+Reactive object hydrated from sync storage (default `ui.storage.tab`) with write-through on each property change. Survives reconnect / `--reload`. Sync scopes only: `tab` | `client` | `browser` (not async `user` / `app`).
+
+```typescript
+const form = ui.draft('formDemo', { name: '', email: '' });
+// omit secrets: ui.draft('login', { user: '', password: '' }, { omit: ['password'] });
+
+form.name = 'Ada'; // persisted
+
+ui.draft.clear('formDemo'); // drop storage key; reset the object yourself if needed
+```
+
+See Form Demo (`/examples/form-demo`).
+
 ### `ui.auto(fn)`
 
 Rebuilds the block when `state` / `reactive` properties **read** during `fn` change. Keep mutable state outside the builder. When the child tree shape is unchanged, patches props in place (`updateProps`) instead of remounting via `setChildren`.

@@ -19,7 +19,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*` including scatter / composed; props API sample |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
-| `/examples/form-demo` | `FormDemo.ts` | Form + validate + OTP + toggle group |
+| `/examples/form-demo` | `FormDemo.ts` | Form + validate + `ui.draft` (survives reload) + OTP |
 | `/examples/auth` | `Auth.ts` (+ login/admin/change-password) | Signed cookie session, hashed passwords, login lockout, role-gated admin + audit log |
 | `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
 | `/examples/overlays` | `OverlaysDemo.ts` | Breadcrumb, dropdown/context menu, hover card, popover, dialog/sheet/drawer |

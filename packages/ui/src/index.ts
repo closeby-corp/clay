@@ -218,6 +218,7 @@ import {
   state as stateCore,
   subscribe as subscribeCore,
   auto as autoCore,
+  draft as draftCore,
   validate as validateCore,
   setPageWrapper,
   type NotifyOptions,
@@ -231,6 +232,8 @@ import {
   TimerHandle,
   type TimerOptions,
   type ThemeMode,
+  type DraftStorage,
+  type DraftOptions,
 } from '@badui/core';
 import {
   BadUIServer,
@@ -320,6 +323,8 @@ export type {
   PageFn,
   TimerOptions,
   FieldRule,
+  DraftStorage,
+  DraftOptions,
 };
 export {
   DataTableElement,
@@ -339,6 +344,7 @@ export {
   attachPageMeta,
   importFresh,
   resetPageDiscovery,
+  draft,
 };
 
 /** Text label. Prefer `ui.label`. See {@link LabelProps}. */
@@ -870,6 +876,19 @@ export const state = stateCore;
 /** Listen for a reactive property change. Prefer this over importing from `@badui/core`. */
 export const subscribe = subscribeCore;
 
+/**
+ * Reactive object hydrated from sync storage (`tab` by default) with write-through.
+ * Survives reconnect / `--reload`. Prefer `ui.draft`. See {@link DraftOptions}.
+ *
+ * @example
+ * ```ts
+ * const form = ui.draft('formDemo', { name: '', email: '' });
+ * // on submit/reset:
+ * ui.draft.clear('formDemo');
+ * ```
+ */
+export const draft = draftCore;
+
 /** Run field checks, set errors, return true if all pass. Prefer `ui.validate`. */
 export function validate(rules: FieldRule[]): boolean {
   return validateCore(rules);
@@ -1036,6 +1055,7 @@ export const ui = {
   reactive,
   state,
   subscribe,
+  draft,
   validate,
   refreshable,
   auto,
