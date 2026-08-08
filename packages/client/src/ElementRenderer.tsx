@@ -22,6 +22,7 @@ import { BoundImageZoom } from './BoundImageZoom';
 import { BoundList } from './BoundList';
 import { BoundImageCrop } from './BoundImageCrop';
 import { BoundGantt } from './BoundGantt';
+import { BoundFlow } from './BoundFlow';
 import { useOptimisticValue } from './useOptimisticValue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -2772,6 +2773,22 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'gantt':
       return <BoundGantt id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'flow':
+      return (
+        <BoundFlow
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+          renderNode={(child, childEmit) => <ElementRenderer node={child} emit={childEmit} />}
+        />
+      );
+
+    case 'flowNode':
+      return null;
 
     case 'link':
       return (

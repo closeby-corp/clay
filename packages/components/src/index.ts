@@ -810,6 +810,19 @@ export {
   type GanttRange,
   type GanttItemMovePayload,
 } from './gantt';
+export {
+  flow,
+  FlowElement,
+  type FlowProps,
+  type FlowNodeProps,
+  type FlowEdge,
+  type FlowHandle,
+  type FlowHandlePosition,
+  type FlowPosition,
+  type FlowConnectPayload,
+  type FlowNodeMovePayload,
+  type FlowSelectionPayload,
+} from './flow';
 
 export {
   chart,

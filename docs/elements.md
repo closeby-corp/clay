@@ -30,6 +30,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `imageZoom` | `imageZoom` | Image with click-to-zoom overlay (leave `image` plain) |
 | `imageCrop` | `imageCrop` | Image cropper (`src`, `aspect?`; emits data URL) |
 | `gantt` | `gantt` | Project timeline (`rows` with dated items; drag move/resize) |
+| `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; node bodies are BadUI trees) |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
@@ -101,6 +102,7 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `list` | `itemMove`, `itemClick` |
 | `imageCrop` | `crop` |
 | `gantt` | `itemMove`, `itemClick` |
+| `flow` | `connect`, `nodeMove`, `nodesDelete`, `edgesDelete`, `selectionChange` |
 | `upload` | `upload`, `progress`, `error`, `abort` |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
@@ -135,6 +137,7 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `kanban` (`columns` while dragging)
 - `list` (`groups` while dragging)
 - `gantt` (`rows` while dragging / resizing)
+- `flow` (node positions while dragging; edges on connect until server props catch up)
 - `tabs`
 - `accordion`
 - `collapsible`

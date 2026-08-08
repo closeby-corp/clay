@@ -549,6 +549,52 @@ Project timeline with sidebar row labels, month axis, bars, today + custom marke
 
 Dates are ISO `YYYY-MM-DD` (or parseable datetime strings).
 
+#### `ui.flow(props, fn)` / `ui.flow(fn, props?)`
+
+Interactive flow diagram backed by `@xyflow/react`. Graph topology (`edges`, each `flow.node` `position` / `handles`) is props-driven; **node interiors are live BadUI element trees** (same idea as DataTable `__ui` cells, but preferring normal children so patches stay incremental). Client keeps positions optimistic while dragging and emits settle events only (`nodeMove` on drag-stop, `connect`, deletes, selection). Viewport pan/zoom stays client-local.
+
+```typescript
+ui.flow(
+  {
+    edges: [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }],
+    onConnect: (e) => { /* append to edges */ },
+    onNodeMove: ({ nodeId, position }) => { /* update node position */ },
+  },
+  (flow) => {
+    flow.node(
+      {
+        id: 'a',
+        position: { x: 0, y: 0 },
+        handles: [{ id: 'out', type: 'source', position: 'right' }],
+      },
+      () => {
+        ui.label('Fetch');
+        ui.button('Run', { onClick: () => {} });
+      },
+    );
+    flow.node({ id: 'b', position: { x: 280, y: 0 } }, () => {
+      ui.label('Transform');
+    });
+  },
+);
+```
+
+| Prop | Type | Default |
+|------|------|---------|
+| `edges` | `{ id, source, target, sourceHandle?, targetHandle? }[]` | `[]` |
+| `fitView` | `boolean` | `true` |
+| `showMiniMap` | `boolean` | `true` |
+| `showControls` | `boolean` | `true` |
+| `onConnect` | `(payload: { source, target, sourceHandle?, targetHandle? }) => void` | |
+| `onNodeMove` | `(payload: { nodeId, position: { x, y } }) => void` | |
+| `onNodesDelete` | `(ids: string[]) => void` | |
+| `onEdgesDelete` | `(ids: string[]) => void` | |
+| `onSelectionChange` | `(payload: { nodeIds, edgeIds }) => void` | |
+
+`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`). When `handles` is omitted, default left-target / right-source ports are used.
+
+Out of v1: app-bundled React `nodeTypes` registry, auto-layout (dagre/elk), custom edges, nested sub-flows.
+
 #### `ui.validate(rules)`
 
 Light submit-gate helper. Runs each rule’s `check`, calls `.setError` on the field (clears when `check` returns null/undefined), and returns `true` only if every rule passes. No schema library — keep rules explicit in the handler.

@@ -27,6 +27,7 @@ import {
   SlidersHorizontal,
   Table2,
   Upload,
+  Workflow,
 } from 'lucide-react';
 
 export type ShellNavItem = {
@@ -69,6 +70,7 @@ const iconMap: Record<string, LucideIcon> = {
   'clipboard-list': ClipboardList,
   'columns-3': Columns3,
   'chart-gantt': ChartNoAxesGantt,
+  workflow: Workflow,
   file: File,
   'file-pen': FilePen,
 };

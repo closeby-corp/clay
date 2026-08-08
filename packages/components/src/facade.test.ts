@@ -45,6 +45,8 @@ import {
   list,
   imageCrop,
   gantt,
+  flow,
+  FlowElement,
   DialogStackElement,
   areaChart,
   barChart,
@@ -508,6 +510,59 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.props.range).toEqual({ start: '2026-07-01', end: '2026-09-01' });
     expect(el.props.readonly).toBe(false);
     expect(el.props.events).toEqual(expect.arrayContaining(['itemMove', 'itemClick']));
+  });
+
+  test('flow builds flowNode children with edges and settle events', () => {
+    const edges = [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }];
+    const el = flow(
+      {
+        edges,
+        fitView: false,
+        showMiniMap: false,
+        showControls: true,
+        onConnect: () => {},
+        onNodeMove: () => {},
+        onNodesDelete: () => {},
+        onEdgesDelete: () => {},
+        onSelectionChange: () => {},
+      },
+      (f) => {
+        f.node(
+          {
+            id: 'a',
+            position: { x: 0, y: 0 },
+            handles: [{ id: 'out', type: 'source', position: 'right' }],
+          },
+          () => {},
+        );
+        f.node({ id: 'b', position: { x: 200, y: 0 } }, () => {});
+      },
+    );
+    expect(el).toBeInstanceOf(FlowElement);
+    expect(el.type).toBe('flow');
+    expect(el.props).toMatchObject({
+      edges,
+      fitView: false,
+      showMiniMap: false,
+      showControls: true,
+    });
+    expect(el.children).toHaveLength(2);
+    expect(el.children[0]!.type).toBe('flowNode');
+    expect(el.children[0]!.props).toMatchObject({
+      id: 'a',
+      position: { x: 0, y: 0 },
+      handles: [{ id: 'out', type: 'source', position: 'right' }],
+    });
+    expect(el.children[1]!.props.id).toBe('b');
+    expect(el.props.events).toEqual(
+      expect.arrayContaining([
+        'connect',
+        'nodeMove',
+        'nodesDelete',
+        'edgesDelete',
+        'selectionChange',
+      ]),
+    );
   });
 
   test('dialogStack builds steps with open/index events', () => {

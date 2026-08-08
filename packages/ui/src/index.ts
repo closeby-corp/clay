@@ -80,6 +80,7 @@ import {
   gantt as ganttFactory,
   chart as chartNamespace,
   table as tableFactory,
+  flow as flowFactory,
   type ButtonProps,
   type LabelProps,
   type InputProps,
@@ -218,6 +219,15 @@ import {
   type GanttMarker,
   type GanttRange,
   type GanttItemMovePayload,
+  type FlowProps,
+  type FlowNodeProps,
+  type FlowEdge,
+  type FlowHandle,
+  type FlowHandlePosition,
+  type FlowPosition,
+  type FlowConnectPayload,
+  type FlowNodeMovePayload,
+  type FlowSelectionPayload,
   type SeriesInput,
   type ChartChromeOpts,
   type PieRowKeys,
@@ -247,6 +257,7 @@ import {
   TabsElement,
   AccordionElement,
   CollapsibleElement,
+  FlowElement,
 } from '@badui/components';
 import {
   Element,
@@ -391,6 +402,15 @@ export type {
   GanttMarker,
   GanttRange,
   GanttItemMovePayload,
+  FlowProps,
+  FlowNodeProps,
+  FlowEdge,
+  FlowHandle,
+  FlowHandlePosition,
+  FlowPosition,
+  FlowConnectPayload,
+  FlowNodeMovePayload,
+  FlowSelectionPayload,
   SeriesInput,
   ChartChromeOpts,
   PieRowKeys,
@@ -423,6 +443,7 @@ export {
   TabsElement,
   AccordionElement,
   CollapsibleElement,
+  FlowElement,
   TimerHandle,
   loadPages,
   navFromPages,
@@ -625,6 +646,13 @@ export function imageCrop(props: ImageCropProps): Element {
 /** Project timeline with drag move/resize. Prefer `ui.gantt`. See {@link GanttProps}. */
 export function gantt(props: GanttProps): Element {
   return ganttFactory(props);
+}
+
+/** Interactive flow diagram (`fn` or props-first). Prefer `ui.flow`. See {@link FlowProps}. */
+export function flow(fn: (f: FlowElement) => void, props?: FlowProps): FlowElement;
+export function flow(props: FlowProps, fn: (f: FlowElement) => void): FlowElement;
+export function flow(a: any, b?: any): FlowElement {
+  return flowFactory(a, b);
 }
 
 /** Stat strip (label/value items). Prefer `ui.stat`. */
@@ -1174,6 +1202,7 @@ export const ui = {
   list,
   imageCrop,
   gantt,
+  flow,
   stat,
   dataTable,
   table,
