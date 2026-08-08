@@ -50,6 +50,7 @@ export type FlowProps = {
   showControls?: boolean;
   className?: string;
   onConnect?: (payload: FlowConnectPayload) => void | Promise<void>;
+  /** Fired once when a node drag ends — persist `position` so the server stays source of truth. */
   onNodeMove?: (payload: FlowNodeMovePayload) => void | Promise<void>;
   onNodesDelete?: (ids: string[]) => void | Promise<void>;
   onEdgesDelete?: (ids: string[]) => void | Promise<void>;
@@ -73,8 +74,8 @@ export class FlowElement extends Element {
   }
 
   /**
-   * Add a graph node. Children of the node render as the custom BadUI body
-   * inside the React Flow node chrome.
+   * Add a graph node. Children render as the BadUI body inside React Flow chrome
+   * (drag by the card; buttons/inputs stay clickable via nodrag).
    */
   node(opts: FlowNodeProps, fn: () => void): Element {
     const panel = new Element('flowNode', {

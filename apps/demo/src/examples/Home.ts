@@ -77,6 +77,18 @@ ui.page('/', () => {
               ui.icon('upload').classes('size-4 text-muted-foreground');
               ui.link('File Upload', '/examples/upload');
             }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('workflow').classes('size-4 text-muted-foreground');
+              ui.link('Flow', '/examples/flow');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('columns-3').classes('size-4 text-muted-foreground');
+              ui.link('Kanban', '/examples/kanban');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
+              ui.icon('file-pen').classes('size-4 text-muted-foreground');
+              ui.link('Editor', '/examples/editor');
+            }, { gap: 2 }).classes('items-center');
           }, { gap: 2 });
         },
       );

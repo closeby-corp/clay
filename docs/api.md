@@ -551,30 +551,67 @@ Dates are ISO `YYYY-MM-DD` (or parseable datetime strings).
 
 #### `ui.flow(props, fn)` / `ui.flow(fn, props?)`
 
-Interactive flow diagram backed by `@xyflow/react`. Graph topology (`edges`, each `flow.node` `position` / `handles`) is props-driven; **node interiors are live BadUI element trees** (same idea as DataTable `__ui` cells, but preferring normal children so patches stay incremental). Client keeps positions optimistic while dragging and emits settle events only (`nodeMove` on drag-stop, `connect`, deletes, selection). Viewport pan/zoom stays client-local.
+Interactive flow diagram backed by `@xyflow/react`. Graph topology (`edges`, each `flow.node` `position` / `handles`) is props-driven; **node interiors are live BadUI element trees** (same idea as DataTable `__ui` cells, but preferring normal children so patches stay incremental).
+
+**Interaction model**
+
+- Drag nodes by the card chrome (labels/empty space). Buttons, inputs, and other interactive controls are marked `nodrag` / `nopan` so clicks do not steal the drag.
+- Positions stay optimistic on the client while dragging; **`nodeMove` fires once on drag-stop**. Persist `position` in your handler (or the next server patch will snap the node back).
+- New connections emit **`connect`** once; append to `edges` (and optional handle ids) in the handler.
+- Deletes (`Backspace` / `Delete`) emit **`nodesDelete`** / **`edgesDelete`**.
+- Viewport pan/zoom is client-local (not round-tripped).
+- Prefer updating `edges` / node `position` via props patches rather than wrapping the whole diagram in `ui.auto` that rebuilds on every status string — remounting the flow drops in-flight drag state.
 
 ```typescript
+const diagram = ui.state({
+  edges: [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }],
+  positions: { a: { x: 0, y: 0 }, b: { x: 280, y: 0 } },
+});
+
 ui.flow(
   {
-    edges: [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }],
-    onConnect: (e) => { /* append to edges */ },
-    onNodeMove: ({ nodeId, position }) => { /* update node position */ },
+    edges: diagram.edges,
+    fitView: true,
+    showMiniMap: true,
+    showControls: true,
+    onConnect: (e) => {
+      diagram.edges = [
+        ...diagram.edges,
+        {
+          id: `e-${e.source}-${e.target}-${Date.now()}`,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        },
+      ];
+    },
+    onNodeMove: ({ nodeId, position }) => {
+      diagram.positions = { ...diagram.positions, [nodeId]: position };
+    },
   },
   (flow) => {
     flow.node(
       {
         id: 'a',
-        position: { x: 0, y: 0 },
+        position: diagram.positions.a,
         handles: [{ id: 'out', type: 'source', position: 'right' }],
       },
       () => {
         ui.label('Fetch');
-        ui.button('Run', { onClick: () => {} });
+        ui.button('Run', { onClick: () => ui.notify('ran') });
       },
     );
-    flow.node({ id: 'b', position: { x: 280, y: 0 } }, () => {
-      ui.label('Transform');
-    });
+    flow.node(
+      {
+        id: 'b',
+        position: diagram.positions.b,
+        handles: [{ id: 'in', type: 'target', position: 'left' }],
+      },
+      () => {
+        ui.label('Transform');
+      },
+    );
   },
 );
 ```
@@ -591,7 +628,9 @@ ui.flow(
 | `onEdgesDelete` | `(ids: string[]) => void` | |
 | `onSelectionChange` | `(payload: { nodeIds, edgeIds }) => void` | |
 
-`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`). When `handles` is omitted, default left-target / right-source ports are used.
+`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`), optional `className`. When `handles` is omitted, default left-target / right-source ports are used. Nested BadUI handlers (`onClick`, `onChange`, …) work as usual inside the node body.
+
+See Flow Demo (`/examples/flow`).
 
 Out of v1: app-bundled React `nodeTypes` registry, auto-layout (dagre/elk), custom edges, nested sub-flows.
 

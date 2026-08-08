@@ -33,12 +33,12 @@ ui.page('/examples/flow', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.flow — React Flow graph; node bodies are live BadUI trees (labels/buttons); connect/drag emit coarse WS events.',
+          'ui.flow — React Flow graph; node bodies are live BadUI trees. Drag by the card chrome (buttons stay clickable); connect handles; positions/edges settle via WS events.',
         );
 
         exampleSection(
           'Pipeline',
-          'Drag nodes, connect handles, click Run inside a node. Positions/edges are server-owned after settle events.',
+          'Drag nodes by the card (not buttons), connect handles, click Run inside a node. Persist positions in onNodeMove so the server stays source of truth.',
         );
 
         ui.auto(() => {
@@ -78,9 +78,6 @@ ui.page('/examples/flow', () => {
                   (e) => !ids.includes(e.source) && !ids.includes(e.target),
                 );
                 diagram.lastEvent = `nodesDelete ${ids.join(',')}`;
-              },
-              onSelectionChange: (payload) => {
-                diagram.lastEvent = `selection nodes=${payload.nodeIds.join(',') || '—'} edges=${payload.edgeIds.join(',') || '—'}`;
               },
             },
             (flow) => {

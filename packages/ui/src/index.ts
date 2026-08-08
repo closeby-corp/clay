@@ -648,7 +648,11 @@ export function gantt(props: GanttProps): Element {
   return ganttFactory(props);
 }
 
-/** Interactive flow diagram (`fn` or props-first). Prefer `ui.flow`. See {@link FlowProps}. */
+/**
+ * Interactive flow diagram (`@xyflow/react`). Node bodies are BadUI trees;
+ * drag by card chrome (controls are nodrag); `nodeMove` on drag-stop.
+ * Prefer `ui.flow`. See {@link FlowProps}.
+ */
 export function flow(fn: (f: FlowElement) => void, props?: FlowProps): FlowElement;
 export function flow(props: FlowProps, fn: (f: FlowElement) => void): FlowElement;
 export function flow(a: any, b?: any): FlowElement {

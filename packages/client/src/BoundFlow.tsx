@@ -125,8 +125,12 @@ function toRfNode(flowNode: ElementNode, emit: Emit, renderNode: RenderNode): No
   };
 }
 
+const INTERACTIVE_SELECTOR =
+  'button, input, textarea, select, a, [role="button"], [contenteditable="true"], [data-slot="slider"]';
+
 function BaduiFlowNode({ id, data }: NodeProps<Node<BaduiNodeData>>) {
   const updateNodeInternals = useUpdateNodeInternals();
+  const rootRef = useRef<HTMLDivElement>(null);
   const handles = data.handles?.length ? data.handles : DEFAULT_HANDLES;
   const bodyKey = data.body.map((c) => c.id).join(',');
 
@@ -134,10 +138,20 @@ function BaduiFlowNode({ id, data }: NodeProps<Node<BaduiNodeData>>) {
     updateNodeInternals(id);
   }, [id, bodyKey, handles, updateNodeInternals]);
 
+  // Mark interactive controls as nodrag/nopan so the card chrome stays draggable.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.querySelectorAll(INTERACTIVE_SELECTOR).forEach((el) => {
+      el.classList.add('nodrag', 'nopan');
+    });
+  }, [bodyKey, data.body]);
+
   return (
     <div
+      ref={rootRef}
       className={cn(
-        'min-w-[10rem] rounded-md border bg-card text-card-foreground shadow-sm',
+        'min-w-[10rem] cursor-grab rounded-md border bg-card text-card-foreground shadow-sm active:cursor-grabbing',
         data.className,
       )}
       data-slot="flow-node"
@@ -151,7 +165,7 @@ function BaduiFlowNode({ id, data }: NodeProps<Node<BaduiNodeData>>) {
           className="!size-2.5 !border-2 !border-background !bg-primary"
         />
       ))}
-      <div className="nodrag nowheel flex flex-col gap-2 p-3">
+      <div className="nowheel flex flex-col gap-2 p-3">
         {data.body.map((child) => (
           <div key={child.id}>{data.renderNode(child, data.emit)}</div>
         ))}
@@ -191,16 +205,28 @@ function BoundFlowInner({
   const structureKey = nodesStructureKey(flowNodes);
   const edgeKey = edgesKey(serverEdges);
   const draggingRef = useRef(false);
+  const flowNodesRef = useRef(flowNodes);
+  const emitRef = useRef(emit);
+  const renderNodeRef = useRef(renderNode);
+  flowNodesRef.current = flowNodes;
+  emitRef.current = emit;
+  renderNodeRef.current = renderNode;
+
   const [nodes, setNodes] = useState<Node<BaduiNodeData>[]>(() =>
     flowNodes.map((n) => toRfNode(n, emit, renderNode)),
   );
   const [edges, setEdges] = useState<Edge[]>(() => serverEdges.map(toRfEdge));
 
-  // Reconcile from server when topology / positions / edges change (skip mid-drag).
+  // Reconcile from server when topology / positions change (skip mid-drag).
+  // Do not depend on emit/renderNode identity — parent passes new lambdas every render.
   useEffect(() => {
     if (draggingRef.current) return;
-    setNodes(flowNodes.map((n) => toRfNode(n, emit, renderNode)));
-  }, [structureKey, flowNodes, emit, renderNode]);
+    setNodes(
+      flowNodesRef.current.map((n) =>
+        toRfNode(n, emitRef.current, renderNodeRef.current),
+      ),
+    );
+  }, [structureKey]);
 
   useEffect(() => {
     if (draggingRef.current) return;
@@ -208,9 +234,14 @@ function BoundFlowInner({
   }, [edgeKey, serverEdges]);
 
   // Keep live body trees / emit fresh without resetting positions.
+  const bodySyncKey = flowNodes
+    .map((n) => `${String(n.props.id ?? n.id)}:${n.children.map((c) => c.id).join(',')}`)
+    .join('|');
   useEffect(() => {
     setNodes((prev) => {
-      const byId = new Map(flowNodes.map((n) => [String(n.props.id ?? n.id), n]));
+      const byId = new Map(
+        flowNodesRef.current.map((n) => [String(n.props.id ?? n.id), n]),
+      );
       return prev.map((node) => {
         const src = byId.get(node.id);
         if (!src) return node;
@@ -220,13 +251,13 @@ function BoundFlowInner({
             handles: src.props.handles as FlowHandle[] | undefined,
             body: src.children,
             className: src.props.className as string | undefined,
-            emit,
-            renderNode,
+            emit: emitRef.current,
+            renderNode: renderNodeRef.current,
           },
         };
       });
     });
-  }, [flowNodes, emit, renderNode]);
+  }, [bodySyncKey]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange<Node<BaduiNodeData>>[]) => {
@@ -325,6 +356,9 @@ function BoundFlowInner({
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onSelectionChange={onSelectionChange}
+        nodesDraggable
+        nodesConnectable
+        elementsSelectable
         fitView={fitView}
         deleteKeyCode={['Backspace', 'Delete']}
         proOptions={{ hideAttribution: true }}
