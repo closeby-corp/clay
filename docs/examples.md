@@ -31,7 +31,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` cross-column drag, `cardMove`, in-memory columns |
 | `/examples/list` | `ListDemo.ts` | `ui.list` dense grouped DnD, `itemMove`, in-memory groups |
 | `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` timeline bars, markers, drag move/resize, `itemMove` |
-| `/examples/flow` | `FlowDemo.ts` | `ui.flow` + `flow.node` BadUI bodies; drag by chrome, connect handles, minimap/controls |
+| `/examples/flow` | `FlowDemo.ts` | Three `ui.flow` demos: ETL with in-node controls, multi-handle approval branches, fan-in/out + dynamic `flow.node` |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 

@@ -630,7 +630,11 @@ ui.flow(
 
 `flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`), optional `className`. When `handles` is omitted, default left-target / right-source ports are used. Nested BadUI handlers (`onClick`, `onChange`, …) work as usual inside the node body.
 
-See Flow Demo (`/examples/flow`).
+See Flow Demo (`/examples/flow`) for three richer patterns:
+
+1. **ETL pipeline** — select/switch/progress/buttons inside nodes  
+2. **Branching approval** — multi-handle triage (`yes` / `no` sources), rating + badges  
+3. **Fan-in / fan-out + dynamic stages** — multiple target/source handles; `Add stage` appends `flow.node` at runtime  
 
 Out of v1: app-bundled React `nodeTypes` registry, auto-layout (dagre/elk), custom edges, nested sub-flows.
 

@@ -217,7 +217,7 @@ function BoundFlowInner({
   );
   const [edges, setEdges] = useState<Edge[]>(() => serverEdges.map(toRfEdge));
 
-  // Reconcile from server when topology / positions change (skip mid-drag).
+  // Reconcile topology / positions from server (skip mid-drag).
   // Do not depend on emit/renderNode identity — parent passes new lambdas every render.
   useEffect(() => {
     if (draggingRef.current) return;
@@ -233,31 +233,25 @@ function BoundFlowInner({
     setEdges(serverEdges.map(toRfEdge));
   }, [edgeKey, serverEdges]);
 
-  // Keep live body trees / emit fresh without resetting positions.
-  const bodySyncKey = flowNodes
-    .map((n) => `${String(n.props.id ?? n.id)}:${n.children.map((c) => c.id).join(',')}`)
-    .join('|');
-  useEffect(() => {
-    setNodes((prev) => {
-      const byId = new Map(
-        flowNodesRef.current.map((n) => [String(n.props.id ?? n.id), n]),
-      );
-      return prev.map((node) => {
-        const src = byId.get(node.id);
-        if (!src) return node;
-        return {
-          ...node,
-          data: {
-            handles: src.props.handles as FlowHandle[] | undefined,
-            body: src.children,
-            className: src.props.className as string | undefined,
-            emit: emitRef.current,
-            renderNode: renderNodeRef.current,
-          },
-        };
-      });
+  // Merge live BadUI bodies into RF nodes each render so nested prop patches
+  // (e.g. progress value) show up without requiring a node drag / structure change.
+  const displayNodes = useMemo(() => {
+    const byId = new Map(flowNodes.map((n) => [String(n.props.id ?? n.id), n]));
+    return nodes.map((node) => {
+      const src = byId.get(node.id);
+      if (!src) return node;
+      return {
+        ...node,
+        data: {
+          handles: src.props.handles as FlowHandle[] | undefined,
+          body: src.children,
+          className: src.props.className as string | undefined,
+          emit: emitRef.current,
+          renderNode: renderNodeRef.current,
+        },
+      };
     });
-  }, [bodySyncKey]);
+  }, [nodes, flowNodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange<Node<BaduiNodeData>>[]) => {
@@ -347,7 +341,7 @@ function BoundFlowInner({
       data-slot="flow"
     >
       <ReactFlow
-        nodes={nodes}
+        nodes={displayNodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
