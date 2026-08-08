@@ -290,4 +290,58 @@ describe('table builder', () => {
       hasDetail: true,
     });
   });
+
+  test('primaryAction and bulkActions compile', async () => {
+    const primaryCalls: number[] = [];
+    const bulkCalls: Array<{ actionId: string; rowKeys: Array<string | number> }> = [];
+    const built = table(rows)
+      .id('id')
+      .columns(columns)
+      .primaryAction('Add', () => {
+        primaryCalls.push(1);
+      })
+      .bulkActions([{ id: 'archive', label: 'Archive' }], (actionId, rowKeys) => {
+        bulkCalls.push({ actionId, rowKeys });
+      })
+      .build();
+
+    expect(built.props).toMatchObject({
+      primaryAction: { label: 'Add' },
+      selectable: true,
+      bulkActions: [{ id: 'archive', label: 'Archive', icon: undefined, variant: undefined }],
+    });
+    expect((built.props.events as string[]).includes('primaryAction')).toBe(true);
+    expect((built.props.events as string[]).includes('bulkAction')).toBe(true);
+
+    await built.handleEvent('primaryAction');
+    expect(primaryCalls).toEqual([1]);
+    await built.handleEvent('bulkAction', { actionId: 'archive', rowKeys: [1, 2] });
+    expect(bulkCalls).toEqual([{ actionId: 'archive', rowKeys: [1, 2] }]);
+  });
+
+  test('bulkActions rejects empty actions', () => {
+    expect(() =>
+      table(rows)
+        .bulkActions([], () => {})
+        .build(),
+    ).toThrow(/non-empty/);
+  });
+
+  test('manualPagination density zebra compile', () => {
+    const built = table(rows)
+      .id('id')
+      .columns(columns)
+      .pageSize(5)
+      .manualPagination(100)
+      .density('compact')
+      .zebra()
+      .build();
+    expect(built.props).toMatchObject({
+      manualPagination: true,
+      totalRows: 100,
+      density: 'compact',
+      zebra: true,
+      pageSize: 5,
+    });
+  });
 });

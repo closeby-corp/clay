@@ -65,7 +65,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `radialChart` | `radialchart` | Recharts radial bar (`nameKey`/`valueKey` or stacked `series`, optional center text / angles) |
 | `scatterChart` | `scatterchart` | Recharts scatter (`xKey` / `yKey`, optional `seriesKey`) |
 | `composedChart` | `composedchart` | Recharts composed (per-series `type`: bar/line/area) |
-| `dataTable` | `datatable` | Search, filters, views, grouping, selection, reorder, editors, export, sort, pagination, actions, detail drawer |
+| `dataTable` | `datatable` | Search, text/facet filters, views, grouping (collapse all), selection, bulk actions, reorder, editors (text/select/number/date/boolean), export, sort, local or manual pagination, density/zebra, column resize, loading/empty, actions, detail drawer |
 | `tabs` | `tabs` (+ child `tab`) | ShadCN `Tabs`; optimistic `value` |
 | `accordion` | `accordion` (+ child `accordionitem`) | ShadCN `Accordion`; optimistic `value` |
 | `collapsible` | `collapsible` | ShadCN `Collapsible`; optimistic open (`value`) |
@@ -104,7 +104,7 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `gantt` | `itemMove`, `itemClick` |
 | `flow` | `connect`, `nodeMove` (drag-stop), `nodesDelete`, `edgesDelete`, `selectionChange` |
 | `upload` | `upload`, `progress`, `error`, `abort` |
-| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
+| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `bulkAction`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
 | `dialogStack` | `close`, `indexChange` (number) |
 | `dropdownMenu` / `contextMenu` / `menubar` item | `select` |

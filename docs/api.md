@@ -845,7 +845,7 @@ ui.chart.radar(monthly, 'month').series(series).title('Skills').build();
 
 #### `ui.dataTable(data, props?)`
 
-Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows`.
+Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows` / `setLoading` / `setTotalRows` / `setDensity` / `setZebra`.
 
 `data` may be:
 
@@ -885,15 +885,22 @@ const table = ui.dataTable(tasks, {
 | `keyField` | `string` | `'__rowId'` | Row identity for actions |
 | `searchable` | `boolean` | `true` | Global filter input |
 | `searchPlaceholder` | `string` | `'Search…'` | Filter placeholder |
-| `columnFilterable` | `boolean` | `true` | Per-column filter row |
+| `columnFilterable` | `boolean` | `true` | Per-column filters (text row and/or facet popovers) |
 | `columnToggle` | `boolean` | `true` | Columns visibility menu |
 | `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
 | `exportFilename` | `string` | `'data'` | Download base name (no extension) |
+| `loading` | `boolean` | `false` | Show a spinner in the table body (`setLoading` toggles it) |
+| `emptyTitle` | `string` | `'No rows'` | Empty-state title |
+| `emptyDescription` | `string` | search/filter hint | Empty-state description |
 | `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
 | `pageSizeOptions` | `number[]` | `[10, 20, 30, 40, 50]` | Footer page-size select |
+| `manualPagination` | `boolean` | `false` | Treat `data` / `setRows` as the **current page**; skip local filter/sort/slice; use `totalRows` for the footer |
+| `totalRows` | `number` | | Total count across pages when `manualPagination` is true (`setTotalRows` updates it) |
+| `density` | `'compact' \| 'default' \| 'comfortable'` | `'default'` | Row / cell spacing (`setDensity`) |
+| `zebra` | `boolean` | `false` | Alternate-row striping (`setZebra`) |
 | `selectable` | `boolean` | `false` | Row checkboxes + selection events |
-| `reorderable` | `boolean` | `false` | Drag handle to reorder rows |
-| `groupBy` | `string \| (row) => unknown` | | Partition rows into collapsible groups (column key or derived value) |
+| `reorderable` | `boolean` | `false` | Drag handle to reorder rows (global order; page slice updates relative order without scrambling off-page rows) |
+| `groupBy` | `string \| (row) => unknown` | | Partition rows into collapsible groups (column key or derived value). Ignored when `manualPagination` is true |
 | `defaultCollapsed` | `boolean` | `false` | Start with every group collapsed (client-owned) |
 | `onGroupToggle` | `(groupKey, collapsed) => void` | | After a group header is expanded/collapsed |
 | `views` | `DataTableView[]` | | Tabbed views; each may include a row `filter` |
@@ -902,13 +909,18 @@ const table = ui.dataTable(tasks, {
 | `primaryAction` | `{ id?, label }` | | Toolbar primary button |
 | `onPrimaryAction` | `() => void` | | Primary button handler |
 | `detail` | `(row) => void` | | Build detached UI for the row detail drawer |
-| `onReorder` | `(orderedKeys) => void` | | After drag-reorder |
+| `onReorder` | `(orderedKeys) => void` | | After drag-reorder (receives the reordered page-slice keys) |
 | `onSelectionChange` | `(keys) => void` | | After selection changes |
+| `onPageChange` | `(page) => void` | | After footer page change (useful with `manualPagination`) |
 | `onPageSizeChange` | `(pageSize) => void` | | After footer page-size change |
 | `onCellChange` | `(rowKey, columnKey, value) => void` | | After inline editor commit |
-| `actions` | `DataTableAction[]` | `[]` | Per-row actions (≤2 as buttons; more collapse into an **Actions** menu) |
+| `actions` | `DataTableAction[]` | `[]` | Per-row actions — always shown in a **⋯** overflow menu |
 | `onAction` | `(actionId, row) => void` | | Row action handler |
+| `bulkActions` | `DataTableAction[]` | `[]` | Toolbar actions for the current selection (requires `selectable`) |
+| `onBulkAction` | `(actionId, rowKeys) => void` | | Bulk action handler |
 | `className` | `string` | | Extra classes |
+
+**Remote / server-paged mode:** set `manualPagination: true`, pass the current page rows as `data` (or `setRows`), and set `totalRows` (or `setTotalRows`). The client still emits `page` / `pageSize`; handle them with `onPageChange` / `onPageSizeChange`, fetch the next slice, then `setRows` + `setTotalRows`. Local filter/sort/group are not applied in this mode (chrome may still show search UI if left enabled — prefer turning search/filters off or driving them from the server). Export uses the current page rows only. Column headers are resizable on the client (drag the right edge).
 
 | View field | Type | Notes |
 |------------|------|-------|
@@ -919,7 +931,7 @@ const table = ui.dataTable(tasks, {
 
 Every view tab shows the same table chrome; switching views applies that view’s `filter` (if any) before search/column filters. Badge counts stay live after `setRows` when `count` is omitted.
 
-When `groupBy` is set, filter/sort run first, then rows are stably partitioned so each group is contiguous. The client renders collapsible group headers (collapse state is client-owned, like selection); `onGroupToggle` fires for app logic. Empty group values show as `(Empty)`.
+When `groupBy` is set, filter/sort run first, then rows are stably partitioned so each group is contiguous. The client renders collapsible group headers plus **Collapse all** / **Expand all** in the toolbar (collapse state is client-owned, like selection); `onGroupToggle` fires for app logic. Empty group values show as `(Empty)`.
 
 | Column field | Type | Notes |
 |--------------|------|-------|
@@ -927,11 +939,15 @@ When `groupBy` is set, filter/sort run first, then rows are stably partitioned s
 | `header` | `string` | Header label |
 | `align` | `'left' \| 'right' \| 'center'` | Cell alignment |
 | `sortable` | `boolean` | Default `true` |
+| `filter` | `'text' \| 'facet'` | Default text substring in the filter row; `'facet'` is multi-select exact match in a header popover |
+| `facetOptions` | `{ value, label }[]` | Facet choices; when set without `filter`, implies `filter: 'facet'`. When omitted with `filter: 'facet'`, distinct values are derived. Server adds live `count`s. |
 | `value` | `(row) => unknown` | Computed scalar for sort / filter / export / default display |
 | `render` | `(row) => Element \| scalar` | Optional cell UI (e.g. `ui.badge(...)`); display-only |
-| `editor` | `'text' \| 'select'` | Inline editor on the client |
+| `editor` | `'text' \| 'select' \| 'number' \| 'date' \| 'boolean'` | Inline editor on the client (`number` commits a finite number; `date` ISO `YYYY-MM-DD`; `boolean` a switch) |
 | `editorOptions` | `{ value, label }[]` | Options when `editor` is `'select'` |
 | `detailTrigger` | `boolean` | Cell opens the row detail drawer |
+
+Facet filters store selected values as a JSON string array in `columnFilters[key]` (e.g. `'["todo","done"]'`). Text columns keep substring filters in the denser filter row; facet-only tables skip that row and filter from the header popover.
 
 Server-side column callbacks (not Vue/NiceGUI slots):
 
@@ -959,7 +975,7 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 | `icon` | Lucide name (`pencil`, `trash-2`, …) from a curated action set |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
-Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `pageSize` / `action` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
+Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `pageSize` / `action` / `bulkAction` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. `bulkAction` payload is `{ actionId, rowKeys }`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page — except in `manualPagination` mode, where export is the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
 
 #### Structured tables (`ui.table`)
 
@@ -971,9 +987,14 @@ Optional sugar over `ui.dataTable`. Staged methods bundle related props; `.build
 | `.columns(cols)` | `columns` |
 | `.search(placeholder?)` | `searchable: true`, `searchPlaceholder` |
 | `.pageSize(n, options?)` | `pageSize`, `pageSizeOptions` |
+| `.manualPagination(totalRows?)` | `manualPagination: true`, optional `totalRows` |
+| `.density(value)` | `density` |
+| `.zebra(enabled?)` | `zebra` (default `true`) |
 | `.groupBy(key, opts?)` | `groupBy`, `defaultCollapsed` |
 | `.views(items, defaultId?)` | `views`, `defaultView` |
 | `.rowActions(actions, onAction)` | `actions`, `onAction` |
+| `.primaryAction(action \| label, onPrimaryAction?)` | `primaryAction`, `onPrimaryAction` |
+| `.bulkActions(actions, onBulkAction)` | `bulkActions`, `onBulkAction`, `selectable: true` |
 | `.detail(fn)` | `detail` (use `detailTrigger` on columns) |
 | `.selectable(onChange?)` | `selectable`, `onSelectionChange` |
 | `.reorderable(onReorder?)` | `reorderable`, `onReorder` |
@@ -987,7 +1008,14 @@ ui.table(tasks)
   .search('Search tasks…')
   .groupBy('status')
   .pageSize(8, { options: [5, 8, 10, 20] })
+  .density('compact')
+  .zebra()
   .rowActions(actions, handleAction)
+  .primaryAction('Add task', () => { /* … */ })
+  .bulkActions(
+    [{ id: 'archive', label: 'Archive' }],
+    (actionId, rowKeys) => { /* … */ },
+  )
   .build();
 ```
 

@@ -1,7 +1,20 @@
 import { Element, withDetached, withParent } from '@badui/core';
 import type { ElementNode } from '@badui/core';
 
-export type TableColumnEditor = 'text' | 'select';
+export type TableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
+
+/** Row / cell spacing. */
+export type DataTableDensity = 'compact' | 'default' | 'comfortable';
+
+/** Per-column filter UI. `'facet'` is multi-select exact match for enum-like values. */
+export type TableColumnFilter = 'text' | 'facet';
+
+export type DataTableFacetOption = {
+  value: string;
+  label: string;
+  /** Distinct-row count under current view + other filters (server-computed). */
+  count?: number;
+};
 
 export type TableColumn = {
   key: string;
@@ -9,11 +22,25 @@ export type TableColumn = {
   align?: 'left' | 'right' | 'center';
   /** Defaults to true when omitted. */
   sortable?: boolean;
+  /**
+   * Column filter mode. Default `'text'` (substring).
+   * `'facet'` enables multi-select exact match; options come from `facetOptions` or distinct values.
+   */
+  filter?: TableColumnFilter;
+  /**
+   * Facet choices. When set without `filter`, implies `filter: 'facet'`.
+   * When `filter: 'facet'` and omitted, distinct values are derived from rows.
+   */
+  facetOptions?: { value: string; label: string }[];
   /** Derived scalar for sort / filter / export / default display. */
   value?: (row: Record<string, unknown>) => unknown;
   /** Optional cell UI; may return an Element (e.g. ui.badge) or a scalar. */
   render?: (row: Record<string, unknown>) => unknown;
-  /** Inline editor chrome on the client. */
+  /**
+   * Inline editor chrome on the client.
+   * `'number'` commits a finite number; `'date'` an ISO `YYYY-MM-DD` string;
+   * `'boolean'` a boolean (switch).
+   */
   editor?: TableColumnEditor;
   /** Options when `editor` is `'select'`. */
   editorOptions?: { value: string; label: string }[];
@@ -63,9 +90,30 @@ export type DataTableProps = {
   pageSize?: number;
   /** Rows-per-page options in the footer select. */
   pageSizeOptions?: number[];
+  /**
+   * When true, `data` / `setRows` are treated as the **current page** only.
+   * Filter/sort/group are not applied server-side; use `totalRows` for the footer
+   * and listen to `page` / `pageSize` (via `onPageChange` / `onPageSizeChange`) to fetch.
+   */
+  manualPagination?: boolean;
+  /**
+   * Total row count across all pages. Used when `manualPagination` is true
+   * (otherwise derived from the processed local row set). Also settable via `setTotalRows`.
+   */
+  totalRows?: number;
+  /** Row density. Default `'default'`. */
+  density?: DataTableDensity;
+  /** Alternate-row striping. Default `false`. */
+  zebra?: boolean;
   actions?: DataTableAction[];
   onAction?: (actionId: string, row: Record<string, unknown>) => void | Promise<void>;
-  /** Show per-column filter row. Default `true`. */
+  /** Toolbar actions applied to the current selection (requires `selectable`). */
+  bulkActions?: DataTableAction[];
+  onBulkAction?: (
+    actionId: string,
+    rowKeys: Array<string | number>,
+  ) => void | Promise<void>;
+  /** Show per-column filters (text row and/or facet popovers). Default `true`. */
   columnFilterable?: boolean;
   /** Show Columns visibility menu. Default `true`. */
   columnToggle?: boolean;
@@ -73,6 +121,12 @@ export type DataTableProps = {
   exportable?: boolean;
   /** Base filename without extension. Default `'data'`. */
   exportFilename?: string;
+  /** When true, the client shows a loading state in the table body. */
+  loading?: boolean;
+  /** Empty-state title. Default `'No rows'`. */
+  emptyTitle?: string;
+  /** Empty-state description. */
+  emptyDescription?: string;
   selectable?: boolean;
   reorderable?: boolean;
   views?: DataTableView[];
@@ -80,6 +134,7 @@ export type DataTableProps = {
   /**
    * Group rows by a column key or a derived value.
    * After filter/sort, rows are partitioned so each group is contiguous.
+   * Ignored when `manualPagination` is true (rows are shown as supplied).
    */
   groupBy?: string | ((row: Record<string, unknown>) => unknown);
   /** When true, the client starts with every group collapsed. Default `false`. */
@@ -89,6 +144,7 @@ export type DataTableProps = {
   detail?: (row: Record<string, unknown>) => void;
   onReorder?: (orderedKeys: Array<string | number>) => void | Promise<void>;
   onSelectionChange?: (keys: Array<string | number>) => void | Promise<void>;
+  onPageChange?: (page: number) => void | Promise<void>;
   onPageSizeChange?: (pageSize: number) => void | Promise<void>;
   onCellChange?: (
     rowKey: string | number,
@@ -118,6 +174,7 @@ type SortDir = 'asc' | 'desc';
 
 type SortPayload = { key?: string; dir?: SortDir };
 type ActionPayload = { actionId?: string; rowKey?: string | number };
+type BulkActionPayload = { actionId?: string; rowKeys?: Array<string | number> };
 type ColumnFilterPayload = { key?: string; value?: string };
 type ColumnVisibilityPayload = { key?: string; visible?: boolean };
 type ExportPayload = { format?: ExportFormat; mode?: ExportMode };
@@ -138,6 +195,8 @@ type ClientColumn = {
   header: string;
   align?: 'left' | 'right' | 'center';
   sortable?: boolean;
+  filter?: TableColumnFilter;
+  facetOptions?: DataTableFacetOption[];
   editor?: TableColumnEditor;
   editorOptions?: { value: string; label: string }[];
   detailTrigger?: boolean;
@@ -229,16 +288,101 @@ function withSortableDefaults(columns: TableColumn[]): TableColumn[] {
   }));
 }
 
-function toClientColumns(columns: TableColumn[]): ClientColumn[] {
-  return columns.map(({ key, header, align, sortable, editor, editorOptions, detailTrigger }) => ({
-    key,
-    header,
-    align,
-    sortable,
-    editor,
-    editorOptions,
-    detailTrigger,
+/** True when the column uses multi-select facet filtering. */
+export function isFacetColumn(col: TableColumn): boolean {
+  if (col.filter === 'facet') return true;
+  if (col.filter === 'text') return false;
+  return col.facetOptions != null;
+}
+
+/**
+ * Facet filter values are stored as a JSON string array in `columnFilters[key]`.
+ * Returns `null` when the value is not a facet payload (treat as text filter).
+ */
+export function parseFacetFilter(value: string): string[] | null {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('[')) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map((v) => String(v));
+  } catch {
+    return null;
+  }
+}
+
+export function serializeFacetFilter(values: string[]): string {
+  return JSON.stringify(values);
+}
+
+function facetCellKey(value: unknown): string {
+  if (value == null || value === '') return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function deriveFacetOptions(
+  col: TableColumn,
+  rows: Record<string, unknown>[],
+): DataTableFacetOption[] {
+  if (col.facetOptions && col.facetOptions.length > 0) {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const key = facetCellKey(cellValue(col, row));
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return col.facetOptions.map((opt) => ({
+      value: opt.value,
+      label: opt.label,
+      count: counts.get(opt.value) ?? 0,
+    }));
+  }
+
+  const order: string[] = [];
+  const labels = new Map<string, string>();
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const raw = cellValue(col, row);
+    const key = facetCellKey(raw);
+    if (!labels.has(key)) {
+      labels.set(key, formatGroupLabel(raw));
+      order.push(key);
+    }
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return order.map((value) => ({
+    value,
+    label: labels.get(value) ?? value,
+    count: counts.get(value) ?? 0,
   }));
+}
+
+function toClientColumns(
+  columns: TableColumn[],
+  facetRowsByKey?: Map<string, Record<string, unknown>[]>,
+): ClientColumn[] {
+  return columns.map((col) => {
+    const filter: TableColumnFilter | undefined = isFacetColumn(col)
+      ? 'facet'
+      : col.filter === 'text'
+        ? 'text'
+        : undefined;
+    const facetOptions =
+      filter === 'facet'
+        ? deriveFacetOptions(col, facetRowsByKey?.get(col.key) ?? [])
+        : undefined;
+    return {
+      key: col.key,
+      header: col.header,
+      align: col.align,
+      sortable: col.sortable,
+      filter,
+      facetOptions,
+      editor: col.editor,
+      editorOptions: col.editorOptions,
+      detailTrigger: col.detailTrigger,
+    };
+  });
 }
 
 /** Scalar used for sort / filter / export / default display. */
@@ -379,10 +523,16 @@ function rowMatchesColumnFilters(
   columnFilters: Record<string, string>,
 ): boolean {
   for (const [key, value] of Object.entries(columnFilters)) {
-    const q = value.trim().toLowerCase();
-    if (!q) continue;
+    if (value.trim() === '') continue;
     const col = columns.find((c) => c.key === key);
     const cell = col ? cellValue(col, row) : row[key];
+    if (col && isFacetColumn(col)) {
+      const selected = parseFacetFilter(value) ?? [];
+      if (selected.length === 0) continue;
+      if (!selected.includes(facetCellKey(cell))) return false;
+      continue;
+    }
+    const q = value.trim().toLowerCase();
     if (!String(cell ?? '').toLowerCase().includes(q)) return false;
   }
   return true;
@@ -455,12 +605,19 @@ export class DataTableElement extends Element {
   private page = 1;
   private pageSize: number;
   private pageSizeOptions: number[];
+  private manualPagination: boolean;
+  private manualTotalRows: number | null;
+  private density: DataTableDensity;
+  private zebra: boolean;
   private searchable: boolean;
   private searchPlaceholder: string;
   private columnFilterable: boolean;
   private columnToggle: boolean;
   private exportable: boolean;
   private exportFilename: string;
+  private loading: boolean;
+  private emptyTitle: string;
+  private emptyDescription: string;
   private selectable: boolean;
   private reorderable: boolean;
   private views: DataTableView[];
@@ -470,9 +627,15 @@ export class DataTableElement extends Element {
   private primaryAction?: DataTablePrimaryAction;
   private detailFn?: (row: Record<string, unknown>) => void;
   private actions: DataTableAction[];
+  private bulkActions: DataTableAction[];
   private onActionFn?: (actionId: string, row: Record<string, unknown>) => void | Promise<void>;
+  private onBulkActionFn?: (
+    actionId: string,
+    rowKeys: Array<string | number>,
+  ) => void | Promise<void>;
   private onReorderFn?: (orderedKeys: Array<string | number>) => void | Promise<void>;
   private onSelectionChangeFn?: (keys: Array<string | number>) => void | Promise<void>;
+  private onPageChangeFn?: (page: number) => void | Promise<void>;
   private onPageSizeChangeFn?: (pageSize: number) => void | Promise<void>;
   private onCellChangeFn?: (
     rowKey: string | number,
@@ -490,13 +653,28 @@ export class DataTableElement extends Element {
     const searchable = props.searchable !== false;
     const pageSize = props.pageSize ?? 10;
     const pageSizeOptions = props.pageSizeOptions ?? [10, 20, 30, 40, 50];
+    const manualPagination = props.manualPagination === true;
+    const manualTotalRows =
+      props.totalRows != null && Number.isFinite(props.totalRows)
+        ? Math.max(0, Math.floor(Number(props.totalRows)))
+        : null;
+    const density: DataTableDensity =
+      props.density === 'compact' || props.density === 'comfortable'
+        ? props.density
+        : 'default';
+    const zebra = props.zebra === true;
     const actions = props.actions ?? [];
+    const bulkActions = props.bulkActions ?? [];
     const keyField = props.keyField ?? ROW_ID_FIELD;
     const searchPlaceholder = props.searchPlaceholder ?? 'Search…';
     const columnFilterable = props.columnFilterable !== false;
     const columnToggle = props.columnToggle !== false;
     const exportable = props.exportable !== false;
     const exportFilename = props.exportFilename ?? 'data';
+    const loading = props.loading === true;
+    const emptyTitle = props.emptyTitle ?? 'No rows';
+    const emptyDescription =
+      props.emptyDescription ?? 'No matching rows. Try adjusting search or filters.';
     const selectable = props.selectable === true;
     const reorderable = props.reorderable === true;
     const views = props.views ?? [];
@@ -516,6 +694,9 @@ export class DataTableElement extends Element {
       columnFilterable,
       columnToggle,
       exportable,
+      loading,
+      emptyTitle,
+      emptyDescription,
       selectable,
       reorderable,
       views,
@@ -527,6 +708,12 @@ export class DataTableElement extends Element {
       pageSizeOptions,
       hasDetail: typeof props.detail === 'function',
       actions: actions.map(({ id, label, icon, variant }) => ({ id, label, icon, variant })),
+      bulkActions: bulkActions.map(({ id, label, icon, variant }) => ({
+        id,
+        label,
+        icon,
+        variant,
+      })),
       filter: '',
       columnFilters: {},
       hiddenColumns: [],
@@ -534,6 +721,9 @@ export class DataTableElement extends Element {
       sortDir: 'asc',
       page: 1,
       pageSize,
+      manualPagination,
+      density,
+      zebra,
       totalRows: 0,
       totalPages: 1,
     });
@@ -544,12 +734,19 @@ export class DataTableElement extends Element {
     this.keyField = keyField;
     this.pageSize = pageSize;
     this.pageSizeOptions = pageSizeOptions;
+    this.manualPagination = manualPagination;
+    this.manualTotalRows = manualTotalRows;
+    this.density = density;
+    this.zebra = zebra;
     this.searchable = searchable;
     this.searchPlaceholder = searchPlaceholder;
     this.columnFilterable = columnFilterable;
     this.columnToggle = columnToggle;
     this.exportable = exportable;
     this.exportFilename = exportFilename;
+    this.loading = loading;
+    this.emptyTitle = emptyTitle;
+    this.emptyDescription = emptyDescription;
     this.selectable = selectable;
     this.reorderable = reorderable;
     this.views = views;
@@ -559,9 +756,12 @@ export class DataTableElement extends Element {
     this.primaryAction = primaryAction;
     this.detailFn = props.detail;
     this.actions = actions;
+    this.bulkActions = bulkActions;
     this.onActionFn = props.onAction;
+    this.onBulkActionFn = props.onBulkAction;
     this.onReorderFn = props.onReorder;
     this.onSelectionChangeFn = props.onSelectionChange;
+    this.onPageChangeFn = props.onPageChange;
     this.onPageSizeChangeFn = props.onPageSizeChange;
     this.onCellChangeFn = props.onCellChange;
     this.onViewChangeFn = props.onViewChange;
@@ -575,6 +775,7 @@ export class DataTableElement extends Element {
     this.on('export', (value) => this.handleExport(value));
     this.on('page', (value) => this.handlePage(value));
     this.on('action', (value) => this.handleAction(value));
+    this.on('bulkAction', (value) => this.handleBulkAction(value));
     this.on('reorder', (value) => this.handleReorder(value));
     this.on('selectionChange', (value) => this.handleSelectionChange(value));
     this.on('pageSize', (value) => this.handlePageSize(value));
@@ -590,6 +791,37 @@ export class DataTableElement extends Element {
     return this.sourceRows.map((r) => ({ ...r }));
   }
 
+  /** Toggle the client loading state (spinner in the table body). */
+  setLoading(loading: boolean): this {
+    this.loading = loading;
+    this.syncView();
+    return this;
+  }
+
+  /**
+   * Set the footer total when `manualPagination` is true.
+   * Ignored for local (auto) pagination, where totals come from processed rows.
+   */
+  setTotalRows(total: number): this {
+    if (!Number.isFinite(total) || total < 0) return this;
+    this.manualTotalRows = Math.floor(total);
+    this.syncView();
+    return this;
+  }
+
+  setDensity(density: DataTableDensity): this {
+    this.density =
+      density === 'compact' || density === 'comfortable' ? density : 'default';
+    this.syncView();
+    return this;
+  }
+
+  setZebra(zebra: boolean): this {
+    this.zebra = zebra === true;
+    this.syncView();
+    return this;
+  }
+
   setRows(data: unknown): this {
     const { rows, inferredColumns } = normalizeTableData(data);
     this.sourceRows = rows;
@@ -603,7 +835,10 @@ export class DataTableElement extends Element {
         if (!keys.has(key)) this.hiddenKeys.delete(key);
       }
     }
-    this.page = 1;
+    // Remote pages keep the current page; local mode resets to page 1.
+    if (!this.manualPagination) {
+      this.page = 1;
+    }
     this.syncView();
     return this;
   }
@@ -638,9 +873,17 @@ export class DataTableElement extends Element {
   private handleColumnFilter(value: unknown): void {
     const payload = (value ?? {}) as ColumnFilterPayload;
     const key = payload.key;
-    if (!key || !this.columns.some((c) => c.key === key)) return;
+    const col = this.columns.find((c) => c.key === key);
+    if (!key || !col) return;
     const next = String(payload.value ?? '');
-    if (next.trim() === '') {
+    if (isFacetColumn(col)) {
+      const selected = parseFacetFilter(next) ?? [];
+      if (selected.length === 0) {
+        delete this.columnFilters[key];
+      } else {
+        this.columnFilters[key] = serializeFacetFilter(selected);
+      }
+    } else if (next.trim() === '') {
       delete this.columnFilters[key];
     } else {
       this.columnFilters[key] = next;
@@ -697,11 +940,14 @@ export class DataTableElement extends Element {
     }
   }
 
-  private handlePage(value: unknown): void {
+  private async handlePage(value: unknown): Promise<void> {
     const next = Number(value);
     if (!Number.isFinite(next) || next < 1) return;
     this.page = Math.floor(next);
     this.syncView();
+    if (this.onPageChangeFn) {
+      await this.onPageChangeFn(this.page);
+    }
   }
 
   private async handleAction(value: unknown): Promise<void> {
@@ -714,21 +960,65 @@ export class DataTableElement extends Element {
     await this.onActionFn(actionId, { ...row });
   }
 
+  private async handleBulkAction(value: unknown): Promise<void> {
+    if (!this.onBulkActionFn || !this.selectable) return;
+    const payload = (value ?? {}) as BulkActionPayload;
+    const actionId = payload.actionId;
+    if (!actionId || !this.bulkActions.some((a) => a.id === actionId)) return;
+    const rowKeys = payload.rowKeys;
+    if (!Array.isArray(rowKeys) || rowKeys.length === 0) return;
+    const known = new Set(this.sourceRows.map((r) => String(r[this.keyField])));
+    const keys = rowKeys.filter((k) => known.has(String(k)));
+    if (keys.length === 0) return;
+    await this.onBulkActionFn(actionId, keys);
+  }
+
+  /**
+   * Global reorder: `orderedKeys` is the new order of the dragged page slice.
+   * Those keys keep their positions in the full filtered/sorted list; only their
+   * relative order changes. Off-page (and filtered-out) rows stay put.
+   */
   private async handleReorder(value: unknown): Promise<void> {
     const payload = (value ?? {}) as ReorderPayload;
     const orderedKeys = payload.orderedKeys;
     if (!Array.isArray(orderedKeys) || orderedKeys.length === 0) return;
 
+    const sliceKeys = orderedKeys.map(String);
+    const sliceSet = new Set(sliceKeys);
+    if (sliceSet.size !== sliceKeys.length) return;
+
+    const processed = this.computeProcessedRows();
+    const processedKeys = processed.map((r) => String(r[this.keyField]));
+    const positions: number[] = [];
+    for (let i = 0; i < processedKeys.length; i++) {
+      if (sliceSet.has(processedKeys[i]!)) positions.push(i);
+    }
+    if (positions.length !== sliceKeys.length) return;
+    const positionSet = new Set(positions.map((i) => processedKeys[i]!));
+    if (positionSet.size !== sliceSet.size || ![...sliceSet].every((k) => positionSet.has(k))) {
+      return;
+    }
+
+    const nextProcessedKeys = [...processedKeys];
+    for (let i = 0; i < positions.length; i++) {
+      nextProcessedKeys[positions[i]!] = sliceKeys[i]!;
+    }
+
     const byKey = new Map(this.sourceRows.map((r) => [String(r[this.keyField]), r]));
     const next: Record<string, unknown>[] = [];
-    for (const key of orderedKeys) {
-      const row = byKey.get(String(key));
+    const seen = new Set<string>();
+    for (const key of nextProcessedKeys) {
+      const row = byKey.get(key);
       if (row) {
         next.push(row);
-        byKey.delete(String(key));
+        seen.add(key);
       }
     }
-    for (const row of byKey.values()) next.push(row);
+    for (const row of this.sourceRows) {
+      const key = String(row[this.keyField]);
+      if (!seen.has(key)) next.push(row);
+    }
+
     this.sourceRows = next.map((row, index) =>
       this.keyField === ROW_ID_FIELD ? { ...row, [ROW_ID_FIELD]: index } : row,
     );
@@ -761,15 +1051,37 @@ export class DataTableElement extends Element {
     }
   }
 
+  private coerceEditorValue(columnKey: string, value: unknown): unknown {
+    const col = this.columns.find((c) => c.key === columnKey);
+    if (!col?.editor) return value;
+    if (col.editor === 'number') {
+      if (value === '' || value == null) return null;
+      const n = typeof value === 'number' ? value : Number(value);
+      return Number.isFinite(n) ? n : value;
+    }
+    if (col.editor === 'boolean') {
+      if (typeof value === 'boolean') return value;
+      if (value === 'true' || value === 1 || value === '1') return true;
+      if (value === 'false' || value === 0 || value === '0') return false;
+      return Boolean(value);
+    }
+    if (col.editor === 'date') {
+      if (value == null || value === '') return null;
+      return String(value);
+    }
+    return value;
+  }
+
   private async handleCellChange(value: unknown): Promise<void> {
     const payload = (value ?? {}) as CellChangePayload;
     if (payload.rowKey == null || !payload.columnKey) return;
     const row = this.sourceRows.find((r) => String(r[this.keyField]) === String(payload.rowKey));
     if (!row) return;
-    row[payload.columnKey] = payload.value;
+    const next = this.coerceEditorValue(payload.columnKey, payload.value);
+    row[payload.columnKey] = next;
     this.syncView();
     if (this.onCellChangeFn) {
-      await this.onCellChangeFn(payload.rowKey, payload.columnKey, payload.value);
+      await this.onCellChangeFn(payload.rowKey, payload.columnKey, next);
     }
   }
 
@@ -799,13 +1111,33 @@ export class DataTableElement extends Element {
     }
   }
 
-  /** Visible rows after view filter + search/column filters + sort (+ group contiguous). */
-  computeProcessedRows(): Record<string, unknown>[] {
+  private viewFilteredRows(): Record<string, unknown>[] {
     const active = this.views.find((v) => v.id === this.activeView);
-    let rows = active?.filter
+    return active?.filter
       ? this.sourceRows.filter((row) => active.filter!(row))
       : this.sourceRows;
-    rows = rows.filter(
+  }
+
+  /** Rows used to count facet options for `columnKey` (excludes that column's filter). */
+  private facetBaseRows(columnKey: string): Record<string, unknown>[] {
+    const filters = { ...this.columnFilters };
+    delete filters[columnKey];
+    return this.viewFilteredRows().filter(
+      (row) =>
+        rowMatchesGlobalFilter(row, this.columns, this.filter) &&
+        rowMatchesColumnFilters(row, this.columns, filters),
+    );
+  }
+
+  /**
+   * Visible rows after view filter + search/column filters + sort (+ group contiguous).
+   * When `manualPagination` is set, returns `sourceRows` unchanged (already a page).
+   */
+  computeProcessedRows(): Record<string, unknown>[] {
+    if (this.manualPagination) {
+      return this.sourceRows;
+    }
+    let rows = this.viewFilteredRows().filter(
       (row) =>
         rowMatchesGlobalFilter(row, this.columns, this.filter) &&
         rowMatchesColumnFilters(row, this.columns, this.columnFilters),
@@ -839,30 +1171,46 @@ export class DataTableElement extends Element {
 
   syncView(): void {
     const processed = this.computeProcessedRows();
-    const totalRows = processed.length;
+    const totalRows = this.manualPagination
+      ? (this.manualTotalRows ?? processed.length)
+      : processed.length;
     const totalPages =
       this.pageSize > 0 ? Math.max(1, Math.ceil(totalRows / this.pageSize) || 1) : 1;
     if (this.page > totalPages) this.page = totalPages;
     if (this.page < 1) this.page = 1;
 
-    const start = this.pageSize > 0 ? (this.page - 1) * this.pageSize : 0;
-    const pageRows =
-      this.pageSize > 0 ? processed.slice(start, start + this.pageSize) : processed;
+    // Manual mode: rows are already the current page — do not slice.
+    const pageRows = this.manualPagination
+      ? processed
+      : this.pageSize > 0
+        ? processed.slice((this.page - 1) * this.pageSize, (this.page - 1) * this.pageSize + this.pageSize)
+        : processed;
     const visibleCols = this.visibleColumns();
-    const groups = this.groupBy
-      ? groupRows(processed, this.groupBy, this.columns).groups
-      : [];
+    const groups =
+      this.groupBy && !this.manualPagination
+        ? groupRows(processed, this.groupBy, this.columns).groups
+        : [];
     const visible = pageRows.map((row) => {
       const display = buildDisplayRow(row, visibleCols, this.detailFn);
-      if (this.groupBy) {
+      if (this.groupBy && !this.manualPagination) {
         display[GROUP_KEY_FIELD] = resolveGroupValue(row, this.groupBy, this.columns).key;
       }
       return display;
     });
 
+    const facetRowsByKey = new Map<string, Record<string, unknown>[]>();
+    for (const col of this.columns) {
+      if (isFacetColumn(col)) {
+        facetRowsByKey.set(
+          col.key,
+          this.manualPagination ? this.sourceRows : this.facetBaseRows(col.key),
+        );
+      }
+    }
+
     this.update({
-      columns: toClientColumns(visibleCols),
-      allColumns: toClientColumns(this.columns),
+      columns: toClientColumns(visibleCols, facetRowsByKey),
+      allColumns: toClientColumns(this.columns, facetRowsByKey),
       rows: visible,
       filter: this.filter,
       columnFilters: { ...this.columnFilters },
@@ -872,6 +1220,9 @@ export class DataTableElement extends Element {
       page: this.page,
       pageSize: this.pageSize,
       pageSizeOptions: this.pageSizeOptions,
+      manualPagination: this.manualPagination,
+      density: this.density,
+      zebra: this.zebra,
       totalRows,
       totalPages,
       searchable: this.searchable,
@@ -879,16 +1230,32 @@ export class DataTableElement extends Element {
       columnFilterable: this.columnFilterable,
       columnToggle: this.columnToggle,
       exportable: this.exportable,
+      loading: this.loading,
+      emptyTitle: this.emptyTitle,
+      emptyDescription: this.emptyDescription,
       selectable: this.selectable,
       reorderable: this.reorderable,
       views: this.clientViews(),
       activeView: this.activeView,
-      groupBy: typeof this.groupBy === 'string' ? this.groupBy : this.groupBy ? true : null,
+      groupBy:
+        this.manualPagination
+          ? null
+          : typeof this.groupBy === 'string'
+            ? this.groupBy
+            : this.groupBy
+              ? true
+              : null,
       groups,
       defaultCollapsed: this.defaultCollapsed,
       primaryAction: this.primaryAction ?? null,
       hasDetail: typeof this.detailFn === 'function',
       actions: this.actions.map(({ id, label, icon, variant }) => ({ id, label, icon, variant })),
+      bulkActions: this.bulkActions.map(({ id, label, icon, variant }) => ({
+        id,
+        label,
+        icon,
+        variant,
+      })),
       keyField: this.keyField,
     });
   }

@@ -15,7 +15,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
-| `/examples/datatable` | `DataTableDemo.ts` | Primary `ui.table(...).build()`; badges, grouping, confirm/prompt/choose; props `dataTable` sample |
+| `/examples/datatable` | `DataTableDemo.ts` | Manual/remote pagination, density/zebra, number/date/boolean editors, column resize; facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*` including scatter / composed; props API sample |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
@@ -219,7 +219,65 @@ ui.dataTable(tasks, {
 });
 ```
 
-Filter/sort run first; rows are then stably partitioned into contiguous groups. The client draws collapsible headers; collapse is client-owned (like selection).
+Filter/sort run first; rows are then stably partitioned into contiguous groups. The client draws collapsible headers plus Collapse all / Expand all; collapse is client-owned (like selection).
+
+## Pattern: DataTable facet filters
+
+```typescript
+ui.dataTable(tasks, {
+  keyField: 'id',
+  columns: [
+    { key: 'title', header: 'Title' },
+    {
+      key: 'status',
+      header: 'Status',
+      filter: 'facet',
+      facetOptions: [
+        { value: 'todo', label: 'Todo' },
+        { value: 'done', label: 'Done' },
+      ],
+    },
+    { key: 'owner', header: 'Owner', filter: 'facet' }, // options derived from distinct values
+  ],
+});
+```
+
+Facet columns filter with multi-select exact match from a header popover. Text columns keep the substring filter row.
+
+## Pattern: DataTable manual / remote pagination
+
+```typescript
+let page = 1;
+let pageSize = 10;
+const remote = ui.dataTable([], {
+  keyField: 'id',
+  manualPagination: true,
+  totalRows: 0,
+  pageSize,
+  searchable: false,
+  columnFilterable: false,
+  onPageChange: async (p) => {
+    page = p;
+    await load();
+  },
+  onPageSizeChange: async (size) => {
+    pageSize = size;
+    page = 1;
+    await load();
+  },
+  columns: [/* … */],
+});
+
+async function load() {
+  remote.setLoading(true);
+  const { rows, total } = await fetchPage({ page, pageSize });
+  remote.setRows(rows);
+  remote.setTotalRows(total);
+  remote.setLoading(false);
+}
+```
+
+Rows are the current page only; the footer uses `totalRows`. Local filter/sort/group are skipped.
 
 ## Styling tip
 

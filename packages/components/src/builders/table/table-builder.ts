@@ -1,4 +1,13 @@
-import { dataTable, type DataTableAction, type DataTableElement, type DataTableProps, type DataTableView, type TableColumn } from '../../data-table';
+import {
+  dataTable,
+  type DataTableAction,
+  type DataTableDensity,
+  type DataTableElement,
+  type DataTablePrimaryAction,
+  type DataTableProps,
+  type DataTableView,
+  type TableColumn,
+} from '../../data-table';
 
 export type PageSizeOptions = {
   options?: number[];
@@ -46,6 +55,28 @@ export class TableBuilder {
     return this;
   }
 
+  /**
+   * Server-paged mode: rows are the current page; `totalRows` drives the footer.
+   * Wire `onPageChange` / `onPageSizeChange` (or listen after `.build()`) to fetch.
+   */
+  manualPagination(totalRows?: number): this {
+    this.props.manualPagination = true;
+    if (totalRows !== undefined) {
+      this.props.totalRows = totalRows;
+    }
+    return this;
+  }
+
+  density(value: DataTableDensity): this {
+    this.props.density = value;
+    return this;
+  }
+
+  zebra(enabled = true): this {
+    this.props.zebra = enabled;
+    return this;
+  }
+
   groupBy(
     key: string | ((row: Record<string, unknown>) => unknown),
     opts?: GroupByOptions,
@@ -78,6 +109,40 @@ export class TableBuilder {
     }
     this.props.actions = actions;
     this.props.onAction = onAction;
+    return this;
+  }
+
+  /**
+   * Toolbar primary button. Pass a label string or `{ id?, label }`, plus optional click handler.
+   */
+  primaryAction(
+    action: DataTablePrimaryAction | string,
+    onPrimaryAction?: () => void | Promise<void>,
+  ): this {
+    this.props.primaryAction =
+      typeof action === 'string' ? { label: action } : action;
+    if (onPrimaryAction) {
+      this.props.onPrimaryAction = onPrimaryAction;
+    }
+    return this;
+  }
+
+  /**
+   * Selection toolbar actions. Enables `selectable` and requires a non-empty action list + handler.
+   */
+  bulkActions(
+    actions: DataTableAction[],
+    onBulkAction: (
+      actionId: string,
+      rowKeys: Array<string | number>,
+    ) => void | Promise<void>,
+  ): this {
+    if (actions.length === 0) {
+      throw new Error('table.bulkActions: actions must be non-empty when a handler is provided');
+    }
+    this.props.selectable = true;
+    this.props.bulkActions = actions;
+    this.props.onBulkAction = onBulkAction;
     return this;
   }
 

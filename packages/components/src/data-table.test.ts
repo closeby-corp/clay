@@ -224,6 +224,8 @@ describe('DataTableElement', () => {
         'export',
         'page',
         'action',
+        'bulkAction',
+        'reorder',
       ]),
     );
   });
@@ -302,6 +304,45 @@ describe('DataTableElement', () => {
     const table = new DataTableElement(rows, { columns, keyField: 'id', pageSize: 10 });
     await table.handleEvent('reorder', { orderedKeys: [5, 1, 2, 3, 4] });
     expect(table.getRows().map((r) => r.id)).toEqual([5, 1, 2, 3, 4]);
+  });
+
+  test('paginated reorder keeps off-page rows in place', async () => {
+    const table = new DataTableElement(rows, { columns, keyField: 'id', pageSize: 2 });
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.id)).toEqual([1, 2]);
+    await table.handleEvent('page', 2);
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.id)).toEqual([3, 4]);
+
+    await table.handleEvent('reorder', { orderedKeys: [4, 3] });
+    expect(table.getRows().map((r) => r.id)).toEqual([1, 2, 4, 3, 5]);
+    expect(table.props.page).toBe(2);
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.id)).toEqual([4, 3]);
+  });
+
+  test('bulkAction invokes onBulkAction with selected keys', async () => {
+    const calls: Array<{ actionId: string; rowKeys: Array<string | number> }> = [];
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 10,
+      selectable: true,
+      bulkActions: [
+        { id: 'archive', label: 'Archive' },
+        { id: 'delete', label: 'Delete', variant: 'destructive' },
+      ],
+      onBulkAction: (actionId, rowKeys) => {
+        calls.push({ actionId, rowKeys });
+      },
+    });
+    expect(
+      (table.props.bulkActions as Array<{ id: string }>).map((a) => a.id),
+    ).toEqual(['archive', 'delete']);
+    expect((table.props.events as string[]).includes('bulkAction')).toBe(true);
+
+    await table.handleEvent('bulkAction', { actionId: 'archive', rowKeys: [1, 3, 99] });
+    expect(calls).toEqual([{ actionId: 'archive', rowKeys: [1, 3] }]);
+
+    await table.handleEvent('bulkAction', { actionId: 'missing', rowKeys: [1] });
+    expect(calls).toHaveLength(1);
   });
 
   test('changes pageSize and resets to page 1', async () => {
@@ -469,5 +510,182 @@ describe('DataTableElement', () => {
     expect(table.props.events).toEqual(expect.arrayContaining(['groupToggle']));
     await table.handleEvent('groupToggle', { groupKey: 'done', collapsed: true });
     expect(seen).toEqual([{ key: 'done', collapsed: true }]);
+  });
+
+  test('facet column filters by exact multi-select JSON payload', async () => {
+    const table = new DataTableElement(rows, {
+      columns: [
+        { key: 'title', header: 'Title' },
+        {
+          key: 'status',
+          header: 'Status',
+          filter: 'facet',
+          facetOptions: [
+            { value: 'todo', label: 'Todo' },
+            { value: 'done', label: 'Done' },
+            { value: 'in progress', label: 'In progress' },
+          ],
+        },
+      ],
+      pageSize: 10,
+    });
+    const statusCol = (table.props.columns as Array<Record<string, unknown>>).find(
+      (c) => c.key === 'status',
+    );
+    expect(statusCol?.filter).toBe('facet');
+    const opts = statusCol?.facetOptions as Array<{ value: string; count?: number }>;
+    expect(opts.map((o) => o.value).sort()).toEqual(['done', 'in progress', 'todo']);
+    expect(opts.find((o) => o.value === 'done')?.count).toBe(2);
+
+    await table.handleEvent('columnFilter', {
+      key: 'status',
+      value: JSON.stringify(['done', 'todo']),
+    });
+    expect(table.props.columnFilters).toEqual({
+      status: JSON.stringify(['done', 'todo']),
+    });
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title).sort()).toEqual([
+      'Alpha',
+      'Bravo',
+      'Charlie',
+      'Delta',
+    ]);
+
+    await table.handleEvent('columnFilter', { key: 'status', value: JSON.stringify([]) });
+    expect(table.props.columnFilters).toEqual({});
+    expect(table.props.totalRows).toBe(5);
+  });
+
+  test('filter: facet without facetOptions derives distinct values', () => {
+    const table = new DataTableElement(rows, {
+      columns: [
+        { key: 'title', header: 'Title' },
+        { key: 'status', header: 'Status', filter: 'facet' },
+      ],
+      pageSize: 10,
+    });
+    const statusCol = (table.props.columns as Array<Record<string, unknown>>).find(
+      (c) => c.key === 'status',
+    );
+    const opts = statusCol?.facetOptions as Array<{ value: string; label: string }>;
+    expect(opts.map((o) => o.value).sort()).toEqual(['done', 'in progress', 'todo']);
+  });
+
+  test('loading and empty props sync; setLoading toggles', () => {
+    const table = new DataTableElement([], {
+      columns: [{ key: 'title', header: 'Title' }],
+      loading: true,
+      emptyTitle: 'Nothing yet',
+      emptyDescription: 'Add a row.',
+      pageSize: 10,
+    });
+    expect(table.props.loading).toBe(true);
+    expect(table.props.emptyTitle).toBe('Nothing yet');
+    expect(table.props.emptyDescription).toBe('Add a row.');
+    table.setLoading(false);
+    expect(table.props.loading).toBe(false);
+  });
+
+  test('manualPagination uses totalRows and does not slice', async () => {
+    const pages: number[] = [];
+    const pageRows = rows.slice(0, 2);
+    const table = new DataTableElement(pageRows, {
+      columns,
+      keyField: 'id',
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 20,
+      onPageChange: (page) => {
+        pages.push(page);
+      },
+    });
+    expect(table.props.manualPagination).toBe(true);
+    expect(table.props.totalRows).toBe(20);
+    expect(table.props.totalPages).toBe(10);
+    expect((table.props.rows as unknown[]).length).toBe(2);
+
+    await table.handleEvent('page', 3);
+    expect(table.props.page).toBe(3);
+    expect(pages).toEqual([3]);
+    // Still showing the supplied page rows (app would setRows after fetch).
+    expect((table.props.rows as unknown[]).length).toBe(2);
+
+    await table.handleEvent('page', 10);
+    expect(table.props.page).toBe(10);
+    table.setTotalRows(5);
+    expect(table.props.totalRows).toBe(5);
+    expect(table.props.totalPages).toBe(3);
+    expect(table.props.page).toBe(3); // clamped to totalPages
+  });
+
+  test('manualPagination setRows keeps current page', async () => {
+    const table = new DataTableElement(rows.slice(0, 2), {
+      columns,
+      keyField: 'id',
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 20,
+    });
+    await table.handleEvent('page', 4);
+    expect(table.props.page).toBe(4);
+    table.setRows(rows.slice(2, 4));
+    expect(table.props.page).toBe(4);
+    expect((table.props.rows as Array<{ id: number }>)[0]?.id).toBe(3);
+  });
+
+  test('density and zebra sync; setters update props', () => {
+    const table = new DataTableElement(rows, {
+      columns,
+      density: 'compact',
+      zebra: true,
+      pageSize: 10,
+    });
+    expect(table.props.density).toBe('compact');
+    expect(table.props.zebra).toBe(true);
+    table.setDensity('comfortable');
+    table.setZebra(false);
+    expect(table.props.density).toBe('comfortable');
+    expect(table.props.zebra).toBe(false);
+  });
+
+  test('number / date / boolean editors coerce cellChange values', async () => {
+    const changes: Array<{ key: string; value: unknown }> = [];
+    const table = new DataTableElement(
+      [
+        {
+          id: 1,
+          hours: 3,
+          due: '2026-01-15',
+          active: false,
+        },
+      ],
+      {
+        keyField: 'id',
+        pageSize: 10,
+        columns: [
+          { key: 'hours', header: 'Hours', editor: 'number' },
+          { key: 'due', header: 'Due', editor: 'date' },
+          { key: 'active', header: 'Active', editor: 'boolean' },
+        ],
+        onCellChange: (_rowKey, columnKey, value) => {
+          changes.push({ key: columnKey, value });
+        },
+      },
+    );
+    const cols = table.props.columns as Array<{ editor?: string }>;
+    expect(cols.map((c) => c.editor)).toEqual(['number', 'date', 'boolean']);
+
+    await table.handleEvent('cellChange', { rowKey: 1, columnKey: 'hours', value: '12' });
+    await table.handleEvent('cellChange', { rowKey: 1, columnKey: 'due', value: '2026-08-01' });
+    await table.handleEvent('cellChange', { rowKey: 1, columnKey: 'active', value: true });
+    expect(changes).toEqual([
+      { key: 'hours', value: 12 },
+      { key: 'due', value: '2026-08-01' },
+      { key: 'active', value: true },
+    ]);
+    const stored = table.getRows()[0]!;
+    expect(stored.hours).toBe(12);
+    expect(stored.due).toBe('2026-08-01');
+    expect(stored.active).toBe(true);
   });
 });
