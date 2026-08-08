@@ -38,6 +38,14 @@ import {
   tree,
   editor,
   kanban,
+  relativeTime,
+  qrCode,
+  imageZoom,
+  dialogStack,
+  list,
+  imageCrop,
+  gantt,
+  DialogStackElement,
   areaChart,
   barChart,
   lineChart,
@@ -411,6 +419,108 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.type).toBe('kanban');
     expect(el.props.columns).toEqual(columns);
     expect(el.props.events).toEqual(expect.arrayContaining(['cardMove', 'cardClick']));
+  });
+
+  test('relativeTime is display-only and defaults styles', () => {
+    const el = relativeTime({
+      timezones: ['America/New_York', { zone: 'Europe/London', label: 'GMT' }],
+      dateStyle: 'short',
+    });
+    expect(el.type).toBe('relativeTime');
+    expect(el.props).toMatchObject({
+      timezones: ['America/New_York', { zone: 'Europe/London', label: 'GMT' }],
+      dateStyle: 'short',
+      timeStyle: 'medium',
+    });
+    expect(el.props.date).toBeUndefined();
+    expect(el.props.events ?? []).toEqual([]);
+  });
+
+  test('qrCode is display-only with defaults', () => {
+    const el = qrCode({ value: 'https://example.com', size: 200, level: 'H' });
+    expect(el.type).toBe('qrCode');
+    expect(el.props).toMatchObject({
+      value: 'https://example.com',
+      size: 200,
+      level: 'H',
+    });
+    expect(el.props.events ?? []).toEqual([]);
+    const el2 = qrCode({ value: 'x' });
+    expect(el2.props).toMatchObject({ size: 160, level: 'M' });
+  });
+
+  test('imageZoom is display-only', () => {
+    const el = imageZoom({ src: '/photo.jpg', alt: 'Photo' });
+    expect(el.type).toBe('imageZoom');
+    expect(el.props).toMatchObject({ src: '/photo.jpg', alt: 'Photo' });
+    expect(el.props.events ?? []).toEqual([]);
+  });
+
+  test('list wires groups and itemMove/itemClick', () => {
+    const groups = [
+      {
+        id: 'inbox',
+        title: 'Inbox',
+        items: [{ id: 'i1', title: 'One', description: 'desc' }],
+      },
+      { id: 'done', title: 'Done', items: [] },
+    ];
+    const el = list({
+      groups,
+      onItemMove: () => {},
+      onItemClick: () => {},
+    });
+    expect(el.type).toBe('list');
+    expect(el.props.groups).toEqual(groups);
+    expect(el.props.events).toEqual(expect.arrayContaining(['itemMove', 'itemClick']));
+  });
+
+  test('imageCrop wires src/aspect and crop event', () => {
+    const el = imageCrop({
+      src: '/photo.jpg',
+      aspect: 16 / 9,
+      onCrop: () => {},
+    });
+    expect(el.type).toBe('imageCrop');
+    expect(el.props).toMatchObject({ src: '/photo.jpg', aspect: 16 / 9 });
+    expect(el.props.events).toEqual(expect.arrayContaining(['crop']));
+  });
+
+  test('gantt wires rows/markers/range and itemMove/itemClick', () => {
+    const rows = [
+      {
+        id: 'r1',
+        title: 'Design',
+        items: [{ id: 'i1', title: 'Wireframes', start: '2026-08-01', end: '2026-08-10' }],
+      },
+    ];
+    const el = gantt({
+      rows,
+      markers: [{ id: 'm1', date: '2026-08-15', label: 'Beta' }],
+      range: { start: '2026-07-01', end: '2026-09-01' },
+      readonly: false,
+      onItemMove: () => {},
+      onItemClick: () => {},
+    });
+    expect(el.type).toBe('gantt');
+    expect(el.props.rows).toEqual(rows);
+    expect(el.props.markers).toEqual([{ id: 'm1', date: '2026-08-15', label: 'Beta' }]);
+    expect(el.props.range).toEqual({ start: '2026-07-01', end: '2026-09-01' });
+    expect(el.props.readonly).toBe(false);
+    expect(el.props.events).toEqual(expect.arrayContaining(['itemMove', 'itemClick']));
+  });
+
+  test('dialogStack builds steps with open/index events', () => {
+    const el = dialogStack({ title: 'Wizard', open: false, index: 0 }, (stack) => {
+      stack.step({ title: 'One' }, () => {});
+      stack.step({ title: 'Two' }, () => {});
+    });
+    expect(el).toBeInstanceOf(DialogStackElement);
+    expect(el.type).toBe('dialogStack');
+    expect(el.props).toMatchObject({ title: 'Wizard', open: false, index: 0 });
+    expect(el.children).toHaveLength(2);
+    expect(el.children[0]!.type).toBe('dialogStackStep');
+    expect(el.props.events).toEqual(expect.arrayContaining(['close', 'indexChange']));
   });
 });
 

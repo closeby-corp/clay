@@ -54,6 +54,10 @@ ui.page('/', () => {
               ui.link('Overlays', '/examples/overlays');
             }, { gap: 2 }).classes('items-center');
             ui.row(() => {
+              ui.icon('layers').classes('size-4 text-muted-foreground');
+              ui.link('Dialog Stack', '/examples/dialog-stack');
+            }, { gap: 2 }).classes('items-center');
+            ui.row(() => {
               ui.icon('sliders-horizontal').classes('size-4 text-muted-foreground');
               ui.link('Controls', '/examples/controls');
             }, { gap: 2 }).classes('items-center');

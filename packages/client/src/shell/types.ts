@@ -8,6 +8,7 @@ import {
   CircleGauge,
   ClipboardList,
   Clock,
+  ChartNoAxesGantt,
   Columns3,
   Database,
   File,
@@ -67,6 +68,7 @@ const iconMap: Record<string, LucideIcon> = {
   database: Database,
   'clipboard-list': ClipboardList,
   'columns-3': Columns3,
+  'chart-gantt': ChartNoAxesGantt,
   file: File,
   'file-pen': FilePen,
 };

@@ -479,6 +479,76 @@ Kanban board with cross-column card drag (`@dnd-kit`). Client reorders optimisti
 | `onCardMove` | `(payload: { cardId, fromColumnId, toColumnId, index }) => void` | |
 | `onCardClick` | `(cardId: string) => void` | |
 
+#### `ui.relativeTime(props)`
+
+Multi-timezone clock (display-only). When `date` is omitted, the client ticks every second using “now”.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `date` | `string \| number` | live now |
+| `timezones` | `(string \| { zone: string; label?: string })[]` | required |
+| `dateStyle` | `'full' \| 'long' \| 'medium' \| 'short'` | `'long'` |
+| `timeStyle` | `'full' \| 'long' \| 'medium' \| 'short'` | `'medium'` |
+| `className` | `string` | |
+
+#### `ui.qrCode(props)`
+
+SVG QR code from a string (display-only; `qrcode` on the client).
+
+| Prop | Type | Default |
+|------|------|---------|
+| `value` | `string` | required |
+| `size` | `number` | `160` |
+| `level` | `'L' \| 'M' \| 'Q' \| 'H'` | `'M'` |
+| `className` | `string` | |
+
+#### `ui.imageZoom(props)`
+
+Image with a click-to-zoom overlay. Prefer this when you want lightbox behavior; leave `ui.image` for plain `<img>`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `src` | `string` | required |
+| `alt` | `string` | `''` |
+| `className` | `string` | |
+
+#### `ui.list(props)`
+
+Dense vertical grouped list with cross-group drag (`@dnd-kit`). Parallel to `ui.kanban`, but stacked groups instead of a board. Client reorders optimistically; emits `itemMove` once per drop. Server should update `groups` as the source of truth.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `groups` | `{ id, title, items: { id, title, description? }[] }[]` | required |
+| `disabled` | `boolean` | `false` |
+| `onItemMove` | `(payload: { itemId, fromGroupId, toGroupId, index }) => void` | |
+| `onItemClick` | `(itemId: string) => void` | |
+
+#### `ui.imageCrop(props)`
+
+Interactive image cropper (`react-easy-crop`). Emits `crop` with `{ dataUrl }` (JPEG data URL). No upload pipeline in v1 — POST via `ui.upload` if needed.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `src` | `string` | required |
+| `aspect` | `number` | free crop |
+| `onCrop` | `(payload: { dataUrl: string }) => void` | |
+| `className` | `string` | |
+
+#### `ui.gantt(props)`
+
+Project timeline with sidebar row labels, month axis, bars, today + custom markers. Drag move/resize when not `readonly`; emits `itemMove` once on pointer-up. Server should update `rows` as the source of truth. Out of v1: create-marker UI, collision layout polish, dependency arrows.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `rows` | `{ id, title, items: { id, title, start, end }[] }[]` | required |
+| `markers` | `{ id, date, label? }[]` | |
+| `range` | `{ start, end }` | inferred from items/markers |
+| `readonly` | `boolean` | `false` |
+| `onItemMove` | `(payload: { itemId, rowId, start, end }) => void` | |
+| `onItemClick` | `(itemId: string) => void` | |
+
+Dates are ISO `YYYY-MM-DD` (or parseable datetime strings).
+
 #### `ui.validate(rules)`
 
 Light submit-gate helper. Runs each rule’s `check`, calls `.setError` on the field (clears when `check` returns null/undefined), and returns `true` only if every rule passes. No schema library — keep rules explicit in the handler.
@@ -856,6 +926,34 @@ dlg.open();
 | `onClose` | `() => void` | | Runs when the client emits `close` (backdrop / Escape), then `open` is set to `false` |
 
 Client emits `close` on backdrop click or Escape. The server always clears `open` on that event.
+
+#### `ui.dialogStack(props, fn)` / `ui.dialogStack(fn, props?)`
+
+Server-owned stacked multi-step modal. Returns a `DialogStackElement` with `open()`, `close()`, `setOpen(boolean)`, and `setIndex(number)`. Children are steps via `stack.step({ title? }, fn)`.
+
+```typescript
+const wizard = ui.dialogStack({ title: 'Onboarding', open: false, index: 0 }, (stack) => {
+  stack.step({ title: 'Account' }, () => {
+    ui.input({ label: 'Email' });
+  });
+  stack.step({ title: 'Confirm' }, () => {
+    ui.button('Done', { onClick: () => wizard.close() });
+  });
+});
+
+wizard.open();
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | | Stack-level heading (fallback when a step has no title) |
+| `open` | `boolean` | `false` | Visibility |
+| `index` | `number` | `0` | Active step index (clamped to step count) |
+| `className` | `string` | | Extra classes on the active panel |
+| `onClose` | `() => void` | | Runs when the client emits `close`, then `open` is set to `false` |
+| `onIndexChange` | `(index: number) => void` | | Runs when the client emits `indexChange`, then `index` is updated |
+
+Client emits `close` (backdrop / Escape / close button) and `indexChange` (Back / Next / step dots). The server owns `open` and `index`.
 
 #### `ui.alertDialog(props?)`
 

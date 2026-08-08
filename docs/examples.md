@@ -23,10 +23,14 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/auth` | `Auth.ts` (+ login/admin/change-password) | Signed cookie session, hashed passwords, login lockout, role-gated admin + audit log |
 | `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
 | `/examples/overlays` | `OverlaysDemo.ts` | Breadcrumb, dropdown/context menu, hover card, popover, dialog/sheet/drawer |
+| `/examples/dialog-stack` | `DialogStackDemo.ts` | `ui.dialogStack` multi-step stacked modal |
 | `/examples/controls` | `ControlsDemo.ts` | Menubar (submenu/checkbox/radio), command dialog + inline, carousel, resizable, scroll-area, `ui.state` / `ui.auto` |
 | `/examples/controls-extra` | `ControlsExtra.ts` | `ui.codeBlock` (Shiki), `ui.tree` |
+| `/examples/media-extra` | `MediaExtra.ts` | `ui.relativeTime`, `ui.qrCode`, `ui.imageZoom`, `ui.imageCrop` |
 | `/examples/editor` | `EditorDemo.ts` | `ui.editor` HTML + Markdown side-by-side, bindValue |
 | `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` cross-column drag, `cardMove`, in-memory columns |
+| `/examples/list` | `ListDemo.ts` | `ui.list` dense grouped DnD, `itemMove`, in-memory groups |
+| `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` timeline bars, markers, drag move/resize, `itemMove` |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 

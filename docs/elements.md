@@ -24,6 +24,12 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `tree` | `tree` | Nested tree (`nodes`, `selected?`, `expanded?`) |
 | `editor` | `editor` | Domternal rich text (`format?: 'html' \| 'markdown'`) |
 | `kanban` | `kanban` | Board (`columns` with cards; cross-column drag) |
+| `list` | `list` | Dense vertical grouped list (`groups` with items; cross-group drag) |
+| `relativeTime` | `relativeTime` | Multi-timezone clock (`timezones`; ticks when `date` omitted) |
+| `qrCode` | `qrCode` | SVG QR from `value` (`size?`, `level?`) |
+| `imageZoom` | `imageZoom` | Image with click-to-zoom overlay (leave `image` plain) |
+| `imageCrop` | `imageCrop` | Image cropper (`src`, `aspect?`; emits data URL) |
+| `gantt` | `gantt` | Project timeline (`rows` with dated items; drag move/resize) |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
@@ -69,6 +75,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `card` | `card` | ShadCN `Card` |
 | `app` | `app` | Dashboard shell (sidebar + inset main); usually via `ui.run({ app })` |
 | `dialog` | `dialog` | Modal overlay (server-owned `open`) |
+| `dialogStack` | `dialogStack` (+ `dialogStackStep`) | Multi-step stacked modal (server-owned `open` + `index`) |
 | `alertDialog` | `alertdialog` | Confirm/destructive modal (server-owned `open`) |
 | `dropdownMenu` | `dropdownmenu` (+ `dropdownitem` / `dropdownseparator`) | ShadCN dropdown; item `select` events |
 | `contextMenu` | `contextmenu` (+ `contextmenuitem` / `contextmenuseparator`) | ShadCN context menu; item `select` events |
@@ -91,9 +98,13 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `tabs` / `accordion` / `collapsible` | `change` |
 | `tree` | `select`, `expand` |
 | `kanban` | `cardMove`, `cardClick` |
+| `list` | `itemMove`, `itemClick` |
+| `imageCrop` | `crop` |
+| `gantt` | `itemMove`, `itemClick` |
 | `upload` | `upload`, `progress`, `error`, `abort` |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
+| `dialogStack` | `close`, `indexChange` (number) |
 | `dropdownMenu` / `contextMenu` / `menubar` item | `select` |
 | `menubar` checkbox | `checkedChange` |
 | `menubar` radio group | `valueChange` |
@@ -122,6 +133,8 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `tree` (`selected` / `expanded`)
 - `editor`
 - `kanban` (`columns` while dragging)
+- `list` (`groups` while dragging)
+- `gantt` (`rows` while dragging / resizing)
 - `tabs`
 - `accordion`
 - `collapsible`

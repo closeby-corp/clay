@@ -36,6 +36,7 @@ import {
   hero as heroFactory,
   card as cardFactory,
   dialog as dialogFactory,
+  dialogStack as dialogStackFactory,
   alertDialog as alertDialogFactory,
   dropdownMenu as dropdownMenuFactory,
   breadcrumb as breadcrumbFactory,
@@ -71,6 +72,12 @@ import {
   tree as treeFactory,
   editor as editorFactory,
   kanban as kanbanFactory,
+  relativeTime as relativeTimeFactory,
+  qrCode as qrCodeFactory,
+  imageZoom as imageZoomFactory,
+  list as listFactory,
+  imageCrop as imageCropFactory,
+  gantt as ganttFactory,
   chart as chartNamespace,
   table as tableFactory,
   type ButtonProps,
@@ -122,6 +129,8 @@ import {
   type ChartSeries,
   type CardProps,
   type DialogProps,
+  type DialogStackProps,
+  type DialogStackStepOptions,
   type AlertDialogProps,
   type DropdownMenuProps,
   type DropdownItemOptions,
@@ -190,6 +199,25 @@ import {
   type KanbanColumn,
   type KanbanCard,
   type KanbanCardMovePayload,
+  type RelativeTimeProps,
+  type RelativeTimeTimezone,
+  type RelativeTimeDateStyle,
+  type RelativeTimeTimeStyle,
+  type QrCodeProps,
+  type QrCodeLevel,
+  type ImageZoomProps,
+  type ListProps,
+  type ListGroup,
+  type ListItem,
+  type ListItemMovePayload,
+  type ImageCropProps,
+  type ImageCropPayload,
+  type GanttProps,
+  type GanttRow,
+  type GanttItem,
+  type GanttMarker,
+  type GanttRange,
+  type GanttItemMovePayload,
   type SeriesInput,
   type ChartChromeOpts,
   type PieRowKeys,
@@ -201,6 +229,7 @@ import {
   DataTableElement,
   TableBuilder,
   DialogElement,
+  DialogStackElement,
   AlertDialogElement,
   DropdownMenuElement,
   ContextMenuElement,
@@ -287,6 +316,8 @@ export type {
   RadialChartProps,
   RadialChartSeries,
   DialogProps,
+  DialogStackProps,
+  DialogStackStepOptions,
   AlertDialogProps,
   DropdownMenuProps,
   DropdownItemOptions,
@@ -341,6 +372,25 @@ export type {
   KanbanColumn,
   KanbanCard,
   KanbanCardMovePayload,
+  RelativeTimeProps,
+  RelativeTimeTimezone,
+  RelativeTimeDateStyle,
+  RelativeTimeTimeStyle,
+  QrCodeProps,
+  QrCodeLevel,
+  ImageZoomProps,
+  ListProps,
+  ListGroup,
+  ListItem,
+  ListItemMovePayload,
+  ImageCropProps,
+  ImageCropPayload,
+  GanttProps,
+  GanttRow,
+  GanttItem,
+  GanttMarker,
+  GanttRange,
+  GanttItemMovePayload,
   SeriesInput,
   ChartChromeOpts,
   PieRowKeys,
@@ -365,6 +415,7 @@ export {
   DataTableElement,
   TableBuilder,
   DialogElement,
+  DialogStackElement,
   AlertDialogElement,
   DropdownMenuElement,
   SheetElement,
@@ -546,6 +597,36 @@ export function kanban(props: KanbanProps): Element {
   return kanbanFactory(props);
 }
 
+/** Multi-timezone clock (ticks when `date` omitted). Prefer `ui.relativeTime`. See {@link RelativeTimeProps}. */
+export function relativeTime(props: RelativeTimeProps): Element {
+  return relativeTimeFactory(props);
+}
+
+/** SVG QR code from a string. Prefer `ui.qrCode`. See {@link QrCodeProps}. */
+export function qrCode(props: QrCodeProps): Element {
+  return qrCodeFactory(props);
+}
+
+/** Image with click-to-zoom overlay. Prefer `ui.imageZoom`. See {@link ImageZoomProps}. */
+export function imageZoom(props: ImageZoomProps): Element {
+  return imageZoomFactory(props);
+}
+
+/** Dense vertical grouped DnD list. Prefer `ui.list`. See {@link ListProps}. */
+export function list(props: ListProps): Element {
+  return listFactory(props);
+}
+
+/** Interactive image cropper (emits data URL). Prefer `ui.imageCrop`. See {@link ImageCropProps}. */
+export function imageCrop(props: ImageCropProps): Element {
+  return imageCropFactory(props);
+}
+
+/** Project timeline with drag move/resize. Prefer `ui.gantt`. See {@link GanttProps}. */
+export function gantt(props: GanttProps): Element {
+  return ganttFactory(props);
+}
+
 /** Stat strip (label/value items). Prefer `ui.stat`. */
 export function stat(items: StatItem[], props?: { className?: string }): Element {
   return statFactory(items, props);
@@ -649,6 +730,19 @@ export function dialog(fn: (dlg: DialogElement) => void, props?: DialogProps): D
 export function dialog(props: DialogProps, fn: (dlg: DialogElement) => void): DialogElement;
 export function dialog(a: any, b?: any): DialogElement {
   return dialogFactory(a, b);
+}
+
+/** Stacked multi-step dialog (`fn` or props-first). Prefer `ui.dialogStack`. See {@link DialogStackProps}. */
+export function dialogStack(
+  fn: (stack: DialogStackElement) => void,
+  props?: DialogStackProps,
+): DialogStackElement;
+export function dialogStack(
+  props: DialogStackProps,
+  fn: (stack: DialogStackElement) => void,
+): DialogStackElement;
+export function dialogStack(a: any, b?: any): DialogStackElement {
+  return dialogStackFactory(a, b);
 }
 
 /** Alert / confirm dialog. Prefer `ui.alertDialog`. See {@link AlertDialogProps}. */
@@ -1074,6 +1168,12 @@ export const ui = {
   tree,
   editor,
   kanban,
+  relativeTime,
+  qrCode,
+  imageZoom,
+  list,
+  imageCrop,
+  gantt,
   stat,
   dataTable,
   table,
@@ -1093,6 +1193,7 @@ export const ui = {
   card,
   app,
   dialog,
+  dialogStack,
   alertDialog,
   dropdownMenu,
   contextMenu,

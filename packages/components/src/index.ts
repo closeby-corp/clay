@@ -516,6 +516,13 @@ export {
 export { dialog, DialogElement, type DialogProps } from './dialog';
 
 export {
+  dialogStack,
+  DialogStackElement,
+  type DialogStackProps,
+  type DialogStackStepOptions,
+} from './dialog-stack';
+
+export {
   alertDialog,
   AlertDialogElement,
   type AlertDialogProps,
@@ -773,6 +780,36 @@ export {
   type KanbanCard,
   type KanbanCardMovePayload,
 } from './kanban';
+export {
+  relativeTime,
+  type RelativeTimeProps,
+  type RelativeTimeTimezone,
+  type RelativeTimeDateStyle,
+  type RelativeTimeTimeStyle,
+} from './relative-time';
+export { qrCode, type QrCodeProps, type QrCodeLevel } from './qr-code';
+export { imageZoom, type ImageZoomProps } from './image-zoom';
+export {
+  list,
+  type ListProps,
+  type ListGroup,
+  type ListItem,
+  type ListItemMovePayload,
+} from './list';
+export {
+  imageCrop,
+  type ImageCropProps,
+  type ImageCropPayload,
+} from './image-crop';
+export {
+  gantt,
+  type GanttProps,
+  type GanttRow,
+  type GanttItem,
+  type GanttMarker,
+  type GanttRange,
+  type GanttItemMovePayload,
+} from './gantt';
 
 export {
   chart,

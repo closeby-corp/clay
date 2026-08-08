@@ -16,6 +16,12 @@ import { BoundCodeBlock } from './BoundCodeBlock';
 import { BoundTree } from './BoundTree';
 import { BoundEditor } from './BoundEditor';
 import { BoundKanban } from './BoundKanban';
+import { BoundRelativeTime } from './BoundRelativeTime';
+import { BoundQrCode } from './BoundQrCode';
+import { BoundImageZoom } from './BoundImageZoom';
+import { BoundList } from './BoundList';
+import { BoundImageCrop } from './BoundImageCrop';
+import { BoundGantt } from './BoundGantt';
 import { useOptimisticValue } from './useOptimisticValue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -34,7 +40,10 @@ import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
+  DialogOverlay,
+  DialogPortal,
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
@@ -177,7 +186,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, ChevronDownIcon, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
+import { CalendarIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
@@ -996,6 +1005,186 @@ function BoundDialog({
         )}
         <div className="flex flex-col gap-4">{children}</div>
       </DialogContent>
+    </Dialog>
+  );
+}
+
+function clampStackIndex(index: number, count: number): number {
+  if (count <= 0) return 0;
+  if (!Number.isFinite(index)) return 0;
+  return Math.min(Math.max(0, Math.trunc(index)), count - 1);
+}
+
+function BoundDialogStack({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  const steps = children.filter((c) => c.type === 'dialogStackStep');
+  const serverIndex = clampStackIndex(Number(props.index ?? 0), steps.length);
+  const [index, setIndex] = useOptimisticValue(serverIndex);
+  const active = clampStackIndex(index, steps.length);
+  const open = !!props.open;
+  const stackTitle = props.title != null ? String(props.title) : '';
+
+  const goTo = (next: number) => {
+    const clamped = clampStackIndex(next, steps.length);
+    if (clamped === active) return;
+    setIndex(clamped);
+    if (hasEvent(props, 'indexChange')) emit(id, 'indexChange', clamped);
+  };
+
+  const activeStep = steps[active];
+  const stepTitle =
+    activeStep?.props.title != null ? String(activeStep.props.title) : '';
+  const heading = stepTitle || stackTitle || 'Dialog';
+
+  const renderStepBody = (step: ElementNode) =>
+    step.children.map((child) => (
+      <ElementRenderer key={child.id} node={child} emit={emit} />
+    ));
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && hasEvent(props, 'close')) emit(id, 'close');
+      }}
+    >
+      <DialogPortal>
+        <DialogOverlay />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          data-slot="dialog-stack"
+        >
+          <div className="relative w-full max-w-lg" style={{ minHeight: '12rem' }}>
+            {steps.map((step, i) => {
+              const depth = active - i;
+              if (depth < 0 || depth > 3) return null;
+              const isActive = i === active;
+              const stepClass = step.props.className as string | undefined;
+              return (
+                <div
+                  key={step.id}
+                  role={isActive ? 'dialog' : undefined}
+                  aria-modal={isActive ? true : undefined}
+                  aria-hidden={!isActive}
+                  data-slot="dialog-stack-step"
+                  data-active={isActive ? 'true' : undefined}
+                  className={cn(
+                    'grid w-full gap-4 rounded-lg border bg-background p-6 shadow-lg outline-none transition-[transform,opacity] duration-200',
+                    isActive
+                      ? 'relative pointer-events-auto'
+                      : 'absolute inset-x-0 top-0 pointer-events-none',
+                    isActive ? className : undefined,
+                    stepClass,
+                  )}
+                  style={{
+                    ...(isActive ? asStyle(style) : undefined),
+                    zIndex: i + 1,
+                    transform: `translateY(${-depth * 14}px) scale(${1 - depth * 0.04})`,
+                    opacity: depth === 0 ? 1 : Math.max(0.35, 1 - depth * 0.22),
+                  }}
+                >
+                  {isActive ? (
+                    <>
+                      <div className="flex flex-col gap-1.5 pr-8 text-center sm:text-left">
+                        <DialogTitle className="text-lg leading-none font-semibold">
+                          {heading}
+                        </DialogTitle>
+                        {stackTitle && stepTitle && stackTitle !== stepTitle ? (
+                          <DialogDescription className="text-sm text-muted-foreground">
+                            {stackTitle}
+                            {' · '}
+                            Step {active + 1} of {steps.length}
+                          </DialogDescription>
+                        ) : steps.length > 1 ? (
+                          <DialogDescription className="text-sm text-muted-foreground">
+                            Step {active + 1} of {steps.length}
+                          </DialogDescription>
+                        ) : (
+                          <DialogDescription className="sr-only">Dialog stack</DialogDescription>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-4">{renderStepBody(step)}</div>
+
+                      {steps.length > 1 ? (
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={active <= 0}
+                            onClick={() => goTo(active - 1)}
+                          >
+                            <ChevronLeft className="size-4" />
+                            Back
+                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            {steps.map((s, dot) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className={cn(
+                                  'size-2 rounded-full transition-colors',
+                                  dot === active
+                                    ? 'bg-primary'
+                                    : 'bg-muted-foreground/30 hover:bg-muted-foreground/50',
+                                )}
+                                aria-label={`Go to step ${dot + 1}`}
+                                onClick={() => goTo(dot)}
+                              />
+                            ))}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={active >= steps.length - 1}
+                            onClick={() => goTo(active + 1)}
+                          >
+                            Next
+                            <ChevronRight className="size-4" />
+                          </Button>
+                        </div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden"
+                        onClick={() => {
+                          if (hasEvent(props, 'close')) emit(id, 'close');
+                        }}
+                      >
+                        <X className="size-4" />
+                        <span className="sr-only">Close</span>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col gap-1.5 text-center sm:text-left">
+                      <div className="text-lg leading-none font-semibold">
+                        {step.props.title != null ? String(step.props.title) : `Step ${i + 1}`}
+                      </div>
+                      <div className="h-16" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </DialogPortal>
     </Dialog>
   );
 }
@@ -2433,6 +2622,21 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         </BoundDialog>
       );
 
+    case 'dialogStack':
+      return (
+        <BoundDialogStack
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'dialogStackStep':
+      return null;
+
     case 'alertdialog':
       return (
         <BoundAlertDialog id={id} props={props} className={className} style={style} emit={emit} />
@@ -2548,6 +2752,26 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'kanban':
       return <BoundKanban id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'relativeTime':
+      return (
+        <BoundRelativeTime id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'qrCode':
+      return <BoundQrCode id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'imageZoom':
+      return <BoundImageZoom id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'list':
+      return <BoundList id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'imageCrop':
+      return <BoundImageCrop id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'gantt':
+      return <BoundGantt id={id} props={props} className={className} style={style} emit={emit} />;
 
     case 'link':
       return (
