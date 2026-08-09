@@ -1,3 +1,4 @@
+import { graphlib, layout as dagreLayout } from '@dagrejs/dagre';
 import { Element, withParent } from '@badui/core';
 
 export type FlowPosition = { x: number; y: number };
@@ -21,14 +22,21 @@ export type FlowEdgePathType =
 /** Stroke / label color presets mapped on the client. */
 export type FlowEdgeVariant = 'default' | 'primary' | 'muted' | 'destructive';
 
+/** Built-in node chrome. Custom keys require client `registerFlowNodeTypes`. */
+export type FlowNodeKind = 'default' | 'group';
+
 export type FlowEdge = {
   id: string;
   source: string;
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
-  /** React Flow path type. Default: `'default'` (bezier). */
-  type?: FlowEdgePathType;
+  /**
+   * React Flow path type, or a custom edgeType registry key.
+   * Built-ins: default / straight / step / smoothstep / simplebezier.
+   * Default: `'default'` (bezier).
+   */
+  type?: FlowEdgePathType | (string & {});
   label?: string;
   animated?: boolean;
   variant?: FlowEdgeVariant;
@@ -58,10 +66,17 @@ export type FlowSelectionPayload = {
 
 export type FlowLayoutDirection = 'LR' | 'TB';
 
+export type FlowLayoutNodeMeta = {
+  width?: number;
+  height?: number;
+  parentId?: string;
+  kind?: FlowNodeKind;
+};
+
 export type FlowLayoutOptions = {
   /** Layer direction. Default `'LR'`. */
   direction?: FlowLayoutDirection;
-  /** Estimated node box for packing. Defaults: 180×80. */
+  /** Estimated node box for packing. Defaults: 180×80 (groups: 360×220). */
   nodeWidth?: number;
   nodeHeight?: number;
   /** Gap between layers (ranks). Default 80. */
@@ -70,6 +85,8 @@ export type FlowLayoutOptions = {
   nodeSep?: number;
   /** Origin offset. Default `{ x: 0, y: 0 }`. */
   origin?: FlowPosition;
+  /** Per-node size / parent overrides (used by `layout()` automatically). */
+  nodes?: Record<string, FlowLayoutNodeMeta>;
 };
 
 export type FlowNodeProps = {
@@ -78,6 +95,26 @@ export type FlowNodeProps = {
   position: FlowPosition;
   handles?: FlowHandle[];
   className?: string;
+  /**
+   * RF `nodeTypes` key. Defaults to `'badui'`, or `'baduiGroup'` when
+   * `kind: 'group'`. Custom keys need client `registerFlowNodeTypes`.
+   */
+  nodeType?: string;
+  /** `'group'` → container node; children set `parentId` to this id. */
+  kind?: FlowNodeKind;
+  /**
+   * Parent group id. Child positions are relative to the parent (RF parentId).
+   * Drag is constrained to the parent by default (`extent: 'parent'`).
+   */
+  parentId?: string;
+  /** Explicit size (especially useful for groups). */
+  width?: number;
+  height?: number;
+  /**
+   * RF extent. Default `'parent'` when `parentId` is set; pass `null` to allow
+   * free dragging outside the group.
+   */
+  extent?: 'parent' | null;
 };
 
 export type FlowProps = {
@@ -87,11 +124,21 @@ export type FlowProps = {
   showControls?: boolean;
   className?: string;
   /** Applied to new edges from `connect` settle when the edge omits `type`. */
-  defaultEdgeType?: FlowEdgePathType;
+  defaultEdgeType?: FlowEdgePathType | (string & {});
   /** Applied to new edges from `connect` settle when the edge omits `animated`. */
   defaultEdgeAnimated?: boolean;
   /** Applied to new edges from `connect` settle when the edge omits `variant`. */
   defaultEdgeVariant?: FlowEdgeVariant;
+  /**
+   * Custom RF nodeType keys referenced by this flow (documentation + client hint).
+   * Components must be registered via client `registerFlowNodeTypes`.
+   */
+  customNodeTypes?: string[];
+  /**
+   * Custom RF edgeType keys referenced by this flow (documentation + client hint).
+   * Components must be registered via client `registerFlowEdgeTypes`.
+   */
+  customEdgeTypes?: string[];
   /**
    * Fired after the flow appends the new edge to its owned model.
    * Prefer side effects here; diagram topology is already updated.
@@ -127,6 +174,11 @@ function clonePosition(position: FlowPosition): FlowPosition {
   return { x: Number(position.x) || 0, y: Number(position.y) || 0 };
 }
 
+function resolveNodeType(opts: FlowNodeProps): string {
+  if (opts.nodeType) return opts.nodeType;
+  return opts.kind === 'group' ? 'baduiGroup' : 'badui';
+}
+
 /** Stable-ish id used by client + server when connect does not supply one. */
 export function makeFlowEdgeId(
   source: string,
@@ -139,9 +191,87 @@ export function makeFlowEdgeId(
   return unique == null || unique === '' ? base : `${base}-${unique}`;
 }
 
+type LayoutGraphInput = {
+  nodeIds: string[];
+  edges: Array<Pick<FlowEdge, 'source' | 'target'>>;
+  direction: FlowLayoutDirection;
+  defaultWidth: number;
+  defaultHeight: number;
+  rankSep: number;
+  nodeSep: number;
+  origin: FlowPosition;
+  meta: Record<string, FlowLayoutNodeMeta>;
+};
+
+function runDagreLayout(input: LayoutGraphInput): Record<string, FlowPosition> {
+  const {
+    nodeIds,
+    edges,
+    direction,
+    defaultWidth,
+    defaultHeight,
+    rankSep,
+    nodeSep,
+    origin,
+    meta,
+  } = input;
+
+  const ids = [...new Set(nodeIds.filter(Boolean))];
+  if (ids.length === 0) return {};
+
+  const idSet = new Set(ids);
+  const g = new graphlib.Graph({ compound: false, directed: true, multigraph: false });
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({
+    rankdir: direction,
+    nodesep: nodeSep,
+    ranksep: rankSep,
+    edgesep: Math.max(20, Math.floor(nodeSep / 2)),
+    marginx: 0,
+    marginy: 0,
+  });
+
+  for (const id of ids) {
+    const m = meta[id];
+    const isGroup = m?.kind === 'group';
+    const width = m?.width ?? (isGroup ? Math.max(defaultWidth, 360) : defaultWidth);
+    const height = m?.height ?? (isGroup ? Math.max(defaultHeight, 220) : defaultHeight);
+    g.setNode(id, { width, height });
+  }
+
+  const seenEdges = new Set<string>();
+  for (const e of edges) {
+    if (!idSet.has(e.source) || !idSet.has(e.target) || e.source === e.target) continue;
+    const key = `${e.source}->${e.target}`;
+    if (seenEdges.has(key)) continue;
+    seenEdges.add(key);
+    g.setEdge(e.source, e.target);
+  }
+
+  dagreLayout(g);
+
+  const positions: Record<string, FlowPosition> = {};
+  for (const id of ids) {
+    const n = g.node(id) as { x?: number; y?: number; width?: number; height?: number } | undefined;
+    if (!n || n.x == null || n.y == null) {
+      positions[id] = { x: origin.x, y: origin.y };
+      continue;
+    }
+    const w = n.width ?? defaultWidth;
+    const h = n.height ?? defaultHeight;
+    // dagre uses center coords; React Flow uses top-left.
+    positions[id] = {
+      x: origin.x + n.x - w / 2,
+      y: origin.y + n.y - h / 2,
+    };
+  }
+  return positions;
+}
+
 /**
- * Layered layout (no dagre): BFS ranks from roots, pack within each rank.
- * Pure helper for tests / callers that want positions without mutating a flow.
+ * Layered layout via `@dagrejs/dagre`. Top-level nodes are laid out as one
+ * graph; children (`parentId`) are packed inside each parent with a nested
+ * dagre pass (relative positions). Pure helper — does not mutate a flow.
  */
 export function computeFlowLayout(
   nodeIds: string[],
@@ -154,94 +284,67 @@ export function computeFlowLayout(
   const rankSep = opts.rankSep ?? 80;
   const nodeSep = opts.nodeSep ?? 40;
   const origin = opts.origin ?? { x: 0, y: 0 };
+  const meta = opts.nodes ?? {};
 
   const ids = [...new Set(nodeIds.filter(Boolean))];
   const idSet = new Set(ids);
-  const outgoing = new Map<string, string[]>();
-  const indegree = new Map<string, number>();
-  for (const id of ids) {
-    outgoing.set(id, []);
-    indegree.set(id, 0);
-  }
-  for (const e of edges) {
-    if (!idSet.has(e.source) || !idSet.has(e.target) || e.source === e.target) continue;
-    outgoing.get(e.source)!.push(e.target);
-    indegree.set(e.target, (indegree.get(e.target) ?? 0) + 1);
-  }
 
-  const rank = new Map<string, number>();
-  const queue: string[] = [];
+  const childrenOf = new Map<string, string[]>();
+  const topLevel: string[] = [];
   for (const id of ids) {
-    if ((indegree.get(id) ?? 0) === 0) {
-      rank.set(id, 0);
-      queue.push(id);
-    }
-  }
-  // Isolated / cyclic leftovers start at rank 0.
-  if (queue.length === 0 && ids.length > 0) {
-    for (const id of ids) {
-      rank.set(id, 0);
-      queue.push(id);
+    const parentId = meta[id]?.parentId;
+    if (parentId && idSet.has(parentId) && parentId !== id) {
+      const list = childrenOf.get(parentId) ?? [];
+      list.push(id);
+      childrenOf.set(parentId, list);
+    } else {
+      topLevel.push(id);
     }
   }
 
-  let head = 0;
-  while (head < queue.length) {
-    const cur = queue[head++]!;
-    const r = rank.get(cur) ?? 0;
-    for (const next of outgoing.get(cur) ?? []) {
-      const nextRank = Math.max(rank.get(next) ?? 0, r + 1);
-      if (!rank.has(next) || nextRank > (rank.get(next) ?? 0)) {
-        rank.set(next, nextRank);
-      }
-      if (!queue.includes(next)) queue.push(next);
+  const topSet = new Set(topLevel);
+  const topEdges = edges.filter(
+    (e) => topSet.has(e.source) && topSet.has(e.target),
+  );
+
+  const positions = runDagreLayout({
+    nodeIds: topLevel,
+    edges: topEdges,
+    direction,
+    defaultWidth: nodeWidth,
+    defaultHeight: nodeHeight,
+    rankSep,
+    nodeSep,
+    origin,
+    meta,
+  });
+
+  for (const [parentId, childIds] of childrenOf) {
+    const childSet = new Set(childIds);
+    const childEdges = edges.filter(
+      (e) => childSet.has(e.source) && childSet.has(e.target),
+    );
+    const nested = runDagreLayout({
+      nodeIds: childIds,
+      edges: childEdges,
+      direction,
+      defaultWidth: Math.max(80, Math.floor(nodeWidth * 0.7)),
+      defaultHeight: Math.max(40, Math.floor(nodeHeight * 0.7)),
+      rankSep: Math.max(24, Math.floor(rankSep / 2)),
+      nodeSep: Math.max(16, Math.floor(nodeSep / 2)),
+      // Padding inside the group so children clear the group chrome.
+      origin: { x: 16, y: 40 },
+      meta,
+    });
+    for (const [id, pos] of Object.entries(nested)) {
+      positions[id] = pos;
+    }
+    // Ensure parent exists even if it was only referenced via parentId.
+    if (!positions[parentId] && idSet.has(parentId)) {
+      // Already handled in topLevel when parent is in ids; no-op otherwise.
     }
   }
-  for (const id of ids) {
-    if (!rank.has(id)) rank.set(id, 0);
-  }
 
-  const layers = new Map<number, string[]>();
-  let maxRank = 0;
-  for (const id of ids) {
-    const r = rank.get(id) ?? 0;
-    maxRank = Math.max(maxRank, r);
-    const list = layers.get(r) ?? [];
-    list.push(id);
-    layers.set(r, list);
-  }
-
-  // Stable order within a layer: original nodeIds order.
-  const orderIndex = new Map(ids.map((id, i) => [id, i]));
-  for (const list of layers.values()) {
-    list.sort((a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0));
-  }
-
-  const positions: Record<string, FlowPosition> = {};
-  for (let r = 0; r <= maxRank; r++) {
-    const list = layers.get(r) ?? [];
-    const count = list.length;
-    for (let i = 0; i < count; i++) {
-      const id = list[i]!;
-      if (direction === 'TB') {
-        const layerWidth =
-          count * nodeWidth + Math.max(0, count - 1) * nodeSep;
-        const startX = origin.x - layerWidth / 2 + nodeWidth / 2;
-        positions[id] = {
-          x: startX + i * (nodeWidth + nodeSep),
-          y: origin.y + r * (nodeHeight + rankSep),
-        };
-      } else {
-        const layerHeight =
-          count * nodeHeight + Math.max(0, count - 1) * nodeSep;
-        const startY = origin.y - layerHeight / 2 + nodeHeight / 2;
-        positions[id] = {
-          x: origin.x + r * (nodeWidth + rankSep),
-          y: startY + i * (nodeHeight + nodeSep),
-        };
-      }
-    }
-  }
   return positions;
 }
 
@@ -270,6 +373,8 @@ export class FlowElement extends Element {
       defaultEdgeType,
       defaultEdgeAnimated,
       defaultEdgeVariant,
+      customNodeTypes,
+      customEdgeTypes,
     } = props;
 
     super('flow', {
@@ -281,6 +386,8 @@ export class FlowElement extends Element {
       defaultEdgeType,
       defaultEdgeAnimated,
       defaultEdgeVariant,
+      customNodeTypes,
+      customEdgeTypes,
     });
 
     // Always register settle events so the client emits them; update owned
@@ -314,7 +421,7 @@ export class FlowElement extends Element {
         sourceHandle: payload.sourceHandle ?? undefined,
         targetHandle: payload.targetHandle ?? undefined,
       };
-      const defType = this.props.defaultEdgeType as FlowEdgePathType | undefined;
+      const defType = this.props.defaultEdgeType as FlowEdge['type'] | undefined;
       const defAnimated = this.props.defaultEdgeAnimated as boolean | undefined;
       const defVariant = this.props.defaultEdgeVariant as FlowEdgeVariant | undefined;
       if (defType) edge.type = defType;
@@ -383,11 +490,28 @@ export class FlowElement extends Element {
   }
 
   /**
-   * Auto-layout nodes with a simple layered algorithm (no dagre/elk).
-   * Updates owned positions via {@link moveNode}.
+   * Auto-layout nodes with dagre (`@dagrejs/dagre`).
+   * Updates owned positions via {@link moveNode}. Child nodes (`parentId`)
+   * get relative positions packed inside their group.
    */
   layout(opts: FlowLayoutOptions = {}): this {
-    const next = computeFlowLayout(this.getNodeIds(), this.getEdges(), opts);
+    const meta: Record<string, FlowLayoutNodeMeta> = { ...(opts.nodes ?? {}) };
+    for (const child of this.children) {
+      if (child.type !== 'flowNode') continue;
+      const id = String(child.props.id ?? '');
+      if (!id) continue;
+      meta[id] = {
+        width: child.props.width as number | undefined,
+        height: child.props.height as number | undefined,
+        parentId: child.props.parentId as string | undefined,
+        kind: child.props.kind as FlowNodeKind | undefined,
+        ...meta[id],
+      };
+    }
+    const next = computeFlowLayout(this.getNodeIds(), this.getEdges(), {
+      ...opts,
+      nodes: meta,
+    });
     for (const [id, position] of Object.entries(next)) {
       this.moveNode(id, position);
     }
@@ -424,9 +548,34 @@ export class FlowElement extends Element {
       position: clonePosition(opts.position),
       handles: opts.handles,
       className: opts.className,
+      nodeType: resolveNodeType(opts),
+      kind: opts.kind ?? 'default',
+      parentId: opts.parentId,
+      width: opts.width,
+      height: opts.height,
+      extent: opts.extent === undefined ? undefined : opts.extent,
     });
     withParent(panel, fn);
     return panel;
+  }
+
+  /**
+   * Convenience for a group/container node (`kind: 'group'`, default size 400×280).
+   * Nested editing as a separate canvas is deferred — children use `parentId`.
+   */
+  group(
+    opts: Omit<FlowNodeProps, 'kind'> & { width?: number; height?: number },
+    fn: () => void,
+  ): Element {
+    return this.node(
+      {
+        ...opts,
+        kind: 'group',
+        width: opts.width ?? 400,
+        height: opts.height ?? 280,
+      },
+      fn,
+    );
   }
 
   /** Append a node at runtime and push a `setChildren` patch. */
@@ -436,6 +585,14 @@ export class FlowElement extends Element {
       this.moveNode(opts.id, opts.position);
       if (opts.handles !== undefined) existing.update({ handles: opts.handles });
       if (opts.className !== undefined) existing.update({ className: opts.className });
+      if (opts.nodeType !== undefined || opts.kind !== undefined) {
+        existing.update({ nodeType: resolveNodeType(opts) });
+      }
+      if (opts.kind !== undefined) existing.update({ kind: opts.kind });
+      if (opts.parentId !== undefined) existing.update({ parentId: opts.parentId });
+      if (opts.width !== undefined) existing.update({ width: opts.width });
+      if (opts.height !== undefined) existing.update({ height: opts.height });
+      if (opts.extent !== undefined) existing.update({ extent: opts.extent });
       return existing;
     }
     const panel = withParent(this, () => this.node(opts, fn));
@@ -443,8 +600,39 @@ export class FlowElement extends Element {
     return panel;
   }
 
-  /** Remove a node, its position, and any incident edges. */
+  /** Append a group node at runtime. */
+  addGroup(
+    opts: Omit<FlowNodeProps, 'kind'> & { width?: number; height?: number },
+    fn: () => void,
+  ): Element {
+    return this.addNode(
+      {
+        ...opts,
+        kind: 'group',
+        width: opts.width ?? 400,
+        height: opts.height ?? 280,
+      },
+      fn,
+    );
+  }
+
+  /**
+   * Remove a node, its position, incident edges, and any children that list
+   * this node as `parentId` (group cleanup).
+   */
   removeNode(id: string): this {
+    const childIds = this.children
+      .filter(
+        (c) =>
+          c.type === 'flowNode' &&
+          String(c.props.parentId ?? '') === id &&
+          String(c.props.id) !== id,
+      )
+      .map((c) => String(c.props.id));
+    for (const childId of childIds) {
+      this.removeNode(childId);
+    }
+
     const idx = this.children.findIndex(
       (c) => c.type === 'flowNode' && String(c.props.id) === id,
     );

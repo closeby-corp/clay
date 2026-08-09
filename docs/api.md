@@ -470,41 +470,61 @@ Rich text editor powered by Domternal (classic toolbar + bubble menu, StarterKit
 
 #### `ui.kanban(props)`
 
-Kanban board with cross-column card drag (`@dnd-kit`). **`KanbanElement` owns board state** (columns + card order), similar to Flow/DataTable — default settle handlers update the model and patch the client without remounting. **Do not** wrap the whole board in `ui.auto` that tracks `columns` (that remounts on every drop). Prefer side effects in `onCardMove`.
+Kanban board with cross-column card drag (`@dnd-kit`), optional swimlanes, and a card detail drawer. **`KanbanElement` owns board state** (columns + card order + selection), similar to Flow/DataTable — default settle handlers update the model and patch the client without remounting. **Do not** wrap the whole board in `ui.auto` that tracks `columns` (that remounts on every drop). Prefer side effects in `onCardMove` / `onCardSelect`.
 
 **Owned model + defaults**
 
-- Initial `columns` seed the owned model.
-- Default settle always runs (even with no user callbacks): `cardMove` → `moveCard`. User `onCardMove` runs **after** for side effects only.
-- Imperative APIs: `getColumns` / `setColumns`, `moveCard`, `addCard` / `removeCard`, `addColumn` / `removeColumn`, `setDisabled`.
+- Initial `columns` / `lanes` / `selectedCardId` seed the owned model.
+- Default settle always runs (even with no user callbacks): `cardMove` → `moveCard`, `cardSelect` → `selectCard`. User `onCardMove` / `onCardSelect` run **after** for side effects only.
+- Clicking a card opens the detail drawer (optimistic `selectedCardId`). Optional `detail` builds a detached Element tree stamped as `__detail` (same pattern as DataTable).
+- When `lanes` is set, cards use `laneId` and drag payloads include `fromLaneId` / `toLaneId` (index is lane-scoped within the column).
+- Imperative APIs: `getColumns` / `setColumns`, `getLanes` / `setLanes`, `getSelectedCardId` / `selectCard` / `clearSelection`, `moveCard`, `addCard` / `removeCard`, `addColumn` / `removeColumn`, `addLane` / `removeLane`, `setDisabled`.
 - Client keeps optimistic column order while dragging; settle patches owned `columns` via `updateProps`.
 
 ```typescript
-const status = ui.state({ lastMove: '' });
+const status = ui.state({ lastMove: '', open: '' });
 
 const board = ui.kanban({
   columns: [
-    { id: 'todo', title: 'Todo', cards: [{ id: 'c1', title: 'Sketch API' }] },
+    {
+      id: 'todo',
+      title: 'Todo',
+      cards: [{ id: 'c1', title: 'Sketch API', laneId: 'eng' }],
+    },
     { id: 'done', title: 'Done', cards: [] },
   ],
+  lanes: [
+    { id: 'eng', title: 'Engineering' },
+    { id: 'design', title: 'Design' },
+  ],
+  detail: (card, column) => {
+    ui.label(card.title);
+    ui.label(column.title).classes('text-muted-foreground');
+  },
   onCardMove: (p) => {
     status.lastMove = `${p.cardId} → ${p.toColumnId}`;
   },
-  onCardClick: (id) => ui.notify(id),
+  onCardSelect: (id) => {
+    status.open = id ?? '';
+  },
 });
 
 // Reset / mutate via element APIs (no outer ui.auto):
-// board.setColumns([...]); board.moveCard({ cardId, fromColumnId, toColumnId, index });
+// board.setColumns([...]); board.selectCard('c1'); board.clearSelection();
 ```
 
 | Prop | Type | Default |
 |------|------|---------|
-| `columns` | `{ id, title, cards: { id, title, description? }[] }[]` | `[]` |
+| `columns` | `{ id, title, cards: { id, title, description?, laneId? }[] }[]` | `[]` |
+| `lanes` | `{ id, title }[]` | `[]` (no swimlanes) |
+| `selectedCardId` | `string \| null` | `null` |
 | `disabled` | `boolean` | `false` |
-| `onCardMove` | `(payload: { cardId, fromColumnId, toColumnId, index }) => void` | after owned `moveCard` |
+| `detail` | `(card, column) => void` | default drawer body (title/description) |
+| `onCardMove` | `(payload: { cardId, fromColumnId, toColumnId, index, fromLaneId?, toLaneId? }) => void` | after owned `moveCard` |
+| `onCardSelect` | `(cardId: string \| null) => void` | after owned `selectCard` |
 | `onCardClick` | `(cardId: string) => void` | |
 
-Out of v1: card edit drawers, swimlanes, persistence helpers, multiplayer cursors.
+Out of v1: persistence helpers, multiplayer cursors, inline card editing forms beyond `detail`.
 
 #### `ui.relativeTime(props)`
 
@@ -541,13 +561,37 @@ Image with a click-to-zoom overlay. Prefer this when you want lightbox behavior;
 
 #### `ui.list(props)`
 
-Dense vertical grouped list with cross-group drag (`@dnd-kit`). Parallel to `ui.kanban`, but stacked groups instead of a board. Client reorders optimistically; emits `itemMove` once per drop. Server should update `groups` as the source of truth.
+Dense vertical grouped list with cross-group drag (`@dnd-kit`). Parallel to `ui.kanban`, but stacked groups instead of a board. **`ListElement` owns list state** (groups + item order), similar to Flow/DataTable — default settle handlers update the model and patch the client without remounting. **Do not** wrap the whole list in `ui.auto` that tracks `groups` (that remounts on every drop). Prefer side effects in `onItemMove`.
+
+**Owned model + defaults**
+
+- Initial `groups` seed the owned model.
+- Default settle always runs (even with no user callbacks): `itemMove` → `moveItem`. User `onItemMove` runs **after** for side effects only.
+- Imperative APIs: `getGroups` / `setGroups`, `moveItem`, `addItem` / `removeItem`, `addGroup` / `removeGroup`, `setDisabled`.
+- Client keeps optimistic group order while dragging; settle patches owned `groups` via `updateProps`.
+
+```typescript
+const status = ui.state({ lastMove: '' });
+
+const board = ui.list({
+  groups: [
+    { id: 'inbox', title: 'Inbox', items: [{ id: 'i1', title: 'Review PR' }] },
+    { id: 'done', title: 'Done', items: [] },
+  ],
+  onItemMove: (p) => {
+    status.lastMove = `${p.itemId}: ${p.fromGroupId} → ${p.toGroupId}`;
+  },
+});
+
+// Reset / mutate via element APIs (no outer ui.auto):
+// board.setGroups([...]); board.setDisabled(true);
+```
 
 | Prop | Type | Default |
 |------|------|---------|
-| `groups` | `{ id, title, items: { id, title, description? }[] }[]` | required |
+| `groups` | `{ id, title, items: { id, title, description? }[] }[]` | `[]` |
 | `disabled` | `boolean` | `false` |
-| `onItemMove` | `(payload: { itemId, fromGroupId, toGroupId, index }) => void` | |
+| `onItemMove` | `(payload: { itemId, fromGroupId, toGroupId, index }) => void` | after owned `moveItem` |
 | `onItemClick` | `(itemId: string) => void` | |
 
 #### `ui.imageCrop(props)`
@@ -563,14 +607,15 @@ Interactive image cropper (`react-easy-crop`). Emits `crop` with `{ dataUrl }` (
 
 #### `ui.gantt(props)`
 
-Project timeline with sidebar row labels, month axis, bars, today + custom markers. **`GanttElement` owns timeline state** (rows + item dates), similar to Flow/DataTable — default settle handlers update the model and patch the client without remounting. **Do not** wrap the whole chart in `ui.auto` that tracks `rows` (that remounts on every drag). Prefer side effects in `onItemMove`.
+Project timeline with sidebar row labels, month axis, bars, today + custom markers, and optional finish-to-start dependency arrows. **`GanttElement` owns timeline state** (rows + item dates + markers + dependencies), similar to Flow/DataTable — default settle handlers update the model and patch the client without remounting. **Do not** wrap the whole chart in `ui.auto` that tracks `rows` (that remounts on every drag). Prefer side effects in `onItemMove` / `onMarkerAdd`.
 
 **Owned model + defaults**
 
-- Initial `rows` / optional `markers` / `range` seed the owned model.
-- Default settle always runs (even with no user callbacks): `itemMove` → `moveItem`. User `onItemMove` runs **after** for side effects only.
-- Imperative APIs: `getRows` / `setRows`, `moveItem`, `addItem` / `removeItem`, `addRow` / `removeRow`, `getMarkers` / `setMarkers`, `getRange` / `setRange`, `isReadonly` / `setReadonly`.
-- Drag move/resize when not `readonly`; client keeps optimistic dates while dragging; settle patches owned `rows` on pointer-up.
+- Initial `rows` / optional `markers` / `dependencies` / `range` seed the owned model.
+- Default settle always runs (even with no user callbacks): `itemMove` → `moveItem`, `markerAdd` → `addMarker`. User `onItemMove` / `onMarkerAdd` run **after** for side effects only.
+- Imperative APIs: `getRows` / `setRows`, `moveItem`, `addItem` / `removeItem`, `addRow` / `removeRow`, `getMarkers` / `setMarkers` / `addMarker` / `removeMarker`, `getDependencies` / `setDependencies` / `addDependency` / `removeDependency`, `getRange` / `setRange`, `isReadonly` / `setReadonly`.
+- Drag move/resize when not `readonly` (including **cross-row** move); client keeps optimistic dates/row while dragging; settle patches owned `rows` on pointer-up.
+- Double-click the month header to create a marker at that date (emits `markerAdd`), or call `addMarker` from app code.
 
 ```typescript
 const status = ui.state({ lastMove: '' });
@@ -584,26 +629,33 @@ const timeline = ui.gantt({
     },
   ],
   markers: [{ id: 'beta', date: '2026-08-15', label: 'Beta' }],
+  dependencies: [{ id: 'dep1', from: 'd1', to: 'd2' }],
   range: { start: '2026-07-15', end: '2026-09-05' },
   onItemMove: (p) => {
-    status.lastMove = `${p.itemId}: ${p.start} → ${p.end}`;
+    status.lastMove = `${p.itemId} @ ${p.rowId}: ${p.start} → ${p.end}`;
+  },
+  onMarkerAdd: (m) => {
+    console.log('marker', m);
   },
 });
 
 // Reset / mutate via element APIs (no outer ui.auto):
-// timeline.setRows([...]); timeline.setReadonly(true);
+// timeline.setRows([...]); timeline.addMarker({ id, date, label });
+// timeline.setDependencies([...]); timeline.setReadonly(true);
 ```
 
 | Prop | Type | Default |
 |------|------|---------|
 | `rows` | `{ id, title, items: { id, title, start, end }[] }[]` | `[]` |
 | `markers` | `{ id, date, label? }[]` | |
+| `dependencies` | `{ id, from, to }[]` | |
 | `range` | `{ start, end }` | inferred from items/markers |
 | `readonly` | `boolean` | `false` |
 | `onItemMove` | `(payload: { itemId, rowId, start, end }) => void` | after owned `moveItem` |
 | `onItemClick` | `(itemId: string) => void` | |
+| `onMarkerAdd` | `(marker: { id, date, label? }) => void` | after owned `addMarker` |
 
-Dates are ISO `YYYY-MM-DD` (or parseable datetime strings). Out of v1: dependency arrows, create-marker UI, collision layout polish.
+Dates are ISO `YYYY-MM-DD` (or parseable datetime strings). `dependencies` are finish-to-start links (`from` bar end → `to` bar start). Out of v1: interactive dependency editing, collision layout polish, marker drag.
 
 #### `ui.flow(props, fn)` / `ui.flow(fn, props?)`
 
@@ -613,7 +665,7 @@ Interactive flow diagram backed by `@xyflow/react`. **`FlowElement` owns diagram
 
 - Initial `edges` and each `flow.node({ position })` seed the owned model.
 - Default settle handlers always run (even with no user callbacks): `nodeMove` → `moveNode`, `connect` → `addEdge`, `edgesDelete` / `nodesDelete` → remove from owned model. User `on*` handlers run **after** for side effects only.
-- Imperative APIs on the returned `FlowElement`: `getEdges` / `setEdges`, `addEdge` / `removeEdges`, `moveNode`, `getPositions` / `getNodeIds`, `addNode` / `removeNode`, `layout(opts?)`.
+- Imperative APIs on the returned `FlowElement`: `getEdges` / `setEdges`, `addEdge` / `removeEdges`, `moveNode`, `getPositions` / `getNodeIds`, `addNode` / `removeNode`, `group` / `addGroup`, `layout(opts?)`.
 - **Do not** wrap the whole flow in `ui.auto` that tracks edges/positions — that remounts the diagram. Keep narrow `ui.auto` (or `bindText` / prop patches) **inside** individual nodes for control labels.
 
 **Interaction model**
@@ -621,10 +673,10 @@ Interactive flow diagram backed by `@xyflow/react`. **`FlowElement` owns diagram
 - Drag nodes by the card chrome (labels/empty space). Buttons, inputs, and other interactive controls are marked `nodrag` / `nopan` so clicks do not steal the drag.
 - Positions stay optimistic on the client while dragging; **`nodeMove` fires once on drag-stop** and the flow persists position automatically.
 - New connections emit **`connect`** once (payload includes a client-generated `id`); the flow appends that edge id so optimistic RF edges settle without remapping flicker. If ids ever diverge, BoundFlow also rematches by `source`/`target`/handles.
-- Deletes (`Backspace` / `Delete`) emit **`nodesDelete`** / **`edgesDelete`** (owned model updates first).
+- Deletes (`Backspace` / `Delete`) emit **`nodesDelete`** / **`edgesDelete`** (owned model updates first). Removing a **group** also removes its `parentId` children.
 - Viewport pan/zoom is client-local (not round-tripped).
-- Client rebuilds RF nodes on topology changes (graph ids / handles / body child ids), and patches positions/edges in place when only those change.
-- **`layout({ direction?, nodeWidth?, nodeHeight?, rankSep?, nodeSep?, origin? })`** runs a simple layered auto-layout (no dagre) and updates owned positions via `moveNode`.
+- Client rebuilds RF nodes on topology changes (graph ids / handles / body child ids / parent / kind), and patches positions/edges in place when only those change.
+- **`layout({ direction?, nodeWidth?, nodeHeight?, rankSep?, nodeSep?, origin?, nodes? })`** runs **dagre** (`@dagrejs/dagre`) and updates owned positions via `moveNode`. Top-level nodes are one graph; children with `parentId` get a nested pack (relative coords) inside their group.
 
 ```typescript
 const status = ui.state({ lastEvent: '' });
@@ -691,26 +743,46 @@ const diagram = ui.flow(
 | `fitView` | `boolean` | `true` |
 | `showMiniMap` | `boolean` | `true` |
 | `showControls` | `boolean` | `true` |
-| `defaultEdgeType` | `'default' \| 'straight' \| 'step' \| 'smoothstep' \| 'simplebezier'` | |
+| `defaultEdgeType` | built-in path \| custom edgeType key | |
 | `defaultEdgeAnimated` | `boolean` | |
 | `defaultEdgeVariant` | `'default' \| 'primary' \| 'muted' \| 'destructive'` | |
+| `customNodeTypes` | `string[]` | |
+| `customEdgeTypes` | `string[]` | |
 | `onConnect` | `(payload: { id?, source, target, sourceHandle?, targetHandle? }) => void` | after owned `addEdge` |
 | `onNodeMove` | `(payload: { nodeId, position: { x, y } }) => void` | after owned `moveNode` |
 | `onNodesDelete` | `(ids: string[]) => void` | after owned `removeNode` |
 | `onEdgesDelete` | `(ids: string[]) => void` | after owned `removeEdges` |
 | `onSelectionChange` | `(payload: { nodeIds, edgeIds }) => void` | |
 
-Edge `type` maps to React Flow built-in path kinds. `variant` sets stroke/label colors (`primary` / `muted` / `destructive`). `label` / `animated` pass through to RF.
+Edge `type` maps to React Flow built-in path kinds (`default` / `straight` / `step` / `smoothstep` / `simplebezier`) **or** a custom edgeType registry key. `variant` sets stroke/label colors (`primary` / `muted` / `destructive`). `label` / `animated` pass through to RF.
 
-`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`), optional `className`. When `handles` is omitted, default left-target / right-source ports are used. Nested BadUI handlers (`onClick`, `onChange`, …) work as usual inside the node body. Use `flow.addNode` / `flow.removeNode` for runtime topology changes. Use `flow.layout()` to pack nodes from current edges.
+`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles`, `className`, `nodeType`, `kind` (`'default' \| 'group'`), `parentId`, `width` / `height`, `extent` (`'parent'` \| `null`). When `handles` is omitted, default left-target / right-source ports are used. `kind: 'group'` (or `flow.group`) uses built-in `baduiGroup` chrome; children set `parentId` (relative positions; drag defaults to `extent: 'parent'`). Nested BadUI handlers work inside the node body. Use `flow.addNode` / `flow.addGroup` / `flow.removeNode` for runtime topology. Use `flow.layout()` for dagre packing.
 
-See Flow Demo (`/examples/flow`) for three richer patterns:
+**Custom React node/edge types (client registry)**
 
-1. **ETL pipeline** — select/switch/progress/buttons inside nodes (narrow per-node `ui.auto`); labeled smoothstep edges + auto-layout  
+React components cannot cross the BadUI wire. Apps that customize the client register components once:
+
+```ts
+import {
+  registerFlowNodeTypes,
+  registerFlowEdgeTypes,
+  BaduiLabeledEdge,
+} from './BoundFlow'; // custom client build
+
+registerFlowNodeTypes({ fancy: FancyNode });
+registerFlowEdgeTypes({ labeled: BaduiLabeledEdge });
+```
+
+Then reference those keys from the server: `flow.node({ nodeType: 'fancy', … })` / edge `type: 'labeled'`, and optionally list them on the flow as `customNodeTypes` / `customEdgeTypes`.
+
+See Flow Demo (`/examples/flow`) for richer patterns:
+
+1. **ETL pipeline** — select/switch/progress/buttons inside nodes; labeled smoothstep edges + dagre auto-layout  
 2. **Branching approval** — multi-handle triage (`yes` / `no` sources), rating + badges  
 3. **Fan-in / fan-out + dynamic stages** — `addNode` / `removeNode` without wrapping the flow in `ui.auto`  
+4. **Group nodes** — `flow.group` + `parentId` children (visual nesting / subflow containers)
 
-Out of v1: app-bundled React `nodeTypes` / custom `edgeTypes` registry, dagre/elk layouts, nested sub-flows.
+Deferred: drill-in nested editing (separate canvas inside a group), ELK layouts.
 
 #### `ui.validate(rules)`
 

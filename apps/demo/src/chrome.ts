@@ -28,5 +28,5 @@ export function exampleSection(title: string, description?: string): void {
 
 /** Constrain reading-width examples inside the full-bleed shell. */
 export function exampleFrame(fn: () => void): void {
-  ui.container({ centered: true, width: 'lg' }, fn);
+  ui.container({ centered: true, width: 'xl' }, fn);
 }

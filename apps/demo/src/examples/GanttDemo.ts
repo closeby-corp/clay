@@ -32,20 +32,31 @@ const INITIAL: GanttRow[] = [
   },
 ];
 
+const INITIAL_DEPS = [
+  { id: 'dep-d1-d2', from: 'd1', to: 'd2' },
+  { id: 'dep-d2-b1', from: 'd2', to: 'b1' },
+  { id: 'dep-b2-s1', from: 'b2', to: 's1' },
+];
+
+const INITIAL_MARKERS = [
+  { id: 'beta', date: '2026-08-15', label: 'Beta' },
+  { id: 'ga', date: '2026-08-28', label: 'GA' },
+];
+
 ui.page('/examples/gantt', () => {
-  const status = ui.state({ lastMove: '' as string });
+  const status = ui.state({ lastMove: '' as string, lastMarker: '' as string });
 
   exampleFrame(() => {
     ui.column(
       () => {
         exampleHeader(
           undefined,
-          'ui.gantt — timeline owns rows/item dates; itemMove settles the model (no outer ui.auto remount).',
+          'ui.gantt — owns rows/dates/markers/deps; itemMove + markerAdd settle the model (no outer ui.auto remount).',
         );
 
         exampleSection(
           'Project timeline',
-          'Optimistic local dates while dragging; settle patches owned rows. Prefer side effects in onItemMove.',
+          'Drag bars across rows; dependency arrows link finish→start. Double-click the month header to drop a marker, or use the buttons below.',
         );
 
         const timeline = ui.gantt({
@@ -53,10 +64,8 @@ ui.page('/examples/gantt', () => {
             ...row,
             items: row.items.map((i) => ({ ...i })),
           })),
-          markers: [
-            { id: 'beta', date: '2026-08-15', label: 'Beta' },
-            { id: 'ga', date: '2026-08-28', label: 'GA' },
-          ],
+          markers: INITIAL_MARKERS.map((m) => ({ ...m })),
+          dependencies: INITIAL_DEPS.map((d) => ({ ...d })),
           range: { start: '2026-07-15', end: '2026-09-05' },
           onItemMove: (payload) => {
             console.log('onItemMove', payload);
@@ -65,12 +74,19 @@ ui.page('/examples/gantt', () => {
           onItemClick: (itemId) => {
             ui.notify(`Item ${itemId}`, 'info');
           },
+          onMarkerAdd: (marker) => {
+            status.lastMarker = `${marker.label ?? marker.id} @ ${marker.date}`;
+            ui.notify(`Marker ${marker.label ?? marker.id}`, 'info');
+          },
         });
 
         ui.auto(() => {
           ui.label(status.lastMove ? `Last move: ${status.lastMove}` : 'Last move: —').classes(
             'text-sm text-muted-foreground',
           );
+          ui.label(
+            status.lastMarker ? `Last marker: ${status.lastMarker}` : 'Last marker: —',
+          ).classes('text-sm text-muted-foreground');
         });
 
         ui.row(
@@ -85,6 +101,27 @@ ui.page('/examples/gantt', () => {
                 );
               },
             });
+            ui.button('Add marker (API)', {
+              variant: 'outline',
+              onClick: () => {
+                const id = `api-${Date.now()}`;
+                timeline.addMarker({
+                  id,
+                  date: '2026-08-22',
+                  label: 'API',
+                });
+                status.lastMarker = `API @ 2026-08-22`;
+                ui.notify('Marker added via addMarker', 'info');
+              },
+            });
+            ui.button('Clear markers', {
+              variant: 'outline',
+              onClick: () => {
+                timeline.setMarkers([]);
+                status.lastMarker = '';
+                ui.notify('Markers cleared', 'info');
+              },
+            });
             ui.button('Reset timeline', {
               variant: 'outline',
               onClick: () => {
@@ -94,7 +131,10 @@ ui.page('/examples/gantt', () => {
                     items: row.items.map((i) => ({ ...i })),
                   })),
                 );
+                timeline.setMarkers(INITIAL_MARKERS.map((m) => ({ ...m })));
+                timeline.setDependencies(INITIAL_DEPS.map((d) => ({ ...d })));
                 status.lastMove = '';
+                status.lastMarker = '';
                 ui.notify('Timeline reset', 'info');
               },
             });

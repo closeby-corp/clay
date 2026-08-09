@@ -22,6 +22,15 @@ export type GanttMarker = {
   label?: string;
 };
 
+/** Finish-to-start style link between two item ids (rendered as an arrow). */
+export type GanttDependency = {
+  id: string;
+  /** Predecessor item id. */
+  from: string;
+  /** Successor item id. */
+  to: string;
+};
+
 export type GanttRange = {
   start: string;
   end: string;
@@ -37,16 +46,23 @@ export type GanttItemMovePayload = {
 export type GanttProps = {
   rows?: GanttRow[];
   markers?: GanttMarker[];
+  /** Finish-to-start links drawn between bars. */
+  dependencies?: GanttDependency[];
   range?: GanttRange;
-  /** When true, bars are not draggable/resizable. */
+  /** When true, bars are not draggable/resizable and markers cannot be created from the chart. */
   readonly?: boolean;
   className?: string;
   /**
-   * Fired after the timeline applies the item dates to its owned model.
-   * Prefer side effects here; start/end are already updated.
+   * Fired after the timeline applies the item dates/row to its owned model.
+   * Prefer side effects here; start/end/rowId are already updated.
    */
   onItemMove?: (payload: GanttItemMovePayload) => void | Promise<void>;
   onItemClick?: (itemId: string) => void | Promise<void>;
+  /**
+   * Fired after the timeline appends a marker created from the client
+   * (or via settle). Prefer side effects; marker is already in the model.
+   */
+  onMarkerAdd?: (marker: GanttMarker) => void | Promise<void>;
 };
 
 function cloneItem(item: GanttItem): GanttItem {
@@ -66,12 +82,28 @@ function cloneRows(rows: GanttRow[]): GanttRow[] {
   }));
 }
 
-function cloneMarkers(markers: GanttMarker[]): GanttMarker[] {
-  return markers.map((m) => ({
+function cloneMarker(m: GanttMarker): GanttMarker {
+  return {
     id: m.id,
     date: m.date,
     label: m.label,
-  }));
+  };
+}
+
+function cloneMarkers(markers: GanttMarker[]): GanttMarker[] {
+  return markers.map(cloneMarker);
+}
+
+function cloneDependency(d: GanttDependency): GanttDependency {
+  return {
+    id: d.id,
+    from: d.from,
+    to: d.to,
+  };
+}
+
+function cloneDependencies(deps: GanttDependency[]): GanttDependency[] {
+  return deps.map(cloneDependency);
 }
 
 function cloneRange(range: GanttRange | undefined): GanttRange | undefined {
@@ -79,20 +111,39 @@ function cloneRange(range: GanttRange | undefined): GanttRange | undefined {
   return { start: range.start, end: range.end };
 }
 
+function dropDepsForItems(
+  deps: GanttDependency[],
+  itemIds: Set<string>,
+): GanttDependency[] {
+  return deps.filter((d) => !itemIds.has(d.from) && !itemIds.has(d.to));
+}
+
 /**
- * Project timeline with sidebar labels, bars, today + custom markers.
- * Owns rows / item dates (DataTable/Flow-style); default `itemMove` settle
- * updates that model before user callbacks. Prefer element APIs instead of
- * wrapping the whole chart in `ui.auto`. Drag move/resize when not `readonly`.
+ * Project timeline with sidebar labels, bars, today + custom markers,
+ * and optional dependency arrows. Owns rows / item dates / markers /
+ * dependencies (DataTable/Flow-style); default `itemMove` / `markerAdd`
+ * settle updates that model before user callbacks. Prefer element APIs
+ * instead of wrapping the whole chart in `ui.auto`. Drag move/resize
+ * (including cross-row) when not `readonly`.
  */
 export class GanttElement extends Element {
   constructor(props: GanttProps = {}) {
-    const { onItemMove, onItemClick, rows, markers, range, readonly, className } =
-      props;
+    const {
+      onItemMove,
+      onItemClick,
+      onMarkerAdd,
+      rows,
+      markers,
+      dependencies,
+      range,
+      readonly,
+      className,
+    } = props;
 
     super('gantt', {
       rows: cloneRows(rows ?? []),
       markers: markers ? cloneMarkers(markers) : undefined,
+      dependencies: dependencies ? cloneDependencies(dependencies) : undefined,
       range: cloneRange(range),
       readonly: readonly ?? false,
       className,
@@ -111,6 +162,15 @@ export class GanttElement extends Element {
     if (onItemClick) {
       this.on('itemClick', (value) => onItemClick(value as string));
     }
+
+    this.on('markerAdd', (value) => {
+      const marker = value as GanttMarker;
+      if (!marker?.id || !marker.date) return;
+      this.addMarker(marker);
+    });
+    if (onMarkerAdd) {
+      this.on('markerAdd', (value) => onMarkerAdd(value as GanttMarker));
+    }
   }
 
   getRows(): GanttRow[] {
@@ -128,6 +188,48 @@ export class GanttElement extends Element {
 
   setMarkers(markers: GanttMarker[]): this {
     this.update({ markers: cloneMarkers(markers) });
+    return this;
+  }
+
+  addMarker(marker: GanttMarker): this {
+    const next = this.getMarkers();
+    if (next.some((m) => m.id === marker.id)) return this;
+    this.update({ markers: [...next, cloneMarker(marker)] });
+    return this;
+  }
+
+  removeMarker(markerId: string): this {
+    const markers = this.getMarkers();
+    const next = markers.filter((m) => m.id !== markerId);
+    if (next.length === markers.length) return this;
+    this.update({ markers: next });
+    return this;
+  }
+
+  getDependencies(): GanttDependency[] {
+    return cloneDependencies(
+      (this.props.dependencies as GanttDependency[] | undefined) ?? [],
+    );
+  }
+
+  setDependencies(dependencies: GanttDependency[]): this {
+    this.update({ dependencies: cloneDependencies(dependencies) });
+    return this;
+  }
+
+  addDependency(dependency: GanttDependency): this {
+    const next = this.getDependencies();
+    if (next.some((d) => d.id === dependency.id)) return this;
+    if (dependency.from === dependency.to) return this;
+    this.update({ dependencies: [...next, cloneDependency(dependency)] });
+    return this;
+  }
+
+  removeDependency(dependencyId: string): this {
+    const deps = this.getDependencies();
+    const next = deps.filter((d) => d.id !== dependencyId);
+    if (next.length === deps.length) return this;
+    this.update({ dependencies: next });
     return this;
   }
 
@@ -214,7 +316,12 @@ export class GanttElement extends Element {
       }
     }
     if (!found) return this;
-    this.update({ rows: next });
+    const deps = this.getDependencies();
+    const nextDeps = dropDepsForItems(deps, new Set([itemId]));
+    this.update({
+      rows: next,
+      ...(nextDeps.length !== deps.length ? { dependencies: nextDeps } : {}),
+    });
     return this;
   }
 
@@ -236,16 +343,24 @@ export class GanttElement extends Element {
 
   removeRow(rowId: string): this {
     const rows = this.getRows();
+    const doomed = rows.find((r) => r.id === rowId);
+    if (!doomed) return this;
     const next = rows.filter((r) => r.id !== rowId);
-    if (next.length === rows.length) return this;
-    this.update({ rows: next });
+    const itemIds = new Set(doomed.items.map((i) => i.id));
+    const deps = this.getDependencies();
+    const nextDeps = dropDepsForItems(deps, itemIds);
+    this.update({
+      rows: next,
+      ...(nextDeps.length !== deps.length ? { dependencies: nextDeps } : {}),
+    });
     return this;
   }
 }
 
 /**
- * Project timeline with sidebar labels, bars, today + custom markers.
- * Drag move/resize when not `readonly`; emits `itemMove` on pointer-up.
+ * Project timeline with sidebar labels, bars, today + custom markers,
+ * and optional dependency arrows. Drag move/resize (including cross-row)
+ * when not `readonly`; emits `itemMove` on pointer-up.
  */
 export function gantt(props: GanttProps = {}): GanttElement {
   return new GanttElement(props);

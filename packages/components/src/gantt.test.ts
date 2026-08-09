@@ -18,10 +18,12 @@ const ROWS = [
 ];
 
 describe('GanttElement owned timeline state', () => {
-  test('registers itemMove settle event even without user handlers', () => {
+  test('registers itemMove and markerAdd settle events even without user handlers', () => {
     const el = gantt({ rows: ROWS });
     expect(el).toBeInstanceOf(GanttElement);
-    expect(el.props.events).toEqual(expect.arrayContaining(['itemMove']));
+    expect(el.props.events).toEqual(
+      expect.arrayContaining(['itemMove', 'markerAdd']),
+    );
   });
 
   test('getRows / setRows clone owned rows', () => {
@@ -71,12 +73,50 @@ describe('GanttElement owned timeline state', () => {
     el.setMarkers([{ id: 'm2', date: '2026-08-28' }]);
     expect(el.getMarkers()).toEqual([{ id: 'm2', date: '2026-08-28' }]);
 
+    el.addMarker({ id: 'm3', date: '2026-08-20', label: 'RC' });
+    expect(el.getMarkers().map((m) => m.id)).toEqual(['m2', 'm3']);
+    el.addMarker({ id: 'm3', date: '2026-08-21' });
+    expect(el.getMarkers()).toHaveLength(2);
+
+    el.removeMarker('m2');
+    expect(el.getMarkers()).toEqual([{ id: 'm3', date: '2026-08-20', label: 'RC' }]);
+
     el.setRange({ start: '2026-08-01', end: '2026-08-31' });
     expect(el.getRange()).toEqual({ start: '2026-08-01', end: '2026-08-31' });
 
     expect(el.isReadonly()).toBe(false);
     el.setReadonly(true);
     expect(el.isReadonly()).toBe(true);
+  });
+
+  test('dependencies helpers and cleanup on remove', () => {
+    const el = gantt({
+      rows: ROWS,
+      dependencies: [
+        { id: 'dep1', from: 'd1', to: 'd2' },
+        { id: 'dep2', from: 'd2', to: 'b1' },
+      ],
+    });
+    expect(el.getDependencies()).toEqual([
+      { id: 'dep1', from: 'd1', to: 'd2' },
+      { id: 'dep2', from: 'd2', to: 'b1' },
+    ]);
+
+    el.addDependency({ id: 'dep3', from: 'd1', to: 'b1' });
+    expect(el.getDependencies().map((d) => d.id)).toEqual(['dep1', 'dep2', 'dep3']);
+    el.addDependency({ id: 'dep3', from: 'd1', to: 'b1' });
+    el.addDependency({ id: 'self', from: 'd1', to: 'd1' });
+    expect(el.getDependencies()).toHaveLength(3);
+
+    el.removeDependency('dep1');
+    expect(el.getDependencies().map((d) => d.id)).toEqual(['dep2', 'dep3']);
+
+    el.removeItem('d2');
+    expect(el.getDependencies().map((d) => d.id)).toEqual(['dep3']);
+
+    el.setDependencies([{ id: 'x', from: 'd1', to: 'b1' }]);
+    el.removeRow('design');
+    expect(el.getDependencies()).toEqual([]);
   });
 
   test('addItem / removeItem / addRow / removeRow', () => {
@@ -104,20 +144,41 @@ describe('GanttElement owned timeline state', () => {
     const el = gantt({
       rows: ROWS,
       onItemMove: (p) => {
-        moves.push(`${p.itemId}:${p.start}->${p.end}`);
+        moves.push(`${p.itemId}:${p.rowId}:${p.start}->${p.end}`);
       },
     });
 
     await el.handleEvent('itemMove', {
       itemId: 'd1',
-      rowId: 'design',
+      rowId: 'build',
       start: '2026-07-25',
       end: '2026-08-08',
     });
-    expect(el.getRows()[0]!.items[0]).toMatchObject({
+    expect(el.getRows()[0]!.items.map((i) => i.id)).toEqual(['d2']);
+    expect(el.getRows()[1]!.items.find((i) => i.id === 'd1')).toMatchObject({
       start: '2026-07-25',
       end: '2026-08-08',
     });
-    expect(moves).toEqual(['d1:2026-07-25->2026-08-08']);
+    expect(moves).toEqual(['d1:build:2026-07-25->2026-08-08']);
+  });
+
+  test('default markerAdd settle updates owned markers then user handlers', async () => {
+    const added: string[] = [];
+    const el = gantt({
+      rows: ROWS,
+      onMarkerAdd: (m) => {
+        added.push(`${m.id}:${m.date}`);
+      },
+    });
+
+    await el.handleEvent('markerAdd', {
+      id: 'm-new',
+      date: '2026-08-20',
+      label: 'RC',
+    });
+    expect(el.getMarkers()).toEqual([
+      { id: 'm-new', date: '2026-08-20', label: 'RC' },
+    ]);
+    expect(added).toEqual(['m-new:2026-08-20']);
   });
 });

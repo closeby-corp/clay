@@ -222,6 +222,7 @@ export function BoundList({
   const activeItem = activeId ? findItem(groups, activeId) : null;
 
   const emitMove = (payload: ItemMovePayload) => {
+    // `itemMove` settle is always registered on ListElement (owned groups).
     if (hasEvent(props, 'itemMove')) emit(id, 'itemMove', payload);
   };
 

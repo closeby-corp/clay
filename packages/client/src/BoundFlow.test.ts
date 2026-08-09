@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { reconcileFlowEdges } from './BoundFlow';
+import {
+  clearFlowTypeRegistries,
+  getRegisteredFlowEdgeTypes,
+  getRegisteredFlowNodeTypes,
+  reconcileFlowEdges,
+  registerFlowEdgeTypes,
+  registerFlowNodeTypes,
+} from './BoundFlow';
 
 describe('reconcileFlowEdges', () => {
   test('replaces optimistic id with server id for the same connection', () => {
@@ -43,5 +50,28 @@ describe('reconcileFlowEdges', () => {
     const next = reconcileFlowEdges([{ id: 'e1', source: 'a', target: 'b' }], [edge]);
     expect(next[0]!.id).toBe('e1');
     expect(next[0]!.selected).toBe(true);
+  });
+
+  test('passes through custom edge type keys', () => {
+    const next = reconcileFlowEdges(
+      [{ id: 'e1', source: 'a', target: 'b', type: 'mySpecial' }],
+      [],
+    );
+    expect(next[0]!.type).toBe('mySpecial');
+  });
+});
+
+describe('flow type registries', () => {
+  test('registerFlowNodeTypes / registerFlowEdgeTypes merge and clear', () => {
+    clearFlowTypeRegistries();
+    const FakeNode = (() => null) as never;
+    const FakeEdge = (() => null) as never;
+    registerFlowNodeTypes({ fancy: FakeNode });
+    registerFlowEdgeTypes({ fancyEdge: FakeEdge });
+    expect(getRegisteredFlowNodeTypes().fancy).toBe(FakeNode);
+    expect(getRegisteredFlowEdgeTypes().fancyEdge).toBe(FakeEdge);
+    clearFlowTypeRegistries();
+    expect(getRegisteredFlowNodeTypes()).toEqual({});
+    expect(getRegisteredFlowEdgeTypes()).toEqual({});
   });
 });

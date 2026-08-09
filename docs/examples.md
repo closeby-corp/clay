@@ -28,10 +28,10 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/controls-extra` | `ControlsExtra.ts` | `ui.codeBlock` (Shiki), `ui.tree` |
 | `/examples/media-extra` | `MediaExtra.ts` | `ui.relativeTime`, `ui.qrCode`, `ui.imageZoom`, `ui.imageCrop` |
 | `/examples/editor` | `EditorDemo.ts` | `ui.editor` HTML + Markdown side-by-side, bindValue |
-| `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` element-owned columns, `cardMove` settle, reset via `setColumns` |
-| `/examples/list` | `ListDemo.ts` | `ui.list` dense grouped DnD, `itemMove`, in-memory groups |
-| `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` element-owned rows/dates, `itemMove` settle, `setReadonly` / `setRows` |
-| `/examples/flow` | `FlowDemo.ts` | Three `ui.flow` demos: ETL with in-node controls + labeled edges + auto-layout, multi-handle approval branches, fan-in/out + `addNode` dynamic stages (flow-owned edges/positions; no outer diagram `ui.auto`) |
+| `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` swimlanes, card detail drawer, element-owned `cardMove`/`cardSelect`, reset via APIs |
+| `/examples/list` | `ListDemo.ts` | `ui.list` element-owned groups, `itemMove` settle, reset via `setGroups` |
+| `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` owned rows/dates/markers/deps, cross-row drag, header double-click markers, `itemMove` / `markerAdd` settle |
+| `/examples/flow` | `FlowDemo.ts` | Four `ui.flow` demos: ETL with in-node controls + labeled edges + dagre auto-layout, multi-handle approval branches, fan-in/out + `addNode` dynamic stages, group/`parentId` nesting (flow-owned edges/positions; no outer diagram `ui.auto`) |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 

@@ -141,7 +141,7 @@ ui.page('/examples/flow', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.flow — custom BadUI trees inside React Flow nodes: forms, branching handles, fan-in/out, and dynamic stages.',
+          'ui.flow — custom BadUI trees inside React Flow nodes: forms, branching handles, fan-in/out, groups, and dynamic stages.',
         );
 
         ui.auto(() => {
@@ -152,7 +152,7 @@ ui.page('/examples/flow', () => {
 
         exampleSection(
           '1. Configurable ETL pipeline',
-          'Controls live inside nodes (select + switch). Drag by the card chrome; Run uses nested onClick. Diagram state is owned by the flow element. Edges use smoothstep + labels; Auto-layout packs LR layers.',
+          'Controls live inside nodes (select + switch). Drag by the card chrome; Run uses nested onClick. Diagram state is owned by the flow element. Edges use smoothstep + labels; Auto-layout runs dagre (LR).',
         );
 
         const pipelineFlow = ui.flow(
@@ -639,6 +639,129 @@ ui.page('/examples/flow', () => {
             ui.label(`Dynamic stages: ${graph.dynamicCount}`).classes(
               'text-sm text-muted-foreground self-center',
             );
+          });
+        }, { gap: 2 }).classes('items-center');
+
+        ui.separator();
+
+        exampleSection(
+          '4. Group / subflow containers',
+          'flow.group creates a dashed parent; child nodes set parentId (positions relative to the group). Drag stays inside the parent by default. Nested drill-in editing is deferred — this is visual grouping.',
+        );
+
+        const groupFlow = ui.flow(
+          {
+            edges: [
+              {
+                id: 'e-in-prep',
+                source: 'ingest',
+                target: 'prep',
+                sourceHandle: 'out',
+                targetHandle: 'in',
+                type: 'smoothstep',
+              },
+              {
+                id: 'e-prep-out',
+                source: 'prep',
+                target: 'publish',
+                sourceHandle: 'out',
+                targetHandle: 'in',
+                type: 'smoothstep',
+                variant: 'primary',
+                label: 'ready',
+              },
+            ],
+            fitView: true,
+            showMiniMap: false,
+            showControls: true,
+            onConnect: (payload) => {
+              shared.lastEvent = `[groups] connect ${payload.source} → ${payload.target}`;
+            },
+            onNodeMove: (payload) => {
+              shared.lastEvent = `[groups] move ${payload.nodeId}`;
+            },
+            onNodesDelete: (ids) => {
+              shared.lastEvent = `[groups] nodesDelete ${ids.join(',')}`;
+            },
+          },
+          (flow) => {
+            flow.group(
+              {
+                id: 'pipeline',
+                position: { x: 40, y: 40 },
+                width: 460,
+                height: 240,
+              },
+              () => {
+                ui.label('Ingest pipeline').classes('text-sm font-medium');
+                ui.label('Children use parentId').classes('text-xs text-muted-foreground');
+              },
+            );
+
+            flow.node(
+              {
+                id: 'ingest',
+                position: { x: 24, y: 56 },
+                parentId: 'pipeline',
+                handles: [
+                  { id: 'out', type: 'source', position: 'right' },
+                ],
+              },
+              () => {
+                ui.label('Ingest').classes('text-sm font-medium');
+                ui.badge('group child', { variant: 'outline' });
+              },
+            );
+
+            flow.node(
+              {
+                id: 'prep',
+                position: { x: 220, y: 56 },
+                parentId: 'pipeline',
+                handles: [
+                  { id: 'in', type: 'target', position: 'left' },
+                  { id: 'out', type: 'source', position: 'right' },
+                ],
+              },
+              () => {
+                ui.label('Prep').classes('text-sm font-medium');
+                ui.label('Clean + validate').classes('text-xs text-muted-foreground');
+              },
+            );
+
+            flow.node(
+              {
+                id: 'publish',
+                position: { x: 560, y: 100 },
+                handles: [{ id: 'in', type: 'target', position: 'left' }],
+              },
+              () => {
+                ui.label('Publish').classes('text-sm font-medium');
+                ui.label('Outside the group').classes('text-xs text-muted-foreground');
+              },
+            );
+          },
+        );
+
+        ui.row(() => {
+          ui.button('Auto-layout groups', {
+            variant: 'secondary',
+            size: 'sm',
+            onClick: () => {
+              groupFlow.layout({ direction: 'LR', rankSep: 72, nodeSep: 40 });
+              shared.lastEvent = '[groups] layout';
+            },
+          });
+          ui.button('Reset groups', {
+            variant: 'outline',
+            size: 'sm',
+            onClick: () => {
+              groupFlow.moveNode('pipeline', { x: 40, y: 40 });
+              groupFlow.moveNode('ingest', { x: 24, y: 56 });
+              groupFlow.moveNode('prep', { x: 220, y: 56 });
+              groupFlow.moveNode('publish', { x: 560, y: 100 });
+              shared.lastEvent = '[groups] reset';
+            },
           });
         }, { gap: 2 }).classes('items-center');
       },

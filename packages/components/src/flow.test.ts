@@ -241,6 +241,79 @@ describe('FlowElement owned diagram state', () => {
     expect(pos.c!.x).toBe(pos.d!.x);
     expect(pos.c!.y).not.toBe(pos.d!.y);
   });
+
+  test('group() + parentId; removeNode clears children', () => {
+    const el = flow((f) => {
+      f.group(
+        {
+          id: 'g1',
+          position: { x: 0, y: 0 },
+          width: 420,
+          height: 260,
+        },
+        () => {},
+      );
+      f.node(
+        {
+          id: 'a',
+          position: { x: 20, y: 40 },
+          parentId: 'g1',
+        },
+        () => {},
+      );
+      f.node(
+        {
+          id: 'b',
+          position: { x: 180, y: 40 },
+          parentId: 'g1',
+        },
+        () => {},
+      );
+      f.node({ id: 'c', position: { x: 500, y: 0 } }, () => {});
+    });
+
+    expect(el.getNodeIds()).toEqual(['g1', 'a', 'b', 'c']);
+    expect(el.children[0]!.props).toMatchObject({
+      id: 'g1',
+      kind: 'group',
+      nodeType: 'baduiGroup',
+      width: 420,
+      height: 260,
+    });
+    expect(el.children[1]!.props.parentId).toBe('g1');
+
+    el.removeNode('g1');
+    expect(el.getNodeIds()).toEqual(['c']);
+    expect(el.getPositions().a).toBeUndefined();
+    expect(el.getPositions().g1).toBeUndefined();
+  });
+
+  test('layout() packs group children relatively', () => {
+    const el = flow(
+      {
+        edges: [{ id: 'e1', source: 'a', target: 'b' }],
+      },
+      (f) => {
+        f.group({ id: 'g1', position: { x: 0, y: 0 } }, () => {});
+        f.node({ id: 'a', position: { x: 0, y: 0 }, parentId: 'g1' }, () => {});
+        f.node({ id: 'b', position: { x: 0, y: 0 }, parentId: 'g1' }, () => {});
+      },
+    );
+
+    el.layout({
+      direction: 'LR',
+      nodeWidth: 80,
+      nodeHeight: 40,
+      rankSep: 40,
+      nodeSep: 16,
+    });
+
+    const pos = el.getPositions();
+    expect(pos.a!.x).toBeLessThan(pos.b!.x);
+    // Relative to group (origin padding inside group).
+    expect(pos.a!.x).toBeGreaterThanOrEqual(0);
+    expect(pos.a!.y).toBeGreaterThanOrEqual(0);
+  });
 });
 
 describe('computeFlowLayout / makeFlowEdgeId', () => {
@@ -249,7 +322,7 @@ describe('computeFlowLayout / makeFlowEdgeId', () => {
     expect(makeFlowEdgeId('a', 'b', 'out', 'in', 7)).toBe('e-a-b-out-in-7');
   });
 
-  test('computeFlowLayout packs TB layers', () => {
+  test('computeFlowLayout packs TB layers with dagre', () => {
     const positions = computeFlowLayout(
       ['root', 'left', 'right'],
       [
@@ -268,5 +341,27 @@ describe('computeFlowLayout / makeFlowEdgeId', () => {
     expect(positions.root!.y).toBeLessThan(positions.left!.y);
     expect(positions.left!.y).toBe(positions.right!.y);
     expect(positions.left!.x).not.toBe(positions.right!.x);
+  });
+
+  test('computeFlowLayout nests children under parentId', () => {
+    const positions = computeFlowLayout(
+      ['g', 'a', 'b', 'out'],
+      [
+        { source: 'a', target: 'b' },
+        { source: 'g', target: 'out' },
+      ],
+      {
+        direction: 'LR',
+        nodeWidth: 100,
+        nodeHeight: 40,
+        nodes: {
+          g: { kind: 'group', width: 300, height: 200 },
+          a: { parentId: 'g' },
+          b: { parentId: 'g' },
+        },
+      },
+    );
+    expect(positions.g!.x).toBeLessThan(positions.out!.x);
+    expect(positions.a!.x).toBeLessThan(positions.b!.x);
   });
 });

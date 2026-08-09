@@ -23,14 +23,14 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `codeBlock` | `codeBlock` | Read-only Shiki-highlighted code (`language?`, `showCopy?`) |
 | `tree` | `tree` | Nested tree (`nodes`, `selected?`, `expanded?`) |
 | `editor` | `editor` | Domternal rich text (`format?: 'html' \| 'markdown'`) |
-| `kanban` | `kanban` | Board (`columns` with cards; owns order; `cardMove` settle defaults) |
-| `list` | `list` | Dense vertical grouped list (`groups` with items; cross-group drag) |
+| `kanban` | `kanban` | Board (`columns` with cards; optional `lanes`; owns order + selection; card drawer; `cardMove`/`cardSelect` settle defaults) |
+| `list` | `list` | Dense vertical grouped list (`groups` with items; owns order; `itemMove` settle defaults) |
 | `relativeTime` | `relativeTime` | Multi-timezone clock (`timezones`; ticks when `date` omitted) |
 | `qrCode` | `qrCode` | SVG QR from `value` (`size?`, `level?`) |
 | `imageZoom` | `imageZoom` | Image with click-to-zoom overlay (leave `image` plain) |
 | `imageCrop` | `imageCrop` | Image cropper (`src`, `aspect?`; emits data URL) |
-| `gantt` | `gantt` | Project timeline (`rows` with dated items; owns dates; `itemMove` settle defaults) |
-| `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; owns edges/positions; BadUI node bodies; `layout()`; typed/labeled edges; `nodeMove`/`connect` settle defaults) |
+| `gantt` | `gantt` | Project timeline (`rows` + markers + dependency arrows; owns dates; `itemMove` / `markerAdd` settle defaults) |
+| `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; owns edges/positions; BadUI node bodies; dagre `layout()`; group/`parentId`; typed/labeled edges; custom type keys + client registries; `nodeMove`/`connect` settle defaults) |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
@@ -98,10 +98,10 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `select` / `slider` / `rating` / `colorPicker` / `tags` / `radioGroup` / `combobox` / `date` / `editor` | `change` (and `input` if bound for radio/combobox/date/editor) |
 | `tabs` / `accordion` / `collapsible` | `change` |
 | `tree` | `select`, `expand` |
-| `kanban` | `cardMove`, `cardClick` (`cardMove` settle always registered; user `onCardMove` runs after owned-model update) |
-| `list` | `itemMove`, `itemClick` |
+| `kanban` | `cardMove`, `cardSelect`, `cardClick` (`cardMove`/`cardSelect` settle always registered; user `on*` run after owned-model update) |
+| `list` | `itemMove`, `itemClick` (`itemMove` settle always registered; user `onItemMove` runs after owned-model update) |
 | `imageCrop` | `crop` |
-| `gantt` | `itemMove`, `itemClick` (`itemMove` settle always registered; user `onItemMove` runs after owned-model update) |
+| `gantt` | `itemMove`, `itemClick`, `markerAdd` (`itemMove` / `markerAdd` settle always registered; user `on*` run after owned-model update) |
 | `flow` | `connect`, `nodeMove` (drag-stop), `nodesDelete`, `edgesDelete`, `selectionChange` (settle handlers always registered; user `on*` run after owned-model update) |
 | `upload` | `upload`, `progress`, `error`, `abort` |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `columnPin`, `export`, `page`, `pageSize`, `action`, `bulkAction`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
@@ -134,9 +134,9 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `tags`
 - `tree` (`selected` / `expanded`)
 - `editor`
-- `kanban` (`columns` while dragging; settle patches owned columns — do not wrap board in `ui.auto`)
-- `list` (`groups` while dragging)
-- `gantt` (`rows` while dragging / resizing; settle patches owned rows — do not wrap chart in `ui.auto`)
+- `kanban` (`columns` while dragging; `selectedCardId` for drawer; settle patches owned columns — do not wrap board in `ui.auto`)
+- `list` (`groups` while dragging; settle patches owned groups — do not wrap list in `ui.auto`)
+- `gantt` (`rows` while dragging / resizing / cross-row; markers on create; settle patches owned model — do not wrap chart in `ui.auto`)
 - `flow` (node positions while dragging; edges on connect keep the client-generated id through settle; position patches do not remount RF nodes)
 - `tabs`
 - `accordion`

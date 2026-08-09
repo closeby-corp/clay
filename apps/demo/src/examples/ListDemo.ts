@@ -1,5 +1,5 @@
 import { ui } from '@badui/ui';
-import type { ListGroup, ListItemMovePayload } from '@badui/ui';
+import type { ListGroup } from '@badui/ui';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -29,65 +29,38 @@ const INITIAL: ListGroup[] = [
   },
 ];
 
-function applyItemMove(groups: ListGroup[], payload: ListItemMovePayload): ListGroup[] {
-  const next = groups.map((g) => ({
-    ...g,
-    items: g.items.map((item) => ({ ...item })),
-  }));
-  let moved: (typeof next)[0]['items'][0] | undefined;
-  for (const g of next) {
-    const idx = g.items.findIndex((i) => i.id === payload.itemId);
-    if (idx >= 0) {
-      [moved] = g.items.splice(idx, 1);
-      break;
-    }
-  }
-  if (!moved) return groups;
-  const to = next.find((g) => g.id === payload.toGroupId);
-  if (!to) return groups;
-  const index = Math.max(0, Math.min(payload.index, to.items.length));
-  to.items.splice(index, 0, moved);
-  return next;
-}
-
 ui.page('/examples/list', () => {
-  const board = ui.state({
-    groups: INITIAL.map((g) => ({
-      ...g,
-      items: g.items.map((i) => ({ ...i })),
-    })),
-    lastMove: '' as string,
-  });
+  const status = ui.state({ lastMove: '' as string });
 
   exampleFrame(() => {
     ui.column(
       () => {
         exampleHeader(
           undefined,
-          'ui.list — dense vertical groups with cross-group drag; itemMove once per drop.',
+          'ui.list — list owns groups/item order; itemMove settles the model (no outer ui.auto remount).',
         );
 
         exampleSection(
           'Grouped list',
-          'Optimistic local reorder; server groups are the source of truth after each drop.',
+          'Optimistic local reorder while dragging; settle patches owned groups. Prefer side effects in onItemMove.',
         );
 
-        ui.auto(() => {
-          ui.list({
-            groups: board.groups,
-            onItemMove: (payload) => {
-              console.log('onItemMove', payload);
-              board.groups = applyItemMove(board.groups, payload);
-              board.lastMove = `${payload.itemId}: ${payload.fromGroupId} → ${payload.toGroupId} @ ${payload.index}`;
-            },
-            onItemClick: (itemId) => {
-              ui.notify(`Item ${itemId}`, 'info');
-            },
-          });
+        const board = ui.list({
+          groups: INITIAL.map((g) => ({
+            ...g,
+            items: g.items.map((i) => ({ ...i })),
+          })),
+          onItemMove: (payload) => {
+            console.log('onItemMove', payload);
+            status.lastMove = `${payload.itemId}: ${payload.fromGroupId} → ${payload.toGroupId} @ ${payload.index}`;
+          },
+          onItemClick: (itemId) => {
+            ui.notify(`Item ${itemId}`, 'info');
+          },
         });
 
         ui.auto(() => {
-          ui.label(board.lastMove ? `Last move: ${board.lastMove}` : 'Last move: —').classes(
+          ui.label(status.lastMove ? `Last move: ${status.lastMove}` : 'Last move: —').classes(
             'text-sm text-muted-foreground',
           );
         });
@@ -95,11 +68,13 @@ ui.page('/examples/list', () => {
         ui.button('Reset list', {
           variant: 'outline',
           onClick: () => {
-            board.groups = INITIAL.map((g) => ({
-              ...g,
-              items: g.items.map((i) => ({ ...i })),
-            }));
-            board.lastMove = '';
+            board.setGroups(
+              INITIAL.map((g) => ({
+                ...g,
+                items: g.items.map((i) => ({ ...i })),
+              })),
+            );
+            status.lastMove = '';
             ui.notify('List reset', 'info');
           },
         });

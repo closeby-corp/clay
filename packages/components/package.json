@@ -1,29 +1,30 @@
 {
   "name": "@badui/components",
   "version": "0.1.0",
-  "description": "Built-in UI element constructors for BadUI",
-  "license": "MIT",
-  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "directory": "packages/components"
+  },
   "main": "src/index.ts",
+  "dependencies": {
+    "@badui/core": "workspace:*",
+    "@dagrejs/dagre": "^3.1.1"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
+  "description": "Built-in UI element constructors for BadUI",
   "files": [
     "src",
     "README.md",
     "LICENSE",
     "!src/**/*.test.ts"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tfsoares/bad-ui.git",
-    "directory": "packages/components"
-  },
   "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "@badui/core": "workspace:*"
-  }
+  "type": "module"
 }

@@ -2752,7 +2752,16 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
       return <BoundEditor id={id} props={props} className={className} style={style} emit={emit} />;
 
     case 'kanban':
-      return <BoundKanban id={id} props={props} className={className} style={style} emit={emit} />;
+      return (
+        <BoundKanban
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          renderNode={(child, childEmit) => <ElementRenderer node={child} emit={childEmit} />}
+        />
+      );
 
     case 'relativeTime':
       return (

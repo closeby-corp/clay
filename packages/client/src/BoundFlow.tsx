@@ -1,7 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import {
   Background,
+  BaseEdge,
   Controls,
+  EdgeLabelRenderer,
+  getBezierPath,
+  getSmoothStepPath,
+  getStraightPath,
   Handle,
   MarkerType,
   MiniMap,
@@ -14,6 +28,7 @@ import {
   type Connection,
   type Edge,
   type EdgeChange,
+  type EdgeProps,
   type Node,
   type NodeChange,
   type NodeProps,
@@ -46,7 +61,7 @@ type FlowEdgeProp = {
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
-  type?: FlowEdgePathType;
+  type?: string;
   label?: string;
   animated?: boolean;
   variant?: FlowEdgeVariant;
@@ -56,6 +71,9 @@ type BaduiNodeData = {
   handles?: FlowHandle[];
   body: ElementNode[];
   className?: string;
+  kind?: string;
+  width?: number;
+  height?: number;
   emit: Emit;
   renderNode: RenderNode;
 };
@@ -89,6 +107,46 @@ const EDGE_VARIANT_STYLE: Record<
     labelColor: 'var(--destructive)',
   },
 };
+
+/** App-registered RF node types (merged with built-in `badui` / `baduiGroup`). */
+const registeredNodeTypes: Record<string, ComponentType<NodeProps>> = {};
+/** App-registered RF edge types (merged into React Flow `edgeTypes`). */
+const registeredEdgeTypes: Record<string, ComponentType<EdgeProps>> = {};
+
+/**
+ * Register custom React Flow node types for BadUI flows.
+ * Use the same string keys via `flow.node({ nodeType: '…' })`.
+ * Intended for custom client builds that import BoundFlow.
+ */
+export function registerFlowNodeTypes(
+  types: Record<string, ComponentType<NodeProps>>,
+): void {
+  Object.assign(registeredNodeTypes, types);
+}
+
+/**
+ * Register custom React Flow edge types for BadUI flows.
+ * Use the same string keys via edge `type: '…'` (non-built-in path kinds).
+ */
+export function registerFlowEdgeTypes(
+  types: Record<string, ComponentType<EdgeProps>>,
+): void {
+  Object.assign(registeredEdgeTypes, types);
+}
+
+/** Test helper — clear app-registered types. */
+export function clearFlowTypeRegistries(): void {
+  for (const key of Object.keys(registeredNodeTypes)) delete registeredNodeTypes[key];
+  for (const key of Object.keys(registeredEdgeTypes)) delete registeredEdgeTypes[key];
+}
+
+export function getRegisteredFlowNodeTypes(): Record<string, ComponentType<NodeProps>> {
+  return { ...registeredNodeTypes };
+}
+
+export function getRegisteredFlowEdgeTypes(): Record<string, ComponentType<EdgeProps>> {
+  return { ...registeredEdgeTypes };
+}
 
 function asStyle(style: unknown): CSSProperties | undefined {
   if (!style) return undefined;
@@ -132,14 +190,24 @@ function edgesKey(edges: FlowEdgeProp[]): string {
     .join('|');
 }
 
-/** Graph identity + handles + body child ids — positions intentionally omitted. */
+/** Graph identity + handles + body + parent/group — positions intentionally omitted. */
 function nodesTopologyKey(flowNodes: ElementNode[]): string {
   return flowNodes
     .map((n) => {
       const handles = (n.props.handles as FlowHandle[] | undefined) ?? [];
       const handleKey = handles.map((h) => `${h.id}:${h.type}:${h.position}`).join(',');
       const bodyKey = n.children.map((c) => c.id).join(',');
-      return `${String(n.props.id)}#${handleKey}#${bodyKey}`;
+      return [
+        String(n.props.id),
+        String(n.props.nodeType ?? ''),
+        String(n.props.kind ?? ''),
+        String(n.props.parentId ?? ''),
+        String(n.props.width ?? ''),
+        String(n.props.height ?? ''),
+        String(n.props.extent ?? ''),
+        handleKey,
+        bodyKey,
+      ].join('#');
     })
     .join('|');
 }
@@ -153,13 +221,14 @@ function nodesPositionsKey(flowNodes: ElementNode[]): string {
 function toRfEdge(e: FlowEdgeProp, prev?: Edge): Edge {
   const variant = e.variant && e.variant !== 'default' ? e.variant : undefined;
   const colors = variant ? EDGE_VARIANT_STYLE[variant] : undefined;
+  const type = e.type && e.type !== 'default' ? e.type : undefined;
   return {
     id: e.id,
     source: e.source,
     target: e.target,
     sourceHandle: e.sourceHandle,
     targetHandle: e.targetHandle,
-    type: e.type && e.type !== 'default' ? e.type : undefined,
+    type,
     label: e.label,
     animated: e.animated,
     selected: prev?.selected,
@@ -205,18 +274,51 @@ export function reconcileFlowEdges(serverEdges: FlowEdgeProp[], prev: Edge[]): E
 
 function toRfNode(flowNode: ElementNode, emit: Emit, renderNode: RenderNode): Node<BaduiNodeData> {
   const pos = (flowNode.props.position as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
-  return {
+  const kind = (flowNode.props.kind as string | undefined) ?? 'default';
+  const nodeType =
+    (flowNode.props.nodeType as string | undefined) ||
+    (kind === 'group' ? 'baduiGroup' : 'badui');
+  const parentId = flowNode.props.parentId as string | undefined;
+  const width = flowNode.props.width as number | undefined;
+  const height = flowNode.props.height as number | undefined;
+  const extentProp = flowNode.props.extent as 'parent' | null | undefined;
+  const extent =
+    extentProp === null
+      ? undefined
+      : extentProp === 'parent'
+        ? 'parent'
+        : parentId
+          ? 'parent'
+          : undefined;
+
+  const node: Node<BaduiNodeData> = {
     id: String(flowNode.props.id ?? flowNode.id),
-    type: 'badui',
+    type: nodeType,
     position: { x: Number(pos.x) || 0, y: Number(pos.y) || 0 },
     data: {
       handles: flowNode.props.handles as FlowHandle[] | undefined,
       body: flowNode.children,
       className: flowNode.props.className as string | undefined,
+      kind,
+      width,
+      height,
       emit,
       renderNode,
     },
   };
+  if (parentId) node.parentId = parentId;
+  if (extent) node.extent = extent;
+  if (width != null || height != null) {
+    node.style = {
+      ...(width != null ? { width } : null),
+      ...(height != null ? { height } : null),
+    };
+  }
+  // Groups sit under children in the stacking sense (RF draws parents first when zIndex lower).
+  if (kind === 'group') {
+    node.zIndex = -1;
+  }
+  return node;
 }
 
 const INTERACTIVE_SELECTOR =
@@ -268,7 +370,119 @@ function BaduiFlowNode({ id, data }: NodeProps<Node<BaduiNodeData>>) {
   );
 }
 
-const nodeTypes = { badui: BaduiFlowNode };
+/** Built-in group / subflow container (parent for `parentId` children). */
+function BaduiGroupNode({ id, data }: NodeProps<Node<BaduiNodeData>>) {
+  const updateNodeInternals = useUpdateNodeInternals();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const handles = data.handles ?? [];
+  const bodyKey = data.body.map((c) => c.id).join(',');
+  const width = data.width ?? 400;
+  const height = data.height ?? 280;
+
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [id, bodyKey, handles, width, height, updateNodeInternals]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.querySelectorAll(INTERACTIVE_SELECTOR).forEach((el) => {
+      el.classList.add('nodrag', 'nopan');
+    });
+  }, [bodyKey, data.body]);
+
+  return (
+    <div
+      ref={rootRef}
+      className={cn(
+        'h-full w-full cursor-grab rounded-lg border-2 border-dashed border-muted-foreground/40 bg-muted/30 text-card-foreground active:cursor-grabbing',
+        data.className,
+      )}
+      style={{ width, height, minWidth: width, minHeight: height }}
+      data-slot="flow-group"
+    >
+      {handles.map((h) => (
+        <Handle
+          key={h.id}
+          id={h.id}
+          type={h.type}
+          position={HANDLE_POSITION[h.position] ?? Position.Right}
+          className="!size-2.5 !border-2 !border-background !bg-primary"
+        />
+      ))}
+      <div className="nowheel flex flex-col gap-1 p-2">
+        {data.body.map((child) => (
+          <div key={child.id}>{data.renderNode(child, data.emit)}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const builtinNodeTypes = {
+  badui: BaduiFlowNode,
+  baduiGroup: BaduiGroupNode,
+};
+
+/**
+ * Optional labeled edge that apps can register under a custom key, or use as a
+ * reference implementation when building custom edgeTypes.
+ */
+export function BaduiLabeledEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style,
+  markerEnd,
+  label,
+  labelStyle,
+  data,
+}: EdgeProps) {
+  const pathKind = (data as { path?: FlowEdgePathType } | undefined)?.path ?? 'smoothstep';
+  const [edgePath, labelX, labelY] =
+    pathKind === 'straight'
+      ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+      : pathKind === 'default' || pathKind === 'simplebezier'
+        ? getBezierPath({
+            sourceX,
+            sourceY,
+            targetX,
+            targetY,
+            sourcePosition,
+            targetPosition,
+          })
+        : getSmoothStepPath({
+            sourceX,
+            sourceY,
+            targetX,
+            targetY,
+            sourcePosition,
+            targetPosition,
+          });
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+      {label ? (
+        <EdgeLabelRenderer>
+          <div
+            className="nodrag nopan pointer-events-none absolute text-[10px] font-medium"
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              ...(labelStyle as CSSProperties | undefined),
+            }}
+          >
+            {String(label)}
+          </div>
+        </EdgeLabelRenderer>
+      ) : null}
+    </>
+  );
+}
 
 function BoundFlowInner({
   id,
@@ -287,15 +501,20 @@ function BoundFlowInner({
   children: ElementNode[];
   renderNode: RenderNode;
 }) {
-  const flowNodes = useMemo(
-    () => children.filter((c) => c.type === 'flowNode'),
-    [children],
-  );
+  const flowNodes = useMemo(() => {
+    const list = children.filter((c) => c.type === 'flowNode');
+    // Parents before children so RF can resolve parentId on first paint.
+    return [...list].sort((a, b) => {
+      const aParent = a.props.parentId ? 1 : 0;
+      const bParent = b.props.parentId ? 1 : 0;
+      return aParent - bParent;
+    });
+  }, [children]);
   const serverEdges = (props.edges as FlowEdgeProp[] | undefined) ?? [];
   const fitView = props.fitView !== false;
   const showMiniMap = props.showMiniMap !== false;
   const showControls = props.showControls !== false;
-  const defaultEdgeType = props.defaultEdgeType as FlowEdgePathType | undefined;
+  const defaultEdgeType = props.defaultEdgeType as string | undefined;
   const defaultEdgeAnimated = props.defaultEdgeAnimated as boolean | undefined;
   const defaultEdgeVariant = props.defaultEdgeVariant as FlowEdgeVariant | undefined;
 
@@ -311,12 +530,25 @@ function BoundFlowInner({
   emitRef.current = emit;
   renderNodeRef.current = renderNode;
 
+  const registeredNodeKeys = Object.keys(registeredNodeTypes).join(',');
+  const registeredEdgeKeys = Object.keys(registeredEdgeTypes).join(',');
+
+  const nodeTypes = useMemo(
+    () => ({ ...builtinNodeTypes, ...registeredNodeTypes }),
+    [registeredNodeKeys],
+  );
+
+  const edgeTypes = useMemo(() => {
+    if (!registeredEdgeKeys) return undefined;
+    return { ...registeredEdgeTypes };
+  }, [registeredEdgeKeys]);
+
   const [nodes, setNodes] = useState<Node<BaduiNodeData>[]>(() =>
     flowNodes.map((n) => toRfNode(n, emit, renderNode)),
   );
   const [edges, setEdges] = useState<Edge[]>(() => serverEdges.map((e) => toRfEdge(e)));
 
-  // Topology change (ids / handles / body ids) → rebuild RF nodes from server.
+  // Topology change (ids / handles / body ids / parent) → rebuild RF nodes from server.
   useEffect(() => {
     if (draggingRef.current) return;
     setNodes(
@@ -370,6 +602,9 @@ function BoundFlowInner({
           handles: src.props.handles as FlowHandle[] | undefined,
           body: src.children,
           className: src.props.className as string | undefined,
+          kind: (src.props.kind as string | undefined) ?? 'default',
+          width: src.props.width as number | undefined,
+          height: src.props.height as number | undefined,
           emit: emitRef.current,
           renderNode: renderNodeRef.current,
         },
@@ -471,6 +706,7 @@ function BoundFlowInner({
         nodes={displayNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

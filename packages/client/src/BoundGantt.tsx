@@ -34,6 +34,12 @@ type GanttMarker = {
   label?: string;
 };
 
+type GanttDependency = {
+  id: string;
+  from: string;
+  to: string;
+};
+
 type GanttRange = {
   start: string;
   end: string;
@@ -150,26 +156,109 @@ function pxPerDayForSpan(spanDays: number): number {
 function findItem(
   rows: GanttRow[],
   itemId: string,
-): { row: GanttRow; item: GanttItem } | null {
-  for (const row of rows) {
+): { row: GanttRow; item: GanttItem; rowIndex: number } | null {
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex]!;
     const item = row.items.find((i) => i.id === itemId);
-    if (item) return { row, item };
+    if (item) return { row, item, rowIndex };
   }
   return null;
 }
 
-function updateItemDates(
+/** Patch dates in place; optionally move the item to another row. */
+function relocateItem(
   rows: GanttRow[],
   itemId: string,
+  targetRowId: string,
   start: string,
   end: string,
 ): GanttRow[] {
-  return rows.map((row) => ({
+  const next = rows.map((row) => ({
     ...row,
-    items: row.items.map((item) =>
-      item.id === itemId ? { ...item, start, end } : item,
-    ),
+    items: row.items.map((item) => ({ ...item })),
   }));
+
+  let found: { item: GanttItem; fromId: string; index: number } | null = null;
+  for (const row of next) {
+    const index = row.items.findIndex((i) => i.id === itemId);
+    if (index >= 0) {
+      found = { item: row.items[index]!, fromId: row.id, index };
+      break;
+    }
+  }
+  if (!found) return rows;
+
+  const updated: GanttItem = { ...found.item, start, end };
+
+  if (targetRowId === found.fromId) {
+    const row = next.find((r) => r.id === found!.fromId)!;
+    row.items[found.index] = updated;
+    return next;
+  }
+
+  const target = next.find((r) => r.id === targetRowId);
+  if (!target) {
+    const row = next.find((r) => r.id === found!.fromId)!;
+    row.items[found.index] = updated;
+    return next;
+  }
+
+  const from = next.find((r) => r.id === found.fromId)!;
+  from.items.splice(found.index, 1);
+  target.items.push(updated);
+  return next;
+}
+
+type BarGeom = {
+  itemId: string;
+  rowIndex: number;
+  left: number;
+  right: number;
+  cy: number;
+};
+
+function barGeometries(
+  rows: GanttRow[],
+  dayToX: (d: Date) => number,
+  pxPerDay: number,
+): Map<string, BarGeom> {
+  const map = new Map<string, BarGeom>();
+  rows.forEach((row, rowIndex) => {
+    for (const item of row.items) {
+      const s = parseDay(item.start);
+      const e = parseDay(item.end);
+      if (!s || !e) continue;
+      const left = dayToX(s);
+      const width = Math.max(
+        pxPerDay,
+        (differenceInCalendarDays(e, s) + 1) * pxPerDay,
+      );
+      map.set(item.id, {
+        itemId: item.id,
+        rowIndex,
+        left,
+        right: left + width,
+        cy: rowIndex * ROW_HEIGHT + ROW_HEIGHT / 2,
+      });
+    }
+  });
+  return map;
+}
+
+function dependencyPath(from: BarGeom, to: BarGeom): string {
+  const x1 = from.right;
+  const y1 = from.cy;
+  const x2 = to.left;
+  const y2 = to.cy;
+  const dx = Math.max(16, Math.min(40, Math.abs(x2 - x1) / 2));
+  // Elbow when successor starts before predecessor ends (overlap / back-edge).
+  if (x2 <= x1 + 8) {
+    const midY = (y1 + y2) / 2;
+    const outX = x1 + 12;
+    const inX = x2 - 12;
+    return `M ${x1} ${y1} L ${outX} ${y1} L ${outX} ${midY} L ${inX} ${midY} L ${inX} ${y2} L ${x2} ${y2}`;
+  }
+  return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 }
 
 export function BoundGantt({
@@ -190,7 +279,15 @@ export function BoundGantt({
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
 
-  const markers = (Array.isArray(props.markers) ? props.markers : []) as GanttMarker[];
+  const serverMarkers = (Array.isArray(props.markers) ? props.markers : []) as GanttMarker[];
+  const [markers, setMarkers] = useOptimisticValue(serverMarkers);
+  const markersRef = useRef(markers);
+  markersRef.current = markers;
+
+  const dependencies = (
+    Array.isArray(props.dependencies) ? props.dependencies : []
+  ) as GanttDependency[];
+
   const rangeProp = props.range as GanttRange | undefined;
   const readonly = !!props.readonly;
 
@@ -206,17 +303,37 @@ export function BoundGantt({
 
   const dragRef = useRef<DragState | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [hoverRowId, setHoverRowId] = useState<string | null>(null);
   const suppressClickRef = useRef(false);
+  const rowsAreaRef = useRef<HTMLDivElement>(null);
 
   const dayToX = (d: Date) => differenceInCalendarDays(d, rangeStart) * pxPerDay;
   const pxPerDayRef = useRef(pxPerDay);
   pxPerDayRef.current = pxPerDay;
+  const rangeStartRef = useRef(rangeStart);
+  rangeStartRef.current = rangeStart;
   const emitRef = useRef(emit);
   emitRef.current = emit;
   const propsRef = useRef(props);
   propsRef.current = props;
   const idRef = useRef(id);
   idRef.current = id;
+  const readonlyRef = useRef(readonly);
+  readonlyRef.current = readonly;
+
+  const rowIdAtClientY = (clientY: number, currentRows: GanttRow[]): string | null => {
+    const area = rowsAreaRef.current;
+    if (!area || currentRows.length === 0) return null;
+    const rect = area.getBoundingClientRect();
+    const y = clientY - rect.top;
+    if (y < 0) return currentRows[0]!.id;
+    if (y >= rect.height) return currentRows[currentRows.length - 1]!.id;
+    const index = Math.min(
+      currentRows.length - 1,
+      Math.max(0, Math.floor(y / ROW_HEIGHT)),
+    );
+    return currentRows[index]?.id ?? null;
+  };
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -232,6 +349,12 @@ export function BoundGantt({
       if (drag.mode === 'move') {
         nextStart = addDays(new Date(drag.startMs), deltaDays);
         nextEnd = addDays(nextStart, span);
+        const nextRowId = rowIdAtClientY(e.clientY, rowsRef.current);
+        if (nextRowId && nextRowId !== drag.rowId) {
+          drag.rowId = nextRowId;
+          drag.moved = true;
+          setHoverRowId(nextRowId);
+        }
       } else if (drag.mode === 'resize-start') {
         nextStart = addDays(new Date(drag.startMs), deltaDays);
         if (differenceInCalendarDays(nextEnd, nextStart) < 0) {
@@ -244,9 +367,10 @@ export function BoundGantt({
         }
       }
 
-      const next = updateItemDates(
+      const next = relocateItem(
         rowsRef.current,
         drag.itemId,
+        drag.rowId,
         toIsoDay(nextStart),
         toIsoDay(nextEnd),
       );
@@ -259,6 +383,7 @@ export function BoundGantt({
       if (!drag || e.pointerId !== drag.pointerId) return;
       dragRef.current = null;
       setDraggingId(null);
+      setHoverRowId(null);
       if (!drag.moved) return;
       suppressClickRef.current = true;
       const found = findItem(rowsRef.current, drag.itemId);
@@ -307,11 +432,34 @@ export function BoundGantt({
       moved: false,
     };
     setDraggingId(item.id);
+    if (mode === 'move') setHoverRowId(rowId);
   };
 
   const emitClick = (itemId: string) => {
     if (hasEvent(props, 'itemClick')) emit(id, 'itemClick', itemId);
   };
+
+  const addMarkerAtClientX = (clientX: number, timelineEl: HTMLElement) => {
+    if (readonlyRef.current) return;
+    if (!hasEvent(propsRef.current, 'markerAdd')) return;
+    const rect = timelineEl.getBoundingClientRect();
+    // Header moves with horizontal scroll; rect.left already accounts for it.
+    const x = clientX - rect.left;
+    const dayOffset = Math.round(x / pxPerDayRef.current);
+    const date = addDays(rangeStartRef.current, dayOffset);
+    const marker: GanttMarker = {
+      id: `m-${Date.now()}`,
+      date: toIsoDay(date),
+      label: 'Marker',
+    };
+    const next = [...markersRef.current, marker];
+    markersRef.current = next;
+    setMarkers(next);
+    emitRef.current(idRef.current, 'markerAdd', marker);
+  };
+
+  const geoms = barGeometries(rows, dayToX, pxPerDay);
+  const bodyHeight = Math.max(ROW_HEIGHT, rows.length * ROW_HEIGHT);
 
   return (
     <div
@@ -337,7 +485,10 @@ export function BoundGantt({
           {rows.map((row) => (
             <div
               key={row.id}
-              className="flex items-center border-b px-3 font-medium"
+              className={cn(
+                'flex items-center border-b px-3 font-medium',
+                hoverRowId === row.id && 'bg-accent/50',
+              )}
               style={{ height: ROW_HEIGHT }}
               title={row.title}
             >
@@ -349,10 +500,18 @@ export function BoundGantt({
         {/* Timeline */}
         <div className="relative min-w-0 flex-1">
           <div style={{ width: timelineWidth, minWidth: '100%' }}>
-            {/* Header */}
+            {/* Header — double-click to add a marker when not readonly */}
             <div
               className="sticky top-0 z-10 border-b bg-muted/40"
               style={{ height: HEADER_HEIGHT }}
+              title={
+                readonly
+                  ? undefined
+                  : 'Double-click to add a marker at this date'
+              }
+              onDoubleClick={(ev) => {
+                addMarkerAtClientX(ev.clientX, ev.currentTarget);
+              }}
             >
               <div className="relative h-full" style={{ width: timelineWidth }}>
                 {months.map((month, i) => {
@@ -377,7 +536,11 @@ export function BoundGantt({
             </div>
 
             {/* Rows + bars */}
-            <div className="relative" style={{ width: timelineWidth }}>
+            <div
+              ref={rowsAreaRef}
+              className="relative"
+              style={{ width: timelineWidth, height: bodyHeight }}
+            >
               {/* Grid lines */}
               {months.map((month) => (
                 <div
@@ -422,11 +585,54 @@ export function BoundGantt({
                 );
               })}
 
+              {/* Dependency arrows */}
+              {dependencies.length > 0 ? (
+                <svg
+                  className="pointer-events-none absolute inset-0 z-[6] overflow-visible"
+                  width={timelineWidth}
+                  height={bodyHeight}
+                  aria-hidden
+                >
+                  <defs>
+                    <marker
+                      id={`${id}-gantt-arrow`}
+                      markerWidth="8"
+                      markerHeight="8"
+                      refX="7"
+                      refY="4"
+                      orient="auto"
+                      markerUnits="strokeWidth"
+                    >
+                      <path d="M0,0 L8,4 L0,8 Z" className="fill-muted-foreground" />
+                    </marker>
+                  </defs>
+                  {dependencies.map((dep) => {
+                    const from = geoms.get(dep.from);
+                    const to = geoms.get(dep.to);
+                    if (!from || !to) return null;
+                    return (
+                      <path
+                        key={dep.id}
+                        d={dependencyPath(from, to)}
+                        fill="none"
+                        className="stroke-muted-foreground"
+                        strokeWidth={1.5}
+                        markerEnd={`url(#${id}-gantt-arrow)`}
+                      />
+                    );
+                  })}
+                </svg>
+              ) : null}
+
               {rows.map((row, rowIndex) => (
                 <div
                   key={row.id}
-                  className="relative border-b"
+                  className={cn(
+                    'relative border-b',
+                    hoverRowId === row.id && 'bg-accent/40',
+                  )}
                   style={{ height: ROW_HEIGHT }}
+                  data-row-id={row.id}
                 >
                   {row.items.map((item, itemIndex) => {
                     const s = parseDay(item.start);

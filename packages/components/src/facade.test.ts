@@ -404,26 +404,31 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el2.props.value).toBe('<p>x</p>');
   });
 
-  test('kanban wires columns and always registers cardMove settle', () => {
+  test('kanban wires columns and always registers cardMove/cardSelect settle', () => {
     const columns = [
       {
         id: 'todo',
         title: 'Todo',
-        cards: [{ id: 'c1', title: 'One', description: 'desc' }],
+        cards: [{ id: 'c1', title: 'One', description: 'desc', laneId: 'eng' }],
       },
       { id: 'done', title: 'Done', cards: [] },
     ];
     const el = kanban({
       columns,
+      lanes: [{ id: 'eng', title: 'Engineering' }],
       onCardMove: () => {},
       onCardClick: () => {},
+      onCardSelect: () => {},
     });
     expect(el.type).toBe('kanban');
     expect(el.props.columns).toEqual(columns);
-    expect(el.props.events).toEqual(expect.arrayContaining(['cardMove', 'cardClick']));
+    expect(el.props.lanes).toEqual([{ id: 'eng', title: 'Engineering' }]);
+    expect(el.props.events).toEqual(
+      expect.arrayContaining(['cardMove', 'cardClick', 'cardSelect']),
+    );
 
     const bare = kanban({ columns });
-    expect(bare.props.events).toEqual(expect.arrayContaining(['cardMove']));
+    expect(bare.props.events).toEqual(expect.arrayContaining(['cardMove', 'cardSelect']));
   });
 
   test('relativeTime is display-only and defaults styles', () => {
@@ -461,7 +466,7 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.props.events ?? []).toEqual([]);
   });
 
-  test('list wires groups and itemMove/itemClick', () => {
+  test('list wires groups and always registers itemMove settle', () => {
     const groups = [
       {
         id: 'inbox',
@@ -478,6 +483,9 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.type).toBe('list');
     expect(el.props.groups).toEqual(groups);
     expect(el.props.events).toEqual(expect.arrayContaining(['itemMove', 'itemClick']));
+
+    const bare = list({ groups });
+    expect(bare.props.events).toEqual(expect.arrayContaining(['itemMove']));
   });
 
   test('imageCrop wires src/aspect and crop event', () => {
@@ -491,31 +499,41 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.props.events).toEqual(expect.arrayContaining(['crop']));
   });
 
-  test('gantt wires rows/markers/range and always registers itemMove settle', () => {
+  test('gantt wires rows/markers/deps/range and always registers settle events', () => {
     const rows = [
       {
         id: 'r1',
         title: 'Design',
-        items: [{ id: 'i1', title: 'Wireframes', start: '2026-08-01', end: '2026-08-10' }],
+        items: [
+          { id: 'i1', title: 'Wireframes', start: '2026-08-01', end: '2026-08-10' },
+          { id: 'i2', title: 'UI kit', start: '2026-08-11', end: '2026-08-20' },
+        ],
       },
     ];
     const el = gantt({
       rows,
       markers: [{ id: 'm1', date: '2026-08-15', label: 'Beta' }],
+      dependencies: [{ id: 'd1', from: 'i1', to: 'i2' }],
       range: { start: '2026-07-01', end: '2026-09-01' },
       readonly: false,
       onItemMove: () => {},
       onItemClick: () => {},
+      onMarkerAdd: () => {},
     });
     expect(el.type).toBe('gantt');
     expect(el.props.rows).toEqual(rows);
     expect(el.props.markers).toEqual([{ id: 'm1', date: '2026-08-15', label: 'Beta' }]);
+    expect(el.props.dependencies).toEqual([{ id: 'd1', from: 'i1', to: 'i2' }]);
     expect(el.props.range).toEqual({ start: '2026-07-01', end: '2026-09-01' });
     expect(el.props.readonly).toBe(false);
-    expect(el.props.events).toEqual(expect.arrayContaining(['itemMove', 'itemClick']));
+    expect(el.props.events).toEqual(
+      expect.arrayContaining(['itemMove', 'itemClick', 'markerAdd']),
+    );
 
     const bare = gantt({ rows });
-    expect(bare.props.events).toEqual(expect.arrayContaining(['itemMove']));
+    expect(bare.props.events).toEqual(
+      expect.arrayContaining(['itemMove', 'markerAdd']),
+    );
   });
 
   test('flow builds flowNode children with edges and settle events', () => {

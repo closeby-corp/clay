@@ -206,9 +206,11 @@ import {
   type EditorProps,
   type EditorFormat,
   KanbanElement,
+  KANBAN_DETAIL_FIELD,
   type KanbanProps,
   type KanbanColumn,
   type KanbanCard,
+  type KanbanLane,
   type KanbanCardMovePayload,
   type RelativeTimeProps,
   type RelativeTimeTimezone,
@@ -217,6 +219,7 @@ import {
   type QrCodeProps,
   type QrCodeLevel,
   type ImageZoomProps,
+  ListElement,
   type ListProps,
   type ListGroup,
   type ListItem,
@@ -228,10 +231,12 @@ import {
   type GanttRow,
   type GanttItem,
   type GanttMarker,
+  type GanttDependency,
   type GanttRange,
   type GanttItemMovePayload,
   type FlowProps,
   type FlowNodeProps,
+  type FlowNodeKind,
   type FlowEdge,
   type FlowEdgePathType,
   type FlowEdgeVariant,
@@ -242,6 +247,7 @@ import {
   type FlowNodeMovePayload,
   type FlowSelectionPayload,
   type FlowLayoutOptions,
+  type FlowLayoutNodeMeta,
   type FlowLayoutDirection,
   makeFlowEdgeId,
   computeFlowLayout,
@@ -408,6 +414,7 @@ export type {
   KanbanProps,
   KanbanColumn,
   KanbanCard,
+  KanbanLane,
   KanbanCardMovePayload,
   RelativeTimeProps,
   RelativeTimeTimezone,
@@ -426,10 +433,12 @@ export type {
   GanttRow,
   GanttItem,
   GanttMarker,
+  GanttDependency,
   GanttRange,
   GanttItemMovePayload,
   FlowProps,
   FlowNodeProps,
+  FlowNodeKind,
   FlowEdge,
   FlowEdgePathType,
   FlowEdgeVariant,
@@ -440,6 +449,7 @@ export type {
   FlowNodeMovePayload,
   FlowSelectionPayload,
   FlowLayoutOptions,
+  FlowLayoutNodeMeta,
   FlowLayoutDirection,
   SeriesInput,
   ChartChromeOpts,
@@ -475,6 +485,8 @@ export {
   CollapsibleElement,
   FlowElement,
   KanbanElement,
+  KANBAN_DETAIL_FIELD,
+  ListElement,
   GanttElement,
   makeFlowEdgeId,
   computeFlowLayout,
@@ -648,9 +660,9 @@ export function editor(props?: EditorProps): Element {
 }
 
 /**
- * Kanban board with cross-column card drag. Owns columns + card order;
- * default `cardMove` settle updates the model before user `onCardMove`.
- * Prefer `ui.kanban`. See {@link KanbanProps}.
+ * Kanban board with cross-column card drag, optional swimlanes, and card detail drawer.
+ * Owns columns + card order + selection; default `cardMove` / `cardSelect` settle
+ * updates the model before user callbacks. Prefer `ui.kanban`. See {@link KanbanProps}.
  */
 export function kanban(props?: KanbanProps): KanbanElement {
   return kanbanFactory(props);
@@ -671,8 +683,12 @@ export function imageZoom(props: ImageZoomProps): Element {
   return imageZoomFactory(props);
 }
 
-/** Dense vertical grouped DnD list. Prefer `ui.list`. See {@link ListProps}. */
-export function list(props: ListProps): Element {
+/**
+ * Dense vertical grouped DnD list. Owns groups + item order;
+ * default `itemMove` settle updates the model before user `onItemMove`.
+ * Prefer `ui.list`. See {@link ListProps}.
+ */
+export function list(props?: ListProps): ListElement {
   return listFactory(props);
 }
 
@@ -682,8 +698,9 @@ export function imageCrop(props: ImageCropProps): Element {
 }
 
 /**
- * Project timeline with drag move/resize. Owns rows + item dates;
- * default `itemMove` settle updates the model before user `onItemMove`.
+ * Project timeline with drag move/resize (including cross-row), markers,
+ * and dependency arrows. Owns rows + dates + markers + dependencies;
+ * default `itemMove` / `markerAdd` settle updates the model before user callbacks.
  * Prefer `ui.gantt`. See {@link GanttProps}.
  */
 export function gantt(props?: GanttProps): GanttElement {

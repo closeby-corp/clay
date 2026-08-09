@@ -785,9 +785,12 @@ export { editor, type EditorProps, type EditorFormat } from './editor';
 export {
   kanban,
   KanbanElement,
+  KANBAN_DETAIL_FIELD,
+  absoluteInsertIndex,
   type KanbanProps,
   type KanbanColumn,
   type KanbanCard,
+  type KanbanLane,
   type KanbanCardMovePayload,
 } from './kanban';
 export {
@@ -801,6 +804,7 @@ export { qrCode, type QrCodeProps, type QrCodeLevel } from './qr-code';
 export { imageZoom, type ImageZoomProps } from './image-zoom';
 export {
   list,
+  ListElement,
   type ListProps,
   type ListGroup,
   type ListItem,
@@ -818,6 +822,7 @@ export {
   type GanttRow,
   type GanttItem,
   type GanttMarker,
+  type GanttDependency,
   type GanttRange,
   type GanttItemMovePayload,
 } from './gantt';
@@ -828,6 +833,7 @@ export {
   computeFlowLayout,
   type FlowProps,
   type FlowNodeProps,
+  type FlowNodeKind,
   type FlowEdge,
   type FlowEdgePathType,
   type FlowEdgeVariant,
@@ -838,6 +844,7 @@ export {
   type FlowNodeMovePayload,
   type FlowSelectionPayload,
   type FlowLayoutOptions,
+  type FlowLayoutNodeMeta,
   type FlowLayoutDirection,
 } from './flow';
 
