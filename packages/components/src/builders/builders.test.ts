@@ -347,5 +347,7 @@ describe('table builder', () => {
       zebra: true,
       pageSize: 5,
     });
+    expect(built.getQuery()).toMatchObject({ page: 1, pageSize: 5, filter: '', sorts: [] });
+    expect(built.getTotalRows()).toBe(100);
   });
 });

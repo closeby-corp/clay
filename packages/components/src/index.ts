@@ -463,6 +463,7 @@ export {
   type DataTableDensity,
   type DataTableSort,
   type DataTableSortDir,
+  type DataTableQuery,
   type ExportFormat,
   type ExportMode,
 } from './data-table';

@@ -551,50 +551,45 @@ Dates are ISO `YYYY-MM-DD` (or parseable datetime strings).
 
 #### `ui.flow(props, fn)` / `ui.flow(fn, props?)`
 
-Interactive flow diagram backed by `@xyflow/react`. Graph topology (`edges`, each `flow.node` `position` / `handles`) is props-driven; **node interiors are live BadUI element trees** (same idea as DataTable `__ui` cells, but preferring normal children so patches stay incremental).
+Interactive flow diagram backed by `@xyflow/react`. **`FlowElement` owns diagram state** (edges + node positions), similar in spirit to DataTable owning rows — DataTable-style imperative APIs mutate the model and patch the client without remounting the React Flow shell. **Node interiors are live BadUI element trees**.
+
+**Owned model + defaults**
+
+- Initial `edges` and each `flow.node({ position })` seed the owned model.
+- Default settle handlers always run (even with no user callbacks): `nodeMove` → `moveNode`, `connect` → `addEdge`, `edgesDelete` / `nodesDelete` → remove from owned model. User `on*` handlers run **after** for side effects only.
+- Imperative APIs on the returned `FlowElement`: `getEdges` / `setEdges`, `addEdge` / `removeEdges`, `moveNode`, `getPositions` / `getNodeIds`, `addNode` / `removeNode`.
+- **Do not** wrap the whole flow in `ui.auto` that tracks edges/positions — that remounts the diagram. Keep narrow `ui.auto` (or `bindText` / prop patches) **inside** individual nodes for control labels.
 
 **Interaction model**
 
 - Drag nodes by the card chrome (labels/empty space). Buttons, inputs, and other interactive controls are marked `nodrag` / `nopan` so clicks do not steal the drag.
-- Positions stay optimistic on the client while dragging; **`nodeMove` fires once on drag-stop**. Persist `position` in your handler (or the next server patch will snap the node back).
-- New connections emit **`connect`** once; append to `edges` (and optional handle ids) in the handler.
-- Deletes (`Backspace` / `Delete`) emit **`nodesDelete`** / **`edgesDelete`**.
+- Positions stay optimistic on the client while dragging; **`nodeMove` fires once on drag-stop** and the flow persists position automatically.
+- New connections emit **`connect`** once; the flow appends the edge automatically.
+- Deletes (`Backspace` / `Delete`) emit **`nodesDelete`** / **`edgesDelete`** (owned model updates first).
 - Viewport pan/zoom is client-local (not round-tripped).
-- Prefer updating `edges` / node `position` via props patches rather than wrapping the whole diagram in `ui.auto` that rebuilds on every status string — remounting the flow drops in-flight drag state.
+- Client rebuilds RF nodes on topology changes (graph ids / handles / body child ids), and patches positions/edges in place when only those change.
 
 ```typescript
-const diagram = ui.state({
-  edges: [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }],
-  positions: { a: { x: 0, y: 0 }, b: { x: 280, y: 0 } },
-});
+const status = ui.state({ lastEvent: '' });
 
-ui.flow(
+const diagram = ui.flow(
   {
-    edges: diagram.edges,
+    edges: [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }],
     fitView: true,
     showMiniMap: true,
     showControls: true,
     onConnect: (e) => {
-      diagram.edges = [
-        ...diagram.edges,
-        {
-          id: `e-${e.source}-${e.target}-${Date.now()}`,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle ?? undefined,
-          targetHandle: e.targetHandle ?? undefined,
-        },
-      ];
+      status.lastEvent = `connect ${e.source} → ${e.target}`;
     },
     onNodeMove: ({ nodeId, position }) => {
-      diagram.positions = { ...diagram.positions, [nodeId]: position };
+      status.lastEvent = `move ${nodeId}`;
     },
   },
   (flow) => {
     flow.node(
       {
         id: 'a',
-        position: diagram.positions.a,
+        position: { x: 0, y: 0 },
         handles: [{ id: 'out', type: 'source', position: 'right' }],
       },
       () => {
@@ -605,7 +600,7 @@ ui.flow(
     flow.node(
       {
         id: 'b',
-        position: diagram.positions.b,
+        position: { x: 280, y: 0 },
         handles: [{ id: 'in', type: 'target', position: 'left' }],
       },
       () => {
@@ -614,6 +609,10 @@ ui.flow(
     );
   },
 );
+
+// Reset / mutate via element APIs (no outer ui.auto):
+// diagram.setEdges([...]); diagram.moveNode('a', { x: 0, y: 0 });
+// diagram.addNode({ id: 'c', position: { x: 560, y: 0 } }, () => { ui.label('C'); });
 ```
 
 | Prop | Type | Default |
@@ -622,19 +621,19 @@ ui.flow(
 | `fitView` | `boolean` | `true` |
 | `showMiniMap` | `boolean` | `true` |
 | `showControls` | `boolean` | `true` |
-| `onConnect` | `(payload: { source, target, sourceHandle?, targetHandle? }) => void` | |
-| `onNodeMove` | `(payload: { nodeId, position: { x, y } }) => void` | |
-| `onNodesDelete` | `(ids: string[]) => void` | |
-| `onEdgesDelete` | `(ids: string[]) => void` | |
+| `onConnect` | `(payload: { source, target, sourceHandle?, targetHandle? }) => void` | after owned `addEdge` |
+| `onNodeMove` | `(payload: { nodeId, position: { x, y } }) => void` | after owned `moveNode` |
+| `onNodesDelete` | `(ids: string[]) => void` | after owned `removeNode` |
+| `onEdgesDelete` | `(ids: string[]) => void` | after owned `removeEdges` |
 | `onSelectionChange` | `(payload: { nodeIds, edgeIds }) => void` | |
 
-`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`), optional `className`. When `handles` is omitted, default left-target / right-source ports are used. Nested BadUI handlers (`onClick`, `onChange`, …) work as usual inside the node body.
+`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`), optional `className`. When `handles` is omitted, default left-target / right-source ports are used. Nested BadUI handlers (`onClick`, `onChange`, …) work as usual inside the node body. Use `flow.addNode` / `flow.removeNode` for runtime topology changes.
 
 See Flow Demo (`/examples/flow`) for three richer patterns:
 
-1. **ETL pipeline** — select/switch/progress/buttons inside nodes  
+1. **ETL pipeline** — select/switch/progress/buttons inside nodes (narrow per-node `ui.auto`)  
 2. **Branching approval** — multi-handle triage (`yes` / `no` sources), rating + badges  
-3. **Fan-in / fan-out + dynamic stages** — multiple target/source handles; `Add stage` appends `flow.node` at runtime  
+3. **Fan-in / fan-out + dynamic stages** — `addNode` / `removeNode` without wrapping the flow in `ui.auto`  
 
 Out of v1: app-bundled React `nodeTypes` registry, auto-layout (dagre/elk), custom edges, nested sub-flows.
 
@@ -845,7 +844,7 @@ ui.chart.radar(monthly, 'month').series(series).title('Skills').build();
 
 #### `ui.dataTable(data, props?)`
 
-Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows` / `setLoading` / `setTotalRows` / `setDensity` / `setZebra` / `setSorts` / `getSorts`.
+Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows` / `getQuery` / `setLoading` / `withLoading` / `setTotalRows` / `setDensity` / `setZebra` / `setSorts` / `getSorts`.
 
 `data` may be:
 
@@ -889,20 +888,20 @@ const table = ui.dataTable(tasks, {
 | `columnToggle` | `boolean` | `true` | Columns visibility menu |
 | `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
 | `exportFilename` | `string` | `'data'` | Download base name (no extension) |
-| `loading` | `boolean` | `false` | Show a spinner in the table body (`setLoading` toggles it) |
-| `emptyTitle` | `string` | `'No rows'` | Empty-state title |
-| `emptyDescription` | `string` | search/filter hint | Empty-state description |
+| `loading` | `boolean` | `false` | Show a spinner in the table body (takes precedence over empty). `setLoading` / `withLoading` toggle it |
+| `emptyTitle` | `string` | `'No rows'` | Empty-state title (only when not loading and rows are empty) |
+| `emptyDescription` | `string` | search/filter hint | Empty-state description (only when not loading and rows are empty) |
 | `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
 | `pageSizeOptions` | `number[]` | `[10, 20, 30, 40, 50]` | Footer page-size select |
-| `manualPagination` | `boolean` | `false` | Treat `data` / `setRows` as the **current page**; skip local filter/sort/group/slice; use `totalRows` for the pager. Implies `manualFiltering` + `manualSorting` unless those are set to `false` |
-| `manualFiltering` | `boolean` | (see note) | Skip local search/column filters; keep filter state and emit `filter` / `columnFilter` (+ `onFilterChange` / `onColumnFilterChange`). Defaults to `true` when `manualPagination` is set |
-| `manualSorting` | `boolean` | (see note) | Skip local sort; keep `sorts` / `sortKey` / `sortDir` and emit `sort` (+ `onSortChange`). Defaults to `true` when `manualPagination` is set |
-| `totalRows` | `number` | | Total count across pages when `manualPagination` is true (`setTotalRows` updates it) |
+| `manualPagination` | `boolean` | `false` | Treat `data` / `setRows` as the **current page**; skip local filter/sort/group/slice; use `totalRows` for the pager. Forces `manualFiltering` + `manualSorting` |
+| `manualFiltering` | `boolean` | `false` | Skip local search/column filters; keep filter state and emit `filter` / `columnFilter` (+ callbacks). Always on when `manualPagination` is set; alone = hybrid (local sort/page still run) |
+| `manualSorting` | `boolean` | `false` | Skip local sort; keep `sorts` and emit `sort` (+ `onSortChange`). Always on when `manualPagination` is set; alone = hybrid (local filter/page still run) |
+| `totalRows` | `number` | | Total count across pages when `manualPagination` is true (`setTotalRows` / `getTotalRows`) |
 | `defaultSorts` | `DataTableSort[]` | `[]` | Initial ordered multi-sort (`{ key, dir }[]`). Mirrored as `sortKey` / `sortDir` from the first entry |
 | `density` | `'compact' \| 'default' \| 'comfortable'` | `'default'` | Row / cell spacing (`setDensity`) |
 | `zebra` | `boolean` | `false` | Alternate-row striping (`setZebra`) |
 | `selectable` | `boolean` | `false` | Row checkboxes + selection events |
-| `reorderable` | `boolean` | `false` | Drag handle to reorder rows (global order; page slice updates relative order without scrambling off-page rows) |
+| `reorderable` | `boolean` | `false` | Drag handle to reorder rows (global order; page slice updates relative order without scrambling off-page rows). Disables row virtualization (dnd conflict) |
 | `groupBy` | `string \| (row) => unknown` | | Partition rows into collapsible groups (column key or derived value). Ignored when `manualPagination` is true |
 | `defaultCollapsed` | `boolean` | `false` | Start with every group collapsed (client-owned) |
 | `onGroupToggle` | `(groupKey, collapsed) => void` | | After a group header is expanded/collapsed |
@@ -914,11 +913,11 @@ const table = ui.dataTable(tasks, {
 | `detail` | `(row) => void` | | Build detached UI for the row detail drawer |
 | `onReorder` | `(orderedKeys) => void` | | After drag-reorder (receives the reordered page-slice keys) |
 | `onSelectionChange` | `(keys) => void` | | After selection changes |
-| `onPageChange` | `(page) => void` | | After footer page change (useful with `manualPagination`) |
-| `onPageSizeChange` | `(pageSize) => void` | | After footer page-size change |
-| `onSortChange` | `(sorts) => void` | | After sort changes (prefer this in remote mode) |
-| `onFilterChange` | `(filter) => void` | | After global search changes (prefer this in remote mode) |
-| `onColumnFilterChange` | `(filters) => void` | | After column filters change (full map; prefer this in remote mode) |
+| `onPageChange` | `(page) => void` | | After footer page change. Remote: refetch (`getQuery()`) |
+| `onPageSizeChange` | `(pageSize) => void` | | After footer page-size change (page → 1). Remote: refetch |
+| `onSortChange` | `(sorts) => void` | | After sort changes. Remote: refetch with `sorts` |
+| `onFilterChange` | `(filter) => void` | | After global search (page → 1). Remote: refetch |
+| `onColumnFilterChange` | `(filters) => void` | | After column filters change (full map; page → 1). Remote: refetch |
 | `onCellChange` | `(rowKey, columnKey, value) => void` | | After inline editor commit |
 | `actions` | `DataTableAction[]` | `[]` | Per-row actions — always shown in a **⋯** overflow menu |
 | `onAction` | `(actionId, row) => void` | | Row action handler |
@@ -926,17 +925,27 @@ const table = ui.dataTable(tasks, {
 | `onBulkAction` | `(actionId, rowKeys) => void` | | Bulk action handler |
 | `className` | `string` | | Extra classes |
 
-**Remote / server-paged mode:** set `manualPagination: true`, pass the current page rows as `data` (or `setRows`), and set `totalRows` (or `setTotalRows`). Local filter/sort/group/slice are **not** applied — the table keeps filter/sort chrome state in props and emits:
+**Remote / server-paged contract** (`manualPagination: true`):
 
-| Event / callback | When | App should |
-|------------------|------|------------|
-| `page` / `onPageChange` | Pager | Fetch page, `setRows` |
-| `pageSize` / `onPageSizeChange` | Rows-per-page | Reset page, fetch, `setRows` + `setTotalRows` |
-| `filter` / `onFilterChange` | Global search | Reset page, fetch with query |
-| `columnFilter` / `onColumnFilterChange` | Column filters | Reset page, fetch with filters |
-| `sort` / `onSortChange` | Header sort (incl. multi-sort) | Reset page, fetch with `sorts` |
+| | Table does | App must |
+|--|------------|----------|
+| Rows | Treats `data` / `setRows` as the **current page** (no local filter/sort/group/slice) | Fetch the page and call `setRows` |
+| Totals | Pager uses `totalRows` / `setTotalRows` (`getTotalRows`) | Return the full matching count from the server |
+| Chrome state | Keeps `page`, `pageSize`, `filter`, `columnFilters`, `sorts` in props; `getQuery()` snapshots them | Apply that query on the server |
+| Events | Emits `page` / `pageSize` / `filter` / `columnFilter` / `sort` and the `on*` callbacks below (filter/sort/pageSize reset `page` to 1) | Refetch on each change |
+| Loading / empty | `loading` shows a body spinner and **hides** empty; `emptyTitle` / `emptyDescription` only when settled empty | `setLoading(true)` **before** await (keep previous rows), then `setRows` + `setTotalRows`, then `setLoading(false)` — or use `withLoading` |
 
-Then call `setRows` + `setTotalRows` with the server result. You can also set `manualFiltering` / `manualSorting` independently (without full remote paging) to skip only those local stages. Export uses the current page rows only when `manualPagination` is true. Column headers are resizable (drag the right edge). Shift+click a sortable header to multi-sort; sort priority numbers appear when more than one column is active. Footer aggregates (`column.aggregate`) run over the **filtered** row set locally, or over the **provided / current-page** rows when `manualPagination` is true.
+| Event / callback | Payload | App should |
+|------------------|---------|------------|
+| `page` / `onPageChange` | page number, or `{ page }` | Fetch that page, `setRows` |
+| `pageSize` / `onPageSizeChange` | page size (or `{ pageSize }`) | Reset page, fetch, `setRows` + `setTotalRows` |
+| `filter` / `onFilterChange` | search string | Reset page, fetch with query |
+| `columnFilter` / `onColumnFilterChange` | `{ key, value }` / full `filters` map | Reset page, fetch with filters |
+| `sort` / `onSortChange` | `{ key, dir?, multi? }` or `{ sorts }` / `DataTableSort[]` | Reset page, fetch with `sorts` |
+
+Hybrid mode: set `manualFiltering` and/or `manualSorting` **without** `manualPagination` to skip only those local stages while still paging locally. Export uses the current page rows only when `manualPagination` is true. Footer aggregates (`column.aggregate`) run over the **filtered** row set locally, or over the **provided / current-page** rows when `manualPagination` is true. Facet option `count`s in remote mode are derived from the supplied page unless you pass `facetOptions` with server-computed counts.
+
+**Client chrome** (renderer behavior; no server API): column headers are resizable (drag the right edge). Sortable headers show a tooltip (`Click to sort · Shift+click for multi-sort`); Shift+click adds/toggles multi-sort, and active sorts show priority badges when more than one column is sorted. Header ⋯ / pin controls expose pin left/right/clear (and an aggregate hint when `column.aggregate` is set); pin state is reflected in `aria-label` / `aria-pressed`. Footer aggregate cells announce via `aria-label` plus a polite live region. Inline editors: **Enter** commits, **Esc** cancels (blur still commits for text/number/date). Row virtualization kicks in when body items ≥ **40** and is **off** when `reorderable` is true (dnd-kit needs the full list) — prefer reorder for small interactive lists, or leave reorder off for large pages that benefit from windowing.
 
 | View field | Type | Notes |
 |------------|------|-------|
@@ -959,11 +968,11 @@ When `groupBy` is set, filter/sort run first, then rows are stably partitioned s
 | `facetOptions` | `{ value, label }[]` | Facet choices; when set without `filter`, implies `filter: 'facet'`. When omitted with `filter: 'facet'`, distinct values are derived. Server adds live `count`s. |
 | `value` | `(row) => unknown` | Computed scalar for sort / filter / export / default display |
 | `render` | `(row) => Element \| scalar` | Optional cell UI (e.g. `ui.badge(...)`); display-only |
-| `editor` | `'text' \| 'select' \| 'number' \| 'date' \| 'boolean'` | Inline editor on the client (`number` commits a finite number; `date` ISO `YYYY-MM-DD`; `boolean` a switch) |
+| `editor` | `'text' \| 'select' \| 'number' \| 'date' \| 'boolean'` | Inline editor on the client (`number` commits a finite number; `date` ISO `YYYY-MM-DD`; `boolean` a switch). Text/number/date: Enter commits, Esc cancels |
 | `editorOptions` | `{ value, label }[]` | Options when `editor` is `'select'` |
 | `detailTrigger` | `boolean` | Cell opens the row detail drawer |
-| `aggregate` | `'sum' \| 'avg' \| 'count' \| 'min' \| 'max' \| (rows, col) => unknown` | Footer total for this column (filtered rows locally; provided/current-page rows when `manualPagination`) |
-| `pin` | `'left' \| 'right'` | Sticky column while scrolling horizontally (header ⋯ menu can change this at runtime) |
+| `aggregate` | `'sum' \| 'avg' \| 'count' \| 'min' \| 'max' \| (rows, col) => unknown` | Footer total for this column (filtered rows locally; provided/current-page rows when `manualPagination`). Announced in the footer / live region |
+| `pin` | `'left' \| 'right'` | Sticky column while scrolling horizontally (header ⋯ menu can change this at runtime; pin control exposes current state to AT) |
 
 Facet filters store selected values as a JSON string array in `columnFilters[key]` (e.g. `'["todo","done"]'`). Text columns keep substring filters in the denser filter row; facet-only tables skip that row and filter from the header popover.
 
@@ -993,7 +1002,7 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 | `icon` | Lucide name (`pencil`, `trash-2`, …) from a curated action set |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
-Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `columnPin` / `export` / `page` / `pageSize` / `action` / `bulkAction` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. `sort` payload is `{ key, dir?, multi? }` or `{ sorts }` (full ordered list). `bulkAction` payload is `{ actionId, rowKeys }`. `columnPin` payload is `{ key, pin: 'left' \| 'right' \| null }`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page — except in `manualPagination` mode, where export is the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
+Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `columnPin` / `export` / `page` / `pageSize` / `action` / `bulkAction` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. `page` accepts a page number or `{ page }`. `pageSize` accepts a number or `{ pageSize }`. `sort` payload is `{ key, dir?, multi? }` or `{ sorts }` (full ordered list). `bulkAction` payload is `{ actionId, rowKeys }`. `columnPin` payload is `{ key, pin: 'left' \| 'right' \| null }`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page — except in `manualPagination` mode, where export is the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
 
 #### Structured tables (`ui.table`)
 
@@ -1005,9 +1014,9 @@ Optional sugar over `ui.dataTable`. Staged methods bundle related props; `.build
 | `.columns(cols)` | `columns` |
 | `.search(placeholder?)` | `searchable: true`, `searchPlaceholder` |
 | `.pageSize(n, options?)` | `pageSize`, `pageSizeOptions` |
-| `.manualPagination(totalRows?)` | `manualPagination: true`, optional `totalRows` |
-| `.manualFiltering(enabled?)` | `manualFiltering` (default `true`) |
-| `.manualSorting(enabled?)` | `manualSorting` (default `true`) |
+| `.manualPagination(totalRows?)` | `manualPagination: true`, optional `totalRows` (forces remote filter/sort) |
+| `.manualFiltering(enabled?)` | `manualFiltering` (default `true`; hybrid without `.manualPagination()`) |
+| `.manualSorting(enabled?)` | `manualSorting` (default `true`; hybrid without `.manualPagination()`) |
 | `.density(value)` | `density` |
 | `.zebra(enabled?)` | `zebra` (default `true`) |
 | `.groupBy(key, opts?)` | `groupBy`, `defaultCollapsed` |

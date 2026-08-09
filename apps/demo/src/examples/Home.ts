@@ -1,5 +1,6 @@
 import { ui } from '@badui/ui';
 import { exampleFrame } from '../chrome';
+import { getSessionUser } from './_auth';
 
 export const pageMeta = {
   label: 'Home',
@@ -8,6 +9,12 @@ export const pageMeta = {
 };
 
 ui.page('/', () => {
+  const user = getSessionUser();
+  // Same catalog as the sidebar (`demoAppShell` → `navFromPages`), minus Home.
+  const examples = ui
+    .navFromPages(user ? { role: user.role } : undefined)
+    .filter((item) => item.href !== '/');
+
   exampleFrame(() => {
     ui.column(() => {
       ui.hero(
@@ -36,59 +43,17 @@ ui.page('/', () => {
       ui.card(
         {
           title: 'Explore examples',
-          description: 'SPA links and imperative navigate — pick a pattern from the sidebar too.',
+          description: 'Same pages as the sidebar — SPA links driven by pageMeta.',
           gap: 3,
         },
         () => {
           ui.column(() => {
-            ui.row(() => {
-              ui.icon('lock').classes('size-4 text-muted-foreground');
-              ui.link('Account', '/examples/auth');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('form-input').classes('size-4 text-muted-foreground');
-              ui.link('Form Demo', '/examples/form-demo');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('layout-dashboard').classes('size-4 text-muted-foreground');
-              ui.link('Overlays', '/examples/overlays');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('layers').classes('size-4 text-muted-foreground');
-              ui.link('Dialog Stack', '/examples/dialog-stack');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('sliders-horizontal').classes('size-4 text-muted-foreground');
-              ui.link('Controls', '/examples/controls');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('help-circle').classes('size-4 text-muted-foreground');
-              ui.link('Feedback', '/examples/feedback');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('chart-area').classes('size-4 text-muted-foreground');
-              ui.link('Charts', '/examples/charts');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('table-2').classes('size-4 text-muted-foreground');
-              ui.link('DataTable', '/examples/datatable');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('upload').classes('size-4 text-muted-foreground');
-              ui.link('File Upload', '/examples/upload');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('workflow').classes('size-4 text-muted-foreground');
-              ui.link('Flow', '/examples/flow');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('columns-3').classes('size-4 text-muted-foreground');
-              ui.link('Kanban', '/examples/kanban');
-            }, { gap: 2 }).classes('items-center');
-            ui.row(() => {
-              ui.icon('file-pen').classes('size-4 text-muted-foreground');
-              ui.link('Editor', '/examples/editor');
-            }, { gap: 2 }).classes('items-center');
+            for (const item of examples) {
+              ui.row(() => {
+                ui.icon(item.icon ?? 'boxes').classes('size-4 text-muted-foreground');
+                ui.link(item.label, item.href);
+              }, { gap: 2 }).classes('items-center');
+            }
           }, { gap: 2 });
         },
       );

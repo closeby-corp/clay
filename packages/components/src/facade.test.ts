@@ -554,6 +554,10 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
       handles: [{ id: 'out', type: 'source', position: 'right' }],
     });
     expect(el.children[1]!.props.id).toBe('b');
+    expect(el.getPositions()).toEqual({
+      a: { x: 0, y: 0 },
+      b: { x: 200, y: 0 },
+    });
     expect(el.props.events).toEqual(
       expect.arrayContaining([
         'connect',

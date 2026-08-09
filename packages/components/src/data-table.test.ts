@@ -782,6 +782,7 @@ describe('DataTableElement', () => {
   test('manualPagination skips local filter/sort and fires change callbacks', async () => {
     const sortsLog: unknown[] = [];
     const filters: string[] = [];
+    const columnFilterLogs: Record<string, string>[] = [];
     const table = new DataTableElement(rows.slice(0, 2), {
       columns,
       keyField: 'id',
@@ -794,14 +795,30 @@ describe('DataTableElement', () => {
       onFilterChange: (filter) => {
         filters.push(filter);
       },
+      onColumnFilterChange: (next) => {
+        columnFilterLogs.push(next);
+      },
     });
     expect(table.props.manualFiltering).toBe(true);
     expect(table.props.manualSorting).toBe(true);
+    // Overrides cannot re-enable local pipeline under manualPagination.
+    const forced = new DataTableElement(rows.slice(0, 2), {
+      columns,
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 5,
+      manualFiltering: false,
+      manualSorting: false,
+    });
+    expect(forced.props.manualFiltering).toBe(true);
+    expect(forced.props.manualSorting).toBe(true);
 
     await table.handleEvent('sort', { key: 'hours', dir: 'asc' });
     await table.handleEvent('filter', 'Alpha');
+    await table.handleEvent('columnFilter', { key: 'status', value: 'todo' });
     expect(sortsLog).toEqual([[{ key: 'hours', dir: 'asc' }]]);
     expect(filters).toEqual(['Alpha']);
+    expect(columnFilterLogs).toEqual([{ status: 'todo' }]);
     // Still the supplied page — not filtered/sorted locally.
     expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
       'Alpha',
@@ -809,5 +826,159 @@ describe('DataTableElement', () => {
     ]);
     expect(table.props.sortKey).toBe('hours');
     expect(table.props.filter).toBe('Alpha');
+    expect(table.props.columnFilters).toEqual({ status: 'todo' });
+    expect(table.getQuery()).toEqual({
+      page: 1,
+      pageSize: 2,
+      filter: 'Alpha',
+      columnFilters: { status: 'todo' },
+      sorts: [{ key: 'hours', dir: 'asc' }],
+    });
+  });
+
+  test('remote getQuery tracks page / pageSize; page accepts { page }', async () => {
+    const pages: number[] = [];
+    const sizes: number[] = [];
+    const table = new DataTableElement(rows.slice(0, 2), {
+      columns,
+      keyField: 'id',
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 20,
+      onPageChange: (page) => {
+        pages.push(page);
+      },
+      onPageSizeChange: (size) => {
+        sizes.push(size);
+      },
+    });
+
+    await table.handleEvent('page', { page: 3 });
+    expect(table.getPage()).toBe(3);
+    expect(pages).toEqual([3]);
+    expect(table.getQuery().page).toBe(3);
+
+    await table.handleEvent('pageSize', { pageSize: 5 });
+    expect(sizes).toEqual([5]);
+    expect(table.getPage()).toBe(1);
+    expect(table.getPageSize()).toBe(5);
+    expect(table.getQuery()).toMatchObject({ page: 1, pageSize: 5 });
+  });
+
+  test('filter and sort reset page in remote mode without changing rows', async () => {
+    const table = new DataTableElement(rows.slice(0, 2), {
+      columns,
+      keyField: 'id',
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 20,
+    });
+    await table.handleEvent('page', 4);
+    expect(table.getPage()).toBe(4);
+    await table.handleEvent('filter', 'x');
+    expect(table.getPage()).toBe(1);
+    expect(table.getFilter()).toBe('x');
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.id)).toEqual([1, 2]);
+
+    await table.handleEvent('page', 2);
+    await table.handleEvent('sort', { key: 'title', dir: 'desc' });
+    expect(table.getPage()).toBe(1);
+    expect(table.getSorts()).toEqual([{ key: 'title', dir: 'desc' }]);
+  });
+
+  test('withLoading toggles loading around refetch; empty props stay settled', async () => {
+    const table = new DataTableElement(rows.slice(0, 2), {
+      columns,
+      keyField: 'id',
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 2,
+      emptyTitle: 'No matches',
+      emptyDescription: 'Try another query.',
+    });
+    expect(table.isLoading()).toBe(false);
+    expect(table.props.emptyTitle).toBe('No matches');
+
+    let sawLoading = false;
+    await table.withLoading(async () => {
+      sawLoading = table.isLoading() && table.props.loading === true;
+      // Previous rows still present while loading (avoid empty flash).
+      expect((table.props.rows as unknown[]).length).toBe(2);
+      table.setRows([]);
+      table.setTotalRows(0);
+    });
+    expect(sawLoading).toBe(true);
+    expect(table.isLoading()).toBe(false);
+    expect(table.props.loading).toBe(false);
+    expect((table.props.rows as unknown[]).length).toBe(0);
+    expect(table.getTotalRows()).toBe(0);
+    expect(table.props.emptyTitle).toBe('No matches');
+  });
+
+  test('manualFiltering alone skips filter but still sorts and pages locally', async () => {
+    const filters: string[] = [];
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 2,
+      manualFiltering: true,
+      onFilterChange: (f) => {
+        filters.push(f);
+      },
+    });
+    expect(table.props.manualPagination).toBe(false);
+    expect(table.props.manualFiltering).toBe(true);
+    expect(table.props.manualSorting).toBe(false);
+
+    await table.handleEvent('filter', 'Alpha');
+    expect(filters).toEqual(['Alpha']);
+    // Not filtered locally — still first page of all rows.
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Alpha',
+      'Bravo',
+    ]);
+    expect(table.props.totalRows).toBe(5);
+
+    await table.handleEvent('sort', { key: 'hours', dir: 'asc' });
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.hours)).toEqual([1, 3]);
+    expect(table.props.totalRows).toBe(5);
+  });
+
+  test('manualSorting alone skips sort but still filters and pages locally', async () => {
+    const sortsLog: unknown[] = [];
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 10,
+      manualSorting: true,
+      onSortChange: (s) => {
+        sortsLog.push(s);
+      },
+    });
+    await table.handleEvent('sort', { key: 'hours', dir: 'asc' });
+    expect(sortsLog).toEqual([[{ key: 'hours', dir: 'asc' }]]);
+    // Order unchanged (source order).
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.hours)).toEqual([
+      3, 10, 1, 7, 5,
+    ]);
+
+    await table.handleEvent('filter', 'done');
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Alpha',
+      'Charlie',
+    ]);
+  });
+
+  test('manualPagination ignores groupBy and keeps groups empty', () => {
+    const table = new DataTableElement(rows.slice(0, 3), {
+      columns,
+      pageSize: 3,
+      manualPagination: true,
+      totalRows: 3,
+      groupBy: 'status',
+    });
+    expect(table.props.groupBy).toBeNull();
+    expect(table.props.groups).toEqual([]);
+    expect((table.props.rows as unknown[]).length).toBe(3);
   });
 });

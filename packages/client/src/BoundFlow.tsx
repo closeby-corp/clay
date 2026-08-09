@@ -88,24 +88,32 @@ function edgesKey(edges: FlowEdgeProp[]): string {
     .join('|');
 }
 
-function nodesStructureKey(flowNodes: ElementNode[]): string {
+/** Graph identity + handles + body child ids — positions intentionally omitted. */
+function nodesTopologyKey(flowNodes: ElementNode[]): string {
   return flowNodes
     .map((n) => {
       const handles = (n.props.handles as FlowHandle[] | undefined) ?? [];
       const handleKey = handles.map((h) => `${h.id}:${h.type}:${h.position}`).join(',');
       const bodyKey = n.children.map((c) => c.id).join(',');
-      return `${String(n.props.id)}@${positionKey(n.props.position as { x: number; y: number })}#${handleKey}#${bodyKey}`;
+      return `${String(n.props.id)}#${handleKey}#${bodyKey}`;
     })
     .join('|');
 }
 
-function toRfEdge(e: FlowEdgeProp): Edge {
+function nodesPositionsKey(flowNodes: ElementNode[]): string {
+  return flowNodes
+    .map((n) => `${String(n.props.id)}@${positionKey(n.props.position as { x: number; y: number })}`)
+    .join('|');
+}
+
+function toRfEdge(e: FlowEdgeProp, prev?: Edge): Edge {
   return {
     id: e.id,
     source: e.source,
     target: e.target,
     sourceHandle: e.sourceHandle,
     targetHandle: e.targetHandle,
+    selected: prev?.selected,
   };
 }
 
@@ -202,7 +210,8 @@ function BoundFlowInner({
   const showMiniMap = props.showMiniMap !== false;
   const showControls = props.showControls !== false;
 
-  const structureKey = nodesStructureKey(flowNodes);
+  const topologyKey = nodesTopologyKey(flowNodes);
+  const positionsKey = nodesPositionsKey(flowNodes);
   const edgeKey = edgesKey(serverEdges);
   const draggingRef = useRef(false);
   const flowNodesRef = useRef(flowNodes);
@@ -215,10 +224,9 @@ function BoundFlowInner({
   const [nodes, setNodes] = useState<Node<BaduiNodeData>[]>(() =>
     flowNodes.map((n) => toRfNode(n, emit, renderNode)),
   );
-  const [edges, setEdges] = useState<Edge[]>(() => serverEdges.map(toRfEdge));
+  const [edges, setEdges] = useState<Edge[]>(() => serverEdges.map((e) => toRfEdge(e)));
 
-  // Reconcile topology / positions from server (skip mid-drag).
-  // Do not depend on emit/renderNode identity — parent passes new lambdas every render.
+  // Topology change (ids / handles / body ids) → rebuild RF nodes from server.
   useEffect(() => {
     if (draggingRef.current) return;
     setNodes(
@@ -226,15 +234,44 @@ function BoundFlowInner({
         toRfNode(n, emitRef.current, renderNodeRef.current),
       ),
     );
-  }, [structureKey]);
+  }, [topologyKey]);
 
+  // Position-only patches: update matching RF nodes without remounting.
   useEffect(() => {
     if (draggingRef.current) return;
-    setEdges(serverEdges.map(toRfEdge));
+    setNodes((nds) => {
+      const byId = new Map(
+        flowNodesRef.current.map((n) => [String(n.props.id ?? n.id), n]),
+      );
+      let changed = false;
+      const next = nds.map((node) => {
+        const src = byId.get(node.id);
+        if (!src) return node;
+        const pos = (src.props.position as { x: number; y: number } | undefined) ?? {
+          x: 0,
+          y: 0,
+        };
+        const x = Number(pos.x) || 0;
+        const y = Number(pos.y) || 0;
+        if (node.position.x === x && node.position.y === y) return node;
+        changed = true;
+        return { ...node, position: { x, y } };
+      });
+      return changed ? next : nds;
+    });
+  }, [positionsKey]);
+
+  // Reconcile edges by id; preserve local selection when the id set is stable.
+  useEffect(() => {
+    if (draggingRef.current) return;
+    setEdges((prev) => {
+      const prevById = new Map(prev.map((e) => [e.id, e]));
+      return serverEdges.map((e) => toRfEdge(e, prevById.get(e.id)));
+    });
   }, [edgeKey, serverEdges]);
 
   // Merge live BadUI bodies into RF nodes each render so nested prop patches
-  // (e.g. progress value) show up without requiring a node drag / structure change.
+  // (e.g. progress value) show up without requiring a node drag / topology change.
   const displayNodes = useMemo(() => {
     const byId = new Map(flowNodes.map((n) => [String(n.props.id ?? n.id), n]));
     return nodes.map((node) => {

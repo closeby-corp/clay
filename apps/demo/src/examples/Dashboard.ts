@@ -49,7 +49,7 @@ ui.page('/examples/dashboard', () => {
       ui.row(() => {
         exampleHeader(
           undefined,
-          'Section cards, interactive visitors chart, and a full-chrome DataTable.',
+          'Section cards, interactive visitors chart, and a polished documents DataTable.',
         );
         ui.button('Refresh stats', {
           variant: 'outline',
@@ -115,14 +115,21 @@ ui.page('/examples/dashboard', () => {
 
       table = ui.dataTable(docs, {
         keyField: 'id',
-        searchable: false,
-        columnFilterable: false,
-        exportable: false,
+        searchable: true,
+        searchPlaceholder: 'Search sections…',
+        columnFilterable: true,
+        exportable: true,
+        exportFilename: 'documents',
         columnToggle: true,
         selectable: true,
         reorderable: true,
+        density: 'default',
+        zebra: true,
         pageSize: 10,
         pageSizeOptions: [10, 20, 30, 40, 50],
+        emptyTitle: 'No sections',
+        emptyDescription: 'Add a section or clear filters to see documents again.',
+        defaultSorts: [{ key: 'status', dir: 'asc' }],
         views: [
           { id: 'outline', label: 'Outline' },
           {
@@ -150,18 +157,22 @@ ui.page('/examples/dashboard', () => {
             key: 'header',
             header: 'Header',
             detailTrigger: true,
-            sortable: false,
+            pin: 'left',
           },
           {
             key: 'type',
             header: 'Section Type',
-            sortable: false,
+            filter: 'facet',
             render: (row) => ui.badge(String(row.type), { variant: 'outline' }),
           },
           {
             key: 'status',
             header: 'Status',
-            sortable: false,
+            filter: 'facet',
+            facetOptions: [
+              { value: 'Done', label: 'Done' },
+              { value: 'In Process', label: 'In Process' },
+            ],
             render: (row) =>
               ui.badge(String(row.status), {
                 variant: 'outline',
@@ -172,20 +183,23 @@ ui.page('/examples/dashboard', () => {
             key: 'target',
             header: 'Target',
             align: 'right',
-            sortable: false,
             editor: 'text',
+            aggregate: 'sum',
+            value: (row) => Number(row.target),
           },
           {
             key: 'limit',
             header: 'Limit',
             align: 'right',
-            sortable: false,
             editor: 'text',
+            aggregate: 'sum',
+            value: (row) => Number(row.limit),
           },
           {
             key: 'reviewer',
             header: 'Reviewer',
-            sortable: false,
+            pin: 'right',
+            filter: 'facet',
             editor: 'select',
             editorOptions: reviewerOptions,
           },
@@ -196,6 +210,30 @@ ui.page('/examples/dashboard', () => {
           { id: 'favorite', label: 'Favorite', icon: 'star' },
           { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
         ],
+        bulkActions: [
+          { id: 'mark-done', label: 'Mark done', icon: 'check' },
+          { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
+        ],
+        onBulkAction: async (actionId, rowKeys) => {
+          const keySet = new Set(rowKeys.map(String));
+          if (actionId === 'mark-done') {
+            docs = docs.map((d) =>
+              keySet.has(String(d.id)) ? { ...d, status: 'Done' } : d,
+            );
+            table.setRows(docs);
+            ui.notify(`Marked ${rowKeys.length} done`, 'success');
+            return;
+          }
+          if (actionId === 'delete') {
+            const ok = await ui.confirm(`Delete ${rowKeys.length} selected section(s)?`, {
+              confirmVariant: 'destructive',
+            });
+            if (!ok) return;
+            docs = docs.filter((d) => !keySet.has(String(d.id)));
+            table.setRows(docs);
+            ui.notify('Selected sections deleted', 'success');
+          }
+        },
         detail: (row) => {
           ui.areaChart({
             data: drawerChartData,
@@ -238,6 +276,7 @@ ui.page('/examples/dashboard', () => {
           docs = docs.map((d) =>
             String(d.id) === String(rowKey) ? { ...d, [columnKey]: value } : d,
           );
+          table.setRows(docs);
           ui.notify(`Updated ${columnKey}`, 'success');
         },
         onPrimaryAction: () => {

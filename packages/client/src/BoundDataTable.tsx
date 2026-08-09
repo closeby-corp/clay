@@ -1,6 +1,7 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -26,6 +27,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Archive,
   ArrowDown,
@@ -130,8 +132,22 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+
+/** Virtualize body once row count is large enough to matter. */
+const VIRTUALIZE_THRESHOLD = 40;
+const LEADING_COL_WIDTH = 32;
+const ACTIONS_COL_WIDTH = 40;
+const DEFAULT_COL_WIDTH = 140;
+const MIN_COL_WIDTH = 72;
+const MAX_COL_WIDTH = 480;
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 type RenderNode = (node: ElementNode, emit: Emit) => ReactNode;
@@ -426,11 +442,15 @@ function EditableCell({
 }) {
   const inputHeight =
     density === 'compact' ? 'h-7' : density === 'comfortable' ? 'h-9' : 'h-8';
+  const skipBlurCommit = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const [local, setLocal] = useState(() => {
-    if (column.editor === 'date') return String(value ?? '').slice(0, 10);
-    return value == null ? '' : String(value);
-  });
+  const valueToLocal = (v: unknown) => {
+    if (column.editor === 'date') return String(v ?? '').slice(0, 10);
+    return v == null ? '' : String(v);
+  };
+
+  const [local, setLocal] = useState(() => valueToLocal(value));
   useEffect(() => {
     if (column.editor === 'date') {
       setLocal(String(value ?? '').slice(0, 10));
@@ -454,6 +474,12 @@ function EditableCell({
           checked={checked}
           onCheckedChange={(next) => onCommit(next)}
           aria-label={column.header}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).blur();
+            }
+          }}
         />
       </div>
     );
@@ -469,7 +495,17 @@ function EditableCell({
           onCommit(next);
         }}
       >
-        <SelectTrigger size="sm" className="w-38">
+        <SelectTrigger
+          size="sm"
+          className="w-38"
+          aria-label={column.header}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              // Let the select close; keep focus on the trigger.
+              e.stopPropagation();
+            }
+          }}
+        >
           <SelectValue placeholder="Select…" />
         </SelectTrigger>
         <SelectContent align="end">
@@ -506,8 +542,15 @@ function EditableCell({
     onCommit(local === '' ? null : local);
   };
 
+  const cancel = () => {
+    setLocal(valueToLocal(value));
+    skipBlurCommit.current = true;
+    inputRef.current?.blur();
+  };
+
   return (
     <Input
+      ref={inputRef}
       type={inputType}
       className={cn(
         inputHeight,
@@ -519,11 +562,23 @@ function EditableCell({
           : 'min-w-24 w-full max-w-48',
       )}
       value={local}
+      aria-label={column.header}
       onChange={(e) => setLocal(e.target.value)}
-      onBlur={commit}
+      onBlur={() => {
+        if (skipBlurCommit.current) {
+          skipBlurCommit.current = false;
+          return;
+        }
+        commit();
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
+          e.preventDefault();
+          commit();
           (e.target as HTMLInputElement).blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancel();
         }
       }}
     />
@@ -617,11 +672,12 @@ function pinStickyStyle(
   leftOffset: number | undefined,
   rightOffset: number | undefined,
   width: number | undefined,
+  opts?: { zIndex?: number },
 ): CSSProperties | undefined {
   if (!pin) return undefined;
   const style: CSSProperties = {
     position: 'sticky',
-    zIndex: 2,
+    zIndex: opts?.zIndex ?? 2,
   };
   if (pin === 'left' && leftOffset != null) style.left = leftOffset;
   if (pin === 'right' && rightOffset != null) style.right = rightOffset;
@@ -631,6 +687,24 @@ function pinStickyStyle(
     style.maxWidth = width;
   }
   return style;
+}
+
+function leadingStickyStyle(
+  enabled: boolean,
+  left: number,
+  zIndex = 3,
+): CSSProperties | undefined {
+  if (!enabled) return undefined;
+  return { position: 'sticky', left, zIndex };
+}
+
+function trailingStickyStyle(
+  enabled: boolean,
+  right: number,
+  zIndex = 3,
+): CSSProperties | undefined {
+  if (!enabled) return undefined;
+  return { position: 'sticky', right, zIndex };
 }
 
 function isLastLeftPin(columns: DataTableColumn[], key: string): boolean {
@@ -646,6 +720,38 @@ function isFirstRightPin(columns: DataTableColumn[], key: string): boolean {
     if (col.pin === 'right') return col.key === key;
   }
   return false;
+}
+
+function aggregateLabel(kind: DataTableColumn['aggregate']): string {
+  switch (kind) {
+    case 'sum':
+      return 'Sum';
+    case 'avg':
+      return 'Average';
+    case 'count':
+      return 'Count';
+    case 'min':
+      return 'Min';
+    case 'max':
+      return 'Max';
+    default:
+      return 'Total';
+  }
+}
+
+function estimatedBodyRowHeight(density: DataTableDensity, kind: 'row' | 'group'): number {
+  if (kind === 'group') return density === 'compact' ? 36 : density === 'comfortable' ? 44 : 40;
+  if (density === 'compact') return 33;
+  if (density === 'comfortable') return 49;
+  return 41;
+}
+
+function ariaSortValue(
+  active: boolean,
+  dir: DataTableSortDir,
+): 'ascending' | 'descending' | 'none' {
+  if (!active) return 'none';
+  return dir === 'desc' ? 'descending' : 'ascending';
 }
 
 function DetailDrawer({
@@ -791,6 +897,7 @@ export function BoundDataTable({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const headerCellRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const tableId = useId();
 
   const dataIds = useMemo(
@@ -858,9 +965,13 @@ export function BoundDataTable({
   const colSpan = columns.length + leadingCols + trailingCols;
   const cellPad = densityCellPad(density);
   const headHeight = densityHeadHeight(density);
-  const leadingStickyWidth = (reorderable ? 32 : 0) + (selectable ? 32 : 0);
-  const trailingStickyWidth = actions.length > 0 ? 40 : 0;
-  const defaultColWidth = 140;
+  const leadingStickyWidth =
+    (reorderable ? LEADING_COL_WIDTH : 0) + (selectable ? LEADING_COL_WIDTH : 0);
+  const trailingStickyWidth = actions.length > 0 ? ACTIONS_COL_WIDTH : 0;
+  const defaultColWidth = DEFAULT_COL_WIDTH;
+
+  const clampColumnWidth = (width: number) =>
+    Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, Math.round(width)));
 
   const { leftOffsets, rightOffsets } = useMemo(() => {
     const leftOffsets: Record<string, number> = {};
@@ -881,13 +992,52 @@ export function BoundDataTable({
       }
     }
     return { leftOffsets, rightOffsets };
-  }, [columns, columnWidths, leadingStickyWidth, trailingStickyWidth]);
+  }, [columns, columnWidths, leadingStickyWidth, trailingStickyWidth, defaultColWidth]);
 
   const hasLeftPins = columns.some((c) => c.pin === 'left');
   const hasRightPins = columns.some((c) => c.pin === 'right');
   const showFooterRow = footerCells != null && Object.keys(footerCells).length > 0;
+  const pinOffsetsNeedMeasure = hasLeftPins || hasRightPins;
 
-  const clampColumnWidth = (width: number) => Math.max(72, Math.min(480, Math.round(width)));
+  /** Keep sticky offsets accurate once pins are active (avoid default-width drift). */
+  useLayoutEffect(() => {
+    if (!pinOffsetsNeedMeasure) return;
+    setColumnWidths((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const col of columns) {
+        if (!col.pin) continue;
+        if (next[col.key] != null) continue;
+        const el = headerCellRefs.current[col.key];
+        if (el != null && el.offsetWidth > 0) {
+          next[col.key] = clampColumnWidth(el.offsetWidth);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [columns, pinOffsetsNeedMeasure, density, headHeight]); // eslint-disable-line react-hooks/exhaustive-deps -- measure when pin layout chrome changes
+
+  const tableMinWidth = useMemo(() => {
+    if (!hasLeftPins && !hasRightPins) return undefined;
+    let min = leadingStickyWidth + trailingStickyWidth;
+    for (const col of columns) {
+      if (col.pin) {
+        min += columnWidths[col.key] ?? defaultColWidth;
+      } else {
+        min += MIN_COL_WIDTH;
+      }
+    }
+    return min;
+  }, [
+    columns,
+    columnWidths,
+    defaultColWidth,
+    hasLeftPins,
+    hasRightPins,
+    leadingStickyWidth,
+    trailingStickyWidth,
+  ]);
 
   /** Seed explicit widths from rendered <th>s so the first drag doesn't jump from a default. */
   const beginColumnResize = (key: string): number => {
@@ -1058,6 +1208,29 @@ export function BoundDataTable({
 
   const sortableIds = grouped ? visibleDataIds : dataIds;
 
+  /**
+   * Row virtualization conflicts with dnd-kit's full-list SortableContext.
+   * Prefer reorder when enabled; virtualize only when reorder is off and the
+   * body is large enough that windowing helps.
+   */
+  const shouldVirtualize =
+    !reorderable && !loading && rows.length > 0 && bodyItems.length >= VIRTUALIZE_THRESHOLD;
+
+  const rowVirtualizer = useVirtualizer({
+    count: shouldVirtualize ? bodyItems.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: (index) =>
+      estimatedBodyRowHeight(density, bodyItems[index]?.kind === 'group' ? 'group' : 'row'),
+    overscan: 10,
+  });
+
+  const virtualRows = shouldVirtualize ? rowVirtualizer.getVirtualItems() : null;
+  const virtualPadTop = virtualRows && virtualRows.length > 0 ? virtualRows[0]!.start : 0;
+  const virtualPadBottom =
+    virtualRows && virtualRows.length > 0
+      ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1]!.end
+      : 0;
+
   const columnsMenu = columnToggle ? (
     <DropdownMenu
       open={columnsOpen}
@@ -1221,262 +1394,548 @@ export function BoundDataTable({
     </div>
   ) : null;
 
-  const tableBlock = (
-    <DndContext
-      id={`${tableId}-dnd`}
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      modifiers={[restrictToVerticalAxis]}
-      onDragEnd={onDragEnd}
-    >
-      <Table
-        containerClassName="max-h-[min(60vh,28rem)] overflow-auto"
-        className={cn(density === 'compact' && 'text-xs', density === 'comfortable' && 'text-sm')}
-        style={
-          Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins
-            ? ({ tableLayout: 'fixed', width: '100%' } as CSSProperties)
-            : undefined
-        }
+  const selectLeftOffset = reorderable ? LEADING_COL_WIDTH : 0;
+
+  const renderGroupRow = (
+    item: Extract<BodyItem, { kind: 'group' }>,
+    rowOpts?: {
+      key?: string;
+      measureRef?: (node: HTMLTableRowElement | null) => void;
+      dataIndex?: number;
+    },
+  ) => {
+    const isCollapsed = collapsed.has(item.group.key);
+    return (
+      <TableRow
+        key={rowOpts?.key ?? `group:${item.group.key}`}
+        ref={rowOpts?.measureRef}
+        data-index={rowOpts?.dataIndex}
+        className="bg-muted/40 hover:bg-muted/40"
       >
-        {Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins ? (
-          <colgroup>
-            {reorderable ? <col style={{ width: 32 }} /> : null}
-            {selectable ? <col style={{ width: 32 }} /> : null}
-            {columns.map((col) => (
-              <col
-                key={col.key}
-                style={{
-                  width:
-                    columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined),
+        <TableCell colSpan={Math.max(colSpan, 1)} className={cn('py-2', cellPad)}>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-sm font-medium"
+            onClick={() => toggleGroup(item.group.key)}
+            aria-expanded={!isCollapsed}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            )}
+            <span>{item.group.label}</span>
+            <Badge
+              variant="secondary"
+              className="h-5 rounded-full px-1.5 font-normal text-muted-foreground"
+            >
+              {item.group.count}
+            </Badge>
+          </button>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const renderDataRowCells = (
+    row: Record<string, unknown>,
+    i: number,
+    rowKey: string,
+    isSelected: boolean,
+  ) => (
+    <>
+      {reorderable ? (
+        <TableCell
+          className={cn(
+            'w-8 px-1',
+            cellPad,
+            hasLeftPins && 'sticky left-0 z-[1] bg-background',
+            zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
+            isSelected && hasLeftPins && 'bg-muted',
+          )}
+          style={leadingStickyStyle(hasLeftPins, 0, 1)}
+        >
+          <DragHandle id={rowKey} />
+        </TableCell>
+      ) : null}
+      {selectable ? (
+        <TableCell
+          className={cn(
+            'w-8 px-1',
+            cellPad,
+            hasLeftPins && 'sticky z-[1] bg-background',
+            zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
+            isSelected && hasLeftPins && 'bg-muted',
+          )}
+          style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 1)}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={(value) => {
+              const next = new Set(selected);
+              if (value) next.add(rowKey);
+              else next.delete(rowKey);
+              emitSelection(next);
+            }}
+            aria-label="Select row"
+          />
+        </TableCell>
+      ) : null}
+      {columns.map((col) => {
+        const pinStyle = pinStickyStyle(
+          col.pin,
+          leftOffsets[col.key],
+          rightOffsets[col.key],
+          columnWidths[col.key],
+          { zIndex: 1 },
+        );
+        const pinEdge =
+          (col.pin === 'left' && isLastLeftPin(columns, col.key)
+            ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+            : null) ??
+          (col.pin === 'right' && isFirstRightPin(columns, col.key)
+            ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+            : null);
+        return (
+          <TableCell
+            key={col.key}
+            className={cn(
+              cellPad,
+              col.align === 'right' && 'text-right',
+              col.align === 'center' && 'text-center',
+              col.pin && 'bg-background',
+              zebra && i % 2 === 1 && col.pin && 'bg-muted/30',
+              isSelected && col.pin && 'bg-muted',
+              pinEdge,
+            )}
+            style={pinStyle}
+          >
+            {renderCellContent(row, col, rowKey)}
+          </TableCell>
+        );
+      })}
+      {actions.length > 0 ? (
+        <TableCell
+          className={cn(
+            'w-8 px-1',
+            cellPad,
+            hasRightPins && 'sticky z-[1] bg-background',
+            zebra && i % 2 === 1 && hasRightPins && 'bg-muted/30',
+            isSelected && hasRightPins && 'bg-muted',
+          )}
+          style={trailingStickyStyle(hasRightPins, 0, 1)}
+        >
+          <DropdownMenu
+            open={actionsMenuKey === rowKey}
+            onOpenChange={(open) => {
+              setActionsMenuKey(open ? rowKey : null);
+              if (open) {
+                setColumnsOpen(false);
+                setExportOpen(false);
+              }
+            }}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
+                size="icon"
+                aria-label="Open menu"
+              >
+                <MoreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {actions.map((action, index) => (
+                <div key={action.id}>
+                  {index > 0 && action.variant === 'destructive' ? (
+                    <DropdownMenuSeparator />
+                  ) : null}
+                  <DropdownMenuItem
+                    className={
+                      action.variant === 'destructive'
+                        ? 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                        : undefined
+                    }
+                    onSelect={() => {
+                      if (hasEvent(props, 'action')) {
+                        emit(id, 'action', { actionId: action.id, rowKey });
+                      }
+                    }}
+                  >
+                    <ActionLabel action={action} />
+                  </DropdownMenuItem>
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      ) : null}
+    </>
+  );
+
+  const renderDataRow = (
+    item: Extract<BodyItem, { kind: 'row' }>,
+    rowOpts?: {
+      key?: string;
+      measureRef?: (node: HTMLTableRowElement | null) => void;
+      dataIndex?: number;
+    },
+  ) => {
+    const { row, index: i } = item;
+    const rowKey = String(row[keyField] ?? i);
+    const isSelected = selected.has(rowKey);
+    const zebraClass = zebra && i % 2 === 1 ? 'bg-muted/30 hover:bg-muted/50' : undefined;
+    const cells = renderDataRowCells(row, i, rowKey, isSelected);
+    if (reorderable) {
+      return (
+        <SortableRow
+          key={rowOpts?.key ?? rowKey}
+          rowKey={rowKey}
+          selected={isSelected}
+          className={zebraClass}
+        >
+          {cells}
+        </SortableRow>
+      );
+    }
+    return (
+      <TableRow
+        key={rowOpts?.key ?? rowKey}
+        ref={rowOpts?.measureRef}
+        data-index={rowOpts?.dataIndex}
+        data-state={isSelected ? 'selected' : undefined}
+        className={zebraClass}
+      >
+        {cells}
+      </TableRow>
+    );
+  };
+
+  const renderBodyItem = (
+    item: BodyItem,
+    rowOpts?: {
+      key?: string;
+      measureRef?: (node: HTMLTableRowElement | null) => void;
+      dataIndex?: number;
+    },
+  ) => {
+    if (item.kind === 'group') return renderGroupRow(item, rowOpts);
+    return renderDataRow(item, rowOpts);
+  };
+
+  const tableInner = (
+    <Table
+      containerRef={scrollContainerRef}
+      containerClassName="max-h-[min(60vh,28rem)] overflow-auto"
+      className={cn(density === 'compact' && 'text-xs', density === 'comfortable' && 'text-sm')}
+      style={
+        Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins
+          ? ({
+              tableLayout: 'fixed',
+              width: '100%',
+              ...(tableMinWidth != null ? { minWidth: tableMinWidth } : null),
+            } as CSSProperties)
+          : undefined
+      }
+    >
+      {Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins ? (
+        <colgroup>
+          {reorderable ? <col style={{ width: LEADING_COL_WIDTH }} /> : null}
+          {selectable ? <col style={{ width: LEADING_COL_WIDTH }} /> : null}
+          {columns.map((col) => (
+            <col
+              key={col.key}
+              style={{
+                width: columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined),
+              }}
+            />
+          ))}
+          {actions.length > 0 ? <col style={{ width: ACTIONS_COL_WIDTH }} /> : null}
+        </colgroup>
+      ) : null}
+      <TableHeader className="sticky top-0 z-10 bg-muted [&_tr]:border-b">
+        <TableRow className="hover:bg-transparent">
+          {reorderable ? (
+            <TableHead
+              className={cn('w-8 bg-muted', headHeight, hasLeftPins && 'sticky z-[3]')}
+              style={leadingStickyStyle(hasLeftPins, 0)}
+            />
+          ) : null}
+          {selectable ? (
+            <TableHead
+              className={cn('w-8 bg-muted', headHeight, hasLeftPins && 'sticky z-[3]')}
+              style={leadingStickyStyle(hasLeftPins, selectLeftOffset)}
+            >
+              <Checkbox
+                checked={
+                  sortableIds.length > 0 &&
+                  sortableIds.every((rowId) => selected.has(String(rowId)))
+                    ? true
+                    : selected.size > 0
+                      ? 'indeterminate'
+                      : false
+                }
+                onCheckedChange={(value) => {
+                  if (value) {
+                    emitSelection(new Set(sortableIds.map(String)));
+                  } else {
+                    emitSelection(new Set());
+                  }
                 }}
+                aria-label="Select all"
               />
-            ))}
-            {actions.length > 0 ? <col style={{ width: 40 }} /> : null}
-          </colgroup>
-        ) : null}
-        <TableHeader className="sticky top-0 z-10 bg-muted [&_tr]:border-b">
+            </TableHead>
+          ) : null}
+          {columns.map((col) => {
+            const sortable = col.sortable !== false && !col.editor && !col.detailTrigger;
+            const sortIdx = sortIndexByKey.get(col.key);
+            const active = sortIdx != null;
+            const sortDir = active ? sorts[sortIdx!]!.dir : 'asc';
+            const SortIcon = !active
+              ? ChevronsUpDown
+              : sortDir === 'asc'
+                ? ArrowUp
+                : ArrowDown;
+            const facet = columnFilterable && isFacetColumn(col);
+            const pinStyle = pinStickyStyle(
+              col.pin,
+              leftOffsets[col.key],
+              rightOffsets[col.key],
+              columnWidths[col.key],
+              { zIndex: 2 },
+            );
+            const pinEdge =
+              (col.pin === 'left' && isLastLeftPin(columns, col.key)
+                ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+                : null) ??
+              (col.pin === 'right' && isFirstRightPin(columns, col.key)
+                ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+                : null);
+            const pinStateLabel =
+              col.pin === 'left' ? 'pinned left' : col.pin === 'right' ? 'pinned right' : 'unpinned';
+            return (
+              <TableHead
+                key={col.key}
+                ref={(el) => {
+                  headerCellRefs.current[col.key] = el;
+                }}
+                aria-sort={sortable ? ariaSortValue(active, sortDir) : undefined}
+                className={cn(
+                  'relative bg-muted',
+                  headHeight,
+                  col.align === 'right' && 'text-right',
+                  col.align === 'center' && 'text-center',
+                  col.pin && 'z-[2]',
+                  pinEdge,
+                )}
+                style={{
+                  ...pinStyle,
+                  ...(columnWidths[col.key] != null && !col.pin
+                    ? {
+                        width: columnWidths[col.key],
+                        minWidth: columnWidths[col.key],
+                        maxWidth: columnWidths[col.key],
+                      }
+                    : null),
+                }}
+              >
+                <div
+                  className={cn(
+                    'flex items-center gap-0.5',
+                    col.align === 'right' && 'justify-end',
+                    col.align === 'center' && 'justify-center',
+                  )}
+                >
+                  {sortable ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            '-ml-2 gap-1.5 px-2 font-medium',
+                            density === 'compact' ? 'h-7' : 'h-8',
+                          )}
+                          aria-label={
+                            active
+                              ? `${col.header}, sorted ${sortDir}${sorts.length > 1 ? `, sort priority ${sortIdx! + 1}` : ''}`
+                              : `Sort ${col.header}`
+                          }
+                          onClick={(e) => {
+                            if (!hasEvent(props, 'sort')) return;
+                            const multi = e.shiftKey;
+                            if (multi) {
+                              emit(id, 'sort', { key: col.key, multi: true });
+                              return;
+                            }
+                            const nextDir: DataTableSortDir =
+                              active && sortDir === 'asc' ? 'desc' : 'asc';
+                            emit(id, 'sort', { key: col.key, dir: nextDir });
+                          }}
+                        >
+                          {col.header}
+                          <SortIcon className="size-3.5 text-muted-foreground" aria-hidden />
+                          {active && sorts.length > 1 ? (
+                            <span
+                              className="text-[10px] font-semibold text-muted-foreground tabular-nums"
+                              aria-hidden
+                            >
+                              {sortIdx! + 1}
+                            </span>
+                          ) : null}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        Click to sort · Shift+click for multi-sort
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span className="font-medium">
+                      {col.header}
+                      {col.aggregate ? (
+                        <span className="sr-only">
+                          {` (${aggregateLabel(col.aggregate)} in footer)`}
+                        </span>
+                      ) : null}
+                    </span>
+                  )}
+                  {facet ? (
+                    <FacetColumnFilter
+                      column={col}
+                      selected={parseFacetFilter(columnFilters[col.key])}
+                      onChange={(values) => setFacetFilter(col.key, values)}
+                    />
+                  ) : null}
+                  {hasEvent(props, 'columnPin') ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            'size-7 shrink-0 text-muted-foreground',
+                            col.pin && 'text-foreground',
+                          )}
+                          title="Pin column"
+                          aria-label={`${col.header} column options, ${pinStateLabel}`}
+                          aria-pressed={col.pin != null}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {col.pin ? (
+                            <Pin className="size-3.5" aria-hidden />
+                          ) : (
+                            <MoreHorizontal className="size-3.5" aria-hidden />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {sortable && hasEvent(props, 'sort') ? (
+                          <>
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                emit(id, 'sort', { key: col.key, multi: true })
+                              }
+                            >
+                              <ChevronsUpDown className="size-3.5" />
+                              Add to multi-sort
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        ) : null}
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            emit(id, 'columnPin', {
+                              key: col.key,
+                              pin: col.pin === 'left' ? null : 'left',
+                            })
+                          }
+                        >
+                          <Pin className="size-3.5" />
+                          {col.pin === 'left' ? 'Unpin left' : 'Pin left'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            emit(id, 'columnPin', {
+                              key: col.key,
+                              pin: col.pin === 'right' ? null : 'right',
+                            })
+                          }
+                        >
+                          <Pin className="size-3.5 rotate-45" />
+                          {col.pin === 'right' ? 'Unpin right' : 'Pin right'}
+                        </DropdownMenuItem>
+                        {col.pin ? (
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              emit(id, 'columnPin', { key: col.key, pin: null })
+                            }
+                          >
+                            <PinOff className="size-3.5" />
+                            Clear pin
+                          </DropdownMenuItem>
+                        ) : null}
+                        {col.aggregate ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem disabled>
+                              Footer: {aggregateLabel(col.aggregate)}
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
+                </div>
+                <ColumnResizeHandle
+                  onResizeStart={() => beginColumnResize(col.key)}
+                  onResize={(width) => setColumnWidth(col.key, width)}
+                />
+              </TableHead>
+            );
+          })}
+          {actions.length > 0 ? (
+            <TableHead
+              className={cn('bg-muted', headHeight, hasRightPins && 'sticky z-[3]')}
+              style={{
+                ...trailingStickyStyle(hasRightPins, 0),
+                width: ACTIONS_COL_WIDTH,
+                minWidth: ACTIONS_COL_WIDTH,
+                maxWidth: ACTIONS_COL_WIDTH,
+              }}
+            />
+          ) : null}
+        </TableRow>
+        {hasTextColumnFilters ? (
           <TableRow className="hover:bg-transparent">
             {reorderable ? (
               <TableHead
-                className={cn(
-                  'w-8 bg-muted',
-                  headHeight,
-                  hasLeftPins && 'sticky left-0 z-[3]',
-                )}
-                style={hasLeftPins ? { left: 0 } : undefined}
+                className={cn('h-auto bg-muted pb-2 pt-0', hasLeftPins && 'sticky z-[3]')}
+                style={leadingStickyStyle(hasLeftPins, 0)}
               />
             ) : null}
             {selectable ? (
               <TableHead
-                className={cn(
-                  'w-8 bg-muted',
-                  headHeight,
-                  hasLeftPins && 'sticky z-[3]',
-                )}
-                style={
-                  hasLeftPins
-                    ? { left: reorderable ? 32 : 0 }
-                    : undefined
-                }
-              >
-                <Checkbox
-                  checked={
-                    sortableIds.length > 0 &&
-                    sortableIds.every((rowId) => selected.has(String(rowId)))
-                      ? true
-                      : selected.size > 0
-                        ? 'indeterminate'
-                        : false
-                  }
-                  onCheckedChange={(value) => {
-                    if (value) {
-                      emitSelection(new Set(sortableIds.map(String)));
-                    } else {
-                      emitSelection(new Set());
-                    }
-                  }}
-                  aria-label="Select all"
-                />
-              </TableHead>
+                className={cn('h-auto bg-muted pb-2 pt-0', hasLeftPins && 'sticky z-[3]')}
+                style={leadingStickyStyle(hasLeftPins, selectLeftOffset)}
+              />
             ) : null}
             {columns.map((col) => {
-              const sortable = col.sortable !== false && !col.editor && !col.detailTrigger;
-              const sortIdx = sortIndexByKey.get(col.key);
-              const active = sortIdx != null;
-              const sortDir = active ? sorts[sortIdx!]!.dir : 'asc';
-              const SortIcon = !active
-                ? ChevronsUpDown
-                : sortDir === 'asc'
-                  ? ArrowUp
-                  : ArrowDown;
-              const facet = columnFilterable && isFacetColumn(col);
               const pinStyle = pinStickyStyle(
                 col.pin,
                 leftOffsets[col.key],
                 rightOffsets[col.key],
                 columnWidths[col.key],
+                { zIndex: 2 },
               );
-              const pinEdge =
-                (col.pin === 'left' && isLastLeftPin(columns, col.key)
-                  ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-                  : null) ??
-                (col.pin === 'right' && isFirstRightPin(columns, col.key)
-                  ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-                  : null);
               return (
                 <TableHead
-                  key={col.key}
-                  ref={(el) => {
-                    headerCellRefs.current[col.key] = el;
-                  }}
-                  className={cn(
-                    'relative bg-muted',
-                    headHeight,
-                    col.align === 'right' && 'text-right',
-                    col.align === 'center' && 'text-center',
-                    col.pin && 'z-[2]',
-                    pinEdge,
-                  )}
-                  style={{
-                    ...pinStyle,
-                    ...(columnWidths[col.key] != null && !col.pin
-                      ? {
-                          width: columnWidths[col.key],
-                          minWidth: columnWidths[col.key],
-                          maxWidth: columnWidths[col.key],
-                        }
-                      : null),
-                  }}
-                >
-                  <div
-                    className={cn(
-                      'flex items-center gap-0.5',
-                      col.align === 'right' && 'justify-end',
-                      col.align === 'center' && 'justify-center',
-                    )}
-                  >
-                    {sortable ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          '-ml-2 gap-1.5 px-2 font-medium',
-                          density === 'compact' ? 'h-7' : 'h-8',
-                        )}
-                        title="Sort — Shift+click for multi-sort"
-                        onClick={(e) => {
-                          if (!hasEvent(props, 'sort')) return;
-                          const multi = e.shiftKey;
-                          if (multi) {
-                            emit(id, 'sort', { key: col.key, multi: true });
-                            return;
-                          }
-                          const nextDir: DataTableSortDir =
-                            active && sortDir === 'asc' ? 'desc' : 'asc';
-                          emit(id, 'sort', { key: col.key, dir: nextDir });
-                        }}
-                      >
-                        {col.header}
-                        <SortIcon className="size-3.5 text-muted-foreground" />
-                        {active && sorts.length > 1 ? (
-                          <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
-                            {sortIdx! + 1}
-                          </span>
-                        ) : null}
-                      </Button>
-                    ) : (
-                      <span className="font-medium">{col.header}</span>
-                    )}
-                    {facet ? (
-                      <FacetColumnFilter
-                        column={col}
-                        selected={parseFacetFilter(columnFilters[col.key])}
-                        onChange={(values) => setFacetFilter(col.key, values)}
-                      />
-                    ) : null}
-                    {hasEvent(props, 'columnPin') ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                              'size-7 shrink-0 text-muted-foreground',
-                              col.pin && 'text-foreground',
-                            )}
-                            aria-label={`${col.header} column options`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {col.pin ? (
-                              <Pin className="size-3.5" />
-                            ) : (
-                              <MoreHorizontal className="size-3.5" />
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              emit(id, 'columnPin', {
-                                key: col.key,
-                                pin: col.pin === 'left' ? null : 'left',
-                              })
-                            }
-                          >
-                            <Pin className="size-3.5" />
-                            {col.pin === 'left' ? 'Unpin' : 'Pin left'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              emit(id, 'columnPin', {
-                                key: col.key,
-                                pin: col.pin === 'right' ? null : 'right',
-                              })
-                            }
-                          >
-                            <Pin className="size-3.5 rotate-45" />
-                            {col.pin === 'right' ? 'Unpin' : 'Pin right'}
-                          </DropdownMenuItem>
-                          {col.pin ? (
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                emit(id, 'columnPin', { key: col.key, pin: null })
-                              }
-                            >
-                              <PinOff className="size-3.5" />
-                              Clear pin
-                            </DropdownMenuItem>
-                          ) : null}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : null}
-                  </div>
-                  <ColumnResizeHandle
-                    onResizeStart={() => beginColumnResize(col.key)}
-                    onResize={(width) => setColumnWidth(col.key, width)}
-                  />
-                </TableHead>
-              );
-            })}
-            {actions.length > 0 ? (
-              <TableHead
-                className={cn(
-                  'w-8 bg-muted',
-                  headHeight,
-                  hasRightPins && 'sticky z-[3]',
-                )}
-                style={hasRightPins ? { right: 0 } : undefined}
-              />
-            ) : null}
-          </TableRow>
-          {hasTextColumnFilters ? (
-            <TableRow className="hover:bg-transparent">
-              {reorderable ? <TableHead className="h-auto bg-muted pb-2 pt-0" /> : null}
-              {selectable ? <TableHead className="h-auto bg-muted pb-2 pt-0" /> : null}
-              {columns.map((col) => (
-                <TableHead
                   key={`filter-${col.key}`}
-                  className="h-auto bg-muted pb-2 pt-0 font-normal"
+                  className={cn(
+                    'h-auto bg-muted pb-2 pt-0 font-normal',
+                    col.pin && 'z-[2]',
+                  )}
+                  style={pinStyle}
                 >
                   {isFacetColumn(col) ? null : (
                     <Input
@@ -1495,282 +1954,181 @@ export function BoundDataTable({
                     />
                   )}
                 </TableHead>
-              ))}
-              {actions.length > 0 ? <TableHead className="h-auto bg-muted pb-2 pt-0" /> : null}
-            </TableRow>
-          ) : null}
-        </TableHeader>
-        <TableBody>
-          {loading ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={Math.max(colSpan, 1)} className="h-48">
-                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                  <Spinner className="size-6" />
-                  <span className="text-sm">Loading…</span>
-                </div>
-              </TableCell>
-            </TableRow>
-          ) : rows.length === 0 ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={Math.max(colSpan, 1)} className="h-48 p-0">
-                <Empty className="border-0 p-8 md:p-10">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <Inbox />
-                    </EmptyMedia>
-                    <EmptyTitle>{emptyTitle}</EmptyTitle>
-                    <EmptyDescription>{emptyDescription}</EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              </TableCell>
-            </TableRow>
-          ) : (
-            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-              {bodyItems.map((item) => {
-                if (item.kind === 'group') {
-                  const isCollapsed = collapsed.has(item.group.key);
-                  return (
-                    <TableRow
-                      key={`group:${item.group.key}`}
-                      className="bg-muted/40 hover:bg-muted/40"
-                    >
-                      <TableCell colSpan={Math.max(colSpan, 1)} className={cn('py-2', cellPad)}>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2 text-sm font-medium"
-                          onClick={() => toggleGroup(item.group.key)}
-                          aria-expanded={!isCollapsed}
-                        >
-                          {isCollapsed ? (
-                            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                          )}
-                          <span>{item.group.label}</span>
-                          <Badge
-                            variant="secondary"
-                            className="h-5 rounded-full px-1.5 font-normal text-muted-foreground"
-                          >
-                            {item.group.count}
-                          </Badge>
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                }
-
-                const { row, index: i } = item;
-                const rowKey = String(row[keyField] ?? i);
-                const isSelected = selected.has(rowKey);
-                const zebraClass =
-                  zebra && i % 2 === 1 ? 'bg-muted/30 hover:bg-muted/50' : undefined;
-                return (
-                  <SortableRow
-                    key={rowKey}
-                    rowKey={rowKey}
-                    selected={isSelected}
-                    className={zebraClass}
-                  >
-                    {reorderable ? (
-                      <TableCell
-                        className={cn(
-                          'w-8 px-1',
-                          cellPad,
-                          hasLeftPins && 'sticky left-0 z-[1] bg-background',
-                          zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
-                          isSelected && hasLeftPins && 'bg-muted',
-                        )}
-                        style={hasLeftPins ? { left: 0 } : undefined}
-                      >
-                        <DragHandle id={rowKey} />
-                      </TableCell>
-                    ) : null}
-                    {selectable ? (
-                      <TableCell
-                        className={cn(
-                          'w-8 px-1',
-                          cellPad,
-                          hasLeftPins && 'sticky z-[1] bg-background',
-                          zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
-                          isSelected && hasLeftPins && 'bg-muted',
-                        )}
-                        style={
-                          hasLeftPins
-                            ? { left: reorderable ? 32 : 0 }
-                            : undefined
-                        }
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={(value) => {
-                            const next = new Set(selected);
-                            if (value) next.add(rowKey);
-                            else next.delete(rowKey);
-                            emitSelection(next);
-                          }}
-                          aria-label="Select row"
-                        />
-                      </TableCell>
-                    ) : null}
-                    {columns.map((col) => {
-                      const pinStyle = pinStickyStyle(
-                        col.pin,
-                        leftOffsets[col.key],
-                        rightOffsets[col.key],
-                        columnWidths[col.key],
-                      );
-                      const pinEdge =
-                        (col.pin === 'left' && isLastLeftPin(columns, col.key)
-                          ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-                          : null) ??
-                        (col.pin === 'right' && isFirstRightPin(columns, col.key)
-                          ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-                          : null);
-                      return (
-                        <TableCell
-                          key={col.key}
-                          className={cn(
-                            cellPad,
-                            col.align === 'right' && 'text-right',
-                            col.align === 'center' && 'text-center',
-                            col.pin && 'bg-background',
-                            zebra && i % 2 === 1 && col.pin && 'bg-muted/30',
-                            isSelected && col.pin && 'bg-muted',
-                            pinEdge,
-                          )}
-                          style={pinStyle}
-                        >
-                          {renderCellContent(row, col, rowKey)}
-                        </TableCell>
-                      );
-                    })}
-                    {actions.length > 0 ? (
-                      <TableCell
-                        className={cn(
-                          'w-8 px-1',
-                          cellPad,
-                          hasRightPins && 'sticky z-[1] bg-background',
-                          zebra && i % 2 === 1 && hasRightPins && 'bg-muted/30',
-                          isSelected && hasRightPins && 'bg-muted',
-                        )}
-                        style={hasRightPins ? { right: 0 } : undefined}
-                      >
-                        <DropdownMenu
-                          open={actionsMenuKey === rowKey}
-                          onOpenChange={(open) => {
-                            setActionsMenuKey(open ? rowKey : null);
-                            if (open) {
-                              setColumnsOpen(false);
-                              setExportOpen(false);
-                            }
-                          }}
-                        >
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-                              size="icon"
-                              aria-label="Open menu"
-                            >
-                              <MoreVertical className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            {actions.map((action, index) => (
-                              <div key={action.id}>
-                                {index > 0 && action.variant === 'destructive' ? (
-                                  <DropdownMenuSeparator />
-                                ) : null}
-                                <DropdownMenuItem
-                                  className={
-                                    action.variant === 'destructive'
-                                      ? 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                                      : undefined
-                                  }
-                                  onSelect={() => {
-                                    if (hasEvent(props, 'action')) {
-                                      emit(id, 'action', { actionId: action.id, rowKey });
-                                    }
-                                  }}
-                                >
-                                  <ActionLabel action={action} />
-                                </DropdownMenuItem>
-                              </div>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    ) : null}
-                  </SortableRow>
-                );
-              })}
-            </SortableContext>
-          )}
-        </TableBody>
-        {showFooterRow && !loading && rows.length > 0 ? (
-          <TableFooter className="sticky bottom-0 z-[1] bg-muted/80 backdrop-blur-sm">
-            <TableRow className="hover:bg-transparent">
-              {reorderable ? (
-                <TableCell
-                  className={cn(
-                    'bg-muted/80',
-                    hasLeftPins && 'sticky left-0 z-[2]',
-                  )}
-                  style={hasLeftPins ? { left: 0 } : undefined}
-                />
-              ) : null}
-              {selectable ? (
-                <TableCell
-                  className={cn(
-                    'bg-muted/80',
-                    hasLeftPins && 'sticky z-[2]',
-                  )}
-                  style={
-                    hasLeftPins ? { left: reorderable ? 32 : 0 } : undefined
-                  }
-                />
-              ) : null}
-              {columns.map((col) => {
-                const value = footerCells?.[col.key];
-                const pinStyle = pinStickyStyle(
-                  col.pin,
-                  leftOffsets[col.key],
-                  rightOffsets[col.key],
-                  columnWidths[col.key],
-                );
-                return (
-                  <TableCell
-                    key={`footer-${col.key}`}
-                    className={cn(
-                      'bg-muted/80 font-medium tabular-nums',
-                      col.align === 'right' && 'text-right',
-                      col.align === 'center' && 'text-center',
-                      col.pin && 'z-[2]',
-                    )}
-                    style={pinStyle}
-                  >
-                    {value == null || value === ''
-                      ? null
-                      : col.aggregate === 'count'
-                        ? `${value}`
-                        : String(value)}
-                  </TableCell>
-                );
-              })}
-              {actions.length > 0 ? (
-                <TableCell
-                  className={cn(
-                    'bg-muted/80',
-                    hasRightPins && 'sticky z-[2]',
-                  )}
-                  style={hasRightPins ? { right: 0 } : undefined}
-                />
-              ) : null}
-            </TableRow>
-          </TableFooter>
+              );
+            })}
+            {actions.length > 0 ? (
+              <TableHead
+                className={cn('h-auto bg-muted pb-2 pt-0', hasRightPins && 'sticky z-[3]')}
+                style={trailingStickyStyle(hasRightPins, 0)}
+              />
+            ) : null}
+          </TableRow>
         ) : null}
-      </Table>
-    </DndContext>
+      </TableHeader>
+      <TableBody>
+        {loading ? (
+          <TableRow className="hover:bg-transparent">
+            <TableCell colSpan={Math.max(colSpan, 1)} className="h-48">
+              <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Spinner className="size-6" />
+                <span className="text-sm">Loading…</span>
+              </div>
+            </TableCell>
+          </TableRow>
+        ) : rows.length === 0 ? (
+          <TableRow className="hover:bg-transparent">
+            <TableCell colSpan={Math.max(colSpan, 1)} className="h-48 p-0">
+              <Empty className="border-0 p-8 md:p-10">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Inbox />
+                  </EmptyMedia>
+                  <EmptyTitle>{emptyTitle}</EmptyTitle>
+                  <EmptyDescription>{emptyDescription}</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </TableCell>
+          </TableRow>
+        ) : shouldVirtualize ? (
+          <>
+            {virtualPadTop > 0 ? (
+              <TableRow className="hover:bg-transparent" aria-hidden>
+                <TableCell
+                  colSpan={Math.max(colSpan, 1)}
+                  className="border-0 p-0"
+                  style={{ height: virtualPadTop }}
+                />
+              </TableRow>
+            ) : null}
+            {virtualRows!.map((virtualRow) => {
+              const item = bodyItems[virtualRow.index]!;
+              return renderBodyItem(item, {
+                key:
+                  item.kind === 'group'
+                    ? `group:${item.group.key}`
+                    : String(item.row[keyField] ?? item.index),
+                dataIndex: virtualRow.index,
+                measureRef: rowVirtualizer.measureElement,
+              });
+            })}
+            {virtualPadBottom > 0 ? (
+              <TableRow className="hover:bg-transparent" aria-hidden>
+                <TableCell
+                  colSpan={Math.max(colSpan, 1)}
+                  className="border-0 p-0"
+                  style={{ height: virtualPadBottom }}
+                />
+              </TableRow>
+            ) : null}
+          </>
+        ) : reorderable ? (
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            {bodyItems.map((item) => renderBodyItem(item))}
+          </SortableContext>
+        ) : (
+          bodyItems.map((item) => renderBodyItem(item))
+        )}
+      </TableBody>
+      {showFooterRow && !loading && rows.length > 0 ? (
+        <TableFooter className="sticky bottom-0 z-[1] bg-muted/80 backdrop-blur-sm">
+          <TableRow className="hover:bg-transparent">
+            {reorderable ? (
+              <TableCell
+                className={cn('bg-muted/80', hasLeftPins && 'sticky z-[2]')}
+                style={leadingStickyStyle(hasLeftPins, 0, 2)}
+              />
+            ) : null}
+            {selectable ? (
+              <TableCell
+                className={cn('bg-muted/80', hasLeftPins && 'sticky z-[2]')}
+                style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 2)}
+              />
+            ) : null}
+            {columns.map((col) => {
+              const value = footerCells?.[col.key];
+              const pinStyle = pinStickyStyle(
+                col.pin,
+                leftOffsets[col.key],
+                rightOffsets[col.key],
+                columnWidths[col.key],
+                { zIndex: 2 },
+              );
+              const display =
+                value == null || value === ''
+                  ? null
+                  : col.aggregate === 'count'
+                    ? `${value}`
+                    : String(value);
+              const announced =
+                display != null && col.aggregate
+                  ? `${col.header} ${aggregateLabel(col.aggregate)}: ${display}`
+                  : display != null
+                    ? `${col.header}: ${display}`
+                    : undefined;
+              return (
+                <TableCell
+                  key={`footer-${col.key}`}
+                  className={cn(
+                    'bg-muted/80 font-medium tabular-nums',
+                    col.align === 'right' && 'text-right',
+                    col.align === 'center' && 'text-center',
+                    col.pin && 'z-[2]',
+                  )}
+                  style={pinStyle}
+                  aria-label={announced}
+                >
+                  {display}
+                </TableCell>
+              );
+            })}
+            {actions.length > 0 ? (
+              <TableCell
+                className={cn('bg-muted/80', hasRightPins && 'sticky z-[2]')}
+                style={trailingStickyStyle(hasRightPins, 0, 2)}
+              />
+            ) : null}
+          </TableRow>
+        </TableFooter>
+      ) : null}
+    </Table>
+  );
+
+  const footerAggregateAnnouncement = showFooterRow
+    ? columns
+        .filter(
+          (c) =>
+            c.aggregate &&
+            footerCells?.[c.key] != null &&
+            footerCells[c.key] !== '',
+        )
+        .map(
+          (c) =>
+            `${c.header} ${aggregateLabel(c.aggregate)} ${footerCells![c.key]}`,
+        )
+        .join('; ')
+    : '';
+
+  const tableBlock = (
+    <TooltipProvider delayDuration={400}>
+      {footerAggregateAnnouncement ? (
+        <div className="sr-only" aria-live="polite">
+          Column aggregates: {footerAggregateAnnouncement}
+        </div>
+      ) : null}
+      {reorderable ? (
+        <DndContext
+          id={`${tableId}-dnd`}
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={onDragEnd}
+        >
+          {tableInner}
+        </DndContext>
+      ) : (
+        tableInner
+      )}
+    </TooltipProvider>
   );
 
   const footer = showPagination ? (

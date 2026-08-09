@@ -57,8 +57,9 @@ export class TableBuilder {
 
   /**
    * Server-paged mode: rows are the current page; `totalRows` drives the pager.
-   * Also implies remote filter/sort unless overridden. Wire `onPageChange` /
-   * `onPageSizeChange` / `onSortChange` / `onFilterChange` to fetch.
+   * Forces remote filter/sort (local pipeline skipped). Wire page / filter / sort
+   * handlers (or read `getQuery()`), then `setRows` + `setTotalRows`. Use
+   * `setLoading` / `withLoading` around fetches.
    */
   manualPagination(totalRows?: number): this {
     this.props.manualPagination = true;
@@ -68,13 +69,19 @@ export class TableBuilder {
     return this;
   }
 
-  /** Skip local search/column filters; emit filter events for the app to fetch. */
+  /**
+   * Skip local search/column filters; emit filter events for the app to fetch.
+   * Implied by `.manualPagination()`; useful alone for hybrid local paging.
+   */
   manualFiltering(enabled = true): this {
     this.props.manualFiltering = enabled;
     return this;
   }
 
-  /** Skip local sort; emit sort events for the app to fetch. */
+  /**
+   * Skip local sort; emit sort events for the app to fetch.
+   * Implied by `.manualPagination()`; useful alone for hybrid local paging.
+   */
   manualSorting(enabled = true): this {
     this.props.manualSorting = enabled;
     return this;

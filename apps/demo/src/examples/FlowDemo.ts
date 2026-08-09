@@ -1,5 +1,5 @@
 import { ui } from '@badui/ui';
-import type { FlowConnectPayload, FlowEdge, FlowNodeMovePayload, FlowPosition } from '@badui/ui';
+import type { FlowEdge, FlowElement, FlowPosition } from '@badui/ui';
 import { exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -8,63 +8,17 @@ export const pageMeta = {
   order: 92,
 };
 
-type Positions = Record<string, FlowPosition>;
-
 function cloneEdges(edges: FlowEdge[]): FlowEdge[] {
   return edges.map((e) => ({ ...e }));
 }
 
-type DiagramSlice = {
-  edges: FlowEdge[];
-  positions: Positions;
-};
-
-function wireFlow(
-  diagram: DiagramSlice,
-  shared: { lastEvent: string },
-  tag: string,
-  extra?: Partial<{
-    onNodesDelete: (ids: string[]) => void;
-  }>,
-) {
-  return {
-    onConnect: (payload: FlowConnectPayload) => {
-      diagram.edges = [
-        ...diagram.edges,
-        {
-          id: `e-${payload.source}-${payload.target}-${Date.now()}`,
-          source: payload.source,
-          target: payload.target,
-          sourceHandle: payload.sourceHandle ?? undefined,
-          targetHandle: payload.targetHandle ?? undefined,
-        },
-      ];
-      shared.lastEvent = `[${tag}] connect ${payload.source} → ${payload.target}`;
-    },
-    onNodeMove: (payload: FlowNodeMovePayload) => {
-      diagram.positions = {
-        ...diagram.positions,
-        [payload.nodeId]: payload.position,
-      };
-      shared.lastEvent = `[${tag}] move ${payload.nodeId} → (${Math.round(payload.position.x)}, ${Math.round(payload.position.y)})`;
-    },
-    onEdgesDelete: (ids: string[]) => {
-      diagram.edges = diagram.edges.filter((e) => !ids.includes(e.id));
-      shared.lastEvent = `[${tag}] edgesDelete ${ids.join(',')}`;
-    },
-    onNodesDelete: (ids: string[]) => {
-      diagram.edges = diagram.edges.filter(
-        (e) => !ids.includes(e.source) && !ids.includes(e.target),
-      );
-      for (const id of ids) delete diagram.positions[id];
-      diagram.positions = { ...diagram.positions };
-      extra?.onNodesDelete?.(ids);
-      shared.lastEvent = `[${tag}] nodesDelete ${ids.join(',')}`;
-    },
-  };
+function restorePositions(flow: FlowElement, positions: Record<string, FlowPosition>) {
+  for (const [id, position] of Object.entries(positions)) {
+    flow.moveNode(id, position);
+  }
 }
 
-const PIPELINE_POSITIONS: Positions = {
+const PIPELINE_POSITIONS: Record<string, FlowPosition> = {
   fetch: { x: 0, y: 60 },
   transform: { x: 260, y: 60 },
   load: { x: 520, y: 60 },
@@ -88,7 +42,7 @@ const PIPELINE_EDGES: FlowEdge[] = [
   },
 ];
 
-const APPROVAL_POSITIONS: Positions = {
+const APPROVAL_POSITIONS: Record<string, FlowPosition> = {
   ticket: { x: 40, y: 120 },
   triage: { x: 320, y: 120 },
   approve: { x: 620, y: 20 },
@@ -120,7 +74,7 @@ const APPROVAL_EDGES: FlowEdge[] = [
   },
 ];
 
-const GRAPH_POSITIONS: Positions = {
+const GRAPH_POSITIONS: Record<string, FlowPosition> = {
   sourceA: { x: 0, y: 40 },
   sourceB: { x: 0, y: 200 },
   merge: { x: 280, y: 120 },
@@ -152,20 +106,18 @@ const GRAPH_EDGES: FlowEdge[] = [
   },
 ];
 
+const STATIC_GRAPH_IDS = new Set(Object.keys(GRAPH_POSITIONS));
+
 ui.page('/examples/flow', () => {
   const shared = ui.state({ lastEvent: '' as string });
 
   const pipeline = ui.state({
-    edges: cloneEdges(PIPELINE_EDGES),
-    positions: { ...PIPELINE_POSITIONS } as Positions,
     runs: 0,
     source: 'prod-api',
     dryRun: true,
   });
 
   const approval = ui.state({
-    edges: cloneEdges(APPROVAL_EDGES),
-    positions: { ...APPROVAL_POSITIONS } as Positions,
     priority: 'normal',
     assignee: 'alice',
     severity: 3,
@@ -174,10 +126,8 @@ ui.page('/examples/flow', () => {
   });
 
   const graph = ui.state({
-    edges: cloneEdges(GRAPH_EDGES),
-    positions: { ...GRAPH_POSITIONS } as Positions,
-    extraStages: [] as { id: string; title: string }[],
     stageCounter: 0,
+    dynamicCount: 0,
   });
 
   ui.container({ centered: true, width: '2xl' }, () => {
@@ -196,27 +146,38 @@ ui.page('/examples/flow', () => {
 
         exampleSection(
           '1. Configurable ETL pipeline',
-          'Controls live inside nodes (select + switch). Drag by the card chrome; Run uses nested onClick.',
+          'Controls live inside nodes (select + switch). Drag by the card chrome; Run uses nested onClick. Diagram state is owned by the flow element.',
         );
 
-        ui.auto(() => {
-          ui.flow(
-            {
-              edges: pipeline.edges,
-              fitView: true,
-              showMiniMap: true,
-              showControls: true,
-              ...wireFlow(pipeline, shared, 'pipeline'),
+        const pipelineFlow = ui.flow(
+          {
+            edges: cloneEdges(PIPELINE_EDGES),
+            fitView: true,
+            showMiniMap: true,
+            showControls: true,
+            onConnect: (payload) => {
+              shared.lastEvent = `[pipeline] connect ${payload.source} → ${payload.target}`;
             },
-            (flow) => {
-              flow.node(
-                {
-                  id: 'fetch',
-                  position: pipeline.positions.fetch,
-                  handles: [{ id: 'out', type: 'source', position: 'right' }],
-                },
-                () => {
-                  ui.label('Fetch').classes('text-sm font-medium');
+            onNodeMove: (payload) => {
+              shared.lastEvent = `[pipeline] move ${payload.nodeId} → (${Math.round(payload.position.x)}, ${Math.round(payload.position.y)})`;
+            },
+            onEdgesDelete: (ids) => {
+              shared.lastEvent = `[pipeline] edgesDelete ${ids.join(',')}`;
+            },
+            onNodesDelete: (ids) => {
+              shared.lastEvent = `[pipeline] nodesDelete ${ids.join(',')}`;
+            },
+          },
+          (flow) => {
+            flow.node(
+              {
+                id: 'fetch',
+                position: PIPELINE_POSITIONS.fetch!,
+                handles: [{ id: 'out', type: 'source', position: 'right' }],
+              },
+              () => {
+                ui.label('Fetch').classes('text-sm font-medium');
+                ui.auto(() => {
                   ui.badge(pipeline.dryRun ? 'dry-run' : 'live', {
                     variant: pipeline.dryRun ? 'secondary' : 'default',
                   });
@@ -238,85 +199,87 @@ ui.page('/examples/flow', () => {
                       pipeline.dryRun = !!v;
                     },
                   });
-                  ui.button('Run', {
-                    size: 'sm',
-                    onClick: () => {
-                      pipeline.runs += 1;
-                      ui.notify(
-                        `Fetch #${pipeline.runs} from ${pipeline.source}` +
-                          (pipeline.dryRun ? ' (dry-run)' : ''),
-                        'success',
-                      );
-                    },
-                  });
-                },
-              );
+                });
+                ui.button('Run', {
+                  size: 'sm',
+                  onClick: () => {
+                    pipeline.runs += 1;
+                    ui.notify(
+                      `Fetch #${pipeline.runs} from ${pipeline.source}` +
+                        (pipeline.dryRun ? ' (dry-run)' : ''),
+                      'success',
+                    );
+                  },
+                });
+              },
+            );
 
-              flow.node(
-                {
-                  id: 'transform',
-                  position: pipeline.positions.transform,
-                  handles: [
-                    { id: 'in', type: 'target', position: 'left' },
-                    { id: 'out', type: 'source', position: 'right' },
-                  ],
-                },
-                () => {
-                  ui.label('Transform').classes('text-sm font-medium');
+            flow.node(
+              {
+                id: 'transform',
+                position: PIPELINE_POSITIONS.transform!,
+                handles: [
+                  { id: 'in', type: 'target', position: 'left' },
+                  { id: 'out', type: 'source', position: 'right' },
+                ],
+              },
+              () => {
+                ui.label('Transform').classes('text-sm font-medium');
+                ui.auto(() => {
                   ui.label(`Source: ${pipeline.source}`).classes('text-xs text-muted-foreground');
                   ui.progress({
                     value: pipeline.runs > 0 ? Math.min(100, pipeline.runs * 25) : 8,
                   });
-                },
-              );
+                });
+              },
+            );
 
-              flow.node(
-                {
-                  id: 'load',
-                  position: pipeline.positions.load,
-                  handles: [
-                    { id: 'in', type: 'target', position: 'left' },
-                    { id: 'out', type: 'source', position: 'right' },
-                  ],
-                },
-                () => {
-                  ui.label('Load').classes('text-sm font-medium');
-                  ui.label('Write destination').classes('text-xs text-muted-foreground');
-                  ui.button('Flush', {
-                    size: 'sm',
-                    variant: 'outline',
-                    onClick: () => ui.notify('Load flushed', 'info'),
-                  });
-                },
-              );
+            flow.node(
+              {
+                id: 'load',
+                position: PIPELINE_POSITIONS.load!,
+                handles: [
+                  { id: 'in', type: 'target', position: 'left' },
+                  { id: 'out', type: 'source', position: 'right' },
+                ],
+              },
+              () => {
+                ui.label('Load').classes('text-sm font-medium');
+                ui.label('Write destination').classes('text-xs text-muted-foreground');
+                ui.button('Flush', {
+                  size: 'sm',
+                  variant: 'outline',
+                  onClick: () => ui.notify('Load flushed', 'info'),
+                });
+              },
+            );
 
-              flow.node(
-                {
-                  id: 'notify',
-                  position: pipeline.positions.notify,
-                  handles: [{ id: 'in', type: 'target', position: 'left' }],
-                },
-                () => {
-                  ui.label('Notify').classes('text-sm font-medium');
-                  ui.label('Slack / email').classes('text-xs text-muted-foreground');
-                  ui.button('Ping', {
-                    size: 'sm',
-                    variant: 'secondary',
-                    onClick: () => ui.notify('Team notified', 'success'),
-                  });
-                },
-              );
-            },
-          );
-        });
+            flow.node(
+              {
+                id: 'notify',
+                position: PIPELINE_POSITIONS.notify!,
+                handles: [{ id: 'in', type: 'target', position: 'left' }],
+              },
+              () => {
+                ui.label('Notify').classes('text-sm font-medium');
+                ui.label('Slack / email').classes('text-xs text-muted-foreground');
+                ui.button('Ping', {
+                  size: 'sm',
+                  variant: 'secondary',
+                  onClick: () => ui.notify('Team notified', 'success'),
+                });
+              },
+            );
+          },
+        );
 
         ui.row(() => {
           ui.button('Reset pipeline', {
             variant: 'outline',
             size: 'sm',
             onClick: () => {
-              pipeline.edges = cloneEdges(PIPELINE_EDGES);
-              pipeline.positions = { ...PIPELINE_POSITIONS };
+              pipelineFlow.setEdges(cloneEdges(PIPELINE_EDGES));
+              restorePositions(pipelineFlow, PIPELINE_POSITIONS);
               pipeline.runs = 0;
               pipeline.source = 'prod-api';
               pipeline.dryRun = true;
@@ -335,24 +298,35 @@ ui.page('/examples/flow', () => {
           'Triage exposes yes/no source handles. Nested selects, rating, and switch update server state; connect Approve → Done yourself.',
         );
 
-        ui.auto(() => {
-          ui.flow(
-            {
-              edges: approval.edges,
-              fitView: true,
-              showMiniMap: false,
-              showControls: true,
-              ...wireFlow(approval, shared, 'approval'),
+        const approvalFlow = ui.flow(
+          {
+            edges: cloneEdges(APPROVAL_EDGES),
+            fitView: true,
+            showMiniMap: false,
+            showControls: true,
+            onConnect: (payload) => {
+              shared.lastEvent = `[approval] connect ${payload.source} → ${payload.target}`;
             },
-            (flow) => {
-              flow.node(
-                {
-                  id: 'ticket',
-                  position: approval.positions.ticket,
-                  handles: [{ id: 'out', type: 'source', position: 'right' }],
-                },
-                () => {
-                  ui.label('Ticket').classes('text-sm font-medium');
+            onNodeMove: (payload) => {
+              shared.lastEvent = `[approval] move ${payload.nodeId} → (${Math.round(payload.position.x)}, ${Math.round(payload.position.y)})`;
+            },
+            onEdgesDelete: (ids) => {
+              shared.lastEvent = `[approval] edgesDelete ${ids.join(',')}`;
+            },
+            onNodesDelete: (ids) => {
+              shared.lastEvent = `[approval] nodesDelete ${ids.join(',')}`;
+            },
+          },
+          (flow) => {
+            flow.node(
+              {
+                id: 'ticket',
+                position: APPROVAL_POSITIONS.ticket!,
+                handles: [{ id: 'out', type: 'source', position: 'right' }],
+              },
+              () => {
+                ui.label('Ticket').classes('text-sm font-medium');
+                ui.auto(() => {
                   ui.select({
                     options: [
                       { value: 'low', label: 'Low' },
@@ -383,21 +357,23 @@ ui.page('/examples/flow', () => {
                       approval.severity = Number(v);
                     },
                   });
-                },
-              );
+                });
+              },
+            );
 
-              flow.node(
-                {
-                  id: 'triage',
-                  position: approval.positions.triage,
-                  handles: [
-                    { id: 'in', type: 'target', position: 'left' },
-                    { id: 'yes', type: 'source', position: 'top' },
-                    { id: 'no', type: 'source', position: 'bottom' },
-                  ],
-                },
-                () => {
-                  ui.label('Triage').classes('text-sm font-medium');
+            flow.node(
+              {
+                id: 'triage',
+                position: APPROVAL_POSITIONS.triage!,
+                handles: [
+                  { id: 'in', type: 'target', position: 'left' },
+                  { id: 'yes', type: 'source', position: 'top' },
+                  { id: 'no', type: 'source', position: 'bottom' },
+                ],
+              },
+              () => {
+                ui.label('Triage').classes('text-sm font-medium');
+                ui.auto(() => {
                   ui.label(
                     `${approval.priority} · ${approval.assignee} · ★${approval.severity}`,
                   ).classes('text-xs text-muted-foreground');
@@ -411,77 +387,79 @@ ui.page('/examples/flow', () => {
                   ui.badge(approval.escalate ? 'escalated' : 'standard', {
                     variant: approval.escalate ? 'destructive' : 'outline',
                   });
-                },
-              );
+                });
+              },
+            );
 
-              flow.node(
-                {
-                  id: 'approve',
-                  position: approval.positions.approve,
-                  handles: [
-                    { id: 'in', type: 'target', position: 'left' },
-                    { id: 'out', type: 'source', position: 'right' },
-                  ],
-                },
-                () => {
-                  ui.label('Approve').classes(
-                    'text-sm font-medium text-green-700 dark:text-green-400',
-                  );
-                  ui.button('Sign off', {
-                    size: 'sm',
-                    onClick: () => {
-                      approval.decision = 'approved';
-                      ui.notify('Approved', 'success');
-                    },
-                  });
-                },
-              );
+            flow.node(
+              {
+                id: 'approve',
+                position: APPROVAL_POSITIONS.approve!,
+                handles: [
+                  { id: 'in', type: 'target', position: 'left' },
+                  { id: 'out', type: 'source', position: 'right' },
+                ],
+              },
+              () => {
+                ui.label('Approve').classes(
+                  'text-sm font-medium text-green-700 dark:text-green-400',
+                );
+                ui.button('Sign off', {
+                  size: 'sm',
+                  onClick: () => {
+                    approval.decision = 'approved';
+                    ui.notify('Approved', 'success');
+                  },
+                });
+              },
+            );
 
-              flow.node(
-                {
-                  id: 'reject',
-                  position: approval.positions.reject,
-                  handles: [
-                    { id: 'in', type: 'target', position: 'left' },
-                    { id: 'out', type: 'source', position: 'right' },
-                  ],
-                },
-                () => {
-                  ui.label('Reject').classes('text-sm font-medium text-red-700 dark:text-red-400');
-                  ui.button('Send back', {
-                    size: 'sm',
-                    variant: 'destructive',
-                    onClick: () => {
-                      approval.decision = 'rejected';
-                      ui.notify('Rejected', 'error');
-                    },
-                  });
-                },
-              );
+            flow.node(
+              {
+                id: 'reject',
+                position: APPROVAL_POSITIONS.reject!,
+                handles: [
+                  { id: 'in', type: 'target', position: 'left' },
+                  { id: 'out', type: 'source', position: 'right' },
+                ],
+              },
+              () => {
+                ui.label('Reject').classes('text-sm font-medium text-red-700 dark:text-red-400');
+                ui.button('Send back', {
+                  size: 'sm',
+                  variant: 'destructive',
+                  onClick: () => {
+                    approval.decision = 'rejected';
+                    ui.notify('Rejected', 'error');
+                  },
+                });
+              },
+            );
 
-              flow.node(
-                {
-                  id: 'done',
-                  position: approval.positions.done,
-                  handles: [{ id: 'in', type: 'target', position: 'left' }],
-                },
-                () => {
-                  ui.label('Done').classes('text-sm font-medium');
+            flow.node(
+              {
+                id: 'done',
+                position: APPROVAL_POSITIONS.done!,
+                handles: [{ id: 'in', type: 'target', position: 'left' }],
+              },
+              () => {
+                ui.label('Done').classes('text-sm font-medium');
+                ui.auto(() => {
                   ui.label(
                     approval.decision ? `Result: ${approval.decision}` : 'Awaiting path',
                   ).classes('text-xs text-muted-foreground');
-                },
-              );
-            },
-          );
-        });
+                });
+              },
+            );
+          },
+        );
 
         ui.button('Reset approval', {
           variant: 'outline',
           size: 'sm',
           onClick: () => {
-            approval.edges = cloneEdges(APPROVAL_EDGES);
-            approval.positions = { ...APPROVAL_POSITIONS };
+            approvalFlow.setEdges(cloneEdges(APPROVAL_EDGES));
+            restorePositions(approvalFlow, APPROVAL_POSITIONS);
             approval.priority = 'normal';
             approval.assignee = 'alice';
             approval.severity = 3;
@@ -495,137 +473,136 @@ ui.page('/examples/flow', () => {
 
         exampleSection(
           '3. Fan-in / fan-out + dynamic stages',
-          'Merge node has two target handles (a/b) and dual sources (ok/err). Add Stage appends a live flow.node at runtime.',
+          'Merge node has two target handles (a/b) and dual sources (ok/err). Add Stage uses flow.addNode — no outer ui.auto around the diagram.',
         );
 
-        ui.auto(() => {
-          ui.flow(
-            {
-              edges: graph.edges,
-              fitView: true,
-              showMiniMap: true,
-              showControls: true,
-              ...wireFlow(graph, shared, 'graph', {
-                onNodesDelete: (ids) => {
-                  graph.extraStages = graph.extraStages.filter((s) => !ids.includes(s.id));
-                },
-              }),
+        const graphFlow = ui.flow(
+          {
+            edges: cloneEdges(GRAPH_EDGES),
+            fitView: true,
+            showMiniMap: true,
+            showControls: true,
+            onConnect: (payload) => {
+              shared.lastEvent = `[graph] connect ${payload.source} → ${payload.target}`;
             },
-            (flow) => {
-              flow.node(
-                {
-                  id: 'sourceA',
-                  position: graph.positions.sourceA,
-                  handles: [{ id: 'out', type: 'source', position: 'right' }],
-                },
-                () => {
-                  ui.label('Source A').classes('text-sm font-medium');
-                  ui.badge('metrics', { variant: 'outline' });
-                },
-              );
-
-              flow.node(
-                {
-                  id: 'sourceB',
-                  position: graph.positions.sourceB,
-                  handles: [{ id: 'out', type: 'source', position: 'right' }],
-                },
-                () => {
-                  ui.label('Source B').classes('text-sm font-medium');
-                  ui.badge('events', { variant: 'outline' });
-                },
-              );
-
-              flow.node(
-                {
-                  id: 'merge',
-                  position: graph.positions.merge,
-                  handles: [
-                    { id: 'a', type: 'target', position: 'left' },
-                    { id: 'b', type: 'target', position: 'bottom' },
-                    { id: 'ok', type: 'source', position: 'right' },
-                    { id: 'err', type: 'source', position: 'top' },
-                  ],
-                },
-                () => {
-                  ui.label('Merge').classes('text-sm font-medium');
-                  ui.label('Join A+B → ok | err').classes('text-xs text-muted-foreground');
-                  ui.button('Simulate ok', {
-                    size: 'sm',
-                    onClick: () => ui.notify('Merge path: ok', 'success'),
-                  });
-                },
-              );
-
-              flow.node(
-                {
-                  id: 'outOk',
-                  position: graph.positions.outOk,
-                  handles: [{ id: 'in', type: 'target', position: 'left' }],
-                },
-                () => {
-                  ui.label('OK sink').classes('text-sm font-medium');
-                  ui.label('Happy path').classes('text-xs text-muted-foreground');
-                },
-              );
-
-              flow.node(
-                {
-                  id: 'outErr',
-                  position: graph.positions.outErr,
-                  handles: [{ id: 'in', type: 'target', position: 'left' }],
-                },
-                () => {
-                  ui.label('Error sink').classes('text-sm font-medium');
-                  ui.label('Connect merge:err → here').classes('text-xs text-muted-foreground');
-                },
-              );
-
-              for (const stage of graph.extraStages) {
-                const pos = graph.positions[stage.id] ?? { x: 280, y: 320 };
-                flow.node(
-                  {
-                    id: stage.id,
-                    position: pos,
-                    handles: [
-                      { id: 'in', type: 'target', position: 'left' },
-                      { id: 'out', type: 'source', position: 'right' },
-                    ],
-                  },
-                  () => {
-                    ui.label(stage.title).classes('text-sm font-medium');
-                    ui.badge('dynamic', { variant: 'secondary' });
-                    ui.button('Remove', {
-                      size: 'sm',
-                      variant: 'ghost',
-                      onClick: () => {
-                        graph.extraStages = graph.extraStages.filter((s) => s.id !== stage.id);
-                        graph.edges = graph.edges.filter(
-                          (e) => e.source !== stage.id && e.target !== stage.id,
-                        );
-                        delete graph.positions[stage.id];
-                        graph.positions = { ...graph.positions };
-                        shared.lastEvent = `[graph] removed ${stage.id}`;
-                      },
-                    });
-                  },
-                );
+            onNodeMove: (payload) => {
+              shared.lastEvent = `[graph] move ${payload.nodeId} → (${Math.round(payload.position.x)}, ${Math.round(payload.position.y)})`;
+            },
+            onEdgesDelete: (ids) => {
+              shared.lastEvent = `[graph] edgesDelete ${ids.join(',')}`;
+            },
+            onNodesDelete: (ids) => {
+              const removedDynamic = ids.filter((id) => !STATIC_GRAPH_IDS.has(id));
+              if (removedDynamic.length) {
+                graph.dynamicCount = Math.max(0, graph.dynamicCount - removedDynamic.length);
               }
+              shared.lastEvent = `[graph] nodesDelete ${ids.join(',')}`;
             },
-          );
-        });
+          },
+          (flow) => {
+            flow.node(
+              {
+                id: 'sourceA',
+                position: GRAPH_POSITIONS.sourceA!,
+                handles: [{ id: 'out', type: 'source', position: 'right' }],
+              },
+              () => {
+                ui.label('Source A').classes('text-sm font-medium');
+                ui.badge('metrics', { variant: 'outline' });
+              },
+            );
+
+            flow.node(
+              {
+                id: 'sourceB',
+                position: GRAPH_POSITIONS.sourceB!,
+                handles: [{ id: 'out', type: 'source', position: 'right' }],
+              },
+              () => {
+                ui.label('Source B').classes('text-sm font-medium');
+                ui.badge('events', { variant: 'outline' });
+              },
+            );
+
+            flow.node(
+              {
+                id: 'merge',
+                position: GRAPH_POSITIONS.merge!,
+                handles: [
+                  { id: 'a', type: 'target', position: 'left' },
+                  { id: 'b', type: 'target', position: 'bottom' },
+                  { id: 'ok', type: 'source', position: 'right' },
+                  { id: 'err', type: 'source', position: 'top' },
+                ],
+              },
+              () => {
+                ui.label('Merge').classes('text-sm font-medium');
+                ui.label('Join A+B → ok | err').classes('text-xs text-muted-foreground');
+                ui.button('Simulate ok', {
+                  size: 'sm',
+                  onClick: () => ui.notify('Merge path: ok', 'success'),
+                });
+              },
+            );
+
+            flow.node(
+              {
+                id: 'outOk',
+                position: GRAPH_POSITIONS.outOk!,
+                handles: [{ id: 'in', type: 'target', position: 'left' }],
+              },
+              () => {
+                ui.label('OK sink').classes('text-sm font-medium');
+                ui.label('Happy path').classes('text-xs text-muted-foreground');
+              },
+            );
+
+            flow.node(
+              {
+                id: 'outErr',
+                position: GRAPH_POSITIONS.outErr!,
+                handles: [{ id: 'in', type: 'target', position: 'left' }],
+              },
+              () => {
+                ui.label('Error sink').classes('text-sm font-medium');
+                ui.label('Connect merge:err → here').classes('text-xs text-muted-foreground');
+              },
+            );
+          },
+        );
 
         ui.row(() => {
           ui.button('Add stage', {
             size: 'sm',
             onClick: () => {
               graph.stageCounter += 1;
-              const id = `stage-${graph.stageCounter}`;
-              graph.extraStages = [...graph.extraStages, { id, title: `Stage ${graph.stageCounter}` }];
-              graph.positions = {
-                ...graph.positions,
-                [id]: { x: 200 + graph.stageCounter * 40, y: 320 },
-              };
+              const n = graph.stageCounter;
+              const id = `stage-${n}`;
+              const title = `Stage ${n}`;
+              graphFlow.addNode(
+                {
+                  id,
+                  position: { x: 200 + n * 40, y: 320 },
+                  handles: [
+                    { id: 'in', type: 'target', position: 'left' },
+                    { id: 'out', type: 'source', position: 'right' },
+                  ],
+                },
+                () => {
+                  ui.label(title).classes('text-sm font-medium');
+                  ui.badge('dynamic', { variant: 'secondary' });
+                  ui.button('Remove', {
+                    size: 'sm',
+                    variant: 'ghost',
+                    onClick: () => {
+                      graphFlow.removeNode(id);
+                      graph.dynamicCount = Math.max(0, graph.dynamicCount - 1);
+                      shared.lastEvent = `[graph] removed ${id}`;
+                    },
+                  });
+                },
+              );
+              graph.dynamicCount += 1;
               shared.lastEvent = `[graph] added ${id}`;
             },
           });
@@ -633,15 +610,18 @@ ui.page('/examples/flow', () => {
             variant: 'outline',
             size: 'sm',
             onClick: () => {
-              graph.edges = cloneEdges(GRAPH_EDGES);
-              graph.positions = { ...GRAPH_POSITIONS };
-              graph.extraStages = [];
+              for (const id of graphFlow.getNodeIds()) {
+                if (!STATIC_GRAPH_IDS.has(id)) graphFlow.removeNode(id);
+              }
+              graphFlow.setEdges(cloneEdges(GRAPH_EDGES));
+              restorePositions(graphFlow, GRAPH_POSITIONS);
               graph.stageCounter = 0;
+              graph.dynamicCount = 0;
               shared.lastEvent = '[graph] reset';
             },
           });
           ui.auto(() => {
-            ui.label(`Dynamic stages: ${graph.extraStages.length}`).classes(
+            ui.label(`Dynamic stages: ${graph.dynamicCount}`).classes(
               'text-sm text-muted-foreground self-center',
             );
           });

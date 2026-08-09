@@ -112,6 +112,7 @@ import {
   type DataTableDensity,
   type DataTableSort,
   type DataTableSortDir,
+  type DataTableQuery,
   type TableColumn,
   type TableColumnFilter,
   type TableColumnEditor,
@@ -331,6 +332,7 @@ export type {
   DataTableDensity,
   DataTableSort,
   DataTableSortDir,
+  DataTableQuery,
   TableColumn,
   TableColumnFilter,
   TableColumnEditor,
@@ -665,8 +667,9 @@ export function gantt(props: GanttProps): Element {
 }
 
 /**
- * Interactive flow diagram (`@xyflow/react`). Node bodies are BadUI trees;
- * drag by card chrome (controls are nodrag); `nodeMove` on drag-stop.
+ * Interactive flow diagram (`@xyflow/react`). Owns edges + positions;
+ * node bodies are BadUI trees; drag by card chrome (controls are nodrag);
+ * default settle handlers update the owned model before user `on*`.
  * Prefer `ui.flow`. See {@link FlowProps}.
  */
 export function flow(fn: (f: FlowElement) => void, props?: FlowProps): FlowElement;

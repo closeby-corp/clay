@@ -26,6 +26,19 @@ export type DataTableSortDir = 'asc' | 'desc';
 /** Ordered multi-sort entry. First entry is primary. */
 export type DataTableSort = { key: string; dir: DataTableSortDir };
 
+/**
+ * Snapshot of table chrome state used for remote fetches.
+ * In `manualPagination` mode the app owns applying this query server-side;
+ * the table only keeps it in props and emits change events.
+ */
+export type DataTableQuery = {
+  page: number;
+  pageSize: number;
+  filter: string;
+  columnFilters: Record<string, string>;
+  sorts: DataTableSort[];
+};
+
 export type DataTableFacetOption = {
   value: string;
   label: string;
@@ -115,29 +128,32 @@ export type DataTableProps = {
   /** Rows-per-page options in the footer select. */
   pageSizeOptions?: number[];
   /**
-   * When true, `data` / `setRows` are treated as the **current page** only.
-   * Local filter/sort/group/slice are skipped (same as enabling both
-   * `manualFiltering` and `manualSorting`). Use `totalRows` for the pager and
-   * listen to `page` / `pageSize` / filter / sort events to fetch, then
-   * `setRows` / `setTotalRows`.
+   * **Remote / server-paged mode.** When true, `data` / `setRows` are the
+   * **current page only** — local filter, sort, group, and page-slice are never
+   * applied. Forces `manualFiltering` + `manualSorting`. Use `totalRows` /
+   * `setTotalRows` for the pager; listen to page / filter / sort callbacks (or
+   * read `getQuery()`), then `setRows` + `setTotalRows`. Wrap refetches with
+   * `setLoading(true/false)` or `withLoading` so empty does not flash.
    */
   manualPagination?: boolean;
   /**
-   * When true, do not apply local search/column filters; keep filter state in
-   * props and emit `filter` / `columnFilter` (and `onFilterChange` /
-   * `onColumnFilterChange`) so the app can fetch. Defaults to true when
-   * `manualPagination` is set.
+   * When true, skip local search/column filters; keep filter chrome state and
+   * emit `filter` / `columnFilter` (+ `onFilterChange` / `onColumnFilterChange`)
+   * so the app can fetch. Always true when `manualPagination` is set. Without
+   * `manualPagination`, local sort/group/slice still run on the supplied rows.
    */
   manualFiltering?: boolean;
   /**
-   * When true, do not apply local sort; keep `sorts` / `sortKey` / `sortDir` in
-   * props and emit `sort` (and `onSortChange`) so the app can fetch. Defaults to
-   * true when `manualPagination` is set.
+   * When true, skip local sort; keep `sorts` / `sortKey` / `sortDir` and emit
+   * `sort` (+ `onSortChange`) so the app can fetch. Always true when
+   * `manualPagination` is set. Without `manualPagination`, local filter/group/slice
+   * still run.
    */
   manualSorting?: boolean;
   /**
-   * Total row count across all pages. Used when `manualPagination` is true
-   * (otherwise derived from the processed local row set). Also settable via `setTotalRows`.
+   * Total row count across all pages. Required for a correct pager when
+   * `manualPagination` is true (otherwise derived from the processed local row
+   * set). Also settable via `setTotalRows`.
    */
   totalRows?: number;
   /** Initial multi-sort (ordered). Also mirrored as `sortKey` / `sortDir` from the first entry. */
@@ -162,11 +178,15 @@ export type DataTableProps = {
   exportable?: boolean;
   /** Base filename without extension. Default `'data'`. */
   exportFilename?: string;
-  /** When true, the client shows a loading state in the table body. */
+  /**
+   * When true, the client shows a loading state in the table body (takes
+   * precedence over empty). Toggle with `setLoading` / `withLoading` around
+   * remote refetches — keep previous rows until the next `setRows`.
+   */
   loading?: boolean;
-  /** Empty-state title. Default `'No rows'`. */
+  /** Empty-state title when not loading and there are no rows. Default `'No rows'`. */
   emptyTitle?: string;
-  /** Empty-state description. */
+  /** Empty-state description when not loading and there are no rows. */
   emptyDescription?: string;
   selectable?: boolean;
   reorderable?: boolean;
@@ -185,13 +205,15 @@ export type DataTableProps = {
   detail?: (row: Record<string, unknown>) => void;
   onReorder?: (orderedKeys: Array<string | number>) => void | Promise<void>;
   onSelectionChange?: (keys: Array<string | number>) => void | Promise<void>;
+  /** After footer page change. Remote: refetch with `getQuery()`. */
   onPageChange?: (page: number) => void | Promise<void>;
+  /** After footer page-size change (page resets to 1). Remote: refetch. */
   onPageSizeChange?: (pageSize: number) => void | Promise<void>;
-  /** After sort changes (single or multi). Prefer this in manual/remote mode. */
+  /** After sort changes (single or multi). Remote: refetch with `sorts` / `getQuery()`. */
   onSortChange?: (sorts: DataTableSort[]) => void | Promise<void>;
-  /** After global search text changes. Prefer this in manual/remote mode. */
+  /** After global search text changes (page resets to 1). Remote: refetch. */
   onFilterChange?: (filter: string) => void | Promise<void>;
-  /** After per-column filters change (full map). Prefer this in manual/remote mode. */
+  /** After per-column filters change (full map; page resets to 1). Remote: refetch. */
   onColumnFilterChange?: (filters: Record<string, string>) => void | Promise<void>;
   onCellChange?: (
     rowKey: string | number,
@@ -825,11 +847,9 @@ export class DataTableElement extends Element {
     const pageSize = props.pageSize ?? 10;
     const pageSizeOptions = props.pageSizeOptions ?? [10, 20, 30, 40, 50];
     const manualPagination = props.manualPagination === true;
-    const manualFiltering =
-      props.manualFiltering === true ||
-      (manualPagination && props.manualFiltering !== false);
-    const manualSorting =
-      props.manualSorting === true || (manualPagination && props.manualSorting !== false);
+    // Remote page mode always owns filter + sort; hybrid flags only apply without it.
+    const manualFiltering = manualPagination || props.manualFiltering === true;
+    const manualSorting = manualPagination || props.manualSorting === true;
     const manualTotalRows =
       props.totalRows != null && Number.isFinite(props.totalRows)
         ? Math.max(0, Math.floor(Number(props.totalRows)))
@@ -979,10 +999,70 @@ export class DataTableElement extends Element {
     return this.sourceRows.map((r) => ({ ...r }));
   }
 
-  /** Toggle the client loading state (spinner in the table body). */
+  /**
+   * Current chrome query (`page`, `pageSize`, `filter`, `columnFilters`, `sorts`).
+   * In remote mode, pass this to your fetch; the table does not apply it locally.
+   */
+  getQuery(): DataTableQuery {
+    return {
+      page: this.page,
+      pageSize: this.pageSize,
+      filter: this.filter,
+      columnFilters: { ...this.columnFilters },
+      sorts: this.sorts.map((s) => ({ ...s })),
+    };
+  }
+
+  getFilter(): string {
+    return this.filter;
+  }
+
+  getColumnFilters(): Record<string, string> {
+    return { ...this.columnFilters };
+  }
+
+  getPage(): number {
+    return this.page;
+  }
+
+  getPageSize(): number {
+    return this.pageSize;
+  }
+
+  /** Footer total when `manualPagination`; otherwise the processed local row count. */
+  getTotalRows(): number {
+    if (this.manualPagination) {
+      return this.manualTotalRows ?? this.sourceRows.length;
+    }
+    return this.computeProcessedRows().length;
+  }
+
+  isLoading(): boolean {
+    return this.loading;
+  }
+
+  /**
+   * Toggle the client loading state (spinner in the table body; hides empty).
+   * For remote refetch: call `setLoading(true)` **before** awaiting fetch, keep
+   * previous rows until `setRows`, then `setLoading(false)`. Prefer `withLoading`.
+   */
   setLoading(loading: boolean): this {
     this.loading = loading;
     this.syncView();
+    return this;
+  }
+
+  /**
+   * Run `fn` with `loading` true, then clear loading in `finally`.
+   * Keeps previous rows visible under the spinner until `setRows` inside `fn`.
+   */
+  async withLoading(fn: () => void | Promise<void>): Promise<this> {
+    this.setLoading(true);
+    try {
+      await fn();
+    } finally {
+      this.setLoading(false);
+    }
     return this;
   }
 
@@ -1194,7 +1274,10 @@ export class DataTableElement extends Element {
   }
 
   private async handlePage(value: unknown): Promise<void> {
-    const next = Number(value);
+    const next =
+      typeof value === 'number' || typeof value === 'string'
+        ? Number(value)
+        : Number(((value ?? {}) as { page?: unknown }).page);
     if (!Number.isFinite(next) || next < 1) return;
     this.page = Math.floor(next);
     this.syncView();
@@ -1384,9 +1467,10 @@ export class DataTableElement extends Element {
 
   /**
    * Visible rows after view filter + search/column filters + sort (+ group contiguous).
-   * When `manualPagination` is set, returns `sourceRows` unchanged (already a page).
-   * When only `manualFiltering` / `manualSorting` are set, those stages are skipped
-   * but the other local pipeline stages still run.
+   * When `manualPagination` is set, returns `sourceRows` unchanged (already a page —
+   * filter/sort/group/slice are the app's job). When only `manualFiltering` /
+   * `manualSorting` are set, those stages are skipped but the other local pipeline
+   * stages still run.
    */
   computeProcessedRows(): Record<string, unknown>[] {
     if (this.manualPagination) {

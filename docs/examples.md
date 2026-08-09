@@ -15,7 +15,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
-| `/examples/datatable` | `DataTableDemo.ts` | Multi-sort, footer aggregates, column pin, remote filter/sort + pagination; density/zebra, editors, resize; facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
+| `/examples/datatable` | `DataTableDemo.ts` | Multi-sort (Shift+click / badges), footer aggregates + a11y hints, column pin, remote filter/sort + pagination; density/zebra, editors (Enter/Esc), resize, virtualization (≥40, off when reorderable); facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*` including scatter / composed; props API sample |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
@@ -31,7 +31,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` cross-column drag, `cardMove`, in-memory columns |
 | `/examples/list` | `ListDemo.ts` | `ui.list` dense grouped DnD, `itemMove`, in-memory groups |
 | `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` timeline bars, markers, drag move/resize, `itemMove` |
-| `/examples/flow` | `FlowDemo.ts` | Three `ui.flow` demos: ETL with in-node controls, multi-handle approval branches, fan-in/out + dynamic `flow.node` |
+| `/examples/flow` | `FlowDemo.ts` | Three `ui.flow` demos: ETL with in-node controls, multi-handle approval branches, fan-in/out + `addNode` dynamic stages (flow-owned edges/positions; no outer diagram `ui.auto`) |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
@@ -246,12 +246,15 @@ Facet columns filter with multi-select exact match from a header popover. Text c
 
 ## Pattern: DataTable manual / remote pagination
 
-When `manualPagination` is true, rows are the **current page only** — local filter/sort/slice are skipped. Keep search/sort chrome enabled and refetch on the callbacks below (or turn chrome off if unused).
+When `manualPagination` is true, rows are the **current page only** — the table does **not** filter, sort, group, or slice locally. It keeps chrome state (`getQuery()`) and emits change events; your app applies that query on the server and calls `setRows` + `setTotalRows`.
+
+**Loading / empty during refetch:** call `setLoading(true)` (or `withLoading`) **before** awaiting the fetch and keep previous rows until `setRows`. Loading hides the empty state; clearing rows first can flash empty if loading is late.
 
 ```typescript
 let page = 1;
 let pageSize = 10;
 let filter = '';
+let columnFilters: Record<string, string> = {};
 let sorts: Array<{ key: string; dir: 'asc' | 'desc' }> = [];
 
 const remote = ui.dataTable([], {
@@ -274,6 +277,11 @@ const remote = ui.dataTable([], {
     page = 1;
     await load();
   },
+  onColumnFilterChange: async (filters) => {
+    columnFilters = filters;
+    page = 1;
+    await load();
+  },
   onSortChange: async (next) => {
     sorts = next;
     page = 1;
@@ -283,15 +291,22 @@ const remote = ui.dataTable([], {
 });
 
 async function load() {
-  remote.setLoading(true);
-  const { rows, total } = await fetchPage({ page, pageSize, filter, sorts });
-  remote.setRows(rows);
-  remote.setTotalRows(total);
-  remote.setLoading(false);
+  await remote.withLoading(async () => {
+    // Or: const q = remote.getQuery();
+    const { rows, total } = await fetchPage({
+      page,
+      pageSize,
+      filter,
+      columnFilters,
+      sorts,
+    });
+    remote.setRows(rows);
+    remote.setTotalRows(total);
+  });
 }
 ```
 
-Footer `aggregate` values in this mode are computed over the **provided page rows** (not the full remote set). The pager footer uses `totalRows`.
+Footer `aggregate` values in this mode are computed over the **provided page rows** (not the full remote set). The pager footer uses `totalRows`. For hybrid local paging with remote filter or sort only, set `manualFiltering` / `manualSorting` without `manualPagination`.
 
 ## Styling tip
 

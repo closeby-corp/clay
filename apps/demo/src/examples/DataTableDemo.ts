@@ -1,5 +1,5 @@
 import { ui } from '@badui/ui';
-import type { DataTableElement } from '@badui/ui';
+import type { DataTableDensity, DataTableElement } from '@badui/ui';
 import { exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -41,59 +41,107 @@ const seed: Task[] = [
   { id: 20, title: 'Demo row actions', status: 'in progress', hours: 4, owner: 'Kai', due: '2026-03-28', active: true },
 ];
 
+const DENSITIES: DataTableDensity[] = ['compact', 'default', 'comfortable'];
+const OWNERS = ['Ada', 'Lin', 'Sam', 'Kai'] as const;
+const STATUSES = ['todo', 'in progress', 'done'] as const;
+
+/** Enough rows that client virtualization engages (≥40 body items, reorder off). */
+const LARGE_ROW_COUNT = 64;
+const largeSeed: Task[] = Array.from({ length: LARGE_ROW_COUNT }, (_, i) => {
+  const n = i + 1;
+  const base = seed[i % seed.length]!;
+  return {
+    id: 1000 + n,
+    title: `${base.title} #${n}`,
+    status: STATUSES[i % STATUSES.length]!,
+    hours: ((i * 3) % 12) + 1,
+    owner: OWNERS[i % OWNERS.length]!,
+    due: `2026-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+    active: i % 3 !== 0,
+  };
+});
+
 ui.page('/examples/datatable', () => {
   let tasks = seed.map((t) => ({ ...t }));
   let nextId = tasks.length + 1;
   let table: DataTableElement;
   let loadingDemo: DataTableElement;
-  let remoteTable: DataTableElement;
-  let remotePage = 1;
-  let remotePageSize = 5;
-  let remoteFilter = '';
-  let remoteSorts: Array<{ key: string; dir: 'asc' | 'desc' }> = [];
+  let remoteTable: DataTableElement | undefined;
+  let density: DataTableDensity = 'default';
+  let zebra = true;
+  let chromeUi: ReturnType<typeof ui.refreshable>;
+  let remoteStatusUi: ReturnType<typeof ui.refreshable>;
+
+  const matchesColumnFilters = (
+    row: Task,
+    columnFilters: Record<string, string>,
+  ): boolean => {
+    for (const [key, raw] of Object.entries(columnFilters)) {
+      if (!raw.trim()) continue;
+      const cell = String((row as Record<string, unknown>)[key] ?? '');
+      if (raw.trim().startsWith('[')) {
+        try {
+          const selected = JSON.parse(raw) as unknown;
+          if (Array.isArray(selected) && selected.length > 0) {
+            if (!selected.map(String).includes(cell)) return false;
+            continue;
+          }
+        } catch {
+          /* fall through to substring match */
+        }
+      }
+      if (!cell.toLowerCase().includes(raw.trim().toLowerCase())) return false;
+    }
+    return true;
+  };
 
   const loadRemotePage = async () => {
-    remoteTable.setLoading(true);
-    await new Promise((r) => setTimeout(r, 180));
-    let pool = [...tasks];
-    const q = remoteFilter.trim().toLowerCase();
-    if (q) {
-      pool = pool.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.status.toLowerCase().includes(q) ||
-          t.owner.toLowerCase().includes(q),
-      );
-    }
-    if (remoteSorts.length > 0) {
-      pool = [...pool].sort((a, b) => {
-        for (const { key, dir } of remoteSorts) {
-          const av = (a as Record<string, unknown>)[key];
-          const bv = (b as Record<string, unknown>)[key];
-          const cmp =
-            typeof av === 'number' && typeof bv === 'number'
-              ? av - bv
-              : String(av ?? '').localeCompare(String(bv ?? ''), undefined, {
-                  numeric: true,
-                  sensitivity: 'base',
-                });
-          if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
-        }
-        return 0;
-      });
-    }
-    const start = (remotePage - 1) * remotePageSize;
-    const slice = pool.slice(start, start + remotePageSize);
-    remoteTable.setRows(slice);
-    remoteTable.setTotalRows(pool.length);
-    remoteTable.setLoading(false);
+    const remote = remoteTable;
+    if (!remote) return;
+    await remote.withLoading(async () => {
+      await new Promise((r) => setTimeout(r, 180));
+      const { page, pageSize, filter, columnFilters, sorts } = remote.getQuery();
+      let pool = [...tasks];
+      const q = filter.trim().toLowerCase();
+      if (q) {
+        pool = pool.filter(
+          (t) =>
+            t.title.toLowerCase().includes(q) ||
+            t.status.toLowerCase().includes(q) ||
+            t.owner.toLowerCase().includes(q),
+        );
+      }
+      pool = pool.filter((t) => matchesColumnFilters(t, columnFilters));
+      if (sorts.length > 0) {
+        pool = [...pool].sort((a, b) => {
+          for (const { key, dir } of sorts) {
+            const av = (a as Record<string, unknown>)[key];
+            const bv = (b as Record<string, unknown>)[key];
+            const cmp =
+              typeof av === 'number' && typeof bv === 'number'
+                ? av - bv
+                : String(av ?? '').localeCompare(String(bv ?? ''), undefined, {
+                    numeric: true,
+                    sensitivity: 'base',
+                  });
+            if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
+          }
+          return 0;
+        });
+      }
+      const start = (page - 1) * pageSize;
+      // Keep previous rows visible under the spinner until this setRows.
+      remote.setRows(pool.slice(start, start + pageSize));
+      remote.setTotalRows(pool.length);
+    });
+    remoteStatusUi?.refresh();
   };
 
   ui.column(() => {
     ui.row(() => {
       exampleHeader(
         undefined,
-        'DataTable leftovers — multi-sort (Shift+click), footer aggregates, column pin, remote filter/sort.',
+        'Kitchen-sink DataTable: search, facets, edit, export, bulk actions, and the leftovers below.',
       );
       ui.button('Add task', {
         size: 'sm',
@@ -123,6 +171,38 @@ ui.page('/examples/datatable', () => {
       });
     }, { gap: 4 }).classes('items-start justify-between');
 
+    exampleSection(
+      'Feature tour',
+      'Shift+click column headers to multi-sort · Title pinned left, Owner pinned right (Columns menu can re-pin) · Hours and Billable sum in the sticky footer · Reorder is on here, so row virtualization stays off (see the large table below).',
+    );
+
+    chromeUi = ui.refreshable(() => {
+      ui.row(() => {
+        ui.label('Density').classes('text-sm text-muted-foreground self-center');
+        for (const d of DENSITIES) {
+          ui.button(d, {
+            size: 'sm',
+            variant: density === d ? 'default' : 'outline',
+            onClick: () => {
+              density = d;
+              table.setDensity(d);
+              chromeUi.refresh();
+            },
+          });
+        }
+        ui.label('Zebra').classes('text-sm text-muted-foreground self-center ml-2');
+        ui.button(zebra ? 'On' : 'Off', {
+          size: 'sm',
+          variant: zebra ? 'default' : 'outline',
+          onClick: () => {
+            zebra = !zebra;
+            table.setZebra(zebra);
+            chromeUi.refresh();
+          },
+        });
+      }, { gap: 2 }).classes('flex-wrap items-center');
+    });
+
     const statusLabel = ui.label(`${tasks.length} tasks`).classes('text-sm text-muted-foreground');
 
     table = ui.dataTable(tasks, {
@@ -134,8 +214,8 @@ ui.page('/examples/datatable', () => {
       groupBy: 'status',
       pageSize: 8,
       pageSizeOptions: [5, 8, 10, 20],
-      density: 'default',
-      zebra: true,
+      density,
+      zebra,
       exportFilename: 'tasks',
       emptyTitle: 'No tasks',
       emptyDescription: 'Try clearing status facets or search.',
@@ -273,48 +353,132 @@ ui.page('/examples/datatable', () => {
     });
 
     exampleSection(
-      'Manual / remote pagination + filter/sort',
-      '`manualPagination` skips local filter/sort/slice. Listen to `onFilterChange` / `onSortChange` / page events, then `setRows` + `setTotalRows`. Shift+click headers for multi-sort.',
+      'Large table (virtualized)',
+      `${LARGE_ROW_COUNT} rows, no pagination, reorder off — the client virtualizes the body once there are ≥40 items. Virtualization is disabled when reorder is enabled (kitchen-sink above). Shift+click to multi-sort; Title / Owner stay pinned left / right.`,
     );
+    ui.dataTable(largeSeed, {
+      keyField: 'id',
+      searchable: true,
+      searchPlaceholder: 'Search large set…',
+      selectable: true,
+      reorderable: false,
+      pageSize: 0,
+      density: 'compact',
+      zebra: true,
+      exportFilename: 'large-tasks',
+      emptyTitle: 'No rows',
+      emptyDescription: 'Clear search to restore the virtualized list.',
+      columns: [
+        { key: 'id', header: 'ID' },
+        { key: 'title', header: 'Title', pin: 'left' },
+        {
+          key: 'status',
+          header: 'Status',
+          filter: 'facet',
+          facetOptions: [
+            { value: 'todo', label: 'Todo' },
+            { value: 'in progress', label: 'In progress' },
+            { value: 'done', label: 'Done' },
+          ],
+          value: (row) => row.status,
+          render: (row) =>
+            ui.badge(String(row.status), {
+              color:
+                row.status === 'done' ? 'green' : row.status === 'todo' ? 'slate' : 'amber',
+            }),
+        },
+        { key: 'hours', header: 'Hours', align: 'right', aggregate: 'sum' },
+        { key: 'due', header: 'Due' },
+        {
+          key: 'owner',
+          header: 'Owner',
+          filter: 'facet',
+          pin: 'right',
+          facetOptions: OWNERS.map((value) => ({ value, label: value })),
+        },
+      ],
+      defaultSorts: [
+        { key: 'status', dir: 'asc' },
+        { key: 'hours', dir: 'desc' },
+      ],
+    });
+
+    exampleSection(
+      'Remote filter / sort / page',
+      '`manualPagination` turns off local filter/sort/slice. Read `getQuery()`, refetch with `withLoading`, then `setRows` + `setTotalRows`. Facets use `onColumnFilterChange` the same way. Shift+click still builds a multi-sort list for the server.',
+    );
+    remoteStatusUi = ui.refreshable(() => {
+      const q = remoteTable?.getQuery() ?? {
+        page: 1,
+        pageSize: 5,
+        filter: '',
+        columnFilters: {},
+        sorts: [] as Array<{ key: string; dir: 'asc' | 'desc' }>,
+      };
+      const sortLabel =
+        q.sorts.length === 0
+          ? 'none'
+          : q.sorts.map((s) => `${s.key} ${s.dir}`).join(' → ');
+      const facetKeys = Object.keys(q.columnFilters).filter((k) => q.columnFilters[k]?.trim());
+      const facetLabel = facetKeys.length === 0 ? '∅' : facetKeys.join(', ');
+      ui.label(
+        `Server state · filter “${q.filter || '∅'}” · facets ${facetLabel} · sort ${sortLabel} · page ${q.page}`,
+      ).classes('text-sm text-muted-foreground');
+    });
     remoteTable = ui.dataTable([], {
       keyField: 'id',
       manualPagination: true,
       totalRows: tasks.length,
-      pageSize: remotePageSize,
+      pageSize: 5,
       pageSizeOptions: [5, 10],
       searchable: true,
       searchPlaceholder: 'Remote search…',
-      columnFilterable: false,
       columnToggle: false,
       exportable: false,
       density: 'compact',
       zebra: true,
-      emptyTitle: 'No page loaded',
-      emptyDescription: 'Use search, sort, or pagination to fetch.',
+      emptyTitle: 'No matching rows',
+      emptyDescription: 'Adjust search or clear sort, then paginate.',
       columns: [
         { key: 'id', header: 'ID' },
         { key: 'title', header: 'Title', pin: 'left' },
-        { key: 'status', header: 'Status' },
-        { key: 'owner', header: 'Owner' },
+        {
+          key: 'status',
+          header: 'Status',
+          filter: 'facet',
+          facetOptions: [
+            { value: 'todo', label: 'Todo' },
+            { value: 'in progress', label: 'In progress' },
+            { value: 'done', label: 'Done' },
+          ],
+        },
+        {
+          key: 'owner',
+          header: 'Owner',
+          filter: 'facet',
+          facetOptions: [
+            { value: 'Ada', label: 'Ada' },
+            { value: 'Lin', label: 'Lin' },
+            { value: 'Sam', label: 'Sam' },
+            { value: 'Kai', label: 'Kai' },
+            { value: 'You', label: 'You' },
+          ],
+        },
         { key: 'hours', header: 'Hours', align: 'right', aggregate: 'sum' },
       ],
-      onPageChange: async (page) => {
-        remotePage = page;
+      onPageChange: async () => {
         await loadRemotePage();
       },
-      onPageSizeChange: async (size) => {
-        remotePageSize = size;
-        remotePage = 1;
+      onPageSizeChange: async () => {
         await loadRemotePage();
       },
-      onFilterChange: async (filter) => {
-        remoteFilter = filter;
-        remotePage = 1;
+      onFilterChange: async () => {
         await loadRemotePage();
       },
-      onSortChange: async (sorts) => {
-        remoteSorts = sorts;
-        remotePage = 1;
+      onColumnFilterChange: async () => {
+        await loadRemotePage();
+      },
+      onSortChange: async () => {
         await loadRemotePage();
       },
     });
