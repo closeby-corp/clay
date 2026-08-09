@@ -470,14 +470,41 @@ Rich text editor powered by Domternal (classic toolbar + bubble menu, StarterKit
 
 #### `ui.kanban(props)`
 
-Kanban board with cross-column card drag (`@dnd-kit`). Client reorders optimistically; emits `cardMove` once per drop with a coarse payload. Server should update `columns` (e.g. via `ui.auto` / `updateProps`) as the source of truth. Out of v1: card edit drawers, swimlanes, persistence helpers, multiplayer cursors.
+Kanban board with cross-column card drag (`@dnd-kit`). **`KanbanElement` owns board state** (columns + card order), similar to Flow/DataTable — default settle handlers update the model and patch the client without remounting. **Do not** wrap the whole board in `ui.auto` that tracks `columns` (that remounts on every drop). Prefer side effects in `onCardMove`.
+
+**Owned model + defaults**
+
+- Initial `columns` seed the owned model.
+- Default settle always runs (even with no user callbacks): `cardMove` → `moveCard`. User `onCardMove` runs **after** for side effects only.
+- Imperative APIs: `getColumns` / `setColumns`, `moveCard`, `addCard` / `removeCard`, `addColumn` / `removeColumn`, `setDisabled`.
+- Client keeps optimistic column order while dragging; settle patches owned `columns` via `updateProps`.
+
+```typescript
+const status = ui.state({ lastMove: '' });
+
+const board = ui.kanban({
+  columns: [
+    { id: 'todo', title: 'Todo', cards: [{ id: 'c1', title: 'Sketch API' }] },
+    { id: 'done', title: 'Done', cards: [] },
+  ],
+  onCardMove: (p) => {
+    status.lastMove = `${p.cardId} → ${p.toColumnId}`;
+  },
+  onCardClick: (id) => ui.notify(id),
+});
+
+// Reset / mutate via element APIs (no outer ui.auto):
+// board.setColumns([...]); board.moveCard({ cardId, fromColumnId, toColumnId, index });
+```
 
 | Prop | Type | Default |
 |------|------|---------|
-| `columns` | `{ id, title, cards: { id, title, description? }[] }[]` | required |
+| `columns` | `{ id, title, cards: { id, title, description? }[] }[]` | `[]` |
 | `disabled` | `boolean` | `false` |
-| `onCardMove` | `(payload: { cardId, fromColumnId, toColumnId, index }) => void` | |
+| `onCardMove` | `(payload: { cardId, fromColumnId, toColumnId, index }) => void` | after owned `moveCard` |
 | `onCardClick` | `(cardId: string) => void` | |
+
+Out of v1: card edit drawers, swimlanes, persistence helpers, multiplayer cursors.
 
 #### `ui.relativeTime(props)`
 
@@ -536,18 +563,47 @@ Interactive image cropper (`react-easy-crop`). Emits `crop` with `{ dataUrl }` (
 
 #### `ui.gantt(props)`
 
-Project timeline with sidebar row labels, month axis, bars, today + custom markers. Drag move/resize when not `readonly`; emits `itemMove` once on pointer-up. Server should update `rows` as the source of truth. Out of v1: create-marker UI, collision layout polish, dependency arrows.
+Project timeline with sidebar row labels, month axis, bars, today + custom markers. **`GanttElement` owns timeline state** (rows + item dates), similar to Flow/DataTable — default settle handlers update the model and patch the client without remounting. **Do not** wrap the whole chart in `ui.auto` that tracks `rows` (that remounts on every drag). Prefer side effects in `onItemMove`.
+
+**Owned model + defaults**
+
+- Initial `rows` / optional `markers` / `range` seed the owned model.
+- Default settle always runs (even with no user callbacks): `itemMove` → `moveItem`. User `onItemMove` runs **after** for side effects only.
+- Imperative APIs: `getRows` / `setRows`, `moveItem`, `addItem` / `removeItem`, `addRow` / `removeRow`, `getMarkers` / `setMarkers`, `getRange` / `setRange`, `isReadonly` / `setReadonly`.
+- Drag move/resize when not `readonly`; client keeps optimistic dates while dragging; settle patches owned `rows` on pointer-up.
+
+```typescript
+const status = ui.state({ lastMove: '' });
+
+const timeline = ui.gantt({
+  rows: [
+    {
+      id: 'design',
+      title: 'Design',
+      items: [{ id: 'd1', title: 'Wireframes', start: '2026-07-20', end: '2026-08-02' }],
+    },
+  ],
+  markers: [{ id: 'beta', date: '2026-08-15', label: 'Beta' }],
+  range: { start: '2026-07-15', end: '2026-09-05' },
+  onItemMove: (p) => {
+    status.lastMove = `${p.itemId}: ${p.start} → ${p.end}`;
+  },
+});
+
+// Reset / mutate via element APIs (no outer ui.auto):
+// timeline.setRows([...]); timeline.setReadonly(true);
+```
 
 | Prop | Type | Default |
 |------|------|---------|
-| `rows` | `{ id, title, items: { id, title, start, end }[] }[]` | required |
+| `rows` | `{ id, title, items: { id, title, start, end }[] }[]` | `[]` |
 | `markers` | `{ id, date, label? }[]` | |
 | `range` | `{ start, end }` | inferred from items/markers |
 | `readonly` | `boolean` | `false` |
-| `onItemMove` | `(payload: { itemId, rowId, start, end }) => void` | |
+| `onItemMove` | `(payload: { itemId, rowId, start, end }) => void` | after owned `moveItem` |
 | `onItemClick` | `(itemId: string) => void` | |
 
-Dates are ISO `YYYY-MM-DD` (or parseable datetime strings).
+Dates are ISO `YYYY-MM-DD` (or parseable datetime strings). Out of v1: dependency arrows, create-marker UI, collision layout polish.
 
 #### `ui.flow(props, fn)` / `ui.flow(fn, props?)`
 
@@ -557,27 +613,40 @@ Interactive flow diagram backed by `@xyflow/react`. **`FlowElement` owns diagram
 
 - Initial `edges` and each `flow.node({ position })` seed the owned model.
 - Default settle handlers always run (even with no user callbacks): `nodeMove` → `moveNode`, `connect` → `addEdge`, `edgesDelete` / `nodesDelete` → remove from owned model. User `on*` handlers run **after** for side effects only.
-- Imperative APIs on the returned `FlowElement`: `getEdges` / `setEdges`, `addEdge` / `removeEdges`, `moveNode`, `getPositions` / `getNodeIds`, `addNode` / `removeNode`.
+- Imperative APIs on the returned `FlowElement`: `getEdges` / `setEdges`, `addEdge` / `removeEdges`, `moveNode`, `getPositions` / `getNodeIds`, `addNode` / `removeNode`, `layout(opts?)`.
 - **Do not** wrap the whole flow in `ui.auto` that tracks edges/positions — that remounts the diagram. Keep narrow `ui.auto` (or `bindText` / prop patches) **inside** individual nodes for control labels.
 
 **Interaction model**
 
 - Drag nodes by the card chrome (labels/empty space). Buttons, inputs, and other interactive controls are marked `nodrag` / `nopan` so clicks do not steal the drag.
 - Positions stay optimistic on the client while dragging; **`nodeMove` fires once on drag-stop** and the flow persists position automatically.
-- New connections emit **`connect`** once; the flow appends the edge automatically.
+- New connections emit **`connect`** once (payload includes a client-generated `id`); the flow appends that edge id so optimistic RF edges settle without remapping flicker. If ids ever diverge, BoundFlow also rematches by `source`/`target`/handles.
 - Deletes (`Backspace` / `Delete`) emit **`nodesDelete`** / **`edgesDelete`** (owned model updates first).
 - Viewport pan/zoom is client-local (not round-tripped).
 - Client rebuilds RF nodes on topology changes (graph ids / handles / body child ids), and patches positions/edges in place when only those change.
+- **`layout({ direction?, nodeWidth?, nodeHeight?, rankSep?, nodeSep?, origin? })`** runs a simple layered auto-layout (no dagre) and updates owned positions via `moveNode`.
 
 ```typescript
 const status = ui.state({ lastEvent: '' });
 
 const diagram = ui.flow(
   {
-    edges: [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }],
+    edges: [
+      {
+        id: 'e1',
+        source: 'a',
+        target: 'b',
+        sourceHandle: 'out',
+        targetHandle: 'in',
+        type: 'smoothstep',
+        label: 'raw',
+        variant: 'primary',
+      },
+    ],
     fitView: true,
     showMiniMap: true,
     showControls: true,
+    defaultEdgeType: 'smoothstep',
     onConnect: (e) => {
       status.lastEvent = `connect ${e.source} → ${e.target}`;
     },
@@ -612,30 +681,36 @@ const diagram = ui.flow(
 
 // Reset / mutate via element APIs (no outer ui.auto):
 // diagram.setEdges([...]); diagram.moveNode('a', { x: 0, y: 0 });
+// diagram.layout({ direction: 'LR' });
 // diagram.addNode({ id: 'c', position: { x: 560, y: 0 } }, () => { ui.label('C'); });
 ```
 
 | Prop | Type | Default |
 |------|------|---------|
-| `edges` | `{ id, source, target, sourceHandle?, targetHandle? }[]` | `[]` |
+| `edges` | `{ id, source, target, sourceHandle?, targetHandle?, type?, label?, animated?, variant? }[]` | `[]` |
 | `fitView` | `boolean` | `true` |
 | `showMiniMap` | `boolean` | `true` |
 | `showControls` | `boolean` | `true` |
-| `onConnect` | `(payload: { source, target, sourceHandle?, targetHandle? }) => void` | after owned `addEdge` |
+| `defaultEdgeType` | `'default' \| 'straight' \| 'step' \| 'smoothstep' \| 'simplebezier'` | |
+| `defaultEdgeAnimated` | `boolean` | |
+| `defaultEdgeVariant` | `'default' \| 'primary' \| 'muted' \| 'destructive'` | |
+| `onConnect` | `(payload: { id?, source, target, sourceHandle?, targetHandle? }) => void` | after owned `addEdge` |
 | `onNodeMove` | `(payload: { nodeId, position: { x, y } }) => void` | after owned `moveNode` |
 | `onNodesDelete` | `(ids: string[]) => void` | after owned `removeNode` |
 | `onEdgesDelete` | `(ids: string[]) => void` | after owned `removeEdges` |
 | `onSelectionChange` | `(payload: { nodeIds, edgeIds }) => void` | |
 
-`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`), optional `className`. When `handles` is omitted, default left-target / right-source ports are used. Nested BadUI handlers (`onClick`, `onChange`, …) work as usual inside the node body. Use `flow.addNode` / `flow.removeNode` for runtime topology changes.
+Edge `type` maps to React Flow built-in path kinds. `variant` sets stroke/label colors (`primary` / `muted` / `destructive`). `label` / `animated` pass through to RF.
+
+`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles` (`{ id, type: 'source' \| 'target', position: 'top' \| 'right' \| 'bottom' \| 'left' }[]`), optional `className`. When `handles` is omitted, default left-target / right-source ports are used. Nested BadUI handlers (`onClick`, `onChange`, …) work as usual inside the node body. Use `flow.addNode` / `flow.removeNode` for runtime topology changes. Use `flow.layout()` to pack nodes from current edges.
 
 See Flow Demo (`/examples/flow`) for three richer patterns:
 
-1. **ETL pipeline** — select/switch/progress/buttons inside nodes (narrow per-node `ui.auto`)  
+1. **ETL pipeline** — select/switch/progress/buttons inside nodes (narrow per-node `ui.auto`); labeled smoothstep edges + auto-layout  
 2. **Branching approval** — multi-handle triage (`yes` / `no` sources), rating + badges  
 3. **Fan-in / fan-out + dynamic stages** — `addNode` / `removeNode` without wrapping the flow in `ui.auto`  
 
-Out of v1: app-bundled React `nodeTypes` registry, auto-layout (dagre/elk), custom edges, nested sub-flows.
+Out of v1: app-bundled React `nodeTypes` / custom `edgeTypes` registry, dagre/elk layouts, nested sub-flows.
 
 #### `ui.validate(rules)`
 
@@ -844,7 +919,7 @@ ui.chart.radar(monthly, 'month').series(series).title('Skills').build();
 
 #### `ui.dataTable(data, props?)`
 
-Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows` / `getQuery` / `setLoading` / `withLoading` / `setTotalRows` / `setDensity` / `setZebra` / `setSorts` / `getSorts`.
+Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows` / `getQuery` (`DataTableQuery`: `{ page, pageSize, filter, columnFilters, sorts }`) / `getPage` / `getPageSize` / `getFilter` / `getColumnFilters` / `setLoading` / `withLoading` / `setTotalRows` / `getTotalRows` / `setDensity` / `setZebra` / `setSorts` / `getSorts`.
 
 `data` may be:
 
@@ -901,7 +976,7 @@ const table = ui.dataTable(tasks, {
 | `density` | `'compact' \| 'default' \| 'comfortable'` | `'default'` | Row / cell spacing (`setDensity`) |
 | `zebra` | `boolean` | `false` | Alternate-row striping (`setZebra`) |
 | `selectable` | `boolean` | `false` | Row checkboxes + selection events |
-| `reorderable` | `boolean` | `false` | Drag handle to reorder rows (global order; page slice updates relative order without scrambling off-page rows). Disables row virtualization (dnd conflict) |
+| `reorderable` | `boolean` | `false` | Drag handle to reorder rows (global order; page slice updates relative order without scrambling off-page rows). Works with row virtualization: only mounted rows are drop targets — drag near the scroll edge to window more rows |
 | `groupBy` | `string \| (row) => unknown` | | Partition rows into collapsible groups (column key or derived value). Ignored when `manualPagination` is true |
 | `defaultCollapsed` | `boolean` | `false` | Start with every group collapsed (client-owned) |
 | `onGroupToggle` | `(groupKey, collapsed) => void` | | After a group header is expanded/collapsed |
@@ -945,7 +1020,7 @@ const table = ui.dataTable(tasks, {
 
 Hybrid mode: set `manualFiltering` and/or `manualSorting` **without** `manualPagination` to skip only those local stages while still paging locally. Export uses the current page rows only when `manualPagination` is true. Footer aggregates (`column.aggregate`) run over the **filtered** row set locally, or over the **provided / current-page** rows when `manualPagination` is true. Facet option `count`s in remote mode are derived from the supplied page unless you pass `facetOptions` with server-computed counts.
 
-**Client chrome** (renderer behavior; no server API): column headers are resizable (drag the right edge). Sortable headers show a tooltip (`Click to sort · Shift+click for multi-sort`); Shift+click adds/toggles multi-sort, and active sorts show priority badges when more than one column is sorted. Header ⋯ / pin controls expose pin left/right/clear (and an aggregate hint when `column.aggregate` is set); pin state is reflected in `aria-label` / `aria-pressed`. Footer aggregate cells announce via `aria-label` plus a polite live region. Inline editors: **Enter** commits, **Esc** cancels (blur still commits for text/number/date). Row virtualization kicks in when body items ≥ **40** and is **off** when `reorderable` is true (dnd-kit needs the full list) — prefer reorder for small interactive lists, or leave reorder off for large pages that benefit from windowing.
+**Client chrome** (renderer behavior; no server API): column headers are resizable (drag the right edge). Sortable headers show a tooltip (`Click to sort · Shift+click for multi-sort`); Shift+click adds/toggles multi-sort, and active sorts show priority badges when more than one column is sorted. Header ⋯ / pin controls expose pin left/right/clear (and an aggregate hint when `column.aggregate` is set); pin state is reflected in `aria-label` / `aria-pressed`. Footer aggregate cells announce via `aria-label` plus a polite live region. Inline editors: text/number/date — **Enter** commits, **Esc** cancels (blur still commits); select/boolean commit on change (**Esc** restores focus). Row virtualization kicks in when body items ≥ **40** (including when `reorderable` is true). With reorder + virtualization, only windowed rows are active drop targets — use drag auto-scroll near the viewport edge to reach farther rows.
 
 | View field | Type | Notes |
 |------------|------|-------|
@@ -968,7 +1043,7 @@ When `groupBy` is set, filter/sort run first, then rows are stably partitioned s
 | `facetOptions` | `{ value, label }[]` | Facet choices; when set without `filter`, implies `filter: 'facet'`. When omitted with `filter: 'facet'`, distinct values are derived. Server adds live `count`s. |
 | `value` | `(row) => unknown` | Computed scalar for sort / filter / export / default display |
 | `render` | `(row) => Element \| scalar` | Optional cell UI (e.g. `ui.badge(...)`); display-only |
-| `editor` | `'text' \| 'select' \| 'number' \| 'date' \| 'boolean'` | Inline editor on the client (`number` commits a finite number; `date` ISO `YYYY-MM-DD`; `boolean` a switch). Text/number/date: Enter commits, Esc cancels |
+| `editor` | `'text' \| 'select' \| 'number' \| 'date' \| 'boolean'` | Inline editor on the client (`number` commits a finite number; `date` ISO `YYYY-MM-DD`; `boolean` a switch). Text/number/date: Enter commits, Esc cancels; select/boolean commit on change (Esc restores focus) |
 | `editorOptions` | `{ value, label }[]` | Options when `editor` is `'select'` |
 | `detailTrigger` | `boolean` | Cell opens the row detail drawer |
 | `aggregate` | `'sum' \| 'avg' \| 'count' \| 'min' \| 'max' \| (rows, col) => unknown` | Footer total for this column (filtered rows locally; provided/current-page rows when `manualPagination`). Announced in the footer / live region |

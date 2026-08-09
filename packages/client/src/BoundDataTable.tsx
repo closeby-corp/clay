@@ -121,7 +121,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -140,6 +139,11 @@ import {
 } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import {
+  EditableCell,
+  type DataTableColumnEditor,
+  type DataTableDensity,
+} from './data-table/EditableCell';
 
 /** Virtualize body once row count is large enough to matter. */
 const VIRTUALIZE_THRESHOLD = 40;
@@ -158,8 +162,6 @@ type DataTableFacetOption = {
   count?: number;
 };
 
-type DataTableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
-type DataTableDensity = 'compact' | 'default' | 'comfortable';
 type DataTableSortDir = 'asc' | 'desc';
 type DataTableSort = { key: string; dir: DataTableSortDir };
 type DataTableColumnPin = 'left' | 'right';
@@ -429,162 +431,6 @@ function DragHandle({ id }: { id: UniqueIdentifier }) {
   );
 }
 
-function EditableCell({
-  column,
-  value,
-  onCommit,
-  density,
-}: {
-  column: DataTableColumn;
-  value: unknown;
-  onCommit: (next: unknown) => void;
-  density: DataTableDensity;
-}) {
-  const inputHeight =
-    density === 'compact' ? 'h-7' : density === 'comfortable' ? 'h-9' : 'h-8';
-  const skipBlurCommit = useRef(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const valueToLocal = (v: unknown) => {
-    if (column.editor === 'date') return String(v ?? '').slice(0, 10);
-    return v == null ? '' : String(v);
-  };
-
-  const [local, setLocal] = useState(() => valueToLocal(value));
-  useEffect(() => {
-    if (column.editor === 'date') {
-      setLocal(String(value ?? '').slice(0, 10));
-    } else if (column.editor !== 'boolean' && column.editor !== 'select') {
-      setLocal(value == null ? '' : String(value));
-    }
-  }, [value, column.editor]);
-
-  if (column.editor === 'boolean') {
-    const checked = value === true || value === 'true' || value === 1 || value === '1';
-    return (
-      <div
-        className={cn(
-          'flex items-center',
-          column.align === 'right' && 'justify-end',
-          column.align === 'center' && 'justify-center',
-        )}
-      >
-        <Switch
-          size="sm"
-          checked={checked}
-          onCheckedChange={(next) => onCommit(next)}
-          aria-label={column.header}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              (e.currentTarget as HTMLElement).blur();
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (column.editor === 'select') {
-    const options = column.editorOptions ?? [];
-    const selectValue = String(value ?? '');
-    return (
-      <Select
-        value={selectValue || undefined}
-        onValueChange={(next) => {
-          onCommit(next);
-        }}
-      >
-        <SelectTrigger
-          size="sm"
-          className="w-38"
-          aria-label={column.header}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              // Let the select close; keep focus on the trigger.
-              e.stopPropagation();
-            }
-          }}
-        >
-          <SelectValue placeholder="Select…" />
-        </SelectTrigger>
-        <SelectContent align="end">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  const inputType =
-    column.editor === 'number' ? 'number' : column.editor === 'date' ? 'date' : 'text';
-
-  const commit = () => {
-    const prev =
-      column.editor === 'date'
-        ? String(value ?? '').slice(0, 10)
-        : value == null
-          ? ''
-          : String(value);
-    if (local === prev) return;
-    if (column.editor === 'number') {
-      if (local.trim() === '') {
-        onCommit(null);
-        return;
-      }
-      const n = Number(local);
-      onCommit(Number.isFinite(n) ? n : local);
-      return;
-    }
-    onCommit(local === '' ? null : local);
-  };
-
-  const cancel = () => {
-    setLocal(valueToLocal(value));
-    skipBlurCommit.current = true;
-    inputRef.current?.blur();
-  };
-
-  return (
-    <Input
-      ref={inputRef}
-      type={inputType}
-      className={cn(
-        inputHeight,
-        'border-transparent bg-transparent shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background',
-        column.align === 'right' && 'text-right',
-        column.align === 'center' && 'text-center',
-        column.editor === 'number' || column.editor === 'date'
-          ? 'min-w-24 w-28 max-w-40'
-          : 'min-w-24 w-full max-w-48',
-      )}
-      value={local}
-      aria-label={column.header}
-      onChange={(e) => setLocal(e.target.value)}
-      onBlur={() => {
-        if (skipBlurCommit.current) {
-          skipBlurCommit.current = false;
-          return;
-        }
-        commit();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          commit();
-          (e.target as HTMLInputElement).blur();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          cancel();
-        }
-      }}
-    />
-  );
-}
-
 function ColumnResizeHandle({
   onResizeStart,
   onResize,
@@ -798,16 +644,25 @@ function SortableRow({
   children,
   selected,
   className,
+  measureRef,
+  dataIndex,
 }: {
   rowKey: UniqueIdentifier;
   children: ReactNode;
   selected?: boolean;
   className?: string;
+  measureRef?: (node: HTMLTableRowElement | null) => void;
+  dataIndex?: number;
 }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({ id: rowKey });
+  const setRefs = (node: HTMLTableRowElement | null) => {
+    setNodeRef(node);
+    measureRef?.(node);
+  };
   return (
     <TableRow
-      ref={setNodeRef}
+      ref={setRefs}
+      data-index={dataIndex}
       data-state={selected ? 'selected' : undefined}
       className={cn(
         'relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80',
@@ -1209,19 +1064,20 @@ export function BoundDataTable({
   const sortableIds = grouped ? visibleDataIds : dataIds;
 
   /**
-   * Row virtualization conflicts with dnd-kit's full-list SortableContext.
-   * Prefer reorder when enabled; virtualize only when reorder is off and the
-   * body is large enough that windowing helps.
+   * Virtualize large bodies even when reorderable. SortableContext keeps the full
+   * id list; only mounted (windowed) rows register drop targets — drag near the
+   * scroll edge to bring more rows into the window (dnd-kit auto-scroll).
    */
   const shouldVirtualize =
-    !reorderable && !loading && rows.length > 0 && bodyItems.length >= VIRTUALIZE_THRESHOLD;
+    !loading && rows.length > 0 && bodyItems.length >= VIRTUALIZE_THRESHOLD;
 
   const rowVirtualizer = useVirtualizer({
     count: shouldVirtualize ? bodyItems.length : 0,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: (index) =>
       estimatedBodyRowHeight(density, bodyItems[index]?.kind === 'group' ? 'group' : 'row'),
-    overscan: 10,
+    // Extra overscan when reorderable so nearby drop targets stay mounted while dragging.
+    overscan: reorderable ? 16 : 10,
   });
 
   const virtualRows = shouldVirtualize ? rowVirtualizer.getVirtualItems() : null;
@@ -1594,6 +1450,8 @@ export function BoundDataTable({
           rowKey={rowKey}
           selected={isSelected}
           className={zebraClass}
+          measureRef={rowOpts?.measureRef}
+          dataIndex={rowOpts?.dataIndex}
         >
           {cells}
         </SortableRow>
@@ -2000,17 +1858,33 @@ export function BoundDataTable({
                 />
               </TableRow>
             ) : null}
-            {virtualRows!.map((virtualRow) => {
-              const item = bodyItems[virtualRow.index]!;
-              return renderBodyItem(item, {
-                key:
-                  item.kind === 'group'
-                    ? `group:${item.group.key}`
-                    : String(item.row[keyField] ?? item.index),
-                dataIndex: virtualRow.index,
-                measureRef: rowVirtualizer.measureElement,
-              });
-            })}
+            {reorderable ? (
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                {virtualRows!.map((virtualRow) => {
+                  const item = bodyItems[virtualRow.index]!;
+                  return renderBodyItem(item, {
+                    key:
+                      item.kind === 'group'
+                        ? `group:${item.group.key}`
+                        : String(item.row[keyField] ?? item.index),
+                    dataIndex: virtualRow.index,
+                    measureRef: rowVirtualizer.measureElement,
+                  });
+                })}
+              </SortableContext>
+            ) : (
+              virtualRows!.map((virtualRow) => {
+                const item = bodyItems[virtualRow.index]!;
+                return renderBodyItem(item, {
+                  key:
+                    item.kind === 'group'
+                      ? `group:${item.group.key}`
+                      : String(item.row[keyField] ?? item.index),
+                  dataIndex: virtualRow.index,
+                  measureRef: rowVirtualizer.measureElement,
+                });
+              })
+            )}
             {virtualPadBottom > 0 ? (
               <TableRow className="hover:bg-transparent" aria-hidden>
                 <TableCell

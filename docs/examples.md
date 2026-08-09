@@ -9,13 +9,13 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 
 | Route | File | Patterns shown |
 |-------|------|----------------|
-| `/` | `Home.ts` | `ui.hero`, `ui.icon`, `ui.link`, `ui.navigate`, `pageMeta` |
+| `/` | `Home.ts` | `ui.hero`, `ui.icon`, `ui.link`, `ui.navigate`; catalog via `ui.navFromPages()` (same as sidebar) |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
-| `/examples/datatable` | `DataTableDemo.ts` | Multi-sort (Shift+click / badges), footer aggregates + a11y hints, column pin, remote filter/sort + pagination; density/zebra, editors (Enter/Esc), resize, virtualization (≥40, off when reorderable); facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
+| `/examples/datatable` | `DataTableDemo.ts` | Multi-sort (Shift+click / badges), footer aggregates + a11y hints, column pin, remote filter/sort + pagination; density/zebra, editors (Enter/Esc + focus restore), resize, virtualization (≥40, coexists with reorder via windowed drop targets); facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*` including scatter / composed; props API sample |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
@@ -28,10 +28,10 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/controls-extra` | `ControlsExtra.ts` | `ui.codeBlock` (Shiki), `ui.tree` |
 | `/examples/media-extra` | `MediaExtra.ts` | `ui.relativeTime`, `ui.qrCode`, `ui.imageZoom`, `ui.imageCrop` |
 | `/examples/editor` | `EditorDemo.ts` | `ui.editor` HTML + Markdown side-by-side, bindValue |
-| `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` cross-column drag, `cardMove`, in-memory columns |
+| `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` element-owned columns, `cardMove` settle, reset via `setColumns` |
 | `/examples/list` | `ListDemo.ts` | `ui.list` dense grouped DnD, `itemMove`, in-memory groups |
-| `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` timeline bars, markers, drag move/resize, `itemMove` |
-| `/examples/flow` | `FlowDemo.ts` | Three `ui.flow` demos: ETL with in-node controls, multi-handle approval branches, fan-in/out + `addNode` dynamic stages (flow-owned edges/positions; no outer diagram `ui.auto`) |
+| `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` element-owned rows/dates, `itemMove` settle, `setReadonly` / `setRows` |
+| `/examples/flow` | `FlowDemo.ts` | Three `ui.flow` demos: ETL with in-node controls + labeled edges + auto-layout, multi-handle approval branches, fan-in/out + `addNode` dynamic stages (flow-owned edges/positions; no outer diagram `ui.auto`) |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 

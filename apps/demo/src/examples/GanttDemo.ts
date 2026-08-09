@@ -1,5 +1,5 @@
 import { ui } from '@badui/ui';
-import type { GanttItemMovePayload, GanttRow } from '@badui/ui';
+import type { GanttRow } from '@badui/ui';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -32,90 +32,75 @@ const INITIAL: GanttRow[] = [
   },
 ];
 
-function applyItemMove(rows: GanttRow[], payload: GanttItemMovePayload): GanttRow[] {
-  return rows.map((row) => ({
-    ...row,
-    items: row.items.map((item) =>
-      item.id === payload.itemId
-        ? { ...item, start: payload.start, end: payload.end }
-        : { ...item },
-    ),
-  }));
-}
-
 ui.page('/examples/gantt', () => {
-  const board = ui.state({
-    rows: INITIAL.map((row) => ({
-      ...row,
-      items: row.items.map((i) => ({ ...i })),
-    })),
-    readonly: false,
-    lastMove: '' as string,
-  });
+  const status = ui.state({ lastMove: '' as string });
 
   exampleFrame(() => {
     ui.column(
       () => {
         exampleHeader(
           undefined,
-          'ui.gantt — sidebar labels, time axis, bars, today + markers; drag move/resize emits itemMove on pointer-up.',
+          'ui.gantt — timeline owns rows/item dates; itemMove settles the model (no outer ui.auto remount).',
         );
 
         exampleSection(
           'Project timeline',
-          'Optimistic local dates while dragging; server rows are the source of truth after each move.',
+          'Optimistic local dates while dragging; settle patches owned rows. Prefer side effects in onItemMove.',
         );
 
-        ui.auto(() => {
-          ui.gantt({
-            rows: board.rows,
-            markers: [
-              { id: 'beta', date: '2026-08-15', label: 'Beta' },
-              { id: 'ga', date: '2026-08-28', label: 'GA' },
-            ],
-            range: { start: '2026-07-15', end: '2026-09-05' },
-            readonly: board.readonly,
-            onItemMove: (payload) => {
-              console.log('onItemMove', payload);
-              board.rows = applyItemMove(board.rows, payload);
-              board.lastMove = `${payload.itemId} @ ${payload.rowId}: ${payload.start} → ${payload.end}`;
-            },
-            onItemClick: (itemId) => {
-              ui.notify(`Item ${itemId}`, 'info');
-            },
-          });
+        const timeline = ui.gantt({
+          rows: INITIAL.map((row) => ({
+            ...row,
+            items: row.items.map((i) => ({ ...i })),
+          })),
+          markers: [
+            { id: 'beta', date: '2026-08-15', label: 'Beta' },
+            { id: 'ga', date: '2026-08-28', label: 'GA' },
+          ],
+          range: { start: '2026-07-15', end: '2026-09-05' },
+          onItemMove: (payload) => {
+            console.log('onItemMove', payload);
+            status.lastMove = `${payload.itemId} @ ${payload.rowId}: ${payload.start} → ${payload.end}`;
+          },
+          onItemClick: (itemId) => {
+            ui.notify(`Item ${itemId}`, 'info');
+          },
         });
 
         ui.auto(() => {
-          ui.label(board.lastMove ? `Last move: ${board.lastMove}` : 'Last move: —').classes(
+          ui.label(status.lastMove ? `Last move: ${status.lastMove}` : 'Last move: —').classes(
             'text-sm text-muted-foreground',
           );
         });
 
-        ui.auto(() => {
-          ui.row(
-            () => {
-              ui.button(board.readonly ? 'Enable drag' : 'Make readonly', {
-                variant: 'outline',
-                onClick: () => {
-                  board.readonly = !board.readonly;
-                },
-              });
-              ui.button('Reset timeline', {
-                variant: 'outline',
-                onClick: () => {
-                  board.rows = INITIAL.map((row) => ({
+        ui.row(
+          () => {
+            ui.button('Toggle readonly', {
+              variant: 'outline',
+              onClick: () => {
+                timeline.setReadonly(!timeline.isReadonly());
+                ui.notify(
+                  timeline.isReadonly() ? 'Readonly' : 'Drag enabled',
+                  'info',
+                );
+              },
+            });
+            ui.button('Reset timeline', {
+              variant: 'outline',
+              onClick: () => {
+                timeline.setRows(
+                  INITIAL.map((row) => ({
                     ...row,
                     items: row.items.map((i) => ({ ...i })),
-                  }));
-                  board.lastMove = '';
-                  ui.notify('Timeline reset', 'info');
-                },
-              });
-            },
-            { gap: 3 },
-          );
-        });
+                  })),
+                );
+                status.lastMove = '';
+                ui.notify('Timeline reset', 'info');
+              },
+            });
+          },
+          { gap: 3 },
+        );
       },
       { gap: 6 },
     );

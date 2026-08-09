@@ -45,7 +45,7 @@ const DENSITIES: DataTableDensity[] = ['compact', 'default', 'comfortable'];
 const OWNERS = ['Ada', 'Lin', 'Sam', 'Kai'] as const;
 const STATUSES = ['todo', 'in progress', 'done'] as const;
 
-/** Enough rows that client virtualization engages (≥40 body items, reorder off). */
+/** Enough rows that client virtualization engages (≥40 body items). */
 const LARGE_ROW_COUNT = 64;
 const largeSeed: Task[] = Array.from({ length: LARGE_ROW_COUNT }, (_, i) => {
   const n = i + 1;
@@ -63,8 +63,10 @@ const largeSeed: Task[] = Array.from({ length: LARGE_ROW_COUNT }, (_, i) => {
 
 ui.page('/examples/datatable', () => {
   let tasks = seed.map((t) => ({ ...t }));
+  let largeRows = largeSeed.map((t) => ({ ...t }));
   let nextId = tasks.length + 1;
   let table: DataTableElement;
+  let largeTable: DataTableElement;
   let loadingDemo: DataTableElement;
   let remoteTable: DataTableElement | undefined;
   let density: DataTableDensity = 'default';
@@ -173,7 +175,7 @@ ui.page('/examples/datatable', () => {
 
     exampleSection(
       'Feature tour',
-      'Shift+click column headers to multi-sort · Title pinned left, Owner pinned right (Columns menu can re-pin) · Hours and Billable sum in the sticky footer · Reorder is on here, so row virtualization stays off (see the large table below).',
+      'Shift+click column headers to multi-sort · Title pinned left, Owner pinned right (Columns menu can re-pin) · Hours and Billable sum in the sticky footer · Reorder works with virtualization on large bodies (drag near the scroll edge to reach off-window rows; see the large table below).',
     );
 
     chromeUi = ui.refreshable(() => {
@@ -353,15 +355,15 @@ ui.page('/examples/datatable', () => {
     });
 
     exampleSection(
-      'Large table (virtualized)',
-      `${LARGE_ROW_COUNT} rows, no pagination, reorder off — the client virtualizes the body once there are ≥40 items. Virtualization is disabled when reorder is enabled (kitchen-sink above). Shift+click to multi-sort; Title / Owner stay pinned left / right.`,
+      'Large table (virtualized + reorder)',
+      `${LARGE_ROW_COUNT} rows, no pagination — virtualizes at ≥40 body items and stays reorderable. Drag near the scroll edge to bring off-window rows into drop range. Shift+click to multi-sort; Title / Owner stay pinned left / right.`,
     );
-    ui.dataTable(largeSeed, {
+    largeTable = ui.dataTable(largeRows, {
       keyField: 'id',
       searchable: true,
       searchPlaceholder: 'Search large set…',
       selectable: true,
-      reorderable: false,
+      reorderable: true,
       pageSize: 0,
       density: 'compact',
       zebra: true,
@@ -401,6 +403,10 @@ ui.page('/examples/datatable', () => {
         { key: 'status', dir: 'asc' },
         { key: 'hours', dir: 'desc' },
       ],
+      onReorder: () => {
+        largeRows = largeTable.getRows() as Task[];
+        ui.notify('Large-table order updated', 'info');
+      },
     });
 
     exampleSection(

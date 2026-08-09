@@ -32,6 +32,9 @@ const PIPELINE_EDGES: FlowEdge[] = [
     target: 'transform',
     sourceHandle: 'out',
     targetHandle: 'in',
+    type: 'smoothstep',
+    label: 'raw',
+    variant: 'primary',
   },
   {
     id: 'e-transform-load',
@@ -39,6 +42,9 @@ const PIPELINE_EDGES: FlowEdge[] = [
     target: 'load',
     sourceHandle: 'out',
     targetHandle: 'in',
+    type: 'smoothstep',
+    label: 'rows',
+    animated: true,
   },
 ];
 
@@ -146,7 +152,7 @@ ui.page('/examples/flow', () => {
 
         exampleSection(
           '1. Configurable ETL pipeline',
-          'Controls live inside nodes (select + switch). Drag by the card chrome; Run uses nested onClick. Diagram state is owned by the flow element.',
+          'Controls live inside nodes (select + switch). Drag by the card chrome; Run uses nested onClick. Diagram state is owned by the flow element. Edges use smoothstep + labels; Auto-layout packs LR layers.',
         );
 
         const pipelineFlow = ui.flow(
@@ -155,6 +161,7 @@ ui.page('/examples/flow', () => {
             fitView: true,
             showMiniMap: true,
             showControls: true,
+            defaultEdgeType: 'smoothstep',
             onConnect: (payload) => {
               shared.lastEvent = `[pipeline] connect ${payload.source} → ${payload.target}`;
             },
@@ -284,6 +291,14 @@ ui.page('/examples/flow', () => {
               pipeline.source = 'prod-api';
               pipeline.dryRun = true;
               shared.lastEvent = '[pipeline] reset';
+            },
+          });
+          ui.button('Auto-layout', {
+            variant: 'secondary',
+            size: 'sm',
+            onClick: () => {
+              pipelineFlow.layout({ direction: 'LR', rankSep: 80, nodeSep: 48 });
+              shared.lastEvent = '[pipeline] layout';
             },
           });
           ui.auto(() => {

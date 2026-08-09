@@ -263,6 +263,7 @@ export function BoundGantt({
       suppressClickRef.current = true;
       const found = findItem(rowsRef.current, drag.itemId);
       if (!found) return;
+      // `itemMove` settle is always registered on GanttElement (owned rows/dates).
       if (hasEvent(propsRef.current, 'itemMove')) {
         emitRef.current(idRef.current, 'itemMove', {
           itemId: drag.itemId,

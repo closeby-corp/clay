@@ -784,6 +784,7 @@ export { tree, type TreeProps, type TreeNode } from './tree';
 export { editor, type EditorProps, type EditorFormat } from './editor';
 export {
   kanban,
+  KanbanElement,
   type KanbanProps,
   type KanbanColumn,
   type KanbanCard,
@@ -812,6 +813,7 @@ export {
 } from './image-crop';
 export {
   gantt,
+  GanttElement,
   type GanttProps,
   type GanttRow,
   type GanttItem,
@@ -822,15 +824,21 @@ export {
 export {
   flow,
   FlowElement,
+  makeFlowEdgeId,
+  computeFlowLayout,
   type FlowProps,
   type FlowNodeProps,
   type FlowEdge,
+  type FlowEdgePathType,
+  type FlowEdgeVariant,
   type FlowHandle,
   type FlowHandlePosition,
   type FlowPosition,
   type FlowConnectPayload,
   type FlowNodeMovePayload,
   type FlowSelectionPayload,
+  type FlowLayoutOptions,
+  type FlowLayoutDirection,
 } from './flow';
 
 export {

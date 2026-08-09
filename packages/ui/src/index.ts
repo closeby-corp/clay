@@ -205,6 +205,7 @@ import {
   type TreeNode,
   type EditorProps,
   type EditorFormat,
+  KanbanElement,
   type KanbanProps,
   type KanbanColumn,
   type KanbanCard,
@@ -222,6 +223,7 @@ import {
   type ListItemMovePayload,
   type ImageCropProps,
   type ImageCropPayload,
+  GanttElement,
   type GanttProps,
   type GanttRow,
   type GanttItem,
@@ -231,12 +233,18 @@ import {
   type FlowProps,
   type FlowNodeProps,
   type FlowEdge,
+  type FlowEdgePathType,
+  type FlowEdgeVariant,
   type FlowHandle,
   type FlowHandlePosition,
   type FlowPosition,
   type FlowConnectPayload,
   type FlowNodeMovePayload,
   type FlowSelectionPayload,
+  type FlowLayoutOptions,
+  type FlowLayoutDirection,
+  makeFlowEdgeId,
+  computeFlowLayout,
   type SeriesInput,
   type ChartChromeOpts,
   type PieRowKeys,
@@ -423,12 +431,16 @@ export type {
   FlowProps,
   FlowNodeProps,
   FlowEdge,
+  FlowEdgePathType,
+  FlowEdgeVariant,
   FlowHandle,
   FlowHandlePosition,
   FlowPosition,
   FlowConnectPayload,
   FlowNodeMovePayload,
   FlowSelectionPayload,
+  FlowLayoutOptions,
+  FlowLayoutDirection,
   SeriesInput,
   ChartChromeOpts,
   PieRowKeys,
@@ -462,6 +474,10 @@ export {
   AccordionElement,
   CollapsibleElement,
   FlowElement,
+  KanbanElement,
+  GanttElement,
+  makeFlowEdgeId,
+  computeFlowLayout,
   TimerHandle,
   loadPages,
   navFromPages,
@@ -631,8 +647,12 @@ export function editor(props?: EditorProps): Element {
   return editorFactory(props);
 }
 
-/** Kanban board with cross-column card drag. Prefer `ui.kanban`. See {@link KanbanProps}. */
-export function kanban(props: KanbanProps): Element {
+/**
+ * Kanban board with cross-column card drag. Owns columns + card order;
+ * default `cardMove` settle updates the model before user `onCardMove`.
+ * Prefer `ui.kanban`. See {@link KanbanProps}.
+ */
+export function kanban(props?: KanbanProps): KanbanElement {
   return kanbanFactory(props);
 }
 
@@ -661,8 +681,12 @@ export function imageCrop(props: ImageCropProps): Element {
   return imageCropFactory(props);
 }
 
-/** Project timeline with drag move/resize. Prefer `ui.gantt`. See {@link GanttProps}. */
-export function gantt(props: GanttProps): Element {
+/**
+ * Project timeline with drag move/resize. Owns rows + item dates;
+ * default `itemMove` settle updates the model before user `onItemMove`.
+ * Prefer `ui.gantt`. See {@link GanttProps}.
+ */
+export function gantt(props?: GanttProps): GanttElement {
   return ganttFactory(props);
 }
 

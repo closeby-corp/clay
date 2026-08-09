@@ -3,6 +3,7 @@ import {
   Background,
   Controls,
   Handle,
+  MarkerType,
   MiniMap,
   Position,
   ReactFlow,
@@ -30,12 +31,25 @@ type FlowHandle = {
   position: 'top' | 'right' | 'bottom' | 'left';
 };
 
+type FlowEdgePathType =
+  | 'default'
+  | 'straight'
+  | 'step'
+  | 'smoothstep'
+  | 'simplebezier';
+
+type FlowEdgeVariant = 'default' | 'primary' | 'muted' | 'destructive';
+
 type FlowEdgeProp = {
   id: string;
   source: string;
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
+  type?: FlowEdgePathType;
+  label?: string;
+  animated?: boolean;
+  variant?: FlowEdgeVariant;
 };
 
 type BaduiNodeData = {
@@ -57,6 +71,24 @@ const DEFAULT_HANDLES: FlowHandle[] = [
   { id: 'target', type: 'target', position: 'left' },
   { id: 'source', type: 'source', position: 'right' },
 ];
+
+const EDGE_VARIANT_STYLE: Record<
+  Exclude<FlowEdgeVariant, 'default'>,
+  { stroke: string; labelColor: string }
+> = {
+  primary: {
+    stroke: 'var(--primary)',
+    labelColor: 'var(--primary)',
+  },
+  muted: {
+    stroke: 'var(--muted-foreground)',
+    labelColor: 'var(--muted-foreground)',
+  },
+  destructive: {
+    stroke: 'var(--destructive)',
+    labelColor: 'var(--destructive)',
+  },
+};
 
 function asStyle(style: unknown): CSSProperties | undefined {
   if (!style) return undefined;
@@ -82,9 +114,21 @@ function positionKey(pos: { x: number; y: number } | undefined): string {
   return `${pos.x},${pos.y}`;
 }
 
+function connectionKey(e: {
+  source: string;
+  target: string;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
+}): string {
+  return `${e.source}|${e.target}|${e.sourceHandle ?? ''}|${e.targetHandle ?? ''}`;
+}
+
 function edgesKey(edges: FlowEdgeProp[]): string {
   return edges
-    .map((e) => `${e.id}:${e.source}:${e.target}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}`)
+    .map(
+      (e) =>
+        `${e.id}:${e.source}:${e.target}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}:${e.type ?? ''}:${e.label ?? ''}:${e.animated ? 1 : 0}:${e.variant ?? ''}`,
+    )
     .join('|');
 }
 
@@ -107,14 +151,56 @@ function nodesPositionsKey(flowNodes: ElementNode[]): string {
 }
 
 function toRfEdge(e: FlowEdgeProp, prev?: Edge): Edge {
+  const variant = e.variant && e.variant !== 'default' ? e.variant : undefined;
+  const colors = variant ? EDGE_VARIANT_STYLE[variant] : undefined;
   return {
     id: e.id,
     source: e.source,
     target: e.target,
     sourceHandle: e.sourceHandle,
     targetHandle: e.targetHandle,
+    type: e.type && e.type !== 'default' ? e.type : undefined,
+    label: e.label,
+    animated: e.animated,
     selected: prev?.selected,
+    style: colors ? { stroke: colors.stroke } : undefined,
+    labelStyle: colors ? { fill: colors.labelColor, fontWeight: 500 } : undefined,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 16,
+      height: 16,
+      color: colors?.stroke,
+    },
   };
+}
+
+/**
+ * Reconcile server edges onto local RF edges.
+ * Prefer id match; if the server id differs from an optimistic connect id,
+ * rematch by source/target/handles and adopt the server id (keep selection).
+ */
+export function reconcileFlowEdges(serverEdges: FlowEdgeProp[], prev: Edge[]): Edge[] {
+  const prevById = new Map(prev.map((e) => [e.id, e]));
+  const prevByConn = new Map<string, Edge>();
+  for (const e of prev) {
+    const k = connectionKey(e);
+    if (!prevByConn.has(k)) prevByConn.set(k, e);
+  }
+  const claimed = new Set<string>();
+
+  return serverEdges.map((e) => {
+    const byId = prevById.get(e.id);
+    if (byId) {
+      claimed.add(byId.id);
+      return toRfEdge(e, byId);
+    }
+    const byConn = prevByConn.get(connectionKey(e));
+    if (byConn && !claimed.has(byConn.id) && byConn.id !== e.id) {
+      claimed.add(byConn.id);
+      return toRfEdge(e, byConn);
+    }
+    return toRfEdge(e);
+  });
 }
 
 function toRfNode(flowNode: ElementNode, emit: Emit, renderNode: RenderNode): Node<BaduiNodeData> {
@@ -209,6 +295,9 @@ function BoundFlowInner({
   const fitView = props.fitView !== false;
   const showMiniMap = props.showMiniMap !== false;
   const showControls = props.showControls !== false;
+  const defaultEdgeType = props.defaultEdgeType as FlowEdgePathType | undefined;
+  const defaultEdgeAnimated = props.defaultEdgeAnimated as boolean | undefined;
+  const defaultEdgeVariant = props.defaultEdgeVariant as FlowEdgeVariant | undefined;
 
   const topologyKey = nodesTopologyKey(flowNodes);
   const positionsKey = nodesPositionsKey(flowNodes);
@@ -217,6 +306,7 @@ function BoundFlowInner({
   const flowNodesRef = useRef(flowNodes);
   const emitRef = useRef(emit);
   const renderNodeRef = useRef(renderNode);
+  const edgeSeqRef = useRef(0);
   flowNodesRef.current = flowNodes;
   emitRef.current = emit;
   renderNodeRef.current = renderNode;
@@ -261,13 +351,10 @@ function BoundFlowInner({
     });
   }, [positionsKey]);
 
-  // Reconcile edges by id; preserve local selection when the id set is stable.
+  // Reconcile edges by id (or connection topology when optimistic id differs).
   useEffect(() => {
     if (draggingRef.current) return;
-    setEdges((prev) => {
-      const prevById = new Map(prev.map((e) => [e.id, e]));
-      return serverEdges.map((e) => toRfEdge(e, prevById.get(e.id)));
-    });
+    setEdges((prev) => reconcileFlowEdges(serverEdges, prev));
   }, [edgeKey, serverEdges]);
 
   // Merge live BadUI bodies into RF nodes each render so nested prop patches
@@ -321,26 +408,29 @@ function BoundFlowInner({
   const onConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
+      edgeSeqRef.current += 1;
+      const edgeId = `e-${connection.source}-${connection.target}-${connection.sourceHandle ?? ''}-${connection.targetHandle ?? ''}-${Date.now()}-${edgeSeqRef.current}`;
       const payload = {
+        id: edgeId,
         source: connection.source,
         target: connection.target,
         sourceHandle: connection.sourceHandle,
         targetHandle: connection.targetHandle,
       };
-      const edgeId = `e-${connection.source}-${connection.target}-${connection.sourceHandle ?? ''}-${connection.targetHandle ?? ''}-${Date.now()}`;
-      setEdges((eds) => [
-        ...eds,
-        {
-          id: edgeId,
-          source: connection.source!,
-          target: connection.target!,
-          sourceHandle: connection.sourceHandle ?? undefined,
-          targetHandle: connection.targetHandle ?? undefined,
-        },
-      ]);
+      const optimistic: FlowEdgeProp = {
+        id: edgeId,
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle ?? undefined,
+        targetHandle: connection.targetHandle ?? undefined,
+      };
+      if (defaultEdgeType) optimistic.type = defaultEdgeType;
+      if (defaultEdgeAnimated != null) optimistic.animated = defaultEdgeAnimated;
+      if (defaultEdgeVariant) optimistic.variant = defaultEdgeVariant;
+      setEdges((eds) => [...eds, toRfEdge(optimistic)]);
       if (hasEvent(props, 'connect')) emit(id, 'connect', payload);
     },
-    [emit, id, props],
+    [defaultEdgeAnimated, defaultEdgeType, defaultEdgeVariant, emit, id, props],
   );
 
   const onNodeDragStart = useCallback(() => {

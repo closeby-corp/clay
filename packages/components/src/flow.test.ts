@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { ClientSession, runWithSession } from '@badui/core';
-import { flow, FlowElement } from './flow';
+import {
+  computeFlowLayout,
+  flow,
+  FlowElement,
+  makeFlowEdgeId,
+} from './flow';
 
 describe('FlowElement owned diagram state', () => {
   test('registers settle events even without user handlers', () => {
@@ -130,6 +135,47 @@ describe('FlowElement owned diagram state', () => {
     expect(connects).toEqual(['a->b']);
   });
 
+  test('connect echoes client edge id and applies default edge style props', async () => {
+    const seen: string[] = [];
+    const el = flow(
+      {
+        defaultEdgeType: 'smoothstep',
+        defaultEdgeAnimated: true,
+        defaultEdgeVariant: 'primary',
+        onConnect: (p) => {
+          if (p.id) seen.push(p.id);
+        },
+      },
+      (f) => {
+        f.node({ id: 'a', position: { x: 0, y: 0 } }, () => {});
+        f.node({ id: 'b', position: { x: 100, y: 0 } }, () => {});
+      },
+    );
+
+    const clientId = makeFlowEdgeId('a', 'b', 'out', 'in', 'client-1');
+    await el.handleEvent('connect', {
+      id: clientId,
+      source: 'a',
+      target: 'b',
+      sourceHandle: 'out',
+      targetHandle: 'in',
+    });
+
+    expect(el.getEdges()).toEqual([
+      {
+        id: clientId,
+        source: 'a',
+        target: 'b',
+        sourceHandle: 'out',
+        targetHandle: 'in',
+        type: 'smoothstep',
+        animated: true,
+        variant: 'primary',
+      },
+    ]);
+    expect(seen).toEqual([clientId]);
+  });
+
   test('default edgesDelete / nodesDelete update owned model then user handlers', async () => {
     const deletedEdges: string[][] = [];
     const deletedNodes: string[][] = [];
@@ -161,5 +207,66 @@ describe('FlowElement owned diagram state', () => {
     expect(el.getNodeIds()).toEqual(['a', 'c']);
     expect(el.getEdges()).toEqual([]);
     expect(deletedNodes).toEqual([['b']]);
+  });
+
+  test('layout() places nodes in LR layers from edge topology', () => {
+    const el = flow(
+      {
+        edges: [
+          { id: 'e1', source: 'a', target: 'b' },
+          { id: 'e2', source: 'b', target: 'c' },
+          { id: 'e3', source: 'b', target: 'd' },
+        ],
+      },
+      (f) => {
+        f.node({ id: 'a', position: { x: 9, y: 9 } }, () => {});
+        f.node({ id: 'b', position: { x: 9, y: 9 } }, () => {});
+        f.node({ id: 'c', position: { x: 9, y: 9 } }, () => {});
+        f.node({ id: 'd', position: { x: 9, y: 9 } }, () => {});
+      },
+    );
+
+    el.layout({
+      direction: 'LR',
+      nodeWidth: 100,
+      nodeHeight: 40,
+      rankSep: 50,
+      nodeSep: 20,
+      origin: { x: 0, y: 0 },
+    });
+
+    const pos = el.getPositions();
+    expect(pos.a!.x).toBeLessThan(pos.b!.x);
+    expect(pos.b!.x).toBeLessThan(pos.c!.x);
+    expect(pos.c!.x).toBe(pos.d!.x);
+    expect(pos.c!.y).not.toBe(pos.d!.y);
+  });
+});
+
+describe('computeFlowLayout / makeFlowEdgeId', () => {
+  test('makeFlowEdgeId is deterministic for the same inputs', () => {
+    expect(makeFlowEdgeId('a', 'b', 'out', 'in')).toBe('e-a-b-out-in');
+    expect(makeFlowEdgeId('a', 'b', 'out', 'in', 7)).toBe('e-a-b-out-in-7');
+  });
+
+  test('computeFlowLayout packs TB layers', () => {
+    const positions = computeFlowLayout(
+      ['root', 'left', 'right'],
+      [
+        { source: 'root', target: 'left' },
+        { source: 'root', target: 'right' },
+      ],
+      {
+        direction: 'TB',
+        nodeWidth: 10,
+        nodeHeight: 10,
+        rankSep: 30,
+        nodeSep: 10,
+        origin: { x: 0, y: 0 },
+      },
+    );
+    expect(positions.root!.y).toBeLessThan(positions.left!.y);
+    expect(positions.left!.y).toBe(positions.right!.y);
+    expect(positions.left!.x).not.toBe(positions.right!.x);
   });
 });

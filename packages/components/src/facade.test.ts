@@ -404,7 +404,7 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el2.props.value).toBe('<p>x</p>');
   });
 
-  test('kanban wires columns and cardMove/cardClick', () => {
+  test('kanban wires columns and always registers cardMove settle', () => {
     const columns = [
       {
         id: 'todo',
@@ -421,6 +421,9 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.type).toBe('kanban');
     expect(el.props.columns).toEqual(columns);
     expect(el.props.events).toEqual(expect.arrayContaining(['cardMove', 'cardClick']));
+
+    const bare = kanban({ columns });
+    expect(bare.props.events).toEqual(expect.arrayContaining(['cardMove']));
   });
 
   test('relativeTime is display-only and defaults styles', () => {
@@ -488,7 +491,7 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.props.events).toEqual(expect.arrayContaining(['crop']));
   });
 
-  test('gantt wires rows/markers/range and itemMove/itemClick', () => {
+  test('gantt wires rows/markers/range and always registers itemMove settle', () => {
     const rows = [
       {
         id: 'r1',
@@ -510,6 +513,9 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.props.range).toEqual({ start: '2026-07-01', end: '2026-09-01' });
     expect(el.props.readonly).toBe(false);
     expect(el.props.events).toEqual(expect.arrayContaining(['itemMove', 'itemClick']));
+
+    const bare = gantt({ rows });
+    expect(bare.props.events).toEqual(expect.arrayContaining(['itemMove']));
   });
 
   test('flow builds flowNode children with edges and settle events', () => {

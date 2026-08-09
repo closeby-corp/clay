@@ -23,14 +23,14 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `codeBlock` | `codeBlock` | Read-only Shiki-highlighted code (`language?`, `showCopy?`) |
 | `tree` | `tree` | Nested tree (`nodes`, `selected?`, `expanded?`) |
 | `editor` | `editor` | Domternal rich text (`format?: 'html' \| 'markdown'`) |
-| `kanban` | `kanban` | Board (`columns` with cards; cross-column drag) |
+| `kanban` | `kanban` | Board (`columns` with cards; owns order; `cardMove` settle defaults) |
 | `list` | `list` | Dense vertical grouped list (`groups` with items; cross-group drag) |
 | `relativeTime` | `relativeTime` | Multi-timezone clock (`timezones`; ticks when `date` omitted) |
 | `qrCode` | `qrCode` | SVG QR from `value` (`size?`, `level?`) |
 | `imageZoom` | `imageZoom` | Image with click-to-zoom overlay (leave `image` plain) |
 | `imageCrop` | `imageCrop` | Image cropper (`src`, `aspect?`; emits data URL) |
-| `gantt` | `gantt` | Project timeline (`rows` with dated items; drag move/resize) |
-| `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; owns edges/positions; BadUI node bodies; `nodeMove`/`connect` settle defaults) |
+| `gantt` | `gantt` | Project timeline (`rows` with dated items; owns dates; `itemMove` settle defaults) |
+| `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; owns edges/positions; BadUI node bodies; `layout()`; typed/labeled edges; `nodeMove`/`connect` settle defaults) |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
@@ -65,7 +65,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `radialChart` | `radialchart` | Recharts radial bar (`nameKey`/`valueKey` or stacked `series`, optional center text / angles) |
 | `scatterChart` | `scatterchart` | Recharts scatter (`xKey` / `yKey`, optional `seriesKey`) |
 | `composedChart` | `composedchart` | Recharts composed (per-series `type`: bar/line/area) |
-| `dataTable` | `datatable` | Search, text/facet filters, views, grouping (collapse all), selection, bulk actions, reorder (disables virtualization), editors (Enter/Esc), export, multi-sort (Shift+click), local or remote (`manualPagination` + `getQuery` / `setLoading` / `withLoading`), density/zebra, column resize/pin, footer aggregates, row virtualization (≥40 body items), loading/empty, actions, detail drawer |
+| `dataTable` | `datatable` | Search, text/facet filters, views, grouping (collapse all), selection, bulk actions, reorder (coexists with virtualization via windowed drop targets), editors (Enter/Esc + focus restore), export, multi-sort (Shift+click), local or remote (`manualPagination` + `getQuery` / `setLoading` / `withLoading`), density/zebra, column resize/pin, footer aggregates, row virtualization (≥40 body items), loading/empty, actions, detail drawer |
 | `tabs` | `tabs` (+ child `tab`) | ShadCN `Tabs`; optimistic `value` |
 | `accordion` | `accordion` (+ child `accordionitem`) | ShadCN `Accordion`; optimistic `value` |
 | `collapsible` | `collapsible` | ShadCN `Collapsible`; optimistic open (`value`) |
@@ -98,13 +98,13 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `select` / `slider` / `rating` / `colorPicker` / `tags` / `radioGroup` / `combobox` / `date` / `editor` | `change` (and `input` if bound for radio/combobox/date/editor) |
 | `tabs` / `accordion` / `collapsible` | `change` |
 | `tree` | `select`, `expand` |
-| `kanban` | `cardMove`, `cardClick` |
+| `kanban` | `cardMove`, `cardClick` (`cardMove` settle always registered; user `onCardMove` runs after owned-model update) |
 | `list` | `itemMove`, `itemClick` |
 | `imageCrop` | `crop` |
-| `gantt` | `itemMove`, `itemClick` |
+| `gantt` | `itemMove`, `itemClick` (`itemMove` settle always registered; user `onItemMove` runs after owned-model update) |
 | `flow` | `connect`, `nodeMove` (drag-stop), `nodesDelete`, `edgesDelete`, `selectionChange` (settle handlers always registered; user `on*` run after owned-model update) |
 | `upload` | `upload`, `progress`, `error`, `abort` |
-| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `export`, `page`, `pageSize`, `action`, `bulkAction`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
+| `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `columnPin`, `export`, `page`, `pageSize`, `action`, `bulkAction`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
 | `dialogStack` | `close`, `indexChange` (number) |
 | `dropdownMenu` / `contextMenu` / `menubar` item | `select` |
@@ -134,10 +134,10 @@ These types keep **local optimistic state** on the client so interaction is not 
 - `tags`
 - `tree` (`selected` / `expanded`)
 - `editor`
-- `kanban` (`columns` while dragging)
+- `kanban` (`columns` while dragging; settle patches owned columns — do not wrap board in `ui.auto`)
 - `list` (`groups` while dragging)
-- `gantt` (`rows` while dragging / resizing)
-- `flow` (node positions while dragging; edges on connect until owned-model props catch up; position patches do not remount RF nodes)
+- `gantt` (`rows` while dragging / resizing; settle patches owned rows — do not wrap chart in `ui.auto`)
+- `flow` (node positions while dragging; edges on connect keep the client-generated id through settle; position patches do not remount RF nodes)
 - `tabs`
 - `accordion`
 - `collapsible`

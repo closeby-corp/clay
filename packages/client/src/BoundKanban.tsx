@@ -217,6 +217,7 @@ export function BoundKanban({
   const activeCard = activeId ? findCard(columns, activeId) : null;
 
   const emitMove = (payload: CardMovePayload) => {
+    // `cardMove` settle is always registered on KanbanElement (owned columns).
     if (hasEvent(props, 'cardMove')) emit(id, 'cardMove', payload);
   };
 

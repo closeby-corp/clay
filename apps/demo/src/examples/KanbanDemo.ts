@@ -1,5 +1,5 @@
 import { ui } from '@badui/ui';
-import type { KanbanCardMovePayload, KanbanColumn } from '@badui/ui';
+import type { KanbanColumn } from '@badui/ui';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -20,7 +20,7 @@ const INITIAL: KanbanColumn[] = [
   {
     id: 'doing',
     title: 'Doing',
-    cards: [{ id: 'c3', title: 'Demo + docs', description: 'in-memory move handler' }],
+    cards: [{ id: 'c3', title: 'Demo + docs', description: 'element-owned move handler' }],
   },
   {
     id: 'done',
@@ -29,62 +29,38 @@ const INITIAL: KanbanColumn[] = [
   },
 ];
 
-function applyCardMove(columns: KanbanColumn[], payload: KanbanCardMovePayload): KanbanColumn[] {
-  const next = columns.map((col) => ({
-    ...col,
-    cards: col.cards.map((card) => ({ ...card })),
-  }));
-  let moved: (typeof next)[0]['cards'][0] | undefined;
-  for (const col of next) {
-    const idx = col.cards.findIndex((c) => c.id === payload.cardId);
-    if (idx >= 0) {
-      [moved] = col.cards.splice(idx, 1);
-      break;
-    }
-  }
-  if (!moved) return columns;
-  const to = next.find((c) => c.id === payload.toColumnId);
-  if (!to) return columns;
-  const index = Math.max(0, Math.min(payload.index, to.cards.length));
-  to.cards.splice(index, 0, moved);
-  return next;
-}
-
 ui.page('/examples/kanban', () => {
-  const board = ui.state({
-    columns: INITIAL.map((col) => ({
-      ...col,
-      cards: col.cards.map((c) => ({ ...c })),
-    })),
-    lastMove: '' as string,
-  });
+  const status = ui.state({ lastMove: '' as string });
 
   exampleFrame(() => {
     ui.column(
       () => {
         exampleHeader(
           undefined,
-          'ui.kanban — drag cards within/across columns; cardMove once per drop; server columns via updateProps.',
+          'ui.kanban — board owns columns/card order; cardMove settles the model (no outer ui.auto remount).',
         );
 
-        exampleSection('Board', 'Optimistic local reorder; server state is the source of truth after each drop.');
+        exampleSection(
+          'Board',
+          'Optimistic local reorder while dragging; settle patches owned columns. Prefer side effects in onCardMove.',
+        );
 
-        ui.auto(() => {
-          ui.kanban({
-            columns: board.columns,
-            onCardMove: (payload) => {
-              console.log('onCardMove', payload);
-              board.columns = applyCardMove(board.columns, payload);
-              board.lastMove = `${payload.cardId}: ${payload.fromColumnId} → ${payload.toColumnId} @ ${payload.index}`;
-            },
-            onCardClick: (cardId) => {
-              ui.notify(`Card ${cardId}`, 'info');
-            },
-          });
+        const board = ui.kanban({
+          columns: INITIAL.map((col) => ({
+            ...col,
+            cards: col.cards.map((c) => ({ ...c })),
+          })),
+          onCardMove: (payload) => {
+            console.log('onCardMove', payload);
+            status.lastMove = `${payload.cardId}: ${payload.fromColumnId} → ${payload.toColumnId} @ ${payload.index}`;
+          },
+          onCardClick: (cardId) => {
+            ui.notify(`Card ${cardId}`, 'info');
+          },
         });
 
         ui.auto(() => {
-          ui.label(board.lastMove ? `Last move: ${board.lastMove}` : 'Last move: —').classes(
+          ui.label(status.lastMove ? `Last move: ${status.lastMove}` : 'Last move: —').classes(
             'text-sm text-muted-foreground',
           );
         });
@@ -92,11 +68,13 @@ ui.page('/examples/kanban', () => {
         ui.button('Reset board', {
           variant: 'outline',
           onClick: () => {
-            board.columns = INITIAL.map((col) => ({
-              ...col,
-              cards: col.cards.map((c) => ({ ...c })),
-            }));
-            board.lastMove = '';
+            board.setColumns(
+              INITIAL.map((col) => ({
+                ...col,
+                cards: col.cards.map((c) => ({ ...c })),
+              })),
+            );
+            status.lastMove = '';
             ui.notify('Board reset', 'info');
           },
         });
