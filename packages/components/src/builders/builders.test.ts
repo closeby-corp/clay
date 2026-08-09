@@ -333,11 +333,15 @@ describe('table builder', () => {
       .columns(columns)
       .pageSize(5)
       .manualPagination(100)
+      .manualFiltering()
+      .manualSorting()
       .density('compact')
       .zebra()
       .build();
     expect(built.props).toMatchObject({
       manualPagination: true,
+      manualFiltering: true,
+      manualSorting: true,
       totalRows: 100,
       density: 'compact',
       zebra: true,

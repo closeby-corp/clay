@@ -845,7 +845,7 @@ ui.chart.radar(monthly, 'month').series(series).title('Skills').build();
 
 #### `ui.dataTable(data, props?)`
 
-Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows` / `setLoading` / `setTotalRows` / `setDensity` / `setZebra`.
+Server-owned table with sorting, global search, pagination, and row actions. Returns a `DataTableElement` with `setRows` / `getRows` / `setLoading` / `setTotalRows` / `setDensity` / `setZebra` / `setSorts` / `getSorts`.
 
 `data` may be:
 
@@ -894,8 +894,11 @@ const table = ui.dataTable(tasks, {
 | `emptyDescription` | `string` | search/filter hint | Empty-state description |
 | `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
 | `pageSizeOptions` | `number[]` | `[10, 20, 30, 40, 50]` | Footer page-size select |
-| `manualPagination` | `boolean` | `false` | Treat `data` / `setRows` as the **current page**; skip local filter/sort/slice; use `totalRows` for the footer |
+| `manualPagination` | `boolean` | `false` | Treat `data` / `setRows` as the **current page**; skip local filter/sort/group/slice; use `totalRows` for the pager. Implies `manualFiltering` + `manualSorting` unless those are set to `false` |
+| `manualFiltering` | `boolean` | (see note) | Skip local search/column filters; keep filter state and emit `filter` / `columnFilter` (+ `onFilterChange` / `onColumnFilterChange`). Defaults to `true` when `manualPagination` is set |
+| `manualSorting` | `boolean` | (see note) | Skip local sort; keep `sorts` / `sortKey` / `sortDir` and emit `sort` (+ `onSortChange`). Defaults to `true` when `manualPagination` is set |
 | `totalRows` | `number` | | Total count across pages when `manualPagination` is true (`setTotalRows` updates it) |
+| `defaultSorts` | `DataTableSort[]` | `[]` | Initial ordered multi-sort (`{ key, dir }[]`). Mirrored as `sortKey` / `sortDir` from the first entry |
 | `density` | `'compact' \| 'default' \| 'comfortable'` | `'default'` | Row / cell spacing (`setDensity`) |
 | `zebra` | `boolean` | `false` | Alternate-row striping (`setZebra`) |
 | `selectable` | `boolean` | `false` | Row checkboxes + selection events |
@@ -913,6 +916,9 @@ const table = ui.dataTable(tasks, {
 | `onSelectionChange` | `(keys) => void` | | After selection changes |
 | `onPageChange` | `(page) => void` | | After footer page change (useful with `manualPagination`) |
 | `onPageSizeChange` | `(pageSize) => void` | | After footer page-size change |
+| `onSortChange` | `(sorts) => void` | | After sort changes (prefer this in remote mode) |
+| `onFilterChange` | `(filter) => void` | | After global search changes (prefer this in remote mode) |
+| `onColumnFilterChange` | `(filters) => void` | | After column filters change (full map; prefer this in remote mode) |
 | `onCellChange` | `(rowKey, columnKey, value) => void` | | After inline editor commit |
 | `actions` | `DataTableAction[]` | `[]` | Per-row actions — always shown in a **⋯** overflow menu |
 | `onAction` | `(actionId, row) => void` | | Row action handler |
@@ -920,7 +926,17 @@ const table = ui.dataTable(tasks, {
 | `onBulkAction` | `(actionId, rowKeys) => void` | | Bulk action handler |
 | `className` | `string` | | Extra classes |
 
-**Remote / server-paged mode:** set `manualPagination: true`, pass the current page rows as `data` (or `setRows`), and set `totalRows` (or `setTotalRows`). The client still emits `page` / `pageSize`; handle them with `onPageChange` / `onPageSizeChange`, fetch the next slice, then `setRows` + `setTotalRows`. Local filter/sort/group are not applied in this mode (chrome may still show search UI if left enabled — prefer turning search/filters off or driving them from the server). Export uses the current page rows only. Column headers are resizable on the client (drag the right edge).
+**Remote / server-paged mode:** set `manualPagination: true`, pass the current page rows as `data` (or `setRows`), and set `totalRows` (or `setTotalRows`). Local filter/sort/group/slice are **not** applied — the table keeps filter/sort chrome state in props and emits:
+
+| Event / callback | When | App should |
+|------------------|------|------------|
+| `page` / `onPageChange` | Pager | Fetch page, `setRows` |
+| `pageSize` / `onPageSizeChange` | Rows-per-page | Reset page, fetch, `setRows` + `setTotalRows` |
+| `filter` / `onFilterChange` | Global search | Reset page, fetch with query |
+| `columnFilter` / `onColumnFilterChange` | Column filters | Reset page, fetch with filters |
+| `sort` / `onSortChange` | Header sort (incl. multi-sort) | Reset page, fetch with `sorts` |
+
+Then call `setRows` + `setTotalRows` with the server result. You can also set `manualFiltering` / `manualSorting` independently (without full remote paging) to skip only those local stages. Export uses the current page rows only when `manualPagination` is true. Column headers are resizable (drag the right edge). Shift+click a sortable header to multi-sort; sort priority numbers appear when more than one column is active. Footer aggregates (`column.aggregate`) run over the **filtered** row set locally, or over the **provided / current-page** rows when `manualPagination` is true.
 
 | View field | Type | Notes |
 |------------|------|-------|
@@ -946,6 +962,8 @@ When `groupBy` is set, filter/sort run first, then rows are stably partitioned s
 | `editor` | `'text' \| 'select' \| 'number' \| 'date' \| 'boolean'` | Inline editor on the client (`number` commits a finite number; `date` ISO `YYYY-MM-DD`; `boolean` a switch) |
 | `editorOptions` | `{ value, label }[]` | Options when `editor` is `'select'` |
 | `detailTrigger` | `boolean` | Cell opens the row detail drawer |
+| `aggregate` | `'sum' \| 'avg' \| 'count' \| 'min' \| 'max' \| (rows, col) => unknown` | Footer total for this column (filtered rows locally; provided/current-page rows when `manualPagination`) |
+| `pin` | `'left' \| 'right'` | Sticky column while scrolling horizontally (header ⋯ menu can change this at runtime) |
 
 Facet filters store selected values as a JSON string array in `columnFilters[key]` (e.g. `'["todo","done"]'`). Text columns keep substring filters in the denser filter row; facet-only tables skip that row and filter from the header popover.
 
@@ -975,7 +993,7 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 | `icon` | Lucide name (`pencil`, `trash-2`, …) from a curated action set |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
-Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `export` / `page` / `pageSize` / `action` / `bulkAction` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. `bulkAction` payload is `{ actionId, rowKeys }`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page — except in `manualPagination` mode, where export is the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
+Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `columnPin` / `export` / `page` / `pageSize` / `action` / `bulkAction` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. `sort` payload is `{ key, dir?, multi? }` or `{ sorts }` (full ordered list). `bulkAction` payload is `{ actionId, rowKeys }`. `columnPin` payload is `{ key, pin: 'left' \| 'right' \| null }`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page — except in `manualPagination` mode, where export is the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
 
 #### Structured tables (`ui.table`)
 
@@ -988,6 +1006,8 @@ Optional sugar over `ui.dataTable`. Staged methods bundle related props; `.build
 | `.search(placeholder?)` | `searchable: true`, `searchPlaceholder` |
 | `.pageSize(n, options?)` | `pageSize`, `pageSizeOptions` |
 | `.manualPagination(totalRows?)` | `manualPagination: true`, optional `totalRows` |
+| `.manualFiltering(enabled?)` | `manualFiltering` (default `true`) |
+| `.manualSorting(enabled?)` | `manualSorting` (default `true`) |
 | `.density(value)` | `density` |
 | `.zebra(enabled?)` | `zebra` (default `true`) |
 | `.groupBy(key, opts?)` | `groupBy`, `defaultCollapsed` |

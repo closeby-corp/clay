@@ -58,6 +58,8 @@ import {
   MoreVertical,
   Pause,
   Pencil,
+  Pin,
+  PinOff,
   Play,
   Plus,
   RefreshCw,
@@ -122,6 +124,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -141,6 +144,9 @@ type DataTableFacetOption = {
 
 type DataTableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
 type DataTableDensity = 'compact' | 'default' | 'comfortable';
+type DataTableSortDir = 'asc' | 'desc';
+type DataTableSort = { key: string; dir: DataTableSortDir };
+type DataTableColumnPin = 'left' | 'right';
 
 type DataTableColumn = {
   key: string;
@@ -152,6 +158,8 @@ type DataTableColumn = {
   editor?: DataTableColumnEditor;
   editorOptions?: { value: string; label: string }[];
   detailTrigger?: boolean;
+  pin?: DataTableColumnPin;
+  aggregate?: 'sum' | 'avg' | 'count' | 'min' | 'max';
 };
 
 type DataTableActionProp = {
@@ -523,21 +531,26 @@ function EditableCell({
 }
 
 function ColumnResizeHandle({
+  onResizeStart,
   onResize,
 }: {
-  onResize: (deltaX: number) => void;
+  /** Capture the column's rendered width before drag; return it as the resize baseline. */
+  onResizeStart: () => number;
+  onResize: (width: number) => void;
 }) {
   const dragging = useRef(false);
-  const lastX = useRef(0);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+  const onResizeStartRef = useRef(onResizeStart);
   const onResizeRef = useRef(onResize);
+  onResizeStartRef.current = onResizeStart;
   onResizeRef.current = onResize;
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (!dragging.current) return;
-      const dx = e.clientX - lastX.current;
-      lastX.current = e.clientX;
-      if (dx !== 0) onResizeRef.current(dx);
+      const next = startWidth.current + (e.clientX - startX.current);
+      onResizeRef.current(next);
     };
     const onUp = () => {
       dragging.current = false;
@@ -560,7 +573,8 @@ function ColumnResizeHandle({
         e.preventDefault();
         e.stopPropagation();
         dragging.current = true;
-        lastX.current = e.clientX;
+        startX.current = e.clientX;
+        startWidth.current = onResizeStartRef.current();
       }}
     />
   );
@@ -576,6 +590,62 @@ function densityHeadHeight(density: DataTableDensity): string {
   if (density === 'compact') return 'h-8';
   if (density === 'comfortable') return 'h-12';
   return '';
+}
+
+function resolveSorts(props: Record<string, unknown>): DataTableSort[] {
+  const raw = props.sorts;
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const key = String((entry as DataTableSort).key ?? '');
+        if (!key) return null;
+        const dir: DataTableSortDir =
+          (entry as DataTableSort).dir === 'desc' ? 'desc' : 'asc';
+        return { key, dir };
+      })
+      .filter((s): s is DataTableSort => s != null);
+  }
+  const sortKey = (props.sortKey as string | null) ?? null;
+  if (!sortKey) return [];
+  const sortDir: DataTableSortDir = props.sortDir === 'desc' ? 'desc' : 'asc';
+  return [{ key: sortKey, dir: sortDir }];
+}
+
+function pinStickyStyle(
+  pin: DataTableColumnPin | undefined,
+  leftOffset: number | undefined,
+  rightOffset: number | undefined,
+  width: number | undefined,
+): CSSProperties | undefined {
+  if (!pin) return undefined;
+  const style: CSSProperties = {
+    position: 'sticky',
+    zIndex: 2,
+  };
+  if (pin === 'left' && leftOffset != null) style.left = leftOffset;
+  if (pin === 'right' && rightOffset != null) style.right = rightOffset;
+  if (width != null) {
+    style.width = width;
+    style.minWidth = width;
+    style.maxWidth = width;
+  }
+  return style;
+}
+
+function isLastLeftPin(columns: DataTableColumn[], key: string): boolean {
+  let last: string | null = null;
+  for (const col of columns) {
+    if (col.pin === 'left') last = col.key;
+  }
+  return last === key;
+}
+
+function isFirstRightPin(columns: DataTableColumn[], key: string): boolean {
+  for (const col of columns) {
+    if (col.pin === 'right') return col.key === key;
+  }
+  return false;
 }
 
 function DetailDrawer({
@@ -687,8 +757,13 @@ export function BoundDataTable({
   const defaultCollapsed = props.defaultCollapsed === true;
   const primaryAction = props.primaryAction as PrimaryAction | null;
   const pageSizeOptions = (props.pageSizeOptions as number[]) ?? [10, 20, 30, 40, 50];
-  const sortKey = (props.sortKey as string | null) ?? null;
-  const sortDir = (props.sortDir as 'asc' | 'desc') ?? 'asc';
+  const sorts = resolveSorts(props);
+  const sortIndexByKey = useMemo(() => {
+    const map = new Map<string, number>();
+    sorts.forEach((s, i) => map.set(s.key, i));
+    return map;
+  }, [sorts]);
+  const footerCells = (props.footer as Record<string, unknown> | null) ?? null;
   const page = Number(props.page ?? 1);
   const pageSize = Number(props.pageSize ?? 10);
   const totalRows = Number(props.totalRows ?? rows.length);
@@ -715,6 +790,7 @@ export function BoundDataTable({
   const groupsKey = groups.map((g) => g.key).join('\0');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const headerCellRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
   const tableId = useId();
 
   const dataIds = useMemo(
@@ -782,12 +858,67 @@ export function BoundDataTable({
   const colSpan = columns.length + leadingCols + trailingCols;
   const cellPad = densityCellPad(density);
   const headHeight = densityHeadHeight(density);
+  const leadingStickyWidth = (reorderable ? 32 : 0) + (selectable ? 32 : 0);
+  const trailingStickyWidth = actions.length > 0 ? 40 : 0;
+  const defaultColWidth = 140;
 
-  const resizeColumn = (key: string, deltaX: number) => {
+  const { leftOffsets, rightOffsets } = useMemo(() => {
+    const leftOffsets: Record<string, number> = {};
+    const rightOffsets: Record<string, number> = {};
+    let left = leadingStickyWidth;
+    for (const col of columns) {
+      if (col.pin === 'left') {
+        leftOffsets[col.key] = left;
+        left += columnWidths[col.key] ?? defaultColWidth;
+      }
+    }
+    let right = trailingStickyWidth;
+    for (let i = columns.length - 1; i >= 0; i--) {
+      const col = columns[i]!;
+      if (col.pin === 'right') {
+        rightOffsets[col.key] = right;
+        right += columnWidths[col.key] ?? defaultColWidth;
+      }
+    }
+    return { leftOffsets, rightOffsets };
+  }, [columns, columnWidths, leadingStickyWidth, trailingStickyWidth]);
+
+  const hasLeftPins = columns.some((c) => c.pin === 'left');
+  const hasRightPins = columns.some((c) => c.pin === 'right');
+  const showFooterRow = footerCells != null && Object.keys(footerCells).length > 0;
+
+  const clampColumnWidth = (width: number) => Math.max(72, Math.min(480, Math.round(width)));
+
+  /** Seed explicit widths from rendered <th>s so the first drag doesn't jump from a default. */
+  const beginColumnResize = (key: string): number => {
+    const seeded: Record<string, number> = {};
+    for (const col of columns) {
+      const existing = columnWidths[col.key];
+      if (existing != null) {
+        seeded[col.key] = existing;
+        continue;
+      }
+      const el = headerCellRefs.current[col.key];
+      seeded[col.key] = el != null && el.offsetWidth > 0 ? el.offsetWidth : defaultColWidth;
+    }
     setColumnWidths((prev) => {
-      const current = prev[key] ?? 140;
-      const next = Math.max(72, Math.min(480, current + deltaX));
-      if (next === current) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const [k, w] of Object.entries(seeded)) {
+        if (next[k] == null) {
+          next[k] = w;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    return seeded[key] ?? columnWidths[key] ?? defaultColWidth;
+  };
+
+  const setColumnWidth = (key: string, width: number) => {
+    const next = clampColumnWidth(width);
+    setColumnWidths((prev) => {
+      if (prev[key] === next) return prev;
       return { ...prev, [key]: next };
     });
   };
@@ -1102,19 +1233,22 @@ export function BoundDataTable({
         containerClassName="max-h-[min(60vh,28rem)] overflow-auto"
         className={cn(density === 'compact' && 'text-xs', density === 'comfortable' && 'text-sm')}
         style={
-          Object.keys(columnWidths).length > 0
-            ? ({ tableLayout: 'fixed' } as CSSProperties)
+          Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins
+            ? ({ tableLayout: 'fixed', width: '100%' } as CSSProperties)
             : undefined
         }
       >
-        {Object.keys(columnWidths).length > 0 ? (
+        {Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins ? (
           <colgroup>
             {reorderable ? <col style={{ width: 32 }} /> : null}
             {selectable ? <col style={{ width: 32 }} /> : null}
             {columns.map((col) => (
               <col
                 key={col.key}
-                style={columnWidths[col.key] != null ? { width: columnWidths[col.key] } : undefined}
+                style={{
+                  width:
+                    columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined),
+                }}
               />
             ))}
             {actions.length > 0 ? <col style={{ width: 40 }} /> : null}
@@ -1122,9 +1256,29 @@ export function BoundDataTable({
         ) : null}
         <TableHeader className="sticky top-0 z-10 bg-muted [&_tr]:border-b">
           <TableRow className="hover:bg-transparent">
-            {reorderable ? <TableHead className={cn('w-8 bg-muted', headHeight)} /> : null}
+            {reorderable ? (
+              <TableHead
+                className={cn(
+                  'w-8 bg-muted',
+                  headHeight,
+                  hasLeftPins && 'sticky left-0 z-[3]',
+                )}
+                style={hasLeftPins ? { left: 0 } : undefined}
+              />
+            ) : null}
             {selectable ? (
-              <TableHead className={cn('w-8 bg-muted', headHeight)}>
+              <TableHead
+                className={cn(
+                  'w-8 bg-muted',
+                  headHeight,
+                  hasLeftPins && 'sticky z-[3]',
+                )}
+                style={
+                  hasLeftPins
+                    ? { left: reorderable ? 32 : 0 }
+                    : undefined
+                }
+              >
                 <Checkbox
                   checked={
                     sortableIds.length > 0 &&
@@ -1147,31 +1301,56 @@ export function BoundDataTable({
             ) : null}
             {columns.map((col) => {
               const sortable = col.sortable !== false && !col.editor && !col.detailTrigger;
-              const active = sortKey === col.key;
+              const sortIdx = sortIndexByKey.get(col.key);
+              const active = sortIdx != null;
+              const sortDir = active ? sorts[sortIdx!]!.dir : 'asc';
               const SortIcon = !active
                 ? ChevronsUpDown
                 : sortDir === 'asc'
                   ? ArrowUp
                   : ArrowDown;
               const facet = columnFilterable && isFacetColumn(col);
+              const pinStyle = pinStickyStyle(
+                col.pin,
+                leftOffsets[col.key],
+                rightOffsets[col.key],
+                columnWidths[col.key],
+              );
+              const pinEdge =
+                (col.pin === 'left' && isLastLeftPin(columns, col.key)
+                  ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+                  : null) ??
+                (col.pin === 'right' && isFirstRightPin(columns, col.key)
+                  ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+                  : null);
               return (
                 <TableHead
                   key={col.key}
+                  ref={(el) => {
+                    headerCellRefs.current[col.key] = el;
+                  }}
                   className={cn(
                     'relative bg-muted',
                     headHeight,
                     col.align === 'right' && 'text-right',
                     col.align === 'center' && 'text-center',
+                    col.pin && 'z-[2]',
+                    pinEdge,
                   )}
-                  style={
-                    columnWidths[col.key] != null
-                      ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] }
-                      : undefined
-                  }
+                  style={{
+                    ...pinStyle,
+                    ...(columnWidths[col.key] != null && !col.pin
+                      ? {
+                          width: columnWidths[col.key],
+                          minWidth: columnWidths[col.key],
+                          maxWidth: columnWidths[col.key],
+                        }
+                      : null),
+                  }}
                 >
                   <div
                     className={cn(
-                      'flex items-center gap-1',
+                      'flex items-center gap-0.5',
                       col.align === 'right' && 'justify-end',
                       col.align === 'center' && 'justify-center',
                     )}
@@ -1184,15 +1363,26 @@ export function BoundDataTable({
                           '-ml-2 gap-1.5 px-2 font-medium',
                           density === 'compact' ? 'h-7' : 'h-8',
                         )}
-                        onClick={() => {
+                        title="Sort — Shift+click for multi-sort"
+                        onClick={(e) => {
                           if (!hasEvent(props, 'sort')) return;
-                          const nextDir: 'asc' | 'desc' =
+                          const multi = e.shiftKey;
+                          if (multi) {
+                            emit(id, 'sort', { key: col.key, multi: true });
+                            return;
+                          }
+                          const nextDir: DataTableSortDir =
                             active && sortDir === 'asc' ? 'desc' : 'asc';
                           emit(id, 'sort', { key: col.key, dir: nextDir });
                         }}
                       >
                         {col.header}
                         <SortIcon className="size-3.5 text-muted-foreground" />
+                        {active && sorts.length > 1 ? (
+                          <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+                            {sortIdx! + 1}
+                          </span>
+                        ) : null}
                       </Button>
                     ) : (
                       <span className="font-medium">{col.header}</span>
@@ -1204,12 +1394,80 @@ export function BoundDataTable({
                         onChange={(values) => setFacetFilter(col.key, values)}
                       />
                     ) : null}
+                    {hasEvent(props, 'columnPin') ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              'size-7 shrink-0 text-muted-foreground',
+                              col.pin && 'text-foreground',
+                            )}
+                            aria-label={`${col.header} column options`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {col.pin ? (
+                              <Pin className="size-3.5" />
+                            ) : (
+                              <MoreHorizontal className="size-3.5" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              emit(id, 'columnPin', {
+                                key: col.key,
+                                pin: col.pin === 'left' ? null : 'left',
+                              })
+                            }
+                          >
+                            <Pin className="size-3.5" />
+                            {col.pin === 'left' ? 'Unpin' : 'Pin left'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              emit(id, 'columnPin', {
+                                key: col.key,
+                                pin: col.pin === 'right' ? null : 'right',
+                              })
+                            }
+                          >
+                            <Pin className="size-3.5 rotate-45" />
+                            {col.pin === 'right' ? 'Unpin' : 'Pin right'}
+                          </DropdownMenuItem>
+                          {col.pin ? (
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                emit(id, 'columnPin', { key: col.key, pin: null })
+                              }
+                            >
+                              <PinOff className="size-3.5" />
+                              Clear pin
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
                   </div>
-                  <ColumnResizeHandle onResize={(dx) => resizeColumn(col.key, dx)} />
+                  <ColumnResizeHandle
+                    onResizeStart={() => beginColumnResize(col.key)}
+                    onResize={(width) => setColumnWidth(col.key, width)}
+                  />
                 </TableHead>
               );
             })}
-            {actions.length > 0 ? <TableHead className={cn('w-8 bg-muted', headHeight)} /> : null}
+            {actions.length > 0 ? (
+              <TableHead
+                className={cn(
+                  'w-8 bg-muted',
+                  headHeight,
+                  hasRightPins && 'sticky z-[3]',
+                )}
+                style={hasRightPins ? { right: 0 } : undefined}
+              />
+            ) : null}
           </TableRow>
           {hasTextColumnFilters ? (
             <TableRow className="hover:bg-transparent">
@@ -1314,12 +1572,34 @@ export function BoundDataTable({
                     className={zebraClass}
                   >
                     {reorderable ? (
-                      <TableCell className={cn('w-8 px-1', cellPad)}>
+                      <TableCell
+                        className={cn(
+                          'w-8 px-1',
+                          cellPad,
+                          hasLeftPins && 'sticky left-0 z-[1] bg-background',
+                          zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
+                          isSelected && hasLeftPins && 'bg-muted',
+                        )}
+                        style={hasLeftPins ? { left: 0 } : undefined}
+                      >
                         <DragHandle id={rowKey} />
                       </TableCell>
                     ) : null}
                     {selectable ? (
-                      <TableCell className={cn('w-8 px-1', cellPad)}>
+                      <TableCell
+                        className={cn(
+                          'w-8 px-1',
+                          cellPad,
+                          hasLeftPins && 'sticky z-[1] bg-background',
+                          zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
+                          isSelected && hasLeftPins && 'bg-muted',
+                        )}
+                        style={
+                          hasLeftPins
+                            ? { left: reorderable ? 32 : 0 }
+                            : undefined
+                        }
+                      >
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(value) => {
@@ -1332,20 +1612,49 @@ export function BoundDataTable({
                         />
                       </TableCell>
                     ) : null}
-                    {columns.map((col) => (
-                      <TableCell
-                        key={col.key}
-                        className={cn(
-                          cellPad,
-                          col.align === 'right' && 'text-right',
-                          col.align === 'center' && 'text-center',
-                        )}
-                      >
-                        {renderCellContent(row, col, rowKey)}
-                      </TableCell>
-                    ))}
+                    {columns.map((col) => {
+                      const pinStyle = pinStickyStyle(
+                        col.pin,
+                        leftOffsets[col.key],
+                        rightOffsets[col.key],
+                        columnWidths[col.key],
+                      );
+                      const pinEdge =
+                        (col.pin === 'left' && isLastLeftPin(columns, col.key)
+                          ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+                          : null) ??
+                        (col.pin === 'right' && isFirstRightPin(columns, col.key)
+                          ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
+                          : null);
+                      return (
+                        <TableCell
+                          key={col.key}
+                          className={cn(
+                            cellPad,
+                            col.align === 'right' && 'text-right',
+                            col.align === 'center' && 'text-center',
+                            col.pin && 'bg-background',
+                            zebra && i % 2 === 1 && col.pin && 'bg-muted/30',
+                            isSelected && col.pin && 'bg-muted',
+                            pinEdge,
+                          )}
+                          style={pinStyle}
+                        >
+                          {renderCellContent(row, col, rowKey)}
+                        </TableCell>
+                      );
+                    })}
                     {actions.length > 0 ? (
-                      <TableCell className={cn('w-8 px-1', cellPad)}>
+                      <TableCell
+                        className={cn(
+                          'w-8 px-1',
+                          cellPad,
+                          hasRightPins && 'sticky z-[1] bg-background',
+                          zebra && i % 2 === 1 && hasRightPins && 'bg-muted/30',
+                          isSelected && hasRightPins && 'bg-muted',
+                        )}
+                        style={hasRightPins ? { right: 0 } : undefined}
+                      >
                         <DropdownMenu
                           open={actionsMenuKey === rowKey}
                           onOpenChange={(open) => {
@@ -1398,6 +1707,68 @@ export function BoundDataTable({
             </SortableContext>
           )}
         </TableBody>
+        {showFooterRow && !loading && rows.length > 0 ? (
+          <TableFooter className="sticky bottom-0 z-[1] bg-muted/80 backdrop-blur-sm">
+            <TableRow className="hover:bg-transparent">
+              {reorderable ? (
+                <TableCell
+                  className={cn(
+                    'bg-muted/80',
+                    hasLeftPins && 'sticky left-0 z-[2]',
+                  )}
+                  style={hasLeftPins ? { left: 0 } : undefined}
+                />
+              ) : null}
+              {selectable ? (
+                <TableCell
+                  className={cn(
+                    'bg-muted/80',
+                    hasLeftPins && 'sticky z-[2]',
+                  )}
+                  style={
+                    hasLeftPins ? { left: reorderable ? 32 : 0 } : undefined
+                  }
+                />
+              ) : null}
+              {columns.map((col) => {
+                const value = footerCells?.[col.key];
+                const pinStyle = pinStickyStyle(
+                  col.pin,
+                  leftOffsets[col.key],
+                  rightOffsets[col.key],
+                  columnWidths[col.key],
+                );
+                return (
+                  <TableCell
+                    key={`footer-${col.key}`}
+                    className={cn(
+                      'bg-muted/80 font-medium tabular-nums',
+                      col.align === 'right' && 'text-right',
+                      col.align === 'center' && 'text-center',
+                      col.pin && 'z-[2]',
+                    )}
+                    style={pinStyle}
+                  >
+                    {value == null || value === ''
+                      ? null
+                      : col.aggregate === 'count'
+                        ? `${value}`
+                        : String(value)}
+                  </TableCell>
+                );
+              })}
+              {actions.length > 0 ? (
+                <TableCell
+                  className={cn(
+                    'bg-muted/80',
+                    hasRightPins && 'sticky z-[2]',
+                  )}
+                  style={hasRightPins ? { right: 0 } : undefined}
+                />
+              ) : null}
+            </TableRow>
+          </TableFooter>
+        ) : null}
       </Table>
     </DndContext>
   );

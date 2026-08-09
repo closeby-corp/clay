@@ -56,14 +56,27 @@ export class TableBuilder {
   }
 
   /**
-   * Server-paged mode: rows are the current page; `totalRows` drives the footer.
-   * Wire `onPageChange` / `onPageSizeChange` (or listen after `.build()`) to fetch.
+   * Server-paged mode: rows are the current page; `totalRows` drives the pager.
+   * Also implies remote filter/sort unless overridden. Wire `onPageChange` /
+   * `onPageSizeChange` / `onSortChange` / `onFilterChange` to fetch.
    */
   manualPagination(totalRows?: number): this {
     this.props.manualPagination = true;
     if (totalRows !== undefined) {
       this.props.totalRows = totalRows;
     }
+    return this;
+  }
+
+  /** Skip local search/column filters; emit filter events for the app to fetch. */
+  manualFiltering(enabled = true): this {
+    this.props.manualFiltering = enabled;
+    return this;
+  }
+
+  /** Skip local sort; emit sort events for the app to fetch. */
+  manualSorting(enabled = true): this {
+    this.props.manualSorting = enabled;
     return this;
   }
 

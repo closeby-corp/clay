@@ -9,6 +9,23 @@ export type DataTableDensity = 'compact' | 'default' | 'comfortable';
 /** Per-column filter UI. `'facet'` is multi-select exact match for enum-like values. */
 export type TableColumnFilter = 'text' | 'facet';
 
+/** Sticky column edge while the table scrolls horizontally. */
+export type TableColumnPin = 'left' | 'right';
+
+/** Built-in footer aggregate, or a custom reducer over the aggregate row set. */
+export type TableColumnAggregate =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'min'
+  | 'max'
+  | ((rows: Record<string, unknown>[], col: TableColumn) => unknown);
+
+export type DataTableSortDir = 'asc' | 'desc';
+
+/** Ordered multi-sort entry. First entry is primary. */
+export type DataTableSort = { key: string; dir: DataTableSortDir };
+
 export type DataTableFacetOption = {
   value: string;
   label: string;
@@ -46,6 +63,13 @@ export type TableColumn = {
   editorOptions?: { value: string; label: string }[];
   /** Render this cell as a link that opens the row detail drawer. */
   detailTrigger?: boolean;
+  /**
+   * Footer aggregate over the aggregate row set (filtered rows in local mode;
+   * provided / current-page rows when `manualPagination` is true).
+   */
+  aggregate?: TableColumnAggregate;
+  /** Pin this column while scrolling horizontally. */
+  pin?: TableColumnPin;
 };
 
 export type DataTableAction = {
@@ -92,15 +116,32 @@ export type DataTableProps = {
   pageSizeOptions?: number[];
   /**
    * When true, `data` / `setRows` are treated as the **current page** only.
-   * Filter/sort/group are not applied server-side; use `totalRows` for the footer
-   * and listen to `page` / `pageSize` (via `onPageChange` / `onPageSizeChange`) to fetch.
+   * Local filter/sort/group/slice are skipped (same as enabling both
+   * `manualFiltering` and `manualSorting`). Use `totalRows` for the pager and
+   * listen to `page` / `pageSize` / filter / sort events to fetch, then
+   * `setRows` / `setTotalRows`.
    */
   manualPagination?: boolean;
+  /**
+   * When true, do not apply local search/column filters; keep filter state in
+   * props and emit `filter` / `columnFilter` (and `onFilterChange` /
+   * `onColumnFilterChange`) so the app can fetch. Defaults to true when
+   * `manualPagination` is set.
+   */
+  manualFiltering?: boolean;
+  /**
+   * When true, do not apply local sort; keep `sorts` / `sortKey` / `sortDir` in
+   * props and emit `sort` (and `onSortChange`) so the app can fetch. Defaults to
+   * true when `manualPagination` is set.
+   */
+  manualSorting?: boolean;
   /**
    * Total row count across all pages. Used when `manualPagination` is true
    * (otherwise derived from the processed local row set). Also settable via `setTotalRows`.
    */
   totalRows?: number;
+  /** Initial multi-sort (ordered). Also mirrored as `sortKey` / `sortDir` from the first entry. */
+  defaultSorts?: DataTableSort[];
   /** Row density. Default `'default'`. */
   density?: DataTableDensity;
   /** Alternate-row striping. Default `false`. */
@@ -146,6 +187,12 @@ export type DataTableProps = {
   onSelectionChange?: (keys: Array<string | number>) => void | Promise<void>;
   onPageChange?: (page: number) => void | Promise<void>;
   onPageSizeChange?: (pageSize: number) => void | Promise<void>;
+  /** After sort changes (single or multi). Prefer this in manual/remote mode. */
+  onSortChange?: (sorts: DataTableSort[]) => void | Promise<void>;
+  /** After global search text changes. Prefer this in manual/remote mode. */
+  onFilterChange?: (filter: string) => void | Promise<void>;
+  /** After per-column filters change (full map). Prefer this in manual/remote mode. */
+  onColumnFilterChange?: (filters: Record<string, string>) => void | Promise<void>;
   onCellChange?: (
     rowKey: string | number,
     columnKey: string,
@@ -170,13 +217,21 @@ export const GROUP_KEY_FIELD = '__groupKey';
 
 export type UiCell = { __ui: ElementNode };
 
-type SortDir = 'asc' | 'desc';
+type SortDir = DataTableSortDir;
 
-type SortPayload = { key?: string; dir?: SortDir };
+type SortPayload = {
+  key?: string;
+  dir?: SortDir;
+  /** When true (shift-click), add/update this column in the multi-sort list. */
+  multi?: boolean;
+  /** Explicit replace of the full ordered sort list. */
+  sorts?: DataTableSort[];
+};
 type ActionPayload = { actionId?: string; rowKey?: string | number };
 type BulkActionPayload = { actionId?: string; rowKeys?: Array<string | number> };
 type ColumnFilterPayload = { key?: string; value?: string };
 type ColumnVisibilityPayload = { key?: string; visible?: boolean };
+type ColumnPinPayload = { key?: string; pin?: TableColumnPin | null | false };
 type ExportPayload = { format?: ExportFormat; mode?: ExportMode };
 type ReorderPayload = { orderedKeys?: Array<string | number> };
 type SelectionPayload = { keys?: Array<string | number> };
@@ -200,6 +255,9 @@ type ClientColumn = {
   editor?: TableColumnEditor;
   editorOptions?: { value: string; label: string }[];
   detailTrigger?: boolean;
+  pin?: TableColumnPin;
+  /** Built-in aggregate name when set (custom functions are opaque to the client). */
+  aggregate?: 'sum' | 'avg' | 'count' | 'min' | 'max';
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -381,6 +439,15 @@ function toClientColumns(
       editor: col.editor,
       editorOptions: col.editorOptions,
       detailTrigger: col.detailTrigger,
+      pin: col.pin === 'left' || col.pin === 'right' ? col.pin : undefined,
+      aggregate:
+        col.aggregate === 'sum' ||
+        col.aggregate === 'avg' ||
+        col.aggregate === 'count' ||
+        col.aggregate === 'min' ||
+        col.aggregate === 'max'
+          ? col.aggregate
+          : undefined,
     };
   });
 }
@@ -507,6 +574,106 @@ function compareValues(a: unknown, b: unknown): number {
   return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
 }
 
+function normalizeSorts(
+  sorts: DataTableSort[] | undefined,
+  columns: TableColumn[],
+): DataTableSort[] {
+  if (!sorts || sorts.length === 0) return [];
+  const keys = new Set(columns.map((c) => c.key));
+  const out: DataTableSort[] = [];
+  const seen = new Set<string>();
+  for (const entry of sorts) {
+    if (!entry?.key || !keys.has(entry.key) || seen.has(entry.key)) continue;
+    const col = columns.find((c) => c.key === entry.key);
+    if (!col || col.sortable === false) continue;
+    seen.add(entry.key);
+    out.push({ key: entry.key, dir: entry.dir === 'desc' ? 'desc' : 'asc' });
+  }
+  return out;
+}
+
+function sortRowsBySorts(
+  rows: Record<string, unknown>[],
+  sorts: DataTableSort[],
+  columns: TableColumn[],
+): Record<string, unknown>[] {
+  if (sorts.length === 0) return rows;
+  return [...rows].sort((a, b) => {
+    for (const { key, dir } of sorts) {
+      const col = columns.find((c) => c.key === key);
+      const av = col ? cellValue(col, a) : a[key];
+      const bv = col ? cellValue(col, b) : b[key];
+      const cmp = compareValues(av, bv);
+      if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
+    }
+    return 0;
+  });
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function formatAggregateValue(value: unknown): unknown {
+  if (value == null) return '';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '';
+    return Number.isInteger(value) ? value : Math.round(value * 100) / 100;
+  }
+  return value;
+}
+
+/** Compute a single column aggregate over `rows`. */
+export function computeColumnAggregate(
+  col: TableColumn,
+  rows: Record<string, unknown>[],
+): unknown {
+  if (!col.aggregate) return null;
+  if (typeof col.aggregate === 'function') {
+    return formatAggregateValue(col.aggregate(rows, col));
+  }
+  if (col.aggregate === 'count') {
+    return rows.length;
+  }
+  const nums = rows
+    .map((row) => toFiniteNumber(cellValue(col, row)))
+    .filter((n): n is number => n != null);
+  if (col.aggregate === 'sum') {
+    return formatAggregateValue(nums.reduce((acc, n) => acc + n, 0));
+  }
+  if (col.aggregate === 'avg') {
+    if (nums.length === 0) return '';
+    return formatAggregateValue(nums.reduce((acc, n) => acc + n, 0) / nums.length);
+  }
+  if (col.aggregate === 'min') {
+    if (nums.length === 0) return '';
+    return formatAggregateValue(Math.min(...nums));
+  }
+  if (col.aggregate === 'max') {
+    if (nums.length === 0) return '';
+    return formatAggregateValue(Math.max(...nums));
+  }
+  return null;
+}
+
+/** Visible-column order with left pins first and right pins last. */
+export function orderColumnsByPin(columns: TableColumn[]): TableColumn[] {
+  const left: TableColumn[] = [];
+  const middle: TableColumn[] = [];
+  const right: TableColumn[] = [];
+  for (const col of columns) {
+    if (col.pin === 'left') left.push(col);
+    else if (col.pin === 'right') right.push(col);
+    else middle.push(col);
+  }
+  return [...left, ...middle, ...right];
+}
+
 function rowMatchesGlobalFilter(
   row: Record<string, unknown>,
   columns: TableColumn[],
@@ -597,8 +764,7 @@ export class DataTableElement extends Element {
   private columns: TableColumn[];
   private columnsExplicit: boolean;
   private keyField: string;
-  private sortKey: string | null = null;
-  private sortDir: SortDir = 'asc';
+  private sorts: DataTableSort[] = [];
   private filter = '';
   private columnFilters: Record<string, string> = {};
   private hiddenKeys = new Set<string>();
@@ -606,6 +772,8 @@ export class DataTableElement extends Element {
   private pageSize: number;
   private pageSizeOptions: number[];
   private manualPagination: boolean;
+  private manualFiltering: boolean;
+  private manualSorting: boolean;
   private manualTotalRows: number | null;
   private density: DataTableDensity;
   private zebra: boolean;
@@ -637,6 +805,9 @@ export class DataTableElement extends Element {
   private onSelectionChangeFn?: (keys: Array<string | number>) => void | Promise<void>;
   private onPageChangeFn?: (page: number) => void | Promise<void>;
   private onPageSizeChangeFn?: (pageSize: number) => void | Promise<void>;
+  private onSortChangeFn?: (sorts: DataTableSort[]) => void | Promise<void>;
+  private onFilterChangeFn?: (filter: string) => void | Promise<void>;
+  private onColumnFilterChangeFn?: (filters: Record<string, string>) => void | Promise<void>;
   private onCellChangeFn?: (
     rowKey: string | number,
     columnKey: string,
@@ -654,6 +825,11 @@ export class DataTableElement extends Element {
     const pageSize = props.pageSize ?? 10;
     const pageSizeOptions = props.pageSizeOptions ?? [10, 20, 30, 40, 50];
     const manualPagination = props.manualPagination === true;
+    const manualFiltering =
+      props.manualFiltering === true ||
+      (manualPagination && props.manualFiltering !== false);
+    const manualSorting =
+      props.manualSorting === true || (manualPagination && props.manualSorting !== false);
     const manualTotalRows =
       props.totalRows != null && Number.isFinite(props.totalRows)
         ? Math.max(0, Math.floor(Number(props.totalRows)))
@@ -682,6 +858,7 @@ export class DataTableElement extends Element {
     const groupBy = props.groupBy;
     const defaultCollapsed = props.defaultCollapsed === true;
     const primaryAction = props.primaryAction;
+    const initialSorts = normalizeSorts(props.defaultSorts, columns);
 
     super('datatable', {
       columns: toClientColumns(columns),
@@ -717,24 +894,31 @@ export class DataTableElement extends Element {
       filter: '',
       columnFilters: {},
       hiddenColumns: [],
-      sortKey: null,
-      sortDir: 'asc',
+      sorts: initialSorts,
+      sortKey: initialSorts[0]?.key ?? null,
+      sortDir: initialSorts[0]?.dir ?? 'asc',
       page: 1,
       pageSize,
       manualPagination,
+      manualFiltering,
+      manualSorting,
       density,
       zebra,
       totalRows: 0,
       totalPages: 1,
+      footer: null,
     });
 
     this.sourceRows = rows;
     this.columns = columns;
     this.columnsExplicit = columnsExplicit;
     this.keyField = keyField;
+    this.sorts = initialSorts;
     this.pageSize = pageSize;
     this.pageSizeOptions = pageSizeOptions;
     this.manualPagination = manualPagination;
+    this.manualFiltering = manualFiltering;
+    this.manualSorting = manualSorting;
     this.manualTotalRows = manualTotalRows;
     this.density = density;
     this.zebra = zebra;
@@ -763,6 +947,9 @@ export class DataTableElement extends Element {
     this.onSelectionChangeFn = props.onSelectionChange;
     this.onPageChangeFn = props.onPageChange;
     this.onPageSizeChangeFn = props.onPageSizeChange;
+    this.onSortChangeFn = props.onSortChange;
+    this.onFilterChangeFn = props.onFilterChange;
+    this.onColumnFilterChangeFn = props.onColumnFilterChange;
     this.onCellChangeFn = props.onCellChange;
     this.onViewChangeFn = props.onViewChange;
     this.onGroupToggleFn = props.onGroupToggle;
@@ -772,6 +959,7 @@ export class DataTableElement extends Element {
     this.on('filter', (value) => this.handleFilter(value));
     this.on('columnFilter', (value) => this.handleColumnFilter(value));
     this.on('columnVisibility', (value) => this.handleColumnVisibility(value));
+    this.on('columnPin', (value) => this.handleColumnPin(value));
     this.on('export', (value) => this.handleExport(value));
     this.on('page', (value) => this.handlePage(value));
     this.on('action', (value) => this.handleAction(value));
@@ -822,6 +1010,18 @@ export class DataTableElement extends Element {
     return this;
   }
 
+  /** Replace the ordered multi-sort list. Empty clears sort. */
+  setSorts(sorts: DataTableSort[]): this {
+    this.sorts = normalizeSorts(sorts, this.columns);
+    this.page = 1;
+    this.syncView();
+    return this;
+  }
+
+  getSorts(): DataTableSort[] {
+    return this.sorts.map((s) => ({ ...s }));
+  }
+
   setRows(data: unknown): this {
     const { rows, inferredColumns } = normalizeTableData(data);
     this.sourceRows = rows;
@@ -834,6 +1034,7 @@ export class DataTableElement extends Element {
       for (const key of [...this.hiddenKeys]) {
         if (!keys.has(key)) this.hiddenKeys.delete(key);
       }
+      this.sorts = normalizeSorts(this.sorts, this.columns);
     }
     // Remote pages keep the current page; local mode resets to page 1.
     if (!this.manualPagination) {
@@ -844,33 +1045,68 @@ export class DataTableElement extends Element {
   }
 
   visibleColumns(): TableColumn[] {
-    return this.columns.filter((col) => !this.hiddenKeys.has(col.key));
+    return orderColumnsByPin(this.columns.filter((col) => !this.hiddenKeys.has(col.key)));
   }
 
-  private handleSort(value: unknown): void {
+  private async handleSort(value: unknown): Promise<void> {
     const payload = (value ?? {}) as SortPayload;
-    const key = payload.key;
-    if (!key) return;
-    const col = this.columns.find((c) => c.key === key);
-    if (!col || col.sortable === false) return;
 
-    if (this.sortKey === key) {
-      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    if (Array.isArray(payload.sorts)) {
+      this.sorts = normalizeSorts(payload.sorts, this.columns);
     } else {
-      this.sortKey = key;
-      this.sortDir = payload.dir === 'desc' ? 'desc' : 'asc';
+      const key = payload.key;
+      if (!key) return;
+      const col = this.columns.find((c) => c.key === key);
+      if (!col || col.sortable === false) return;
+      const dir: SortDir = payload.dir === 'desc' ? 'desc' : 'asc';
+      const multi = payload.multi === true;
+
+      if (multi) {
+        const idx = this.sorts.findIndex((s) => s.key === key);
+        if (idx >= 0) {
+          const current = this.sorts[idx]!;
+          if (payload.dir == null && current.dir === 'asc') {
+            this.sorts = this.sorts.map((s, i) => (i === idx ? { key, dir: 'desc' } : s));
+          } else if (payload.dir == null && current.dir === 'desc') {
+            this.sorts = this.sorts.filter((_, i) => i !== idx);
+          } else if (payload.dir != null && current.dir === payload.dir) {
+            // Same dir again while multi → remove from list.
+            this.sorts = this.sorts.filter((_, i) => i !== idx);
+          } else {
+            this.sorts = this.sorts.map((s, i) => (i === idx ? { key, dir } : s));
+          }
+        } else {
+          this.sorts = [...this.sorts, { key, dir }];
+        }
+      } else if (payload.dir != null) {
+        this.sorts = [{ key, dir }];
+      } else {
+        const current = this.sorts.length === 1 ? this.sorts[0] : null;
+        if (current?.key === key) {
+          this.sorts = [{ key, dir: current.dir === 'asc' ? 'desc' : 'asc' }];
+        } else {
+          this.sorts = [{ key, dir: 'asc' }];
+        }
+      }
     }
+
     this.page = 1;
     this.syncView();
+    if (this.onSortChangeFn) {
+      await this.onSortChangeFn(this.getSorts());
+    }
   }
 
-  private handleFilter(value: unknown): void {
+  private async handleFilter(value: unknown): Promise<void> {
     this.filter = String(value ?? '');
     this.page = 1;
     this.syncView();
+    if (this.onFilterChangeFn) {
+      await this.onFilterChangeFn(this.filter);
+    }
   }
 
-  private handleColumnFilter(value: unknown): void {
+  private async handleColumnFilter(value: unknown): Promise<void> {
     const payload = (value ?? {}) as ColumnFilterPayload;
     const key = payload.key;
     const col = this.columns.find((c) => c.key === key);
@@ -890,6 +1126,9 @@ export class DataTableElement extends Element {
     }
     this.page = 1;
     this.syncView();
+    if (this.onColumnFilterChangeFn) {
+      await this.onColumnFilterChangeFn({ ...this.columnFilters });
+    }
   }
 
   private handleColumnVisibility(value: unknown): void {
@@ -905,6 +1144,20 @@ export class DataTableElement extends Element {
       this.hiddenKeys.add(key);
     } else {
       this.hiddenKeys.delete(key);
+    }
+    this.syncView();
+  }
+
+  private handleColumnPin(value: unknown): void {
+    const payload = (value ?? {}) as ColumnPinPayload;
+    const key = payload.key;
+    const col = this.columns.find((c) => c.key === key);
+    if (!key || !col) return;
+    const pin = payload.pin;
+    if (pin === 'left' || pin === 'right') {
+      col.pin = pin;
+    } else {
+      delete col.pin;
     }
     this.syncView();
   }
@@ -1132,31 +1385,50 @@ export class DataTableElement extends Element {
   /**
    * Visible rows after view filter + search/column filters + sort (+ group contiguous).
    * When `manualPagination` is set, returns `sourceRows` unchanged (already a page).
+   * When only `manualFiltering` / `manualSorting` are set, those stages are skipped
+   * but the other local pipeline stages still run.
    */
   computeProcessedRows(): Record<string, unknown>[] {
     if (this.manualPagination) {
       return this.sourceRows;
     }
-    let rows = this.viewFilteredRows().filter(
-      (row) =>
-        rowMatchesGlobalFilter(row, this.columns, this.filter) &&
-        rowMatchesColumnFilters(row, this.columns, this.columnFilters),
-    );
-    if (this.sortKey) {
-      const key = this.sortKey;
-      const dir = this.sortDir;
-      const col = this.columns.find((c) => c.key === key);
-      rows = [...rows].sort((a, b) => {
-        const av = col ? cellValue(col, a) : a[key];
-        const bv = col ? cellValue(col, b) : b[key];
-        const cmp = compareValues(av, bv);
-        return dir === 'asc' ? cmp : -cmp;
-      });
+    let rows = this.viewFilteredRows();
+    if (!this.manualFiltering) {
+      rows = rows.filter(
+        (row) =>
+          rowMatchesGlobalFilter(row, this.columns, this.filter) &&
+          rowMatchesColumnFilters(row, this.columns, this.columnFilters),
+      );
+    }
+    if (!this.manualSorting && this.sorts.length > 0) {
+      rows = sortRowsBySorts(rows, this.sorts, this.columns);
     }
     if (this.groupBy) {
       rows = groupRows(rows, this.groupBy, this.columns).rows;
     }
     return rows;
+  }
+
+  /** Rows used for footer aggregates (filtered set locally; provided rows when remote-paged). */
+  private aggregateRows(): Record<string, unknown>[] {
+    if (this.manualPagination) {
+      return this.sourceRows;
+    }
+    return this.computeProcessedRows();
+  }
+
+  private buildFooter(
+    visibleCols: TableColumn[],
+    rows: Record<string, unknown>[],
+  ): Record<string, unknown> | null {
+    const hasAny = visibleCols.some((col) => col.aggregate != null);
+    if (!hasAny) return null;
+    const footer: Record<string, unknown> = {};
+    for (const col of visibleCols) {
+      if (col.aggregate == null) continue;
+      footer[col.key] = computeColumnAggregate(col, rows);
+    }
+    return footer;
   }
 
   private clientViews(): Array<{ id: string; label: string; count: number }> {
@@ -1203,10 +1475,15 @@ export class DataTableElement extends Element {
       if (isFacetColumn(col)) {
         facetRowsByKey.set(
           col.key,
-          this.manualPagination ? this.sourceRows : this.facetBaseRows(col.key),
+          this.manualFiltering || this.manualPagination
+            ? this.sourceRows
+            : this.facetBaseRows(col.key),
         );
       }
     }
+
+    const footer = this.buildFooter(visibleCols, this.aggregateRows());
+    const sorts = this.sorts.map((s) => ({ ...s }));
 
     this.update({
       columns: toClientColumns(visibleCols, facetRowsByKey),
@@ -1215,16 +1492,20 @@ export class DataTableElement extends Element {
       filter: this.filter,
       columnFilters: { ...this.columnFilters },
       hiddenColumns: [...this.hiddenKeys],
-      sortKey: this.sortKey,
-      sortDir: this.sortDir,
+      sorts,
+      sortKey: sorts[0]?.key ?? null,
+      sortDir: sorts[0]?.dir ?? 'asc',
       page: this.page,
       pageSize: this.pageSize,
       pageSizeOptions: this.pageSizeOptions,
       manualPagination: this.manualPagination,
+      manualFiltering: this.manualFiltering,
+      manualSorting: this.manualSorting,
       density: this.density,
       zebra: this.zebra,
       totalRows,
       totalPages,
+      footer,
       searchable: this.searchable,
       searchPlaceholder: this.searchPlaceholder,
       columnFilterable: this.columnFilterable,

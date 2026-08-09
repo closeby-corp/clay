@@ -221,6 +221,7 @@ describe('DataTableElement', () => {
         'filter',
         'columnFilter',
         'columnVisibility',
+        'columnPin',
         'export',
         'page',
         'action',
@@ -687,5 +688,126 @@ describe('DataTableElement', () => {
     expect(stored.hours).toBe(12);
     expect(stored.due).toBe('2026-08-01');
     expect(stored.active).toBe(true);
+  });
+
+  test('multi-sort via multi flag and sorts payload', async () => {
+    const table = new DataTableElement(rows, { columns, pageSize: 10 });
+    await table.handleEvent('sort', { key: 'status', dir: 'asc' });
+    await table.handleEvent('sort', { key: 'hours', multi: true, dir: 'asc' });
+    expect(table.props.sorts).toEqual([
+      { key: 'status', dir: 'asc' },
+      { key: 'hours', dir: 'asc' },
+    ]);
+    expect(table.props.sortKey).toBe('status');
+    expect(table.props.sortDir).toBe('asc');
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Charlie',
+      'Alpha',
+      'Echo',
+      'Delta',
+      'Bravo',
+    ]);
+
+    await table.handleEvent('sort', {
+      sorts: [
+        { key: 'hours', dir: 'desc' },
+        { key: 'title', dir: 'asc' },
+      ],
+    });
+    expect(table.getSorts()).toEqual([
+      { key: 'hours', dir: 'desc' },
+      { key: 'title', dir: 'asc' },
+    ]);
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.hours)).toEqual([
+      10, 7, 5, 3, 1,
+    ]);
+  });
+
+  test('footer aggregates over filtered rows; page-only when manualPagination', async () => {
+    const table = new DataTableElement(rows, {
+      columns: [
+        ...columns.slice(0, 3),
+        { key: 'hours', header: 'Hours', align: 'right', aggregate: 'sum' },
+      ],
+      pageSize: 10,
+    });
+    expect(table.props.footer).toEqual({ hours: 26 });
+
+    await table.handleEvent('filter', 'done');
+    expect(table.props.footer).toEqual({ hours: 4 });
+
+    const remote = new DataTableElement(rows.slice(0, 2), {
+      columns: [
+        { key: 'title', header: 'Title' },
+        { key: 'hours', header: 'Hours', aggregate: 'sum' },
+      ],
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 5,
+    });
+    expect(remote.props.footer).toEqual({ hours: 13 });
+  });
+
+  test('column pin reorders visible columns and emits via columnPin', async () => {
+    const table = new DataTableElement(rows, {
+      columns: [
+        { key: 'id', header: 'ID' },
+        { key: 'title', header: 'Title', pin: 'left' },
+        { key: 'status', header: 'Status' },
+        { key: 'hours', header: 'Hours', pin: 'right' },
+      ],
+      pageSize: 10,
+    });
+    expect(table.props.columns.map((c: { key: string; pin?: string }) => [c.key, c.pin])).toEqual([
+      ['title', 'left'],
+      ['id', undefined],
+      ['status', undefined],
+      ['hours', 'right'],
+    ]);
+
+    await table.handleEvent('columnPin', { key: 'status', pin: 'left' });
+    expect(table.props.columns.map((c: { key: string }) => c.key)).toEqual([
+      'title',
+      'status',
+      'id',
+      'hours',
+    ]);
+    await table.handleEvent('columnPin', { key: 'title', pin: null });
+    expect(
+      (table.props.columns as Array<{ key: string; pin?: string }>).find((c) => c.key === 'title')
+        ?.pin,
+    ).toBeUndefined();
+  });
+
+  test('manualPagination skips local filter/sort and fires change callbacks', async () => {
+    const sortsLog: unknown[] = [];
+    const filters: string[] = [];
+    const table = new DataTableElement(rows.slice(0, 2), {
+      columns,
+      keyField: 'id',
+      pageSize: 2,
+      manualPagination: true,
+      totalRows: 5,
+      onSortChange: (sorts) => {
+        sortsLog.push(sorts);
+      },
+      onFilterChange: (filter) => {
+        filters.push(filter);
+      },
+    });
+    expect(table.props.manualFiltering).toBe(true);
+    expect(table.props.manualSorting).toBe(true);
+
+    await table.handleEvent('sort', { key: 'hours', dir: 'asc' });
+    await table.handleEvent('filter', 'Alpha');
+    expect(sortsLog).toEqual([[{ key: 'hours', dir: 'asc' }]]);
+    expect(filters).toEqual(['Alpha']);
+    // Still the supplied page — not filtered/sorted locally.
+    expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual([
+      'Alpha',
+      'Bravo',
+    ]);
+    expect(table.props.sortKey).toBe('hours');
+    expect(table.props.filter).toBe('Alpha');
   });
 });

@@ -452,6 +452,8 @@ export {
   type TableColumn,
   type TableColumnFilter,
   type TableColumnEditor,
+  type TableColumnPin,
+  type TableColumnAggregate,
   type DataTableFacetOption,
   type DataTableAction,
   type DataTableProps,
@@ -459,6 +461,8 @@ export {
   type DataTableGroup,
   type DataTablePrimaryAction,
   type DataTableDensity,
+  type DataTableSort,
+  type DataTableSortDir,
   type ExportFormat,
   type ExportMode,
 } from './data-table';

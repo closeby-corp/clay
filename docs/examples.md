@@ -15,7 +15,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
-| `/examples/datatable` | `DataTableDemo.ts` | Manual/remote pagination, density/zebra, number/date/boolean editors, column resize; facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
+| `/examples/datatable` | `DataTableDemo.ts` | Multi-sort, footer aggregates, column pin, remote filter/sort + pagination; density/zebra, editors, resize; facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*` including scatter / composed; props API sample |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
@@ -246,16 +246,20 @@ Facet columns filter with multi-select exact match from a header popover. Text c
 
 ## Pattern: DataTable manual / remote pagination
 
+When `manualPagination` is true, rows are the **current page only** — local filter/sort/slice are skipped. Keep search/sort chrome enabled and refetch on the callbacks below (or turn chrome off if unused).
+
 ```typescript
 let page = 1;
 let pageSize = 10;
+let filter = '';
+let sorts: Array<{ key: string; dir: 'asc' | 'desc' }> = [];
+
 const remote = ui.dataTable([], {
   keyField: 'id',
   manualPagination: true,
   totalRows: 0,
   pageSize,
-  searchable: false,
-  columnFilterable: false,
+  searchable: true,
   onPageChange: async (p) => {
     page = p;
     await load();
@@ -265,19 +269,29 @@ const remote = ui.dataTable([], {
     page = 1;
     await load();
   },
+  onFilterChange: async (q) => {
+    filter = q;
+    page = 1;
+    await load();
+  },
+  onSortChange: async (next) => {
+    sorts = next;
+    page = 1;
+    await load();
+  },
   columns: [/* … */],
 });
 
 async function load() {
   remote.setLoading(true);
-  const { rows, total } = await fetchPage({ page, pageSize });
+  const { rows, total } = await fetchPage({ page, pageSize, filter, sorts });
   remote.setRows(rows);
   remote.setTotalRows(total);
   remote.setLoading(false);
 }
 ```
 
-Rows are the current page only; the footer uses `totalRows`. Local filter/sort/group are skipped.
+Footer `aggregate` values in this mode are computed over the **provided page rows** (not the full remote set). The pager footer uses `totalRows`.
 
 ## Styling tip
 

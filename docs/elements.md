@@ -65,7 +65,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `radialChart` | `radialchart` | Recharts radial bar (`nameKey`/`valueKey` or stacked `series`, optional center text / angles) |
 | `scatterChart` | `scatterchart` | Recharts scatter (`xKey` / `yKey`, optional `seriesKey`) |
 | `composedChart` | `composedchart` | Recharts composed (per-series `type`: bar/line/area) |
-| `dataTable` | `datatable` | Search, text/facet filters, views, grouping (collapse all), selection, bulk actions, reorder, editors (text/select/number/date/boolean), export, sort, local or manual pagination, density/zebra, column resize, loading/empty, actions, detail drawer |
+| `dataTable` | `datatable` | Search, text/facet filters, views, grouping (collapse all), selection, bulk actions, reorder, editors (text/select/number/date/boolean), export, multi-sort, local or manual pagination, remote filter/sort, density/zebra, column resize/pin, footer aggregates, loading/empty, actions, detail drawer |
 | `tabs` | `tabs` (+ child `tab`) | ShadCN `Tabs`; optimistic `value` |
 | `accordion` | `accordion` (+ child `accordionitem`) | ShadCN `Accordion`; optimistic `value` |
 | `collapsible` | `collapsible` | ShadCN `Collapsible`; optimistic open (`value`) |

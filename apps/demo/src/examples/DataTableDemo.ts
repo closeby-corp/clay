@@ -49,14 +49,43 @@ ui.page('/examples/datatable', () => {
   let remoteTable: DataTableElement;
   let remotePage = 1;
   let remotePageSize = 5;
+  let remoteFilter = '';
+  let remoteSorts: Array<{ key: string; dir: 'asc' | 'desc' }> = [];
 
   const loadRemotePage = async () => {
     remoteTable.setLoading(true);
     await new Promise((r) => setTimeout(r, 180));
+    let pool = [...tasks];
+    const q = remoteFilter.trim().toLowerCase();
+    if (q) {
+      pool = pool.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.status.toLowerCase().includes(q) ||
+          t.owner.toLowerCase().includes(q),
+      );
+    }
+    if (remoteSorts.length > 0) {
+      pool = [...pool].sort((a, b) => {
+        for (const { key, dir } of remoteSorts) {
+          const av = (a as Record<string, unknown>)[key];
+          const bv = (b as Record<string, unknown>)[key];
+          const cmp =
+            typeof av === 'number' && typeof bv === 'number'
+              ? av - bv
+              : String(av ?? '').localeCompare(String(bv ?? ''), undefined, {
+                  numeric: true,
+                  sensitivity: 'base',
+                });
+          if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
+        }
+        return 0;
+      });
+    }
     const start = (remotePage - 1) * remotePageSize;
-    const slice = tasks.slice(start, start + remotePageSize);
+    const slice = pool.slice(start, start + remotePageSize);
     remoteTable.setRows(slice);
-    remoteTable.setTotalRows(tasks.length);
+    remoteTable.setTotalRows(pool.length);
     remoteTable.setLoading(false);
   };
 
@@ -64,7 +93,7 @@ ui.page('/examples/datatable', () => {
     ui.row(() => {
       exampleHeader(
         undefined,
-        'DataTable Phase 3 — manual/remote pagination, density, zebra, richer editors, column resize.',
+        'DataTable leftovers — multi-sort (Shift+click), footer aggregates, column pin, remote filter/sort.',
       );
       ui.button('Add task', {
         size: 'sm',
@@ -112,7 +141,7 @@ ui.page('/examples/datatable', () => {
       emptyDescription: 'Try clearing status facets or search.',
       columns: [
         { key: 'id', header: 'ID' },
-        { key: 'title', header: 'Title' },
+        { key: 'title', header: 'Title', pin: 'left' },
         {
           key: 'status',
           header: 'Status',
@@ -129,13 +158,14 @@ ui.page('/examples/datatable', () => {
                 row.status === 'done' ? 'green' : row.status === 'todo' ? 'slate' : 'amber',
             }),
         },
-        { key: 'hours', header: 'Hours', align: 'right', editor: 'number' },
+        { key: 'hours', header: 'Hours', align: 'right', editor: 'number', aggregate: 'sum' },
         { key: 'due', header: 'Due', editor: 'date' },
         { key: 'active', header: 'Active', align: 'center', editor: 'boolean' },
         {
           key: 'billable',
           header: 'Billable',
           align: 'right',
+          aggregate: 'sum',
           value: (row) => Number(row.hours) * 50,
           render: (row) => `${row.hours}h → $${Number(row.hours) * 50}`,
         },
@@ -143,7 +173,12 @@ ui.page('/examples/datatable', () => {
           key: 'owner',
           header: 'Owner',
           filter: 'facet',
+          pin: 'right',
         },
+      ],
+      defaultSorts: [
+        { key: 'status', dir: 'asc' },
+        { key: 'hours', dir: 'desc' },
       ],
       actions: [
         { id: 'edit', label: 'Rename', icon: 'pencil' },
@@ -238,8 +273,8 @@ ui.page('/examples/datatable', () => {
     });
 
     exampleSection(
-      'Manual / remote pagination',
-      '`manualPagination` + `totalRows`: table shows the current page only; fetch on page/pageSize.',
+      'Manual / remote pagination + filter/sort',
+      '`manualPagination` skips local filter/sort/slice. Listen to `onFilterChange` / `onSortChange` / page events, then `setRows` + `setTotalRows`. Shift+click headers for multi-sort.',
     );
     remoteTable = ui.dataTable([], {
       keyField: 'id',
@@ -247,19 +282,21 @@ ui.page('/examples/datatable', () => {
       totalRows: tasks.length,
       pageSize: remotePageSize,
       pageSizeOptions: [5, 10],
-      searchable: false,
+      searchable: true,
+      searchPlaceholder: 'Remote search…',
       columnFilterable: false,
       columnToggle: false,
       exportable: false,
       density: 'compact',
       zebra: true,
       emptyTitle: 'No page loaded',
-      emptyDescription: 'Use pagination or wait for the first fetch.',
+      emptyDescription: 'Use search, sort, or pagination to fetch.',
       columns: [
         { key: 'id', header: 'ID' },
-        { key: 'title', header: 'Title' },
+        { key: 'title', header: 'Title', pin: 'left' },
         { key: 'status', header: 'Status' },
         { key: 'owner', header: 'Owner' },
+        { key: 'hours', header: 'Hours', align: 'right', aggregate: 'sum' },
       ],
       onPageChange: async (page) => {
         remotePage = page;
@@ -267,6 +304,16 @@ ui.page('/examples/datatable', () => {
       },
       onPageSizeChange: async (size) => {
         remotePageSize = size;
+        remotePage = 1;
+        await loadRemotePage();
+      },
+      onFilterChange: async (filter) => {
+        remoteFilter = filter;
+        remotePage = 1;
+        await loadRemotePage();
+      },
+      onSortChange: async (sorts) => {
+        remoteSorts = sorts;
         remotePage = 1;
         await loadRemotePage();
       },
