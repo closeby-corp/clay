@@ -111,7 +111,7 @@ describe('QueryBuilder', () => {
     const { mkdtemp, rm } = await import('node:fs/promises');
     const { tmpdir } = await import('node:os');
     const { join } = await import('node:path');
-    const { DuckDB } = await import('@badui/duckdb');
+    const { DuckDB } = await import('@clay/duckdb');
 
     let page = 0;
     const kbn = new Kibana({
@@ -143,7 +143,7 @@ describe('QueryBuilder', () => {
       }),
     });
 
-    const dir = await mkdtemp(join(tmpdir(), 'badui-parquet-'));
+    const dir = await mkdtemp(join(tmpdir(), 'clay-parquet-'));
     const out = join(dir, 'logs.parquet');
     try {
       const result = await kbn

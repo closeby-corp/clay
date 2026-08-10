@@ -1,4 +1,4 @@
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 import { exampleHeader, exampleSection } from '../chrome';
 import visitorsSeed from './dashboard-visitors.json';
 

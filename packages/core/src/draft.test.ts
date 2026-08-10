@@ -7,7 +7,7 @@ import {
   resetIdSequence,
   runWithSession,
   storage,
-} from '@badui/core';
+} from '@clay/core';
 
 beforeEach(() => {
   clearPages();

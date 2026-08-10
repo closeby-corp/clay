@@ -41,10 +41,10 @@ export async function resolveTitle(explicit: string | undefined, cwd: string): P
     const file = Bun.file(pkgPath);
     if (await file.exists()) {
       const pkg = (await file.json()) as { name?: string };
-      if (pkg.name && pkg.name !== 'badui') return pkg.name;
+      if (pkg.name && pkg.name !== 'clay') return pkg.name;
     }
   } catch {
     // ignore
   }
-  return 'BadUI';
+  return 'Clay';
 }

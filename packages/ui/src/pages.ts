@@ -4,8 +4,8 @@ import {
   clearPages,
   getRegisteredPaths,
   type PageFn,
-} from '@badui/core';
-import type { AppNavItem } from '@badui/components';
+} from '@clay/core';
+import type { AppNavItem } from '@clay/components';
 
 /**
  * Dynamic `import` that forces Bun to re-execute the module.

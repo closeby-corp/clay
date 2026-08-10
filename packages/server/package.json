@@ -1,7 +1,7 @@
 {
-  "name": "@badui/server",
+  "name": "@clay/server",
   "version": "0.1.0",
-  "description": "HTTP + WebSocket server runtime for BadUI",
+  "description": "HTTP + WebSocket server runtime for Clay",
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
@@ -16,15 +16,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "url": "git+https://github.com/closeby-corp/clay.git",
     "directory": "packages/server"
   },
-  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "homepage": "https://github.com/closeby-corp/clay#readme",
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@badui/core": "workspace:*",
-    "@badui/persistence-file": "workspace:*"
+    "@clay/core": "workspace:*",
+    "@clay/persistence-file": "workspace:*"
   }
 }

@@ -1,4 +1,4 @@
-import { Element, getCurrentSession, withParent } from '@badui/core';
+import { Element, getCurrentSession, withParent } from '@clay/core';
 
 export type AppNavItem = {
   label: string;

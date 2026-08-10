@@ -30,7 +30,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `imageZoom` | `imageZoom` | Image with click-to-zoom overlay (leave `image` plain) |
 | `imageCrop` | `imageCrop` | Image cropper (`src`, `aspect?`; emits data URL) |
 | `gantt` | `gantt` | Project timeline (`rows` + markers + dependency arrows; owns dates; `itemMove` / `markerAdd` settle defaults) |
-| `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; owns edges/positions; BadUI node bodies; dagre `layout()`; group/`parentId`; typed/labeled edges; custom type keys + client registries; `nodeMove`/`connect` settle defaults) |
+| `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; owns edges/positions; Clay node bodies; dagre `layout()`; group/`parentId`; typed/labeled edges; custom type keys + client registries; `nodeMove`/`connect` settle defaults) |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |

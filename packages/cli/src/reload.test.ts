@@ -36,14 +36,14 @@ describe('reload helpers', () => {
   });
 
   test('reload stub is skipped by page discovery naming', () => {
-    expect(reloadStubFileName(42)).toBe('_badui-reload-42.ts');
+    expect(reloadStubFileName(42)).toBe('_clay-reload-42.ts');
     expect(reloadStubFileName(42).startsWith('_')).toBe(true);
-    expect(reloadOpenMarkerFileName(42)).toBe('_badui-reload-opened-42');
+    expect(reloadOpenMarkerFileName(42)).toBe('_clay-reload-opened-42');
   });
 
   test('buildReloadChildCommand watches the stub, not the CLI module', () => {
-    const cmd = buildReloadChildCommand('/usr/bin/bun', '/proj/_badui-reload-1.ts');
-    expect(cmd).toEqual(['/usr/bin/bun', '--watch', '/proj/_badui-reload-1.ts']);
+    const cmd = buildReloadChildCommand('/usr/bin/bun', '/proj/_clay-reload-1.ts');
+    expect(cmd).toEqual(['/usr/bin/bun', '--watch', '/proj/_clay-reload-1.ts']);
     expect(cmd.join(' ')).not.toContain('/packages/cli/');
   });
 
@@ -53,7 +53,7 @@ describe('reload helpers', () => {
       '-p',
       '4000',
     ]);
-    expect(src).toContain('BADUI_RELOAD_CHILD');
+    expect(src).toContain('CLAY_RELOAD_CHILD');
     expect(src).toContain('await import(');
     expect(src).toContain('/repo/packages/cli/src/main.ts');
     expect(src).toContain('/proj/hello.ts');
@@ -81,47 +81,47 @@ describe('reload helpers', () => {
   test('writeReloadStubNudge changes stub contents (Bun watches content, not utimes)', () => {
     rmSync(tmpRoot, { recursive: true, force: true });
     mkdirSync(tmpRoot, { recursive: true });
-    const stubPath = join(tmpRoot, '_badui-reload-nudge.ts');
+    const stubPath = join(tmpRoot, '_clay-reload-nudge.ts');
     const base = buildReloadStubSource('/cli/main.ts', ['/pages']);
     writeReloadStubNudge(stubPath, base, 1);
     const first = readFileSync(stubPath, 'utf8');
     writeReloadStubNudge(stubPath, base, 2);
     const second = readFileSync(stubPath, 'utf8');
-    expect(first).toContain('badui-reload-nudge 1');
-    expect(second).toContain('badui-reload-nudge 2');
+    expect(first).toContain('clay-reload-nudge 1');
+    expect(second).toContain('clay-reload-nudge 2');
     expect(first).not.toEqual(second);
     rmSync(tmpRoot, { recursive: true, force: true });
   });
 });
 
 describe('shouldOpenBrowser', () => {
-  const prevChild = process.env.BADUI_RELOAD_CHILD;
-  const prevMarker = process.env.BADUI_RELOAD_OPEN_MARKER;
+  const prevChild = process.env.CLAY_RELOAD_CHILD;
+  const prevMarker = process.env.CLAY_RELOAD_OPEN_MARKER;
 
   afterEach(() => {
-    if (prevChild === undefined) delete process.env.BADUI_RELOAD_CHILD;
-    else process.env.BADUI_RELOAD_CHILD = prevChild;
-    if (prevMarker === undefined) delete process.env.BADUI_RELOAD_OPEN_MARKER;
-    else process.env.BADUI_RELOAD_OPEN_MARKER = prevMarker;
+    if (prevChild === undefined) delete process.env.CLAY_RELOAD_CHILD;
+    else process.env.CLAY_RELOAD_CHILD = prevChild;
+    if (prevMarker === undefined) delete process.env.CLAY_RELOAD_OPEN_MARKER;
+    else process.env.CLAY_RELOAD_OPEN_MARKER = prevMarker;
     rmSync(tmpRoot, { recursive: true, force: true });
   });
 
   test('respects --no-open', () => {
-    delete process.env.BADUI_RELOAD_CHILD;
+    delete process.env.CLAY_RELOAD_CHILD;
     expect(shouldOpenBrowser(false)).toBe(false);
   });
 
   test('opens on normal (non-reload) runs', () => {
-    delete process.env.BADUI_RELOAD_CHILD;
-    delete process.env.BADUI_RELOAD_OPEN_MARKER;
+    delete process.env.CLAY_RELOAD_CHILD;
+    delete process.env.CLAY_RELOAD_OPEN_MARKER;
     expect(shouldOpenBrowser(true)).toBe(true);
   });
 
   test('opens once under reload child, then skips', () => {
     mkdirSync(tmpRoot, { recursive: true });
     const marker = join(tmpRoot, 'opened');
-    process.env.BADUI_RELOAD_CHILD = '1';
-    process.env.BADUI_RELOAD_OPEN_MARKER = marker;
+    process.env.CLAY_RELOAD_CHILD = '1';
+    process.env.CLAY_RELOAD_OPEN_MARKER = marker;
     expect(shouldOpenBrowser(true)).toBe(true);
     expect(existsSync(marker)).toBe(true);
     expect(shouldOpenBrowser(true)).toBe(false);

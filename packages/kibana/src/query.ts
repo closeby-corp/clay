@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { DuckDB } from '@badui/duckdb';
+import { DuckDB } from '@clay/duckdb';
 import type { Kibana } from './kibana';
 import { sourceOnly, sqlQuote, type ToParquetOptions, type ToParquetResult } from './parquet';
 import type { EsHit, EsSearchBody, EsSearchResponse, PaginateSearchOptions } from './types';
@@ -210,7 +210,7 @@ export class QueryBuilder<T = Record<string, unknown>> {
   async toParquet(path: string, options: ToParquetOptions<T> = {}): Promise<ToParquetResult> {
     const map = options.map ?? sourceOnly;
 
-    const tmp = await mkdtemp(join(tmpdir(), 'badui-kibana-'));
+    const tmp = await mkdtemp(join(tmpdir(), 'clay-kibana-'));
     const ndjsonPath = join(tmp, 'hits.ndjson');
     let rows = 0;
 

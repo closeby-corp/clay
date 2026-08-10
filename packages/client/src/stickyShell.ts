@@ -1,7 +1,7 @@
 import type { ElementNode } from './protocol';
 
 /** Stable React key so `app` chrome survives session remounts across navigate. */
-export const STICKY_APP_KEY = 'badui-sticky-app';
+export const STICKY_APP_KEY = 'clay-sticky-app';
 
 /**
  * React reconciliation key for an element node.

@@ -1,4 +1,4 @@
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 export const pageMeta = { label: 'Hidden', icon: 'eye-off', order: 50, nav: false };
 

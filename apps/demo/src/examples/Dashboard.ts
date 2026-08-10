@@ -1,5 +1,5 @@
-import { ui } from '@badui/ui';
-import type { DataTableElement } from '@badui/ui';
+import { ui } from '@clay/ui';
+import type { DataTableElement } from '@clay/ui';
 import { exampleHeader } from '../chrome';
 import documentsSeed from './dashboard-documents.json';
 import visitorsSeed from './dashboard-visitors.json';

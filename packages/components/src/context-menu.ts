@@ -1,4 +1,4 @@
-import { Element, withParent } from '@badui/core';
+import { Element, withParent } from '@clay/core';
 
 export type ContextMenuProps = {
   /** Visible label on the trigger (default: right-click target text). */

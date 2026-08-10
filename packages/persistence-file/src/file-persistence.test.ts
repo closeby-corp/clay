@@ -14,7 +14,7 @@ describe('createFilePersistence', () => {
   });
 
   async function tempDir(): Promise<string> {
-    const dir = await mkdtemp(join(tmpdir(), 'badui-persist-'));
+    const dir = await mkdtemp(join(tmpdir(), 'clay-persist-'));
     dirs.push(dir);
     return dir;
   }

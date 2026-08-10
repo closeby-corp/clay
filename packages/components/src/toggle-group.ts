@@ -1,4 +1,4 @@
-import { Element, withParent } from '@badui/core';
+import { Element, withParent } from '@clay/core';
 
 export type ToggleGroupType = 'single' | 'multiple';
 export type ToggleGroupVariant = 'default' | 'outline';

@@ -1,7 +1,7 @@
-/** Prefixes for BadUI browser/client/tab storage scopes in Web Storage. */
-export const BADUI_BROWSER_STORAGE_KEY = 'badui-browser-storage';
-export const BADUI_CLIENT_STORAGE_KEY = 'badui-client-storage';
-export const BADUI_TAB_STORAGE_KEY = 'badui-tab-storage';
+/** Prefixes for Clay browser/client/tab storage scopes in Web Storage. */
+export const CLAY_BROWSER_STORAGE_KEY = 'clay-browser-storage';
+export const CLAY_CLIENT_STORAGE_KEY = 'clay-client-storage';
+export const CLAY_TAB_STORAGE_KEY = 'clay-tab-storage';
 
 function readBag(storage: Storage, key: string): Record<string, unknown> {
   try {
@@ -27,7 +27,7 @@ function writeBag(storage: Storage, key: string, bag: Record<string, unknown>): 
 
 export function loadBrowserStorageBag(): Record<string, unknown> {
   try {
-    return readBag(localStorage, BADUI_BROWSER_STORAGE_KEY);
+    return readBag(localStorage, CLAY_BROWSER_STORAGE_KEY);
   } catch {
     return {};
   }
@@ -35,7 +35,7 @@ export function loadBrowserStorageBag(): Record<string, unknown> {
 
 export function loadClientStorageBag(): Record<string, unknown> {
   try {
-    return readBag(sessionStorage, BADUI_CLIENT_STORAGE_KEY);
+    return readBag(sessionStorage, CLAY_CLIENT_STORAGE_KEY);
   } catch {
     return {};
   }
@@ -43,7 +43,7 @@ export function loadClientStorageBag(): Record<string, unknown> {
 
 export function loadTabStorageBag(): Record<string, unknown> {
   try {
-    return readBag(sessionStorage, BADUI_TAB_STORAGE_KEY);
+    return readBag(sessionStorage, CLAY_TAB_STORAGE_KEY);
   } catch {
     return {};
   }
@@ -59,10 +59,10 @@ export function applyClientStorageOp(msg: {
     const store = msg.scope === 'browser' ? localStorage : sessionStorage;
     const bagKey =
       msg.scope === 'browser'
-        ? BADUI_BROWSER_STORAGE_KEY
+        ? CLAY_BROWSER_STORAGE_KEY
         : msg.scope === 'tab'
-          ? BADUI_TAB_STORAGE_KEY
-          : BADUI_CLIENT_STORAGE_KEY;
+          ? CLAY_TAB_STORAGE_KEY
+          : CLAY_CLIENT_STORAGE_KEY;
     if (msg.action === 'clear') {
       store.removeItem(bagKey);
       return;

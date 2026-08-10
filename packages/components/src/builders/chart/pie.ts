@@ -1,4 +1,4 @@
-import { Element } from '@badui/core';
+import { Element } from '@clay/core';
 import { pieChart } from '../../pie-chart';
 import type { ChartSeries } from '../../chart-shared';
 import {

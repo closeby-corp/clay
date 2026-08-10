@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { runWithSession } from '@badui/core';
+import { runWithSession } from '@clay/core';
 import { app } from './app';
 
 describe('app layout', () => {
@@ -12,7 +12,7 @@ describe('app layout', () => {
     runWithSession(session, () => {
       const el = app(
         {
-          title: 'BadUI',
+          title: 'Clay',
           nav: [
             { label: 'Home', href: '/', icon: 'home' },
             { label: 'Counter', href: '/examples/counter', icon: 'gauge' },

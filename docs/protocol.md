@@ -10,7 +10,7 @@ All fields are **camelCase**. Transport: single WebSocket at `/ws`.
 4. Server creates `ClientSession`, runs the page builder, replies `{ op: "mount", sessionId, tree }`
 5. Interaction continues with `event` ↔ `patch` (plus optional `notify` / `navigate` / `theme`)
 
-On unexpected socket close, the client reconnects with exponential backoff (500ms → 10s) and shows a corner **BadUI** status chip (`reloading` / brief `ready`). A sticky “Disconnected — reconnecting…” toast appears only if the outage lasts longer than ~4s. Matching `app` chrome stays mounted across remounts.
+On unexpected socket close, the client reconnects with exponential backoff (500ms → 10s) and shows a corner **Clay** status chip (`reloading` / brief `ready`). A sticky “Disconnected — reconnecting…” toast appears only if the outage lasts longer than ~4s. Matching `app` chrome stays mounted across remounts.
 ## Client → server
 
 ### `hello`
@@ -163,7 +163,7 @@ Client writes `content` with `navigator.clipboard.writeText` (shows an error toa
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `theme` | `light\|dark\|system` | Applied via next-themes; persisted under `badui-theme` |
+| `theme` | `light\|dark\|system` | Applied via next-themes; persisted under `clay-theme` |
 
 Sent by `ui.theme.set(...)`.
 
@@ -191,7 +191,7 @@ Client evaluates the snippet (trusted server-authored code).
 { "op": "clientStorage", "scope": "browser", "action": "set", "key": "theme", "value": "dark" }
 ```
 
-Updates the client Web Storage bag used by `ui.storage.browser` (`localStorage`), `ui.storage.client` (`sessionStorage`), or `ui.storage.tab` (`sessionStorage`, key `badui-tab-storage`). Write-through keeps the bag warm for the next `hello`.
+Updates the client Web Storage bag used by `ui.storage.browser` (`localStorage`), `ui.storage.client` (`sessionStorage`), or `ui.storage.tab` (`sessionStorage`, key `clay-tab-storage`). Write-through keeps the bag warm for the next `hello`.
 
 ### `error`
 

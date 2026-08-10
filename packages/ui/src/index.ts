@@ -281,7 +281,7 @@ import {
   AccordionElement,
   CollapsibleElement,
   FlowElement,
-} from '@badui/components';
+} from '@clay/components';
 import {
   Element,
   RefreshableElement,
@@ -318,13 +318,13 @@ import {
   type ThemeMode,
   type DraftStorage,
   type DraftOptions,
-} from '@badui/core';
+} from '@clay/core';
 import {
-  BadUIServer,
-  type BadUIServerConfig,
+  ClayServer,
+  type ClayServerConfig,
   establishAuthSession as establishAuthSessionCore,
   clearAuthSession as clearAuthSessionCore,
-} from '@badui/server';
+} from '@clay/server';
 import {
   loadPages,
   navFromPages,
@@ -709,7 +709,7 @@ export function gantt(props?: GanttProps): GanttElement {
 
 /**
  * Interactive flow diagram (`@xyflow/react`). Owns edges + positions;
- * node bodies are BadUI trees; drag by card chrome (controls are nodrag);
+ * node bodies are Clay trees; drag by card chrome (controls are nodrag);
  * default settle handlers update the owned model before user `on*`.
  * Prefer `ui.flow`. See {@link FlowProps}.
  */
@@ -1122,13 +1122,13 @@ export const storage = storageCore;
 /** Server-driven appearance (`light` | `dark` | `system`). */
 export const theme = themeCore;
 
-/** Proxy that notifies subscribers on property change. Prefer this over importing from `@badui/core`. */
+/** Proxy that notifies subscribers on property change. Prefer this over importing from `@clay/core`. */
 export const reactive = reactiveCore;
 
 /** Alias for `reactive` — NiceGUI-ish mutable page state. Prefer `ui.state`. */
 export const state = stateCore;
 
-/** Listen for a reactive property change. Prefer this over importing from `@badui/core`. */
+/** Listen for a reactive property change. Prefer this over importing from `@clay/core`. */
 export const subscribe = subscribeCore;
 
 /**
@@ -1172,16 +1172,16 @@ export function page(path: string, fn: () => void, options?: PageOptions): void 
 
 /**
  * Server + run options for `ui.run`.
- * Extends {@link BadUIServerConfig} (port, auth, storage, uploads, session timeouts).
+ * Extends {@link ClayServerConfig} (port, auth, storage, uploads, session timeouts).
  */
-export type RunConfig = BadUIServerConfig & {
+export type RunConfig = ClayServerConfig & {
   /** Global dashboard shell; wraps every page unless `ui.page(..., { shell: false })`. */
   app?: AppProps;
 };
 
 let runCalled = false;
 
-/** Whether `ui.run` has been invoked in this process (used by the `badui` CLI). */
+/** Whether `ui.run` has been invoked in this process (used by the `clay` CLI). */
 export function wasRunCalled(): boolean {
   return runCalled;
 }
@@ -1192,14 +1192,14 @@ export function resetRunState(): void {
 }
 
 /**
- * Start the BadUI server.
+ * Start the Clay server.
  *
  * - `ui.run(config?)` — current pages + optional global shell
  * - `ui.run(root, config?)` — NiceGUI-style root page: registers `/` if missing, then starts
  */
-export function run(config?: RunConfig): BadUIServer;
-export function run(root: PageFn, config?: RunConfig): BadUIServer;
-export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {}): BadUIServer {
+export function run(config?: RunConfig): ClayServer;
+export function run(root: PageFn, config?: RunConfig): ClayServer;
+export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {}): ClayServer {
   let root: PageFn | undefined;
   let cfg: RunConfig;
 
@@ -1222,7 +1222,7 @@ export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {
   }
 
   runCalled = true;
-  const server = new BadUIServer(serverConfig);
+  const server = new ClayServer(serverConfig);
   server.start();
   return server;
 }

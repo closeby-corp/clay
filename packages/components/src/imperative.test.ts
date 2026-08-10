@@ -6,9 +6,9 @@ import {
   resetIdSequence,
   runWithSession,
   type ServerMessage,
-} from '@badui/core';
+} from '@clay/core';
 import { confirm, prompt, choose } from './imperative';
-import type { Element } from '@badui/core';
+import type { Element } from '@clay/core';
 
 function findByType(root: Element, type: string): Element[] {
   const out: Element[] = [];

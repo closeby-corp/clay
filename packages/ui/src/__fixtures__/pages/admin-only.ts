@@ -1,4 +1,4 @@
-import { page } from '@badui/core';
+import { page } from '@clay/core';
 
 export const pageMeta = {
   label: 'Admin Only',

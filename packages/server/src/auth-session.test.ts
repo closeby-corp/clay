@@ -8,9 +8,9 @@ import {
   page,
   storage,
   type ServerMessage,
-} from '@badui/core';
+} from '@clay/core';
 import { AUTH_COOKIE_NAME, signAuthToken } from './auth-cookie';
-import { BadUIServer } from './server';
+import { ClayServer } from './server';
 
 function waitFor(
   ws: WebSocket,
@@ -39,10 +39,10 @@ function waitFor(
 describe('auth cookie + session timeouts', () => {
   let dir: string;
   let server: ReturnType<typeof Bun.serve> | null = null;
-  let badui: BadUIServer | null = null;
+  let clay: ClayServer | null = null;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'badui-auth-cookie-'));
+    dir = await mkdtemp(join(tmpdir(), 'clay-auth-cookie-'));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, 'index.js'), '');
     clearPages();
@@ -52,8 +52,8 @@ describe('auth cookie + session timeouts', () => {
   afterEach(async () => {
     server?.stop(true);
     server = null;
-    badui?.stop();
-    badui = null;
+    clay?.stop();
+    clay = null;
     clearPages();
     storage.clearAll();
     await rm(dir, { recursive: true, force: true });
@@ -66,16 +66,16 @@ describe('auth cookie + session timeouts', () => {
     });
 
     const secret = 'cookie-secret';
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       clientDir: dir,
       userStorageDir: false,
       authSecret: secret,
     });
-    server = badui.start();
+    server = clay.start();
 
     const token = signAuthToken('trusted-carol', secret);
-    const ws = new WebSocket(`ws://127.0.0.1:${badui.port}/ws`, {
+    const ws = new WebSocket(`ws://127.0.0.1:${clay.port}/ws`, {
       headers: {
         cookie: `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
       },
@@ -100,16 +100,16 @@ describe('auth cookie + session timeouts', () => {
   });
 
   test('POST /auth/session then DELETE', async () => {
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       clientDir: dir,
       userStorageDir: false,
       authSecret: 's',
     });
-    server = badui.start();
+    server = clay.start();
 
     const token = signAuthToken('dave', 's');
-    const post = await fetch(`http://127.0.0.1:${badui.port}/auth/session`, {
+    const post = await fetch(`http://127.0.0.1:${clay.port}/auth/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -117,7 +117,7 @@ describe('auth cookie + session timeouts', () => {
     expect(post.status).toBe(204);
     expect(post.headers.get('Set-Cookie') ?? '').toContain(AUTH_COOKIE_NAME);
 
-    const del = await fetch(`http://127.0.0.1:${badui.port}/auth/session`, {
+    const del = await fetch(`http://127.0.0.1:${clay.port}/auth/session`, {
       method: 'DELETE',
     });
     expect(del.status).toBe(204);
@@ -127,7 +127,7 @@ describe('auth cookie + session timeouts', () => {
   test('idle timeout clears auth via authSession message', async () => {
     page('/t', () => {});
 
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       clientDir: dir,
       userStorageDir: false,
@@ -135,10 +135,10 @@ describe('auth cookie + session timeouts', () => {
       sessionIdleMs: 50,
       sessionExpiredPath: '/examples/auth/login',
     });
-    server = badui.start();
+    server = clay.start();
 
     const token = signAuthToken('eve', 'idle-secret');
-    const ws = new WebSocket(`ws://127.0.0.1:${badui.port}/ws`, {
+    const ws = new WebSocket(`ws://127.0.0.1:${clay.port}/ws`, {
       headers: {
         cookie: `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
       },

@@ -2,19 +2,19 @@
 
 ## Mental model
 
-BadUI is **server-owned UI**:
+Clay is **server-owned UI**:
 
 1. Your page callback runs on the server and builds an **element tree**.
 2. Each browser tab gets a **`ClientSession`** over WebSocket.
 3. The React client mounts that tree and renders ShadCN components.
 4. User events go to the server as `{ op: "event", id, type, value? }`.
-5. Server handlers mutate elements; BadUI sends **patches** back.
+5. Server handlers mutate elements; Clay sends **patches** back.
 
 You do not write React for app screens. You write `ui.button`, `ui.input`, `ui.refreshable`, etc.
 
 ```
 ┌─────────────┐  hello(path)   ┌──────────────────┐
-│ React client│ ─────────────► │ BadUIServer / WS │
+│ React client│ ─────────────► │ ClayServer / WS │
 │ (ShadCN)    │ ◄── mount ──── │ ClientSession    │
 │             │ ◄── patch ──── │ element tree     │
 │             │ ── event ────► │ page handlers    │
@@ -29,7 +29,7 @@ ui.page('/examples/todo', () => {
 });
 ```
 
-- Register routes with `ui.page(path, fn)` (or `page` from `@badui/core`).
+- Register routes with `ui.page(path, fn)` (or `page` from `@clay/core`).
 - On `hello`, the server creates a session, runs the page builder, and sends `mount`.
 - State in local variables (`let count = 0`) is **per session** (per tab), not shared.
 - Use `ui.storage.app` for process-wide shared data (e.g. chat messages). Configure a `PersistenceAdapter` via `storage.configure({ app })` or `ui.run({ appStorageDir })` to persist stores (default on when configured; opt out with `{ persist: false }`). `await state.get()` reloads from the adapter when persisted.
@@ -86,7 +86,7 @@ list.refresh(); // rebuilds children and sends setChildren
 Two-way bind form controls to a reactive object:
 
 ```typescript
-import { ui, reactive } from '@badui/ui';
+import { ui, reactive } from '@clay/ui';
 
 const draft = reactive({ text: '' });
 const input = ui.input({ placeholder: '…' });
@@ -181,7 +181,7 @@ ui.notify('Look here', {
 });
 
 // still available:
-import { notify, navigate } from '@badui/core';
+import { notify, navigate } from '@clay/core';
 navigate('/examples/todo');
 ```
 

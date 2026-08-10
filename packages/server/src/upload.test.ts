@@ -8,7 +8,7 @@ describe('handleMultipartUpload', () => {
   let dir: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'badui-upload-'));
+    dir = await mkdtemp(join(tmpdir(), 'clay-upload-'));
   });
 
   afterEach(async () => {
@@ -72,7 +72,7 @@ describe('POST /upload integration', () => {
   let server: ReturnType<typeof Bun.serve> | null = null;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'badui-upload-srv-'));
+    dir = await mkdtemp(join(tmpdir(), 'clay-upload-srv-'));
   });
 
   afterEach(async () => {
@@ -82,12 +82,12 @@ describe('POST /upload integration', () => {
   });
 
   test('serves multipart upload endpoint', async () => {
-    const { BadUIServer } = await import('./server');
-    const { clearPages, page } = await import('@badui/core');
+    const { ClayServer } = await import('./server');
+    const { clearPages, page } = await import('@clay/core');
     clearPages();
     page('/tmp', () => {});
 
-    const badui = new BadUIServer({
+    const clay = new ClayServer({
       port: 0,
       uploadDir: dir,
       userStorageDir: false,
@@ -96,11 +96,11 @@ describe('POST /upload integration', () => {
     // Ensure clientDir exists so asset 404s are fine
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, 'index.js'), '');
-    server = badui.start();
+    server = clay.start();
 
     const form = new FormData();
     form.append('files', new File(['payload'], 'a.bin', { type: 'application/octet-stream' }));
-    const res = await fetch(`http://127.0.0.1:${badui.port}/upload`, {
+    const res = await fetch(`http://127.0.0.1:${clay.port}/upload`, {
       method: 'POST',
       body: form,
     });
@@ -112,7 +112,7 @@ describe('POST /upload integration', () => {
     expect(body.files[0]!.name).toBe('a.bin');
     expect(await readFile(body.files[0]!.path, 'utf8')).toBe('payload');
 
-    badui.stop();
+    clay.stop();
     server = null;
   });
 });

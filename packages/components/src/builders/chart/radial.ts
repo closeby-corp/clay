@@ -1,4 +1,4 @@
-import { Element } from '@badui/core';
+import { Element } from '@clay/core';
 import { radialChart } from '../../radial-chart';
 import type { ChartSeries } from '../../chart-shared';
 import {

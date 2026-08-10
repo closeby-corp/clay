@@ -10,11 +10,11 @@ export type CliArgs = {
   help: boolean;
 };
 
-const USAGE = `Usage: badui <file.ts|dir> [options]
+const USAGE = `Usage: clay <file.ts|dir> [options]
 
-  badui hello.ts              Run a single-file app
-  badui ./pages               Load every page under a directory
-  badui ./pages --app         Same + dashboard shell (nav from pages)
+  clay hello.ts              Run a single-file app
+  clay ./pages               Load every page under a directory
+  clay ./pages --app         Same + dashboard shell (nav from pages)
 
 Options:
   -p, --port <n>     Port (default: 3000)

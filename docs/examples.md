@@ -47,7 +47,7 @@ Try the journey as an end user (sidebar **Account**, or `/examples/auth` while l
 4. **Sign out** clears the HttpOnly auth cookie and soft-reconnects; visiting Account/Admin while signed out redirects to Sign in.
 5. Kill the WebSocket / refresh — cookie identity keeps you signed in. Idle timeout (`sessionIdleMs` on `ui.run`) signs out.
 
-Helpers live in `_auth.ts` (skipped by `loadPages`): `@badui/auth` password hash + login limiter, cookie session via `ui.establishAuthSession`, online roster in `ui.storage.app`, plus `requireAuth` / `requireRole`.
+Helpers live in `_auth.ts` (skipped by `loadPages`): `@clay/auth` password hash + login limiter, cookie session via `ui.establishAuthSession`, online roster in `ui.storage.app`, plus `requireAuth` / `requireRole`.
 
 ## Pattern: app entry + discovered pages
 
@@ -57,10 +57,10 @@ await ui.loadPages(new URL('./examples', import.meta.url));
 
 ui.run({
   port: 4000,
-  title: 'BadUI Demo',
-  authSecret: process.env.BADUI_AUTH_SECRET ?? '…',
+  title: 'Clay Demo',
+  authSecret: process.env.CLAY_AUTH_SECRET ?? '…',
   app: {
-    title: 'BadUI',
+    title: 'Clay',
     get nav() {
       // role-aware; see apps/demo/src/demo-run.ts
       return ui.navFromPages(/* { role } */);
@@ -73,7 +73,7 @@ Or via CLI (same pages + shell; demo auth from `examples/_run.ts`):
 
 ```bash
 bun run demo:cli
-# → badui apps/demo/src/examples --app -p 4000
+# → clay apps/demo/src/examples --app -p 4000
 ```
 
 Directory mode looks for optional `_run.ts` exporting `configureRun(base)` so `demo:cli` gets the same `authSecret` / session timeouts / role-aware nav as `bun run demo`.
@@ -108,7 +108,7 @@ Use `setText` / `setValue` when the node identity stays the same.
 ## Pattern: todo list (refreshable + bindValue)
 
 ```typescript
-import { ui, reactive } from '@badui/ui';
+import { ui, reactive } from '@clay/ui';
 
 const draft = reactive({ text: '' });
 const input = ui.input({ placeholder: 'What needs to be done?' });
@@ -132,7 +132,7 @@ ui.button('Add', {
 ## Pattern: form + live summary + validate
 
 ```typescript
-import { ui, reactive, subscribe } from '@badui/ui';
+import { ui, reactive, subscribe } from '@clay/ui';
 
 const form = reactive({ name: '', terms: false });
 
@@ -165,12 +165,12 @@ for (const key of Object.keys(form)) {
 
 ```typescript
 // main.ts (optional persistence)
-import { createFilePersistence } from '@badui/persistence-file';
-import { storage } from '@badui/core';
-// or: ui.run({ appStorageDir: '.badui-data' })
+import { createFilePersistence } from '@clay/persistence-file';
+import { storage } from '@clay/core';
+// or: ui.run({ appStorageDir: '.clay-data' })
 
 storage.configure({
-  app: createFilePersistence({ dir: '.badui-data' }),
+  app: createFilePersistence({ dir: '.clay-data' }),
 });
 
 const messages = ui.storage.app.create<ChatMessage[]>('chatMessages', []);
@@ -242,7 +242,7 @@ ui.dataTable(tasks, {
 });
 ```
 
-Facet columns filter with multi-select exact match from a header popover. Text columns keep the substring filter row.
+Facet columns filter with multi-select exact match from a header popover. Text columns use the same header filter button with a substring input popover.
 
 ## Pattern: DataTable manual / remote pagination
 

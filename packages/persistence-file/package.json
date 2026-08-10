@@ -1,7 +1,7 @@
 {
-  "name": "@badui/persistence-file",
+  "name": "@clay/persistence-file",
   "version": "0.1.0",
-  "description": "File-backed persistence adapters for BadUI",
+  "description": "File-backed persistence adapters for Clay",
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
@@ -16,14 +16,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "url": "git+https://github.com/closeby-corp/clay.git",
     "directory": "packages/persistence-file"
   },
-  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "homepage": "https://github.com/closeby-corp/clay#readme",
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@badui/core": "workspace:*"
+    "@clay/core": "workspace:*"
   }
 }

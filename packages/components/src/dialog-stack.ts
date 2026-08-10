@@ -1,4 +1,4 @@
-import { Element, withParent } from '@badui/core';
+import { Element, withParent } from '@clay/core';
 
 export type DialogStackProps = {
   /** Optional stack-level heading (shown when the active step has no title). */

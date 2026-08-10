@@ -1,5 +1,5 @@
-import { Element } from '@badui/core';
-import { ui } from '@badui/ui';
+import { Element } from '@clay/core';
+import { ui } from '@clay/ui';
 
 export const pageMeta = {
   label: 'Kitchen Sink',

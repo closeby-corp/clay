@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createMemoryPersistence, storage, AppStore } from '@badui/core';
+import { createMemoryPersistence, storage, AppStore } from '@clay/core';
 import { createRedisPersistence, type RedisLikeClient } from './redis-persistence';
 
 function memoryRedis(): RedisLikeClient & { store: Map<string, string> } {
@@ -31,7 +31,7 @@ describe('createRedisPersistence', () => {
     storage.configure({ app: createRedisPersistence({ client: redis }) });
     const count = storage.app.create('counter', 0);
     await count.set(7);
-    expect(await redis.get('badui:counter')).toBe('7');
+    expect(await redis.get('clay:counter')).toBe('7');
     AppStore.clearAll();
     const again = storage.app.create('counter', 0);
     expect(await again.get()).toBe(7);

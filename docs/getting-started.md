@@ -2,61 +2,61 @@
 
 ## Requirements
 
-- [Bun](https://bun.sh/) 1.1+ (runtime for `badui` and app code)
+- [Bun](https://bun.sh/) 1.1+ (runtime for `clay` and app code)
 - Node-compatible OS (macOS / Linux / WSL)
 - For local tarball installs: npm (links co-installed `file:` packages; Bun may try the registry for rewritten versions)
 
 ## Outside the monorepo
 
-Consumers import `@badui/ui` and run apps with the `badui` binary from `@badui/cli`. The CLI ships prebuilt Vite assets (`client-dist`); you do **not** need `@badui/client` or a monorepo `build:client`.
+Consumers import `@clay/ui` and run apps with the `clay` binary from `@clay/cli`. The CLI ships prebuilt Vite assets (`client-dist`); you do **not** need `@clay/client` or a monorepo `build:client`.
 
 ### From local packs (this repo)
 
 ```bash
-# In the BadUI checkout:
+# In the Clay checkout:
 bun install
 bun run pack:publishable   # build:client + bun pm pack → dist-pack/*.tgz
 # workspace:* is rewritten to real versions inside each tarball
 
 # In your app directory:
 npm install \
-  /path/to/bad-ui/dist-pack/badui-core-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/badui-auth-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/badui-compiler-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/badui-persistence-file-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/badui-components-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/badui-server-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/badui-ui-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/badui-cli-0.1.0.tgz
+  /path/to/bad-ui/dist-pack/clay-core-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/clay-auth-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/clay-compiler-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/clay-persistence-file-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/clay-components-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/clay-server-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/clay-ui-0.1.0.tgz \
+  /path/to/bad-ui/dist-pack/clay-cli-0.1.0.tgz
 ```
 
-Install **all** runtime tarballs together so `@badui/*@0.1.0` resolves from the co-installed packs (they are not on the public registry yet).
+Install **all** runtime tarballs together so `@clay/*@0.1.0` resolves from the co-installed packs (they are not on the public registry yet).
 
 ### When published to npm
 
 ```bash
-bun add @badui/cli @badui/ui
+bun add @clay/cli @clay/ui
 # transitive: core, components, server, persistence-file
-# optional: bun add @badui/auth
+# optional: bun add @clay/auth
 ```
 
 ### Publishing to npm (maintainers)
 
-Runtime packages are scoped (`@badui/*`) and public (`publishConfig.access: public`). Publish **in dependency order** so the registry can resolve rewritten versions:
+Runtime packages are scoped (`@clay/*`) and public (`publishConfig.access: public`). Publish **in dependency order** so the registry can resolve rewritten versions:
 
-1. `@badui/core`
-2. `@badui/auth`
-3. `@badui/compiler`
-4. `@badui/persistence-file`
-5. `@badui/components`
-6. `@badui/server`
-7. `@badui/ui`
-8. `@badui/cli`
+1. `@clay/core`
+2. `@clay/auth`
+3. `@clay/compiler`
+4. `@clay/persistence-file`
+5. `@clay/components`
+6. `@clay/server`
+7. `@clay/ui`
+8. `@clay/cli`
 
 ```bash
-# In the BadUI checkout:
+# In the Clay checkout:
 bun install
-npm login                          # once; needs rights on the @badui scope
+npm login                          # once; needs rights on the @clay scope
 
 bun run publish:dry                # pack + validate + npm publish --dry-run (no upload)
 bun run publish:npm                # pack + validate + real npm publish (same order)
@@ -66,14 +66,14 @@ Equivalent manual flow from packed tarballs:
 
 ```bash
 bun run pack:publishable
-npm publish ./dist-pack/badui-core-0.1.0.tgz --access public
-npm publish ./dist-pack/badui-auth-0.1.0.tgz --access public
-npm publish ./dist-pack/badui-compiler-0.1.0.tgz --access public
-npm publish ./dist-pack/badui-persistence-file-0.1.0.tgz --access public
-npm publish ./dist-pack/badui-components-0.1.0.tgz --access public
-npm publish ./dist-pack/badui-server-0.1.0.tgz --access public
-npm publish ./dist-pack/badui-ui-0.1.0.tgz --access public
-npm publish ./dist-pack/badui-cli-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-core-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-auth-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-compiler-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-persistence-file-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-components-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-server-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-ui-0.1.0.tgz --access public
+npm publish ./dist-pack/clay-cli-0.1.0.tgz --access public
 ```
 
 `publish:dry` checks each tarball for rewritten deps (no `workspace:*`), `license` / README / LICENSE, CLI `bin` + `client-dist`, then runs `npm publish --dry-run`. Use `--skip-pack` to reuse an existing `dist-pack/`: `bun scripts/publish-from-pack.ts --dry-run --skip-pack`.
@@ -82,60 +82,60 @@ npm publish ./dist-pack/badui-cli-0.1.0.tgz --access public
 
 ```typescript
 // hello.ts
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 export default function () {
-  ui.label('Hello BadUI');
+  ui.label('Hello Clay');
   ui.button('Ping', { onClick: () => ui.notify('hi', 'success') });
 }
 ```
 
 ```bash
-bunx badui hello.ts   # → http://localhost:3000 (opens browser)
+bunx clay hello.ts   # → http://localhost:3000 (opens browser)
 ```
 
 `ui.run(() => { … })` also works; CLI `-p` / `--title` / `--app` apply when the entry uses a default export or `ui.page` and lets the CLI start the server.
 
-## Three-line app (`badui`) — monorepo
+## Three-line app (`clay`) — monorepo
 
 ```typescript
 // hello.ts
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 ui.run(() => {
-  ui.label('Hello BadUI');
+  ui.label('Hello Clay');
   ui.button('Ping', { onClick: () => ui.notify('hi', 'success') });
 });
 ```
 
-**This monorepo:** build the client once (also copies assets into `@badui/cli` for packaging), then use the workspace CLI:
+**This monorepo:** build the client once (also copies assets into `@clay/cli` for packaging), then use the workspace CLI:
 
 ```bash
 bun install
 bun run build:client          # Vite → packages/client/dist (+ copy → packages/cli/client-dist)
-bun run badui hello.ts        # → http://localhost:3000 (opens browser)
+bun run clay hello.ts        # → http://localhost:3000 (opens browser)
 ```
 
-The CLI prefers `packages/cli/client-dist` when present, otherwise falls back to `packages/client/dist` so local `bun run badui` / `demo:cli` work after a single `build:client`.
+The CLI prefers `packages/cli/client-dist` when present, otherwise falls back to `packages/client/dist` so local `bun run clay` / `demo:cli` work after a single `build:client`.
 
 Or a default export (CLI registers `/` and starts the server for you):
 
 ```typescript
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 export default function () {
-  ui.label('Hello BadUI');
+  ui.label('Hello Clay');
 }
 ```
 
 ```bash
-bun run badui hello.ts --port 4000
+bun run clay hello.ts --port 4000
 ```
 
 ### Multi-page SPA with shell
 
 ```bash
-bun run badui ./pages --app --title "My App"
+bun run clay ./pages --app --title "My App"
 # loadPages + ui.run({ app: { title, nav: navFromPages() } })
 ```
 
@@ -145,7 +145,7 @@ bun run badui ./pages --app --title "My App"
 | `-t, --title` | HTML / shell title |
 | `--app` | Dashboard shell + nav from discovered pages |
 | `--no-open` | Do not open the browser |
-| `--reload` | Restart on file changes (`bun --watch`); opens the browser once; prints `↻ badui: reloading…` and re-imports pages (clears `require.cache`) |
+| `--reload` | Restart on file changes (`bun --watch`); opens the browser once; prints `↻ clay: reloading…` and re-imports pages (clears `require.cache`) |
 | `--reactive-let` | Enable compile-time reactive `let` Bun loader (default) |
 | `--no-reactive-let` | Disable the reactive-let plugin |
 
@@ -155,10 +155,10 @@ See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto`, `ui.
 
 ```bash
 bun install
-bun run build:client   # builds packages/client → dist, copies into @badui/cli
+bun run build:client   # builds packages/client → dist, copies into @clay/cli
 bun run demo           # starts apps/demo on :4000
 # or
-bun run demo:cli       # same examples via `badui … --app`
+bun run demo:cli       # same examples via `clay … --app`
 ```
 
 Or in one step:
@@ -177,20 +177,20 @@ Open:
 
 | Script | What it does |
 |--------|----------------|
-| `bun run build:client` | Vite production build of the React client + copy into `@badui/cli` |
-| `bun run pack:publishable` | `build:client` + pack `@badui/{core,auth,compiler,persistence-file,components,server,ui,cli}` → `dist-pack/` |
+| `bun run build:client` | Vite production build of the React client + copy into `@clay/cli` |
+| `bun run pack:publishable` | `build:client` + pack `@clay/{core,auth,compiler,persistence-file,components,server,ui,cli}` → `dist-pack/` |
 | `bun run publish:dry` | Pack + validate tarballs + `npm publish --dry-run` (no registry upload) |
 | `bun run publish:npm` | Pack + validate + `npm publish` in order (requires `npm login`) |
 | `bun run demo` | Start demo server (`main.ts`; expects client already built) |
-| `bun run demo:cli` | Start demo via `badui apps/demo/src/examples --app` (loads `_run.ts` auth config) |
-| `bun run badui …` | CLI runtime (`@badui/cli`) |
+| `bun run demo:cli` | Start demo via `clay apps/demo/src/examples --app` (loads `_run.ts` auth config) |
+| `bun run clay …` | CLI runtime (`@clay/cli`) |
 | `bun run dev` | Build client, then start demo |
 | `bun test` | Run package tests |
 
 ### Packaging notes (maintainers)
 
 - Source packages keep `workspace:*` for the monorepo; `bun pm pack` / publish rewrites them to the package version.
-- `@badui/client` is **private**; only its Vite `dist` is copied into `@badui/cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
+- `@clay/client` is **private**; only its Vite `dist` is copied into `@clay/cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
 - Root stays `private: true`. Each runtime package ships `license`, `README.md`, `LICENSE`, and `publishConfig.access: public`.
 - Publish order: `core` → `auth` → `compiler` → `persistence-file` → `components` → `server` → `ui` → `cli` (see **Publishing to npm** above).
 
@@ -200,7 +200,7 @@ Create a page file and an entrypoint:
 
 ```typescript
 // pages/counter.ts
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 export const pageMeta = { label: 'Counter', icon: 'hash', order: 10 };
 
@@ -228,7 +228,7 @@ ui.page('/counter', () => {
 
 ```typescript
 // main.ts
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 await ui.loadPages(new URL('./pages', import.meta.url));
 
@@ -243,7 +243,7 @@ ui.run({
 });
 ```
 
-Point `clientDir` at a built `@badui/client` dist only if the default (`packages/client/dist`) is wrong for your layout. The `badui` CLI serves shipped assets from `packages/cli/client-dist` (or the monorepo `packages/client/dist` fallback).
+Point `clientDir` at a built `@clay/client` dist only if the default (`packages/client/dist`) is wrong for your layout. The `clay` CLI serves shipped assets from `packages/cli/client-dist` (or the monorepo `packages/client/dist` fallback).
 
 Use `css` to inject your own `globals.css` after the built client styles — override shadcn-style tokens such as `--primary`, `--background`, and `--sidebar` (and optional `.dark`) without rebuilding the client. Runtime CSS cannot add new Tailwind utilities; use those variables or plain CSS.
 
@@ -251,7 +251,7 @@ Use `css` to inject your own `globals.css` after the built client styles — ove
 
 ```
 apps/demo/           Demo pages + server entry (`loadPages` + `ui.run({ app })`)
-packages/cli/         `badui` binary — file/dir launcher + shipped client-dist
+packages/cli/         `clay` binary — file/dir launcher + shipped client-dist
 packages/ui/         NiceGUI-style ui facade (`loadPages`, `navFromPages`, `run`)
 packages/core/       Element tree, session, page wrapper, reactive, storage (tab/user/app)
 packages/auth/       Optional password hash, login limiter, requireAuth / requireRole, audit

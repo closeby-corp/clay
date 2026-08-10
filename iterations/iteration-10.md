@@ -30,7 +30,7 @@ render(): JSX.Element {
 ```
 
 **Steps**:
-- [ ] 1.1 Add `jsx: "react-jsx"` / `jsxImportSource: "badui/jsx-runtime"` to `tsconfig.json`
+- [ ] 1.1 Add `jsx: "react-jsx"` / `jsxImportSource: "clay/jsx-runtime"` to `tsconfig.json`
 - [ ] 1.2 Create `packages/core/src/jsx-runtime.ts` — implement `jsx(tag, props, key)` returning a lightweight VNode tree (`{ tag, props, children }`)
 - [ ] 1.3 Create `packages/core/src/jsx-render.ts` — walk the VNode tree and produce HTML string (this replaces `render(): string`)
 - [ ] 1.4 Create `Fragment` support (`<>...</>`)
@@ -45,7 +45,7 @@ render(): JSX.Element {
 
 **Problem**: `signalStreamRegistry` is a per-process `Map<string, ...>`. SSE streams are tied to one server instance. Horizontal scaling = broken SSE.
 
-**Solution**: Extract an interface `PatchBus` that `BadUIServer` depends on. Ship two implementations:
+**Solution**: Extract an interface `PatchBus` that `ClayServer` depends on. Ship two implementations:
 
 - `InMemoryPatchBus` — current `Map`-based approach (single process)
 - `RedisPatchBus` — fan-out via Redis Pub/Sub (multi-process)
@@ -63,7 +63,7 @@ render(): JSX.Element {
   ```
 - [ ] 2.2 Refactor `signal-stream.ts` → `InMemoryPatchBus` (keep existing behavior)
 - [ ] 2.3 Rewrite `patchResponse()` and `createStreamResponse()` to accept `PatchBus`
-- [ ] 2.4 Update `BadUIServer` to receive `PatchBus` in its constructor (defaults to `InMemoryPatchBus`)
+- [ ] 2.4 Update `ClayServer` to receive `PatchBus` in its constructor (defaults to `InMemoryPatchBus`)
 - [ ] 2.5 Create `RedisPatchBus` in a new `packages/server/src/patch-bus-redis.ts` using `@upstash/redis` or `ioredis`
 - [ ] 2.6 Wire `setGlobalStreamPatcher` through the bus instead of directly calling `signalStreamRegistry`
 
@@ -115,7 +115,7 @@ Remove the local signal store (`namedStates` with `PAGE_PREFIX`) and instead use
   const bad = s.state('counts', 0);     // Type error ✨
   ```
 - [ ] 4.3 Update the `page` decorator / page creation to accept a generic signal type so `context.exportSignals()` returns the typed shape
-- [ ] 4.4 Update `readBadUISignals` in `datastar.ts` to parse into a generic type
+- [ ] 4.4 Update `readClaySignals` in `datastar.ts` to parse into a generic type
 - [ ] 4.5 Add a `ts-expect-error` test in the compiler fixtures for a mismatched signal name
 
 **Note**: Full type safety across the wire (client → server → client) requires shared types between server and client. For now, focus on server-side type safety — the client already handles its own signal merging.
@@ -130,7 +130,7 @@ Remove the local signal store (`namedStates` with `PAGE_PREFIX`) and instead use
 
 **Steps**:
 - [ ] 5.1 Split `PageTemplate.render()` into:
-  - `shell()` — renders `<html><head>...<body><div id="badui-stream">...<div id="app" data-signals="..."></div></body></html>` (no inner content)
+  - `shell()` — renders `<html><head>...<body><div id="clay-stream">...<div id="app" data-signals="..."></div></body></html>` (no inner content)
 - [ ] 5.2 On first page GET, instead of:
   ```
   render() → template.render(html, ctxId, signals)

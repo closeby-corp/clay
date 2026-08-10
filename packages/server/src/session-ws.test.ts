@@ -12,8 +12,8 @@ import {
   type ClientMessage,
   type ElementNode,
   type ServerMessage,
-} from '@badui/core';
-import { BadUIServer } from './server';
+} from '@clay/core';
+import { ClayServer } from './server';
 
 function findByType(node: ElementNode, type: string): ElementNode[] {
   const out: ElementNode[] = [];
@@ -77,19 +77,19 @@ function send(ws: WebSocket, msg: ClientMessage): void {
 
 describe('WebSocket session protocol', () => {
   let dir: string;
-  let badui: BadUIServer | null = null;
+  let clay: ClayServer | null = null;
 
   beforeEach(async () => {
     clearPages();
     resetIdSequence();
     storage.clearAll();
-    dir = await mkdtemp(join(tmpdir(), 'badui-ws-'));
+    dir = await mkdtemp(join(tmpdir(), 'clay-ws-'));
     await mkdir(dir, { recursive: true });
   });
 
   afterEach(async () => {
-    badui?.stop();
-    badui = null;
+    clay?.stop();
+    clay = null;
     clearPages();
     storage.clearAll();
     await rm(dir, { recursive: true, force: true });
@@ -113,15 +113,15 @@ describe('WebSocket session protocol', () => {
       new Element('label', { text: 'arrived' });
     });
 
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       uploadDir: dir,
       userStorageDir: false,
       clientDir: dir,
     });
-    badui.start();
+    clay.start();
 
-    const ws = await openWs(badui.port);
+    const ws = await openWs(clay.port);
     try {
       const mountA = waitForMessage(ws, (m) => m.op === 'mount');
       send(ws, { op: 'hello', path: '/ws-a', userId: 'ws-user-1' });
@@ -183,15 +183,15 @@ describe('WebSocket session protocol', () => {
       });
     });
 
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       uploadDir: dir,
       userStorageDir: false,
       clientDir: dir,
     });
-    badui.start();
+    clay.start();
 
-    const ws = await openWs(badui.port);
+    const ws = await openWs(clay.port);
     try {
       const mountStore = waitForMessage(ws, (m) => m.op === 'mount');
       send(ws, { op: 'hello', path: '/ws-store', userId: 'persist-user' });
@@ -247,15 +247,15 @@ describe('WebSocket session protocol', () => {
       void label;
     });
 
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       uploadDir: dir,
       userStorageDir: false,
       clientDir: dir,
     });
-    badui.start();
+    clay.start();
 
-    const ws = await openWs(badui.port);
+    const ws = await openWs(clay.port);
     try {
       const mountP = waitForMessage(ws, (m) => m.op === 'mount');
       send(ws, {
@@ -292,15 +292,15 @@ describe('WebSocket session protocol', () => {
       });
     });
 
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       uploadDir: dir,
       userStorageDir: false,
       clientDir: dir,
     });
-    badui.start();
+    clay.start();
 
-    const ws = await openWs(badui.port);
+    const ws = await openWs(clay.port);
     try {
       const mountP = waitForMessage(ws, (m) => m.op === 'mount');
       send(ws, { op: 'hello', path: '/ws-tab-write' });

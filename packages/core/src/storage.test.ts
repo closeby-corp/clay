@@ -9,7 +9,7 @@ import {
   setCurrentSession,
   storage,
   type PersistenceAdapter,
-} from '@badui/core';
+} from '@clay/core';
 
 beforeEach(() => {
   clearPages();

@@ -1,4 +1,4 @@
-import type { PersistenceAdapter } from '@badui/core';
+import type { PersistenceAdapter } from '@clay/core';
 
 /** Minimal Redis surface used by the adapter (ioredis, node-redis, Bun, mocks). */
 export type RedisLikeClient = {
@@ -11,7 +11,7 @@ export type RedisLikeClient = {
 export type RedisPersistenceOptions = {
   client: RedisLikeClient;
   /**
-   * Prefix for all keys (default `badui:`).
+   * Prefix for all keys (default `clay:`).
    * App stores use `${prefix}${key}`; user bags already include `user:` in the key.
    */
   keyPrefix?: string;
@@ -26,8 +26,8 @@ export type RedisPersistenceOptions = {
  *
  * @example
  * ```ts
- * import { storage } from '@badui/core';
- * import { createRedisPersistence } from '@badui/persistence-redis';
+ * import { storage } from '@clay/core';
+ * import { createRedisPersistence } from '@clay/persistence-redis';
  * import Redis from 'ioredis';
  *
  * const redis = new Redis(process.env.REDIS_URL!);
@@ -38,7 +38,7 @@ export type RedisPersistenceOptions = {
 export function createRedisPersistence(
   options: RedisPersistenceOptions,
 ): PersistenceAdapter {
-  const prefix = options.keyPrefix ?? 'badui:';
+  const prefix = options.keyPrefix ?? 'clay:';
   const { client } = options;
 
   function fullKey(key: string): string {

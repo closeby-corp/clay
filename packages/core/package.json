@@ -1,7 +1,7 @@
 {
-  "name": "@badui/core",
+  "name": "@clay/core",
   "version": "0.1.0",
-  "description": "Core element tree, sessions, and protocol types for BadUI",
+  "description": "Core element tree, sessions, and protocol types for Clay",
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
@@ -17,10 +17,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "url": "git+https://github.com/closeby-corp/clay.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "homepage": "https://github.com/closeby-corp/clay#readme",
   "publishConfig": {
     "access": "public"
   },

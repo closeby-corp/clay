@@ -1,8 +1,8 @@
 import { isAbsolute, join, resolve } from 'path';
 import { existsSync, writeFileSync } from 'fs';
 import { stat } from 'fs/promises';
-import { registerReactiveLetPlugin } from '@badui/compiler/plugin';
-import { getRegisteredPaths } from '@badui/core';
+import { registerReactiveLetPlugin } from '@clay/compiler/plugin';
+import { getRegisteredPaths } from '@clay/core';
 import {
   ui,
   wasRunCalled,
@@ -10,7 +10,7 @@ import {
   importFresh,
   resetPageDiscovery,
   type RunConfig,
-} from '@badui/ui';
+} from '@clay/ui';
 import { parseArgs, printUsage } from './parse-args.ts';
 import { openBrowser, resolveBundledClientDir, resolveTitle } from './helpers.ts';
 import { maybeReload } from './reload.ts';
@@ -21,7 +21,7 @@ const NO_PAGES_HINT = `No pages registered.
 
 Use one of:
   // hello.ts — root page
-  import { ui } from '@badui/ui';
+  import { ui } from '@clay/ui';
   ui.run(() => { ui.label('Hello'); });
 
   // or export a default builder (CLI registers as /)
@@ -57,8 +57,8 @@ function ensureStarted(config: RunConfig): ReturnType<typeof ui.run> | null {
 /** Open once under `--reload` (marker path from parent); always open otherwise. */
 export function shouldOpenBrowser(openFlag: boolean): boolean {
   if (!openFlag) return false;
-  if (process.env.BADUI_RELOAD_CHILD !== '1') return true;
-  const marker = process.env.BADUI_RELOAD_OPEN_MARKER;
+  if (process.env.CLAY_RELOAD_CHILD !== '1') return true;
+  const marker = process.env.CLAY_RELOAD_OPEN_MARKER;
   if (!marker) return true;
   if (existsSync(marker)) return false;
   try {
@@ -137,7 +137,7 @@ async function startServerWithRetry(
           'ui.run() was already called by the entry module; CLI cannot start a second server. Remove ui.run from page modules when using the CLI.',
         );
       }
-      throw new Error('Failed to start BadUI server (ensureStarted returned null).');
+      throw new Error('Failed to start Clay server (ensureStarted returned null).');
     } catch (err) {
       lastErr = err;
       if (isAddrInUse(err) && i < attempts - 1) {
@@ -167,8 +167,8 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     process.exit(args.help ? 0 : 1);
   }
 
-  if (process.env.BADUI_RELOAD_CHILD === '1') {
-    console.log('↻ badui: reloading…');
+  if (process.env.CLAY_RELOAD_CHILD === '1') {
+    console.log('↻ clay: reloading…');
   }
 
   resetRunState();

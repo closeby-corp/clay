@@ -1,9 +1,9 @@
-# ClickHouse (`@badui/clickhouse`)
+# ClickHouse (`@clay/clickhouse`)
 
-Multi-connection ClickHouse wrapper with the same shape as [`@badui/duckdb`](./duckdb.md): named clients, `exec` / `query` / `queryOne`, and insert/update/delete helpers. Also includes `stream` for large SELECTs.
+Multi-connection ClickHouse wrapper with the same shape as [`@clay/duckdb`](./duckdb.md): named clients, `exec` / `query` / `queryOne`, and insert/update/delete helpers. Also includes `stream` for large SELECTs.
 
 ```typescript
-import { ClickHouse } from '@badui/clickhouse';
+import { ClickHouse } from '@clay/clickhouse';
 
 const ch = new ClickHouse();
 

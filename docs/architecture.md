@@ -4,26 +4,26 @@
 
 | Package | Role |
 |---------|------|
-| `@badui/ui` | App-facing `ui` object: factories, `page`, `loadPages`, `navFromPages`, `run` |
-| `@badui/cli` | `badui` binary: run a `.ts` file or page directory with sane defaults |
-| `@badui/components` | Thin `Element` factories (no HTML strings) |
-| `@badui/core` | Element tree, session, page wrapper, reactive, protocol, `storage` (`tab` / `user` / `app`) + PersistenceAdapter |
-| `@badui/persistence-file` | File-backed `PersistenceAdapter` for `storage.configure` |
-| `@badui/server` | Bun.serve: static SPA assets + `/ws` upgrade, `/auth/session`, session timeouts |
-| `@badui/auth` | Optional helpers: password hash, login limiter, `requireAuth` / `requireRole`, `auditRecord` |
-| `@badui/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@badui/cli` via `bun run build:client` / `pack:publishable`. |
+| `@clay/ui` | App-facing `ui` object: factories, `page`, `loadPages`, `navFromPages`, `run` |
+| `@clay/cli` | `clay` binary: run a `.ts` file or page directory with sane defaults |
+| `@clay/components` | Thin `Element` factories (no HTML strings) |
+| `@clay/core` | Element tree, session, page wrapper, reactive, protocol, `storage` (`tab` / `user` / `app`) + PersistenceAdapter |
+| `@clay/persistence-file` | File-backed `PersistenceAdapter` for `storage.configure` |
+| `@clay/server` | Bun.serve: static SPA assets + `/ws` upgrade, `/auth/session`, session timeouts |
+| `@clay/auth` | Optional helpers: password hash, login limiter, `requireAuth` / `requireRole`, `auditRecord` |
+| `@clay/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@clay/cli` via `bun run build:client` / `pack:publishable`. |
 
-`@badui/compiler` (old Datastar `let` transform) was removed; compile-time reactive `let` remains a Later backlog item.
+`@clay/compiler` (old Datastar `let` transform) was removed; compile-time reactive `let` remains a Later backlog item.
 
 ## Runtime data flow
 
 ```
-badui <file|dir> ──► import / loadPages
+clay <file|dir> ──► import / loadPages
         │
 ui.run({ app? }) ──► setPageWrapper(app shell)
         │
         ▼
-BadUIServer ──HTTP──► SPA shell (index.html + assets)
+ClayServer ──HTTP──► SPA shell (index.html + assets)
 ```
 
 Or library entry:
@@ -34,7 +34,7 @@ ui.loadPages(dir) ──► ui.page registrations + pageMeta
 ui.run({ app }) ──► setPageWrapper(app shell)
         │
         ▼
-BadUIServer ──HTTP──► SPA shell (index.html + assets)
+ClayServer ──HTTP──► SPA shell (index.html + assets)
         │
         └──WS /ws──► ClientSession
                         │
@@ -43,7 +43,7 @@ BadUIServer ──HTTP──► SPA shell (index.html + assets)
                         └─ patch: updateProps / setChildren / …
                                     │
                                     ▼
-                         React useBadUISession + ElementRenderer
+                         React useClaySession + ElementRenderer
                          (notify → Sonner toast)
 ```
 
@@ -62,7 +62,7 @@ BadUIServer ──HTTP──► SPA shell (index.html + assets)
 
 On the client, a durable WebSocket + sticky React key for `type: 'app'` keeps sidebar/header mounted across navigate when chrome identity matches; only the inset tree remounts.
 
-Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `ui.storage.app` when you need a process-wide store. Optional `PersistenceAdapter` (via `storage.configure({ app })` or `ui.run({ appStorageDir })`) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@badui/persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
+Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `ui.storage.app` when you need a process-wide store. Optional `PersistenceAdapter` (via `storage.configure({ app })` or `ui.run({ appStorageDir })`) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@clay/persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
 
 ## Extending the system
 
@@ -76,16 +76,16 @@ Per-tab isolation: local `let` / `reactive` state inside a page builder is not s
 ### Custom server
 
 ```typescript
-import { BadUIServer } from '@badui/server';
-import { setPageWrapper } from '@badui/core';
-import { app } from '@badui/components';
+import { ClayServer } from '@clay/server';
+import { setPageWrapper } from '@clay/core';
+import { app } from '@clay/components';
 import './pages';
 
 setPageWrapper((pageFn) =>
   app({ title: 'App', nav: [{ label: 'Home', href: '/' }] }, pageFn),
 );
 
-const server = new BadUIServer({ port: 4000, title: 'App' });
+const server = new ClayServer({ port: 4000, title: 'App' });
 server.start();
 ```
 
@@ -95,7 +95,7 @@ Or use `ui.run({ app, … })` which sets the page wrapper and starts the server.
 
 The previous Datastar + DaisyUI + SSE signal-sync architecture is removed:
 
-- No `/badui/stream` or `/badui/events`
+- No `/clay/stream` or `/clay/events`
 - No DaisyUI CDN page template
 - No signal cache / PatchBus as the primary update path
 - Compiler preload (`bunfig.toml`) removed

@@ -19,19 +19,19 @@ export function resolveWatchRoot(absEntry: string, isDirectory: boolean): string
 
 /** Leading `_` so `ui.loadPages` skips this stub if it lands inside a pages dir. */
 export function reloadStubFileName(pid = process.pid): string {
-  return `_badui-reload-${pid}.ts`;
+  return `_clay-reload-${pid}.ts`;
 }
 
 /** Marker so reload children open the browser only on the first start. */
 export function reloadOpenMarkerFileName(pid = process.pid): string {
-  return `_badui-reload-opened-${pid}`;
+  return `_clay-reload-opened-${pid}`;
 }
 
 /** Stub that re-invokes the CLI under `bun --watch` with the user's project as cwd. */
 export function buildReloadStubSource(cliPath: string, filteredArgv: string[]): string {
   const cliUrl = JSON.stringify(pathToFileURL(cliPath).href);
   const argvLit = JSON.stringify(filteredArgv);
-  return `process.env.BADUI_RELOAD_CHILD = "1";
+  return `process.env.CLAY_RELOAD_CHILD = "1";
 const { main } = await import(${cliUrl});
 await main(${argvLit});
 `;
@@ -42,7 +42,7 @@ await main(${argvLit});
  * contents so the child process actually restarts.
  */
 export function writeReloadStubNudge(stubPath: string, baseSource: string, now = Date.now()): void {
-  writeFileSync(stubPath, `${baseSource}\n// badui-reload-nudge ${now}\n`);
+  writeFileSync(stubPath, `${baseSource}\n// clay-reload-nudge ${now}\n`);
 }
 
 /**
@@ -68,7 +68,7 @@ export function watchDirectoryForNewModules(
 ): FSWatcher {
   let timer: ReturnType<typeof setTimeout> | undefined;
   return watch(absDir, { recursive: true }, (_event, filename) => {
-    if (typeof filename === 'string' && filename.includes('_badui-reload-')) return;
+    if (typeof filename === 'string' && filename.includes('_clay-reload-')) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
       try {
@@ -96,8 +96,8 @@ export async function maybeReload(
 ): Promise<boolean> {
   if (
     !argv.includes('--reload') ||
-    opts.env?.BADUI_RELOAD_CHILD === '1' ||
-    process.env.BADUI_RELOAD_CHILD === '1'
+    opts.env?.CLAY_RELOAD_CHILD === '1' ||
+    process.env.CLAY_RELOAD_CHILD === '1'
   ) {
     return false;
   }
@@ -129,8 +129,8 @@ export async function maybeReload(
   const childEnv = {
     ...process.env,
     ...opts.env,
-    BADUI_RELOAD_CHILD: '1',
-    BADUI_RELOAD_OPEN_MARKER: openMarkerPath,
+    CLAY_RELOAD_CHILD: '1',
+    CLAY_RELOAD_OPEN_MARKER: openMarkerPath,
   };
 
   const stubSource = () => buildReloadStubSource(opts.cliPath, filtered);

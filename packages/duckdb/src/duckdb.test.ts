@@ -66,7 +66,7 @@ describe('DuckDB manager', () => {
   });
 
   test('attach another duckdb file, query, detach', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'badui-duckdb-'));
+    const dir = await mkdtemp(join(tmpdir(), 'clay-duckdb-'));
     const otherPath = join(dir, 'other.duckdb');
     try {
       const setup = create();

@@ -1,4 +1,4 @@
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -72,7 +72,7 @@ ui.timer(1, () => label.setText(new Date().toISOString()));
       );
 
       exampleSection('Image', 'Plain img with src URL.');
-      ui.image('https://picsum.photos/seed/badui/640/240', {
+      ui.image('https://picsum.photos/seed/clay/640/240', {
         alt: 'Sample photo',
         className: 'rounded-md border',
       });

@@ -1,15 +1,15 @@
-# BadUI
+# Clay
 
 Server-driven UI for TypeScript, inspired by [NiceGUI](https://nicegui.io/).
 
-You write imperative `ui.*` on the server. BadUI owns a per-client element tree and syncs it to a thin **React + ShadCN** client over **WebSocket**.
+You write imperative `ui.*` on the server. Clay owns a per-client element tree and syncs it to a thin **React + ShadCN** client over **WebSocket**.
 
 **Full documentation:** [docs/README.md](./docs/README.md)
 
 ## Features
 
 - **NiceGUI-like API** — `ui.page`, `ui.run(root?)`, `ui.button`, `ui.refreshable`, `bindValue`, `setText`, `onClick`
-- **`badui` CLI** — `badui hello.ts` or `badui ./pages --app`
+- **`clay` CLI** — `clay hello.ts` or `clay ./pages --app`
 - **Server-owned element tree** — per-tab sessions; incremental WS patches
 - **React + ShadCN client** — Radix/Tailwind under the hood
 - **camelCase everywhere** on the public API and wire protocol
@@ -20,31 +20,31 @@ You write imperative `ui.*` on the server. BadUI owns a per-client element tree 
 **Outside this monorepo** (packed or published packages):
 
 ```bash
-# After `bun run pack:publishable` in a BadUI checkout — or once packages are on npm:
-npm install ./dist-pack/badui-*-0.1.0.tgz   # local packs; see docs/getting-started.md
-# bun add @badui/cli @badui/ui               # when published to the registry
+# After `bun run pack:publishable` in a Clay checkout — or once packages are on npm:
+npm install ./dist-pack/clay-*-0.1.0.tgz   # local packs; see docs/getting-started.md
+# bun add @clay/cli @clay/ui               # when published to the registry
 
-bunx badui hello.ts   # ships prebuilt client-dist — no Vite build needed
+bunx clay hello.ts   # ships prebuilt client-dist — no Vite build needed
 ```
 
 **This monorepo:**
 
 ```bash
 bun install
-bun run build:client   # Vite → packages/client/dist (+ copy into @badui/cli)
-bun run badui hello.ts # http://localhost:3000
+bun run build:client   # Vite → packages/client/dist (+ copy into @clay/cli)
+bun run clay hello.ts # http://localhost:3000
 
 # Demo app
 bun run demo           # http://localhost:4000
-bun run demo:cli       # same via `badui … --app`
+bun run demo:cli       # same via `clay … --app`
 bun run dev            # build client + start demo
 ```
 
-`@badui/cli` ships prebuilt client assets. In this repo, run `build:client` (or `pack:publishable`) so the workspace CLI / demo have assets to serve.
+`@clay/cli` ships prebuilt client assets. In this repo, run `build:client` (or `pack:publishable`) so the workspace CLI / demo have assets to serve.
 
 ```typescript
 // hello.ts
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 ui.run(() => {
   let count = 0;
@@ -83,13 +83,13 @@ ui.run(() => {
 
 | Package | Role |
 |---------|------|
-| `@badui/ui` | NiceGUI-style `ui` facade |
-| `@badui/cli` | `badui` runtime — run a file or page directory |
-| `@badui/core` | Element tree, session, reactive, protocol |
-| `@badui/auth` | Optional password hash, login limiter, guards, audit |
-| `@badui/components` | Element factories |
-| `@badui/client` | React + ShadCN renderer |
-| `@badui/server` | Bun HTTP + WebSocket |
+| `@clay/ui` | NiceGUI-style `ui` facade |
+| `@clay/cli` | `clay` runtime — run a file or page directory |
+| `@clay/core` | Element tree, session, reactive, protocol |
+| `@clay/auth` | Optional password hash, login limiter, guards, audit |
+| `@clay/components` | Element factories |
+| `@clay/client` | React + ShadCN renderer |
+| `@clay/server` | Bun HTTP + WebSocket |
 
 ## Architecture (short)
 
@@ -104,13 +104,13 @@ App (ui.page / ui.refreshable)
 
 | Command | Description |
 |---------|-------------|
-| `bun run build:client` | Build the React client (+ copy into `@badui/cli`) |
+| `bun run build:client` | Build the React client (+ copy into `@clay/cli`) |
 | `bun run pack:publishable` | `build:client` + pack runtime packages into `dist-pack/` |
 | `bun run publish:dry` | Pack + validate + `npm publish --dry-run` (no upload) |
 | `bun run publish:npm` | Pack + validate + publish to npm (needs login; order: core → … → cli) |
 | `bun run demo` | Start the demo server |
-| `bun run demo:cli` | Demo via `badui … --app` |
-| `bun run badui …` | CLI runtime |
+| `bun run demo:cli` | Demo via `clay … --app` |
+| `bun run clay …` | CLI runtime |
 | `bun run dev` | Build client, then demo |
 | `bun test` | Run package tests |
 
@@ -126,4 +126,4 @@ Maintainers: `bun run publish:dry` validates packs; `bun run publish:npm` publis
 
 ## License
 
-MIT. Root workspace is private; runtime packages (`@badui/cli`, `@badui/ui`, …) are publishable via `bun run pack:publishable` / `publish:npm`. `@badui/client` stays private — its build is copied into `@badui/cli`.
+MIT. Root workspace is private; runtime packages (`@clay/cli`, `@clay/ui`, …) are publishable via `bun run pack:publishable` / `publish:npm`. `@clay/client` stays private — its build is copied into `@clay/cli`.

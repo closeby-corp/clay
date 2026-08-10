@@ -1,4 +1,4 @@
-import { Element, withParent } from '@badui/core';
+import { Element, withParent } from '@clay/core';
 
 export type HoverCardSide = 'top' | 'right' | 'bottom' | 'left';
 

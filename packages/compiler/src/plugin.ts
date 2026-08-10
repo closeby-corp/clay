@@ -31,7 +31,7 @@ export function registerReactiveLetPlugin(
     ((path: string) => path.includes('/node_modules/') || path.includes('\\node_modules\\'));
 
   Bun.plugin({
-    name: 'badui-reactive-let',
+    name: 'clay-reactive-let',
     setup(build) {
       build.onLoad({ filter: /\.[cm]?[jt]sx?$/ }, async (args) => {
         const loader = loaderForPath(args.path);

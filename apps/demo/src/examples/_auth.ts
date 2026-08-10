@@ -1,11 +1,11 @@
-import { getCurrentSession } from '@badui/core';
+import { getCurrentSession } from '@clay/core';
 import {
   createAuthGuards,
   createLoginLimiter,
   hashPassword,
   verifyPassword,
-} from '@badui/auth';
-import { ui } from '@badui/ui';
+} from '@clay/auth';
+import { ui } from '@clay/ui';
 
 export type Role = 'admin' | 'user';
 

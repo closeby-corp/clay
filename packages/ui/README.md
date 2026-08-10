@@ -1,21 +1,21 @@
-# @badui/ui
+# @clay/ui
 
-NiceGUI-like `ui.*` facade for [BadUI](https://github.com/tfsoares/bad-ui) apps.
+NiceGUI-like `ui.*` facade for [Clay](https://github.com/closeby-corp/clay) apps.
 
 ```bash
-bun add @badui/cli @badui/ui
+bun add @clay/cli @clay/ui
 ```
 
 ```typescript
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 export default function () {
-  ui.label('Hello BadUI');
+  ui.label('Hello Clay');
 }
 ```
 
 ```bash
-bunx badui hello.ts
+bunx clay hello.ts
 ```
 
-Docs: [Getting started](https://github.com/tfsoares/bad-ui/blob/main/docs/getting-started.md).
+Docs: [Getting started](https://github.com/closeby-corp/clay/blob/main/docs/getting-started.md).

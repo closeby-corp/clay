@@ -47,6 +47,12 @@ export class TableBuilder {
     return this;
   }
 
+  /** Debounce (ms) for global search and text column filters. Default `300`. */
+  filterDebounce(ms: number): this {
+    this.props.filterDebounceMs = ms;
+    return this;
+  }
+
   pageSize(n: number, options?: PageSizeOptions): this {
     this.props.pageSize = n;
     if (options?.options) {

@@ -2,8 +2,8 @@ import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { clearPages, page, storage } from '@badui/core';
-import { BadUIServer } from './server';
+import { clearPages, page, storage } from '@clay/core';
+import { ClayServer } from './server';
 
 function waitFor(ws: WebSocket, predicate: (data: unknown) => boolean, ms = 4000): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -28,10 +28,10 @@ function waitFor(ws: WebSocket, predicate: (data: unknown) => boolean, ms = 4000
 describe('resolveUserId auth hook', () => {
   let dir: string;
   let server: ReturnType<typeof Bun.serve> | null = null;
-  let badui: BadUIServer | null = null;
+  let clay: ClayServer | null = null;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'badui-auth-'));
+    dir = await mkdtemp(join(tmpdir(), 'clay-auth-'));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, 'index.js'), '');
     clearPages();
@@ -41,7 +41,7 @@ describe('resolveUserId auth hook', () => {
   afterEach(async () => {
     server?.stop(true);
     server = null;
-    badui = null;
+    clay = null;
     clearPages();
     storage.clearAll();
     await rm(dir, { recursive: true, force: true });
@@ -51,7 +51,7 @@ describe('resolveUserId auth hook', () => {
     page('/auth', () => {});
 
     let resolved: string | null | undefined;
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       clientDir: dir,
       userStorageDir: false,
@@ -61,10 +61,10 @@ describe('resolveUserId auth hook', () => {
         return resolved;
       },
     });
-    server = badui.start();
+    server = clay.start();
 
     // Bun's WebSocket constructor accepts a second options bag with headers.
-    const ws = new WebSocket(`ws://127.0.0.1:${badui.port}/ws`, {
+    const ws = new WebSocket(`ws://127.0.0.1:${clay.port}/ws`, {
       headers: { 'x-forwarded-user': 'trusted-alice' },
     } as unknown as string[]);
 
@@ -90,7 +90,7 @@ describe('resolveUserId auth hook', () => {
   test('falls back to hello userId when hook returns null', async () => {
     page('/auth', () => {});
     let seenHello: string | undefined;
-    badui = new BadUIServer({
+    clay = new ClayServer({
       port: 0,
       clientDir: dir,
       userStorageDir: false,
@@ -99,9 +99,9 @@ describe('resolveUserId auth hook', () => {
         return null;
       },
     });
-    server = badui.start();
+    server = clay.start();
 
-    const ws = new WebSocket(`ws://127.0.0.1:${badui.port}/ws`);
+    const ws = new WebSocket(`ws://127.0.0.1:${clay.port}/ws`);
     await new Promise<void>((resolve, reject) => {
       ws.onopen = () => resolve();
       ws.onerror = () => reject(new Error('ws error'));

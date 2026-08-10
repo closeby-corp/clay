@@ -1,5 +1,5 @@
-import { auditRecord, listAuditRecords, clearAuditRecords } from '@badui/auth';
-import { ui } from '@badui/ui';
+import { auditRecord, listAuditRecords, clearAuditRecords } from '@clay/auth';
+import { ui } from '@clay/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
 import {
   ACCOUNT_PATH,

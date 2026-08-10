@@ -108,13 +108,13 @@ const EDGE_VARIANT_STYLE: Record<
   },
 };
 
-/** App-registered RF node types (merged with built-in `badui` / `baduiGroup`). */
+/** App-registered RF node types (merged with built-in `clay` / `clayGroup`). */
 const registeredNodeTypes: Record<string, ComponentType<NodeProps>> = {};
 /** App-registered RF edge types (merged into React Flow `edgeTypes`). */
 const registeredEdgeTypes: Record<string, ComponentType<EdgeProps>> = {};
 
 /**
- * Register custom React Flow node types for BadUI flows.
+ * Register custom React Flow node types for Clay flows.
  * Use the same string keys via `flow.node({ nodeType: '…' })`.
  * Intended for custom client builds that import BoundFlow.
  */
@@ -125,7 +125,7 @@ export function registerFlowNodeTypes(
 }
 
 /**
- * Register custom React Flow edge types for BadUI flows.
+ * Register custom React Flow edge types for Clay flows.
  * Use the same string keys via edge `type: '…'` (non-built-in path kinds).
  */
 export function registerFlowEdgeTypes(
@@ -277,7 +277,7 @@ function toRfNode(flowNode: ElementNode, emit: Emit, renderNode: RenderNode): No
   const kind = (flowNode.props.kind as string | undefined) ?? 'default';
   const nodeType =
     (flowNode.props.nodeType as string | undefined) ||
-    (kind === 'group' ? 'baduiGroup' : 'badui');
+    (kind === 'group' ? 'clayGroup' : 'clay');
   const parentId = flowNode.props.parentId as string | undefined;
   const width = flowNode.props.width as number | undefined;
   const height = flowNode.props.height as number | undefined;
@@ -420,8 +420,8 @@ function BaduiGroupNode({ id, data }: NodeProps<Node<BaduiNodeData>>) {
 }
 
 const builtinNodeTypes = {
-  badui: BaduiFlowNode,
-  baduiGroup: BaduiGroupNode,
+  clay: BaduiFlowNode,
+  clayGroup: BaduiGroupNode,
 };
 
 /**
@@ -589,7 +589,7 @@ function BoundFlowInner({
     setEdges((prev) => reconcileFlowEdges(serverEdges, prev));
   }, [edgeKey, serverEdges]);
 
-  // Merge live BadUI bodies into RF nodes each render so nested prop patches
+  // Merge live Clay bodies into RF nodes each render so nested prop patches
   // (e.g. progress value) show up without requiring a node drag / topology change.
   const displayNodes = useMemo(() => {
     const byId = new Map(flowNodes.map((n) => [String(n.props.id ?? n.id), n]));

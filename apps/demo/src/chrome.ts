@@ -1,4 +1,4 @@
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 /**
  * Page intro under the shell SiteHeader.
@@ -26,7 +26,7 @@ export function exampleSection(title: string, description?: string): void {
   }, { gap: 1 });
 }
 
-/** Constrain reading-width examples inside the full-bleed shell. */
+/** Constrain examples inside the full-bleed shell (wide enough for boards/tables). */
 export function exampleFrame(fn: () => void): void {
-  ui.container({ centered: true, width: 'xl' }, fn);
+  ui.container({ centered: true, width: '6xl' }, fn);
 }

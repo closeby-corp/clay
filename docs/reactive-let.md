@@ -1,6 +1,6 @@
 # Compile-time reactive `let`
 
-Status: **Phase 1 shipped** (`ui.state` + `ui.auto`, with in-place props sync when the tree shape is stable). **Phase 2 shipped** (`@badui/compiler` transform + `badui` CLI Bun loader; expanded beyond the original leading-`let` MVP).
+Status: **Phase 1 shipped** (`ui.state` + `ui.auto`, with in-place props sync when the tree shape is stable). **Phase 2 shipped** (`@clay/compiler` transform + `clay` CLI Bun loader; expanded beyond the original leading-`let` MVP).
 
 ## Goal
 
@@ -40,13 +40,13 @@ Tests: `packages/core/src/auto.test.ts`, `packages/core/src/element.test.ts`.
 
 ## Phase 2 (shipped)
 
-Package `@badui/compiler` rewrites a **documented subset** of `let` into Phase 1 APIs.
+Package `@clay/compiler` rewrites a **documented subset** of `let` into Phase 1 APIs.
 
 ### Opt-in
 
 Any of:
 
-1. File pragma: `// @badui-reactive` (near the top of the file)
+1. File pragma: `// @clay-reactive` (near the top of the file)
 2. Block directive as the first statement: `"use reactive";`
 3. Leading / body `let`s inside a `page(...)` / `ui.page(...)` callback (no pragma required)
 4. Nested function callbacks **inside** an already-eligible site (e.g. `ui.column(() => { let n = 0; … })` under `ui.page`)
@@ -56,7 +56,7 @@ Any of:
 Simple `let name = <simple>` declarations **anywhere** in an eligible function body, including nested blocks (`if` / bare blocks / `try` / `switch`), but **not** inside loops or nested function scopes (nested functions are their own sites when eligible):
 
 ```ts
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 ui.page('/', () => {
   ui.label('hi');
@@ -70,11 +70,11 @@ Becomes roughly:
 
 ```ts
 ui.page('/', () => {
-  const __badui_s0 = ui.state({ count: 0 });
+  const __clay_s0 = ui.state({ count: 0 });
   ui.auto(() => {
     ui.label('hi');
-    ui.label(`Count: ${__badui_s0.count}`);
-    ui.button('+', { onClick: () => { __badui_s0.count++; } });
+    ui.label(`Count: ${__clay_s0.count}`);
+    ui.button('+', { onClick: () => { __clay_s0.count++; } });
   });
 });
 ```
@@ -83,18 +83,18 @@ ui.page('/', () => {
 
 ### CLI
 
-The `badui` CLI registers the Bun loader plugin by default (before importing the entry). Disable with `--no-reactive-let`.
+The `clay` CLI registers the Bun loader plugin by default (before importing the entry). Disable with `--no-reactive-let`.
 
 ```bash
-badui ./pages --app --reload
-badui hello.ts --no-reactive-let
+clay ./pages --app --reload
+clay hello.ts --no-reactive-let
 ```
 
 Programmatic:
 
 ```ts
-import { registerReactiveLetPlugin } from '@badui/compiler/plugin';
-import { transformReactiveLet } from '@badui/compiler';
+import { registerReactiveLetPlugin } from '@clay/compiler/plugin';
+import { transformReactiveLet } from '@clay/compiler';
 
 registerReactiveLetPlugin();
 ```
@@ -106,7 +106,7 @@ registerReactiveLetPlugin();
 - No loop-scoped `let` (would re-init incorrectly if hoisted).
 - Duplicate `let` names in nested blocks abort the transform for that function (shadowing).
 - Does not rewrite interpolations into `bindText` at compile time (runtime `auto` already prefers props patches when the tree is stable).
-- Running the demo via plain `bun apps/demo/...` does **not** load the plugin unless you register it; use `badui` or `--preload`.
+- Running the demo via plain `bun apps/demo/...` does **not** load the plugin unless you register it; use `clay` or `--preload`.
 
 Tests: `packages/compiler/src/transform.test.ts`.
 

@@ -1,11 +1,11 @@
 {
-  "name": "@badui/cli",
+  "name": "@clay/cli",
   "version": "0.1.0",
-  "description": "badui CLI — run a .ts file or page directory with bundled React client assets",
+  "description": "clay CLI — run a .ts file or page directory with bundled React client assets",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "badui": "./bin/badui"
+    "clay": "./bin/clay"
   },
   "exports": {
     ".": "./src/main.ts"
@@ -24,16 +24,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "url": "git+https://github.com/closeby-corp/clay.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "homepage": "https://github.com/closeby-corp/clay#readme",
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@badui/compiler": "workspace:*",
-    "@badui/core": "workspace:*",
-    "@badui/ui": "workspace:*"
+    "@clay/compiler": "workspace:*",
+    "@clay/core": "workspace:*",
+    "@clay/ui": "workspace:*"
   }
 }

@@ -1,4 +1,4 @@
-import { ui, reactive, subscribe } from '@badui/ui';
+import { ui, reactive, subscribe } from '@clay/ui';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {

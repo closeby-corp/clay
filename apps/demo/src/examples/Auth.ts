@@ -1,5 +1,5 @@
-import { getCurrentSession, setCurrentSession } from '@badui/core';
-import { ui } from '@badui/ui';
+import { getCurrentSession, setCurrentSession } from '@clay/core';
+import { ui } from '@clay/ui';
 import { exampleFrame } from '../chrome';
 import {
   clearSessionUser,

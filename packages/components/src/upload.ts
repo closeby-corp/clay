@@ -1,4 +1,4 @@
-import { Element } from '@badui/core';
+import { Element } from '@clay/core';
 
 /** Metadata returned after a successful HTTP upload (not file bytes). */
 export type UploadedFile = {

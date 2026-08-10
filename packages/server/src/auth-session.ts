@@ -1,7 +1,7 @@
-import { getCurrentSession } from '@badui/core';
+import { getCurrentSession } from '@clay/core';
 import { signAuthToken } from './auth-cookie';
 
-/** Runtime config for signed auth cookies (set by BadUIServer when `authSecret` is set). */
+/** Runtime config for signed auth cookies (set by ClayServer when `authSecret` is set). */
 export type AuthSessionRuntimeConfig = {
   secret: string;
   /** Cookie / token max age in ms (for signing + verify). */
@@ -12,7 +12,7 @@ export type AuthSessionRuntimeConfig = {
 
 let runtime: AuthSessionRuntimeConfig | null = null;
 
-/** Called by BadUIServer when `authSecret` is configured. */
+/** Called by ClayServer when `authSecret` is configured. */
 export function configureAuthSession(config: AuthSessionRuntimeConfig | null): void {
   runtime = config;
 }
@@ -33,7 +33,7 @@ export function establishAuthSession(
 ): void {
   if (!runtime) {
     throw new Error(
-      'establishAuthSession requires ui.run({ authSecret }) (or BadUIServer authSecret)',
+      'establishAuthSession requires ui.run({ authSecret }) (or ClayServer authSecret)',
     );
   }
   const token = signAuthToken(userId, runtime.secret);

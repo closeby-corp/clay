@@ -12,7 +12,7 @@ type Phase = 'idle' | 'connecting' | 'reconnecting' | 'ready';
 const READY_FLASH_MS = 1200;
 
 /**
- * Fixed corner chip for BadUI connection state.
+ * Fixed corner chip for Clay connection state.
  * Quiet when connected; pulses while (re)connecting; brief “ready” after recover.
  * Routine reloads should use this instead of toast spam.
  */
@@ -57,7 +57,7 @@ export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) 
     <div
       role="status"
       aria-live="polite"
-      aria-label={label ? `BadUI ${label}` : 'BadUI connected'}
+      aria-label={label ? `Clay ${label}` : 'Clay connected'}
       className={cn(
         'pointer-events-none fixed bottom-4 left-4 z-50 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium shadow-sm backdrop-blur-sm transition-colors',
         phase === 'idle' &&
@@ -76,7 +76,7 @@ export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) 
           phase === 'ready' && 'bg-emerald-500',
         )}
       />
-      <span className="tracking-tight">BadUI</span>
+      <span className="tracking-tight">Clay</span>
       {label ? (
         <span className="text-[10px] font-normal opacity-80">{label}</span>
       ) : null}

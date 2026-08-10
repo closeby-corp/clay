@@ -401,7 +401,7 @@ export default function KitchenSink() {
 
             <HoverCard>
               <HoverCardTrigger asChild>
-                <Button variant="link">@badui</Button>
+                <Button variant="link">@clay</Button>
               </HoverCardTrigger>
               <HoverCardContent className="w-72">
                 <div className="flex gap-3">
@@ -409,7 +409,7 @@ export default function KitchenSink() {
                     <AvatarFallback>BU</AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">BadUI</h4>
+                    <h4 className="text-sm font-semibold">Clay</h4>
                     <p className="text-sm text-muted-foreground">
                       Server-driven UI with a React + ShadCN client.
                     </p>

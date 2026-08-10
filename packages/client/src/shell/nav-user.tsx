@@ -26,7 +26,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import type { ShellUser } from './types';
-import { BADUI_THEME_KEY, type ThemeMode } from '../themeBridge';
+import { CLAY_THEME_KEY, type ThemeMode } from '../themeBridge';
 
 function initials(name: string) {
   return name
@@ -44,7 +44,7 @@ export function NavUser({ user }: { user: ShellUser }) {
 
   const pickTheme = (theme: ThemeMode) => {
     try {
-      localStorage.setItem(BADUI_THEME_KEY, theme);
+      localStorage.setItem(CLAY_THEME_KEY, theme);
     } catch {
       // ignore
     }

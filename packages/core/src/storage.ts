@@ -311,7 +311,7 @@ const userApi: UserStorage = {
  * Lightweight session storage (NiceGUI-ish scopes).
  *
  * - **tab** — in-memory `Map` on the current `ClientSession`, mirrored to client
- *   `sessionStorage` (`badui-tab-storage`); survives reconnect / navigate-hello;
+ *   `sessionStorage` (`clay-tab-storage`); survives reconnect / navigate-hello;
  *   cleared via `tab.clear()` or when the browser tab closes (sessionStorage lifetime)
  * - **browser** — mirrored to client `localStorage` (shared across tabs for the origin)
  * - **client** — mirrored to client `sessionStorage` (this browser tab only)

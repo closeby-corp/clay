@@ -4,14 +4,14 @@
  * Order matters for registry publish (deps first):
  *   core → auth → compiler → persistence-file → components → server → ui → cli
  *
- * `@badui/client` stays private; Vite output ships inside `@badui/cli` as `client-dist`.
+ * `@clay/client` stays private; Vite output ships inside `@clay/cli` as `client-dist`.
  */
 import { join } from 'path';
 
 export const root = join(import.meta.dir, '..');
 export const outDir = join(root, 'dist-pack');
 
-/** Runtime packages consumers need for `badui hello.ts` (client is bundled into cli). */
+/** Runtime packages consumers need for `clay hello.ts` (client is bundled into cli). */
 export const PACKAGES = [
   'core',
   'auth',
@@ -27,11 +27,11 @@ export type PublishableName = (typeof PACKAGES)[number];
 
 export const REPOSITORY = {
   type: 'git',
-  url: 'git+https://github.com/tfsoares/bad-ui.git',
+  url: 'git+https://github.com/closeby-corp/clay.git',
 } as const;
 
 export function tarballPath(name: PublishableName, version: string): string {
-  return join(outDir, `badui-${name}-${version}.tgz`);
+  return join(outDir, `clay-${name}-${version}.tgz`);
 }
 
 export async function readCoreVersion(): Promise<string> {

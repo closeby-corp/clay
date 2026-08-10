@@ -1,27 +1,27 @@
 {
-  "name": "@badui/components",
+  "name": "@clay/components",
   "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "url": "git+https://github.com/closeby-corp/clay.git",
     "directory": "packages/components"
   },
   "main": "src/index.ts",
   "dependencies": {
-    "@badui/core": "workspace:*",
+    "@clay/core": "workspace:*",
     "@dagrejs/dagre": "^3.1.1"
   },
   "exports": {
     ".": "./src/index.ts"
   },
-  "description": "Built-in UI element constructors for BadUI",
+  "description": "Built-in UI element constructors for Clay",
   "files": [
     "src",
     "README.md",
     "LICENSE",
     "!src/**/*.test.ts"
   ],
-  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "homepage": "https://github.com/closeby-corp/clay#readme",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

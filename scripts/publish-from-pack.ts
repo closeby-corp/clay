@@ -1,5 +1,5 @@
 /**
- * Validate (and optionally publish) packed @badui tarballs in dist-pack/.
+ * Validate (and optionally publish) packed @clay tarballs in dist-pack/.
  *
  * Default: pack + dry-run validation (`bun run publish:dry`).
  * Live publish: `bun run publish:npm` (requires npm auth; uploads to the registry).
@@ -79,7 +79,7 @@ function assertNoWorkspaceDeps(meta: PackedMeta, pkg: PublishableName) {
   const deps = meta.dependencies ?? {};
   for (const [dep, range] of Object.entries(deps)) {
     if (range.startsWith('workspace:')) {
-      throw new Error(`@badui/${pkg}: dependency ${dep} still has ${range} (expected rewritten version)`);
+      throw new Error(`@clay/${pkg}: dependency ${dep} still has ${range} (expected rewritten version)`);
     }
   }
 }
@@ -96,7 +96,7 @@ for (const name of PACKAGES) {
 
   try {
     const meta = await readPackedJson(tgz);
-    const expectedName = `@badui/${name}`;
+    const expectedName = `@clay/${name}`;
     if (meta.name !== expectedName) {
       errors.push(`${name}: name is ${meta.name}, expected ${expectedName}`);
     }
@@ -120,18 +120,18 @@ for (const name of PACKAGES) {
     }
 
     if (name === 'cli') {
-      if (!meta.bin?.badui) {
-        errors.push('cli: missing bin.badui');
+      if (!meta.bin?.clay) {
+        errors.push('cli: missing bin.clay');
       }
       if (!entries.some((e) => e.includes('client-dist/'))) {
         errors.push('cli: client-dist/ missing from tarball');
       }
-      if (!entries.includes('package/bin/badui')) {
-        errors.push('cli: package/bin/badui missing from tarball');
+      if (!entries.includes('package/bin/clay')) {
+        errors.push('cli: package/bin/clay missing from tarball');
       }
     }
 
-    console.log(`  ✓ @badui/${name}@${meta.version} (${tgz})`);
+    console.log(`  ✓ @clay/${name}@${meta.version} (${tgz})`);
   } catch (e) {
     errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -149,7 +149,7 @@ for (const name of PACKAGES) {
   const npmArgs = ['publish', tgz, '--access', 'public'];
   if (!doPublish) npmArgs.push('--dry-run');
 
-  console.log(`\n=== @badui/${name} ${doPublish ? 'PUBLISH' : 'dry-run'} ===`);
+  console.log(`\n=== @clay/${name} ${doPublish ? 'PUBLISH' : 'dry-run'} ===`);
   const proc = Bun.spawn(['npm', ...npmArgs], {
     cwd: root,
     stdout: 'inherit',
@@ -157,7 +157,7 @@ for (const name of PACKAGES) {
   });
   const code = await proc.exited;
   if (code !== 0) {
-    console.error(`npm publish failed for @badui/${name} (exit ${code})`);
+    console.error(`npm publish failed for @clay/${name} (exit ${code})`);
     if (doPublish) {
       console.error(
         'Stop here to avoid a partial release. Fix auth/registry, then re-run from this package onward.',
@@ -168,13 +168,13 @@ for (const name of PACKAGES) {
 }
 
 if (doPublish) {
-  console.log(`\nPublished @badui/{${PACKAGES.join(',')}}@${version}`);
-  console.log('Consumers: bun add @badui/cli @badui/ui && bunx badui hello.ts');
+  console.log(`\nPublished @clay/{${PACKAGES.join(',')}}@${version}`);
+  console.log('Consumers: bun add @clay/cli @clay/ui && bunx clay hello.ts');
 } else {
   console.log(`
 Dry-run OK — packs are publish-ready (no registry upload).
 
-Live publish (requires npm login / OTP for the @badui scope):
+Live publish (requires npm login / OTP for the @clay scope):
   npm login
   bun run publish:npm
 

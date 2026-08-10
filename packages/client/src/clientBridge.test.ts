@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   applyClientStorageOp,
-  BADUI_CLIENT_STORAGE_KEY,
-  BADUI_TAB_STORAGE_KEY,
+  CLAY_CLIENT_STORAGE_KEY,
+  CLAY_TAB_STORAGE_KEY,
   loadClientStorageBag,
   loadTabStorageBag,
 } from './clientBridge';
@@ -58,7 +58,7 @@ describe('tab / client sessionStorage bags', () => {
       value: [{ name: 'a.txt' }],
     });
     expect(loadTabStorageBag()).toEqual({ files: [{ name: 'a.txt' }] });
-    expect(sessionStore.getItem(BADUI_TAB_STORAGE_KEY)).toContain('a.txt');
+    expect(sessionStore.getItem(CLAY_TAB_STORAGE_KEY)).toContain('a.txt');
 
     applyClientStorageOp({ scope: 'tab', action: 'delete', key: 'files' });
     expect(loadTabStorageBag()).toEqual({});
@@ -66,7 +66,7 @@ describe('tab / client sessionStorage bags', () => {
     applyClientStorageOp({ scope: 'tab', action: 'set', key: 'n', value: 1 });
     applyClientStorageOp({ scope: 'tab', action: 'clear' });
     expect(loadTabStorageBag()).toEqual({});
-    expect(sessionStore.getItem(BADUI_TAB_STORAGE_KEY)).toBeNull();
+    expect(sessionStore.getItem(CLAY_TAB_STORAGE_KEY)).toBeNull();
   });
 
   test('tab and client bags stay separate under sessionStorage', () => {
@@ -85,8 +85,8 @@ describe('tab / client sessionStorage bags', () => {
 
     expect(loadTabStorageBag()).toEqual({ shared: 'tab-val' });
     expect(loadClientStorageBag()).toEqual({ shared: 'client-val' });
-    expect(sessionStore.getItem(BADUI_TAB_STORAGE_KEY)).not.toBe(
-      sessionStore.getItem(BADUI_CLIENT_STORAGE_KEY),
+    expect(sessionStore.getItem(CLAY_TAB_STORAGE_KEY)).not.toBe(
+      sessionStore.getItem(CLAY_CLIENT_STORAGE_KEY),
     );
   });
 });

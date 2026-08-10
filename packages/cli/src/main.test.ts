@@ -1,8 +1,8 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { clearPages, getRegisteredPaths, setPageWrapper } from '@badui/core';
-import { ui, resetRunState, wasRunCalled } from '@badui/ui';
+import { clearPages, getRegisteredPaths, setPageWrapper } from '@clay/core';
+import { ui, resetRunState, wasRunCalled } from '@clay/ui';
 import { applyDirRunConfig } from './main.ts';
 
 const fixtures = join(fileURLToPath(new URL('.', import.meta.url)), '../fixtures');
@@ -21,7 +21,7 @@ afterEach(() => {
   resetRunState();
 });
 
-describe('badui CLI entry shapes', () => {
+describe('clay CLI entry shapes', () => {
   test('default-export file can be registered as /', async () => {
     const mod = (await import(pathToFileURL(join(fixtures, 'default-export.ts')).href)) as {
       default?: () => void;

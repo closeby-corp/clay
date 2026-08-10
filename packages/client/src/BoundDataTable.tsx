@@ -227,9 +227,16 @@ function isUiCell(content: unknown): content is { __ui: ElementNode } {
 
 function renderTableCell(content: unknown, emit: Emit, renderNode: RenderNode): ReactNode {
   if (isUiCell(content)) {
-    return renderNode(content.__ui, emit);
+    return (
+      <div className="min-w-0 max-w-full overflow-hidden">{renderNode(content.__ui, emit)}</div>
+    );
   }
-  return <>{String(content ?? '')}</>;
+  const text = String(content ?? '');
+  return (
+    <span className="block min-w-0 max-w-full truncate" title={text || undefined}>
+      {text}
+    </span>
+  );
 }
 
 function toPascalIconName(name: string): string {
@@ -384,6 +391,86 @@ function FacetColumnFilter({
   );
 }
 
+function TextColumnFilter({
+  column,
+  value,
+  onChange,
+  onCommit,
+}: {
+  column: DataTableColumn;
+  value: string;
+  onChange: (next: string) => void;
+  onCommit: (next: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = value.trim().length > 0;
+  const inputId = `dt-filter-${column.key}`;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            'h-7 gap-1 border-dashed px-2 font-normal',
+            active && 'border-solid',
+          )}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Filter ${column.header}`}
+        >
+          <ListFilter className="size-3.5 text-muted-foreground" />
+          {active ? (
+            <Badge
+              variant="secondary"
+              className="h-5 max-w-20 truncate rounded-sm px-1 font-normal"
+            >
+              {value.trim()}
+            </Badge>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2" align="start" onClick={(e) => e.stopPropagation()}>
+        <Label htmlFor={inputId} className="sr-only">
+          Filter {column.header}
+        </Label>
+        <Input
+          id={inputId}
+          value={value}
+          placeholder="Filter…"
+          className="h-8"
+          autoFocus
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onCommit(value);
+              setOpen(false);
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              setOpen(false);
+            }
+          }}
+        />
+        {active ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1 h-8 w-full justify-center"
+            onClick={() => {
+              onChange('');
+              onCommit('');
+            }}
+          >
+            Clear filter
+          </Button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function ActionLabel({
   action,
   iconClassName,
@@ -521,18 +608,67 @@ function pinStickyStyle(
   opts?: { zIndex?: number },
 ): CSSProperties | undefined {
   if (!pin) return undefined;
+  // Always clamp sticky cells — without maxWidth, nowrap content paints over neighbors.
+  const resolvedWidth = width != null && width > 0 ? width : DEFAULT_COL_WIDTH;
   const style: CSSProperties = {
     position: 'sticky',
     zIndex: opts?.zIndex ?? 2,
+    width: resolvedWidth,
+    minWidth: resolvedWidth,
+    maxWidth: resolvedWidth,
+    // Do not set overflow:hidden here — it clips the pin edge shadow.
   };
   if (pin === 'left' && leftOffset != null) style.left = leftOffset;
   if (pin === 'right' && rightOffset != null) style.right = rightOffset;
-  if (width != null) {
-    style.width = width;
-    style.minWidth = width;
-    style.maxWidth = width;
-  }
   return style;
+}
+
+/** Opaque fill so horizontally scrolled cells cannot show through sticky pins. */
+function stickyCellBg(opts: {
+  active: boolean;
+  zebra?: boolean;
+  selected?: boolean;
+  tone?: 'body' | 'head' | 'footer';
+}): string | undefined {
+  if (!opts.active) return undefined;
+  if (opts.selected) return 'bg-muted';
+  if (opts.tone === 'head' || opts.tone === 'footer') return 'bg-muted';
+  if (opts.zebra) return 'bg-muted';
+  return 'bg-background';
+}
+
+/**
+ * Gradient edge painted *outside* the sticky cell so it isn’t clipped by cell overflow.
+ * Parent cell must be `relative overflow-visible`. Uses theme foreground so it works in light/dark.
+ */
+function PinEdgeShadow({
+  side,
+  visible,
+}: {
+  side: 'left' | 'right';
+  visible: boolean;
+}) {
+  if (!visible) return null;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'pointer-events-none absolute inset-y-0 z-[5] w-3',
+        side === 'left'
+          ? 'left-full bg-gradient-to-r from-foreground/8 to-transparent'
+          : 'right-full bg-gradient-to-l from-foreground/8 to-transparent',
+      )}
+    />
+  );
+}
+
+function pinEdgeSide(
+  columns: DataTableColumn[],
+  col: DataTableColumn,
+): 'left' | 'right' | null {
+  if (col.pin === 'left' && isLastLeftPin(columns, col.key)) return 'left';
+  if (col.pin === 'right' && isFirstRightPin(columns, col.key)) return 'right';
+  return null;
 }
 
 function leadingStickyStyle(
@@ -737,6 +873,10 @@ export function BoundDataTable({
   const hiddenColumns = new Set((props.hiddenColumns as string[]) ?? []);
   const serverFilter = String(props.filter ?? '');
   const serverColumnFilters = (props.columnFilters as Record<string, string>) ?? {};
+  const filterDebounceMs =
+    props.filterDebounceMs != null && Number.isFinite(Number(props.filterDebounceMs))
+      ? Math.max(0, Math.floor(Number(props.filterDebounceMs)))
+      : 300;
   const [filter, setFilter] = useOptimisticValue(serverFilter);
   const [columnFilters, setColumnFilters] = useOptimisticValue(serverColumnFilters);
   const [columnsOpen, setColumnsOpen] = useState(false);
@@ -812,8 +952,6 @@ export function BoundDataTable({
   const showToolbar = searchable || columnToggle || exportable || !!primaryAction || grouped;
   const showBulkBar = selectable && bulkActions.length > 0 && selected.size > 0;
   const defaultViewId = views[0]?.id ?? '';
-  const hasTextColumnFilters =
-    columnFilterable && columns.some((col) => !isFacetColumn(col));
 
   const leadingCols = (reorderable ? 1 : 0) + (selectable ? 1 : 0);
   const trailingCols = actions.length > 0 ? 1 : 0;
@@ -853,6 +991,7 @@ export function BoundDataTable({
   const hasRightPins = columns.some((c) => c.pin === 'right');
   const showFooterRow = footerCells != null && Object.keys(footerCells).length > 0;
   const pinOffsetsNeedMeasure = hasLeftPins || hasRightPins;
+  const [pinScrollShadow, setPinScrollShadow] = useState({ left: false, right: false });
 
   /** Keep sticky offsets accurate once pins are active (avoid default-width drift). */
   useLayoutEffect(() => {
@@ -893,6 +1032,32 @@ export function BoundDataTable({
     leadingStickyWidth,
     trailingStickyWidth,
   ]);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || (!hasLeftPins && !hasRightPins)) {
+      setPinScrollShadow({ left: false, right: false });
+      return;
+    }
+    const update = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = el;
+      const maxScroll = Math.max(0, scrollWidth - clientWidth);
+      setPinScrollShadow({
+        left: hasLeftPins && scrollLeft > 0.5,
+        right: hasRightPins && maxScroll > 0.5 && scrollLeft < maxScroll - 0.5,
+      });
+    };
+    update();
+    const raf = requestAnimationFrame(update);
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('scroll', update);
+      ro?.disconnect();
+    };
+  }, [hasLeftPins, hasRightPins, columns.length, tableMinWidth, columnWidths]);
 
   /** Seed explicit widths from rendered <th>s so the first drag doesn't jump from a default. */
   const beginColumnResize = (key: string): number => {
@@ -939,6 +1104,32 @@ export function BoundDataTable({
     if (hasEvent(props, 'columnFilter')) {
       emit(id, 'columnFilter', { key, value });
     }
+  };
+
+  const scheduleFilterEmit = (next: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const run = () => {
+      debounceRef.current = null;
+      if (hasEvent(props, 'filter')) emit(id, 'filter', next);
+    };
+    if (filterDebounceMs <= 0) {
+      run();
+      return;
+    }
+    debounceRef.current = setTimeout(run, filterDebounceMs);
+  };
+
+  const scheduleColumnFilterEmit = (key: string, next: string) => {
+    if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
+    const run = () => {
+      columnDebounceRef.current = null;
+      emitColumnFilter(key, next);
+    };
+    if (filterDebounceMs <= 0) {
+      run();
+      return;
+    }
+    columnDebounceRef.current = setTimeout(run, filterDebounceMs);
   };
 
   const setFacetFilter = (key: string, values: string[]) => {
@@ -1008,7 +1199,10 @@ export function BoundDataTable({
           emit={emit}
           renderNode={renderNode}
           trigger={
-            <Button variant="link" className="h-auto w-fit px-0 text-left text-foreground">
+            <Button
+              variant="link"
+              className="h-auto max-w-full min-w-0 truncate px-0 text-left text-foreground"
+            >
               {renderTableCell(content, emit, renderNode)}
             </Button>
           }
@@ -1018,16 +1212,18 @@ export function BoundDataTable({
 
     if (col.editor) {
       return (
-        <EditableCell
-          column={col}
-          value={row[col.key]}
-          density={density}
-          onCommit={(next) => {
-            if (hasEvent(props, 'cellChange')) {
-              emit(id, 'cellChange', { rowKey, columnKey: col.key, value: next });
-            }
-          }}
-        />
+        <div className="min-w-0 max-w-full overflow-hidden">
+          <EditableCell
+            column={col}
+            value={row[col.key]}
+            density={density}
+            onCommit={(next) => {
+              if (hasEvent(props, 'cellChange')) {
+                emit(id, 'cellChange', { rowKey, columnKey: col.key, value: next });
+              }
+            }}
+          />
+        </div>
       );
     }
 
@@ -1208,10 +1404,7 @@ export function BoundDataTable({
           onChange={(e) => {
             const next = e.target.value;
             setFilter(next);
-            if (debounceRef.current) clearTimeout(debounceRef.current);
-            debounceRef.current = setTimeout(() => {
-              if (hasEvent(props, 'filter')) emit(id, 'filter', next);
-            }, 150);
+            scheduleFilterEmit(next);
           }}
         />
       ) : (
@@ -1303,13 +1496,16 @@ export function BoundDataTable({
       {reorderable ? (
         <TableCell
           className={cn(
-            'w-8 px-1',
+            'w-8 overflow-hidden px-1',
             cellPad,
-            hasLeftPins && 'sticky left-0 z-[1] bg-background',
-            zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
-            isSelected && hasLeftPins && 'bg-muted',
+            stickyCellBg({
+              active: hasLeftPins,
+              zebra: zebra && i % 2 === 1,
+              selected: isSelected,
+            }),
+            hasLeftPins && 'sticky left-0 z-[4]',
           )}
-          style={leadingStickyStyle(hasLeftPins, 0, 1)}
+          style={leadingStickyStyle(hasLeftPins, 0, 4)}
         >
           <DragHandle id={rowKey} />
         </TableCell>
@@ -1317,13 +1513,16 @@ export function BoundDataTable({
       {selectable ? (
         <TableCell
           className={cn(
-            'w-8 px-1',
+            'w-8 overflow-hidden px-1',
             cellPad,
-            hasLeftPins && 'sticky z-[1] bg-background',
-            zebra && i % 2 === 1 && hasLeftPins && 'bg-muted/30',
-            isSelected && hasLeftPins && 'bg-muted',
+            stickyCellBg({
+              active: hasLeftPins,
+              zebra: zebra && i % 2 === 1,
+              selected: isSelected,
+            }),
+            hasLeftPins && 'sticky z-[4]',
           )}
-          style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 1)}
+          style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 4)}
         >
           <Checkbox
             checked={isSelected}
@@ -1338,48 +1537,58 @@ export function BoundDataTable({
         </TableCell>
       ) : null}
       {columns.map((col) => {
+        const pinWidth = columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined);
         const pinStyle = pinStickyStyle(
           col.pin,
           leftOffsets[col.key],
           rightOffsets[col.key],
-          columnWidths[col.key],
-          { zIndex: 1 },
+          pinWidth,
+          { zIndex: 3 },
         );
-        const pinEdge =
-          (col.pin === 'left' && isLastLeftPin(columns, col.key)
-            ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-            : null) ??
-          (col.pin === 'right' && isFirstRightPin(columns, col.key)
-            ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-            : null);
+        const edge = pinEdgeSide(columns, col);
         return (
           <TableCell
             key={col.key}
             className={cn(
+              'relative max-w-0',
+              // Override base table cell overflow so the edge gradient can paint outside.
+              col.pin ? 'overflow-visible' : 'overflow-hidden',
               cellPad,
               col.align === 'right' && 'text-right',
               col.align === 'center' && 'text-center',
-              col.pin && 'bg-background',
-              zebra && i % 2 === 1 && col.pin && 'bg-muted/30',
-              isSelected && col.pin && 'bg-muted',
-              pinEdge,
+              stickyCellBg({
+                active: !!col.pin,
+                zebra: zebra && i % 2 === 1,
+                selected: isSelected,
+              }),
             )}
             style={pinStyle}
           >
-            {renderCellContent(row, col, rowKey)}
+            {edge ? (
+              <PinEdgeShadow
+                side={edge}
+                visible={edge === 'left' ? pinScrollShadow.left : pinScrollShadow.right}
+              />
+            ) : null}
+            <div className="relative min-w-0 max-w-full overflow-hidden">
+              {renderCellContent(row, col, rowKey)}
+            </div>
           </TableCell>
         );
       })}
       {actions.length > 0 ? (
         <TableCell
           className={cn(
-            'w-8 px-1',
+            'w-8 overflow-hidden px-1',
             cellPad,
-            hasRightPins && 'sticky z-[1] bg-background',
-            zebra && i % 2 === 1 && hasRightPins && 'bg-muted/30',
-            isSelected && hasRightPins && 'bg-muted',
+            stickyCellBg({
+              active: hasRightPins,
+              zebra: zebra && i % 2 === 1,
+              selected: isSelected,
+            }),
+            hasRightPins && 'sticky z-[4]',
           )}
-          style={trailingStickyStyle(hasRightPins, 0, 1)}
+          style={trailingStickyStyle(hasRightPins, 0, 4)}
         >
           <DropdownMenu
             open={actionsMenuKey === rowKey}
@@ -1486,44 +1695,53 @@ export function BoundDataTable({
     <Table
       containerRef={scrollContainerRef}
       containerClassName="max-h-[min(60vh,28rem)] overflow-auto"
-      className={cn(density === 'compact' && 'text-xs', density === 'comfortable' && 'text-sm')}
+      className={cn(
+        'table-fixed w-full',
+        density === 'compact' && 'text-xs',
+        density === 'comfortable' && 'text-sm',
+      )}
       style={
-        Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins
-          ? ({
-              tableLayout: 'fixed',
-              width: '100%',
-              ...(tableMinWidth != null ? { minWidth: tableMinWidth } : null),
-            } as CSSProperties)
-          : undefined
+        {
+          width: '100%',
+          ...(tableMinWidth != null ? { minWidth: tableMinWidth } : null),
+        } as CSSProperties
       }
     >
-      {Object.keys(columnWidths).length > 0 || hasLeftPins || hasRightPins ? (
-        <colgroup>
-          {reorderable ? <col style={{ width: LEADING_COL_WIDTH }} /> : null}
-          {selectable ? <col style={{ width: LEADING_COL_WIDTH }} /> : null}
-          {columns.map((col) => (
-            <col
-              key={col.key}
-              style={{
-                width: columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined),
-              }}
-            />
-          ))}
-          {actions.length > 0 ? <col style={{ width: ACTIONS_COL_WIDTH }} /> : null}
-        </colgroup>
-      ) : null}
+      <colgroup>
+        {reorderable ? <col style={{ width: LEADING_COL_WIDTH }} /> : null}
+        {selectable ? <col style={{ width: LEADING_COL_WIDTH }} /> : null}
+        {columns.map((col) => (
+          <col
+            key={col.key}
+            style={{
+              width:
+                columnWidths[col.key] ??
+                (col.pin ? defaultColWidth : undefined),
+            }}
+          />
+        ))}
+        {actions.length > 0 ? <col style={{ width: ACTIONS_COL_WIDTH }} /> : null}
+      </colgroup>
       <TableHeader className="sticky top-0 z-10 bg-muted [&_tr]:border-b">
         <TableRow className="hover:bg-transparent">
           {reorderable ? (
             <TableHead
-              className={cn('w-8 bg-muted', headHeight, hasLeftPins && 'sticky z-[3]')}
-              style={leadingStickyStyle(hasLeftPins, 0)}
+              className={cn(
+                'w-8 overflow-hidden bg-muted',
+                headHeight,
+                hasLeftPins && 'sticky z-[5]',
+              )}
+              style={leadingStickyStyle(hasLeftPins, 0, 5)}
             />
           ) : null}
           {selectable ? (
             <TableHead
-              className={cn('w-8 bg-muted', headHeight, hasLeftPins && 'sticky z-[3]')}
-              style={leadingStickyStyle(hasLeftPins, selectLeftOffset)}
+              className={cn(
+                'w-8 overflow-hidden bg-muted',
+                headHeight,
+                hasLeftPins && 'sticky z-[5]',
+              )}
+              style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 5)}
             >
               <Checkbox
                 checked={
@@ -1556,20 +1774,15 @@ export function BoundDataTable({
                 ? ArrowUp
                 : ArrowDown;
             const facet = columnFilterable && isFacetColumn(col);
+            const pinWidth = columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined);
             const pinStyle = pinStickyStyle(
               col.pin,
               leftOffsets[col.key],
               rightOffsets[col.key],
-              columnWidths[col.key],
-              { zIndex: 2 },
+              pinWidth,
+              { zIndex: 4 },
             );
-            const pinEdge =
-              (col.pin === 'left' && isLastLeftPin(columns, col.key)
-                ? 'shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-                : null) ??
-              (col.pin === 'right' && isFirstRightPin(columns, col.key)
-                ? 'shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.12)]'
-                : null);
+            const edge = pinEdgeSide(columns, col);
             const pinStateLabel =
               col.pin === 'left' ? 'pinned left' : col.pin === 'right' ? 'pinned right' : 'unpinned';
             return (
@@ -1580,12 +1793,12 @@ export function BoundDataTable({
                 }}
                 aria-sort={sortable ? ariaSortValue(active, sortDir) : undefined}
                 className={cn(
-                  'relative bg-muted',
+                  'relative max-w-0 bg-muted',
+                  col.pin ? 'overflow-visible' : 'overflow-hidden',
                   headHeight,
                   col.align === 'right' && 'text-right',
                   col.align === 'center' && 'text-center',
-                  col.pin && 'z-[2]',
-                  pinEdge,
+                  col.pin && 'z-[4]',
                 )}
                 style={{
                   ...pinStyle,
@@ -1598,9 +1811,15 @@ export function BoundDataTable({
                     : null),
                 }}
               >
+                {edge ? (
+                  <PinEdgeShadow
+                    side={edge}
+                    visible={edge === 'left' ? pinScrollShadow.left : pinScrollShadow.right}
+                  />
+                ) : null}
                 <div
                   className={cn(
-                    'flex items-center gap-0.5',
+                    'relative flex min-w-0 items-center gap-0.5 overflow-hidden',
                     col.align === 'right' && 'justify-end',
                     col.align === 'center' && 'justify-center',
                   )}
@@ -1612,7 +1831,7 @@ export function BoundDataTable({
                           variant="ghost"
                           size="sm"
                           className={cn(
-                            '-ml-2 gap-1.5 px-2 font-medium',
+                            '-ml-2 min-w-0 gap-1.5 px-2 font-medium',
                             density === 'compact' ? 'h-7' : 'h-8',
                           )}
                           aria-label={
@@ -1632,11 +1851,14 @@ export function BoundDataTable({
                             emit(id, 'sort', { key: col.key, dir: nextDir });
                           }}
                         >
-                          {col.header}
-                          <SortIcon className="size-3.5 text-muted-foreground" aria-hidden />
+                          <span className="truncate">{col.header}</span>
+                          <SortIcon
+                            className="size-3.5 shrink-0 text-muted-foreground"
+                            aria-hidden
+                          />
                           {active && sorts.length > 1 ? (
                             <span
-                              className="text-[10px] font-semibold text-muted-foreground tabular-nums"
+                              className="shrink-0 text-[10px] font-semibold text-muted-foreground tabular-nums"
                               aria-hidden
                             >
                               {sortIdx! + 1}
@@ -1649,7 +1871,7 @@ export function BoundDataTable({
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <span className="font-medium">
+                    <span className="min-w-0 truncate font-medium">
                       {col.header}
                       {col.aggregate ? (
                         <span className="sr-only">
@@ -1663,6 +1885,20 @@ export function BoundDataTable({
                       column={col}
                       selected={parseFacetFilter(columnFilters[col.key])}
                       onChange={(values) => setFacetFilter(col.key, values)}
+                    />
+                  ) : columnFilterable ? (
+                    <TextColumnFilter
+                      column={col}
+                      value={columnFilters[col.key] ?? ''}
+                      onChange={(next) => {
+                        setColumnFilters({ ...columnFilters, [col.key]: next });
+                        scheduleColumnFilterEmit(col.key, next);
+                      }}
+                      onCommit={(next) => {
+                        if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
+                        setColumnFilters({ ...columnFilters, [col.key]: next });
+                        emitColumnFilter(col.key, next);
+                      }}
                     />
                   ) : null}
                   {hasEvent(props, 'columnPin') ? (
@@ -1754,9 +1990,13 @@ export function BoundDataTable({
           })}
           {actions.length > 0 ? (
             <TableHead
-              className={cn('bg-muted', headHeight, hasRightPins && 'sticky z-[3]')}
+              className={cn(
+                'overflow-hidden bg-muted',
+                headHeight,
+                hasRightPins && 'sticky z-[5]',
+              )}
               style={{
-                ...trailingStickyStyle(hasRightPins, 0),
+                ...trailingStickyStyle(hasRightPins, 0, 5),
                 width: ACTIONS_COL_WIDTH,
                 minWidth: ACTIONS_COL_WIDTH,
                 maxWidth: ACTIONS_COL_WIDTH,
@@ -1764,64 +2004,6 @@ export function BoundDataTable({
             />
           ) : null}
         </TableRow>
-        {hasTextColumnFilters ? (
-          <TableRow className="hover:bg-transparent">
-            {reorderable ? (
-              <TableHead
-                className={cn('h-auto bg-muted pb-2 pt-0', hasLeftPins && 'sticky z-[3]')}
-                style={leadingStickyStyle(hasLeftPins, 0)}
-              />
-            ) : null}
-            {selectable ? (
-              <TableHead
-                className={cn('h-auto bg-muted pb-2 pt-0', hasLeftPins && 'sticky z-[3]')}
-                style={leadingStickyStyle(hasLeftPins, selectLeftOffset)}
-              />
-            ) : null}
-            {columns.map((col) => {
-              const pinStyle = pinStickyStyle(
-                col.pin,
-                leftOffsets[col.key],
-                rightOffsets[col.key],
-                columnWidths[col.key],
-                { zIndex: 2 },
-              );
-              return (
-                <TableHead
-                  key={`filter-${col.key}`}
-                  className={cn(
-                    'h-auto bg-muted pb-2 pt-0 font-normal',
-                    col.pin && 'z-[2]',
-                  )}
-                  style={pinStyle}
-                >
-                  {isFacetColumn(col) ? null : (
-                    <Input
-                      value={columnFilters[col.key] ?? ''}
-                      placeholder="Filter…"
-                      className={cn(density === 'compact' ? 'h-7' : 'h-8')}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setColumnFilters({ ...columnFilters, [col.key]: next });
-                        if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
-                        columnDebounceRef.current = setTimeout(() => {
-                          emitColumnFilter(col.key, next);
-                        }, 150);
-                      }}
-                    />
-                  )}
-                </TableHead>
-              );
-            })}
-            {actions.length > 0 ? (
-              <TableHead
-                className={cn('h-auto bg-muted pb-2 pt-0', hasRightPins && 'sticky z-[3]')}
-                style={trailingStickyStyle(hasRightPins, 0)}
-              />
-            ) : null}
-          </TableRow>
-        ) : null}
       </TableHeader>
       <TableBody>
         {loading ? (
@@ -1904,29 +2086,31 @@ export function BoundDataTable({
         )}
       </TableBody>
       {showFooterRow && !loading && rows.length > 0 ? (
-        <TableFooter className="sticky bottom-0 z-[1] bg-muted/80 backdrop-blur-sm">
+        <TableFooter className="sticky bottom-0 z-[1] bg-muted">
           <TableRow className="hover:bg-transparent">
             {reorderable ? (
               <TableCell
-                className={cn('bg-muted/80', hasLeftPins && 'sticky z-[2]')}
-                style={leadingStickyStyle(hasLeftPins, 0, 2)}
+                className={cn('overflow-hidden bg-muted', hasLeftPins && 'sticky z-[4]')}
+                style={leadingStickyStyle(hasLeftPins, 0, 4)}
               />
             ) : null}
             {selectable ? (
               <TableCell
-                className={cn('bg-muted/80', hasLeftPins && 'sticky z-[2]')}
-                style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 2)}
+                className={cn('overflow-hidden bg-muted', hasLeftPins && 'sticky z-[4]')}
+                style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 4)}
               />
             ) : null}
             {columns.map((col) => {
               const value = footerCells?.[col.key];
+              const pinWidth = columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined);
               const pinStyle = pinStickyStyle(
                 col.pin,
                 leftOffsets[col.key],
                 rightOffsets[col.key],
-                columnWidths[col.key],
-                { zIndex: 2 },
+                pinWidth,
+                { zIndex: 3 },
               );
+              const edge = pinEdgeSide(columns, col);
               const display =
                 value == null || value === ''
                   ? null
@@ -1943,22 +2127,36 @@ export function BoundDataTable({
                 <TableCell
                   key={`footer-${col.key}`}
                   className={cn(
-                    'bg-muted/80 font-medium tabular-nums',
+                    'relative max-w-0 font-medium tabular-nums',
+                    col.pin ? 'overflow-visible' : 'overflow-hidden',
+                    stickyCellBg({ active: true, tone: 'footer' }),
                     col.align === 'right' && 'text-right',
                     col.align === 'center' && 'text-center',
-                    col.pin && 'z-[2]',
+                    col.pin && 'z-[3]',
                   )}
                   style={pinStyle}
                   aria-label={announced}
                 >
-                  {display}
+                  {edge ? (
+                    <PinEdgeShadow
+                      side={edge}
+                      visible={edge === 'left' ? pinScrollShadow.left : pinScrollShadow.right}
+                    />
+                  ) : null}
+                  <div className="relative min-w-0 max-w-full overflow-hidden">
+                    {display != null ? (
+                      <span className="block truncate" title={display}>
+                        {display}
+                      </span>
+                    ) : null}
+                  </div>
                 </TableCell>
               );
             })}
             {actions.length > 0 ? (
               <TableCell
-                className={cn('bg-muted/80', hasRightPins && 'sticky z-[2]')}
-                style={trailingStickyStyle(hasRightPins, 0, 2)}
+                className={cn('overflow-hidden bg-muted', hasRightPins && 'sticky z-[4]')}
+                style={trailingStickyStyle(hasRightPins, 0, 4)}
               />
             ) : null}
           </TableRow>
@@ -2174,10 +2372,7 @@ export function BoundDataTable({
                       onChange={(e) => {
                         const next = e.target.value;
                         setFilter(next);
-                        if (debounceRef.current) clearTimeout(debounceRef.current);
-                        debounceRef.current = setTimeout(() => {
-                          if (hasEvent(props, 'filter')) emit(id, 'filter', next);
-                        }, 150);
+                        scheduleFilterEmit(next);
                       }}
                     />
                   ) : (

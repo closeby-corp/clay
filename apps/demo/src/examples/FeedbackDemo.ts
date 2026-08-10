@@ -1,4 +1,4 @@
-import { ui, type TimerHandle } from '@badui/ui';
+import { ui, type TimerHandle } from '@clay/ui';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -73,7 +73,7 @@ ui.page('/examples/feedback', () => {
           variant: 'outline',
           size: 'sm',
           onClick: () => {
-            ui.runJavaScript('console.log("[badui]", Date.now())');
+            ui.runJavaScript('console.log("[clay]", Date.now())');
             ui.notify('Logged to browser console', 'info');
           },
         });

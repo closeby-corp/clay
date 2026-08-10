@@ -1,4 +1,4 @@
-import { Element } from '@badui/core';
+import { Element } from '@clay/core';
 
 export type RelativeTimeDateStyle = 'full' | 'long' | 'medium' | 'short';
 export type RelativeTimeTimeStyle = 'full' | 'long' | 'medium' | 'short';

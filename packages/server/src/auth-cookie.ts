@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /** HttpOnly cookie carrying a signed auth token. */
-export const AUTH_COOKIE_NAME = 'badui-auth';
+export const AUTH_COOKIE_NAME = 'clay-auth';
 
 /** Minimal context for cookie-based resolveUserId (matches server hello hook). */
 export type AuthResolveUserIdContext = {

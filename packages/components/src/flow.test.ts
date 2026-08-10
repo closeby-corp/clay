@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ClientSession, runWithSession } from '@badui/core';
+import { ClientSession, runWithSession } from '@clay/core';
 import {
   computeFlowLayout,
   flow,
@@ -276,7 +276,7 @@ describe('FlowElement owned diagram state', () => {
     expect(el.children[0]!.props).toMatchObject({
       id: 'g1',
       kind: 'group',
-      nodeType: 'baduiGroup',
+      nodeType: 'clayGroup',
       width: 420,
       height: 260,
     });

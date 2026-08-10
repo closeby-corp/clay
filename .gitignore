@@ -35,11 +35,15 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-# badui --reload watch stubs (cleaned up on exit; ignore if left behind)
-_badui-reload-*.ts
+# clay --reload watch stubs (cleaned up on exit; ignore if left behind)
+_clay-reload-*.ts
 packages/cli/.tmp-*
 
 # runtime data dirs
-.badui-uploads
+.clay-uploads
+.clay-user-data
+.clay-data
+
+# legacy local data dirs
 .badui-user-data
-.badui-data
+.badui-uploads

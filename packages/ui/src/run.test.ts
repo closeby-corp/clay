@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { clearPages, getPage, getRegisteredPaths, setPageWrapper } from '@badui/core';
+import { clearPages, getPage, getRegisteredPaths, setPageWrapper } from '@clay/core';
 import { run, resetRunState, wasRunCalled, page } from './index.ts';
 
 beforeEach(() => {

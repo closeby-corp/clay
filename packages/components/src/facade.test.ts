@@ -9,7 +9,7 @@ import {
   clipboard,
   navigate,
   type ServerMessage,
-} from '@badui/core';
+} from '@clay/core';
 import {
   switchControl,
   spinner,
@@ -62,7 +62,7 @@ import {
   slider,
   label,
 } from './index';
-import { reactive } from '@badui/core';
+import { reactive } from '@clay/core';
 
 describe('facade feedback / layout elements', () => {
   test('label accepts compute fn via bindText', async () => {

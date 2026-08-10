@@ -12,14 +12,14 @@ export type TransformReactiveLetResult = {
   lets: string[];
 };
 
-const FILE_PRAGMA_RE = /^\s*(?:\/\/\s*@badui-reactive\b|\/\*\s*@badui-reactive\b)/m;
+const FILE_PRAGMA_RE = /^\s*(?:\/\/\s*@clay-reactive\b|\/\*\s*@clay-reactive\b)/m;
 
 function hasFilePragma(source: string): boolean {
   // Only look at the leading comment block (before first non-comment statement).
   const head = source.slice(0, 4000);
   const firstCode = head.search(/^\s*(?!\/\/|\/\*|\*)/m);
   const prefix = firstCode === -1 ? head : head.slice(0, Math.max(firstCode, 0) + 200);
-  return FILE_PRAGMA_RE.test(prefix) || /^\s*\/\/\s*@badui-reactive\b/m.test(source.split('\n').slice(0, 30).join('\n'));
+  return FILE_PRAGMA_RE.test(prefix) || /^\s*\/\/\s*@clay-reactive\b/m.test(source.split('\n').slice(0, 30).join('\n'));
 }
 
 function isUseReactiveDirective(stmt: ts.Statement): boolean {
@@ -419,7 +419,7 @@ function findSites(sourceFile: ts.SourceFile, filePragma: boolean): TransformSit
 /**
  * Rewrite tracked `let` bindings into `ui.state` / `ui.auto` (or `state` / `auto`).
  *
- * Opt-in via file pragma `// @badui-reactive`, block directive `"use reactive";`,
+ * Opt-in via file pragma `// @clay-reactive`, block directive `"use reactive";`,
  * a `page` / `ui.page` callback, or nesting inside an already-eligible function.
  *
  * Lifts simple `let`s anywhere in the function body (including nested blocks,
@@ -470,7 +470,7 @@ export function transformReactiveLet(
       const body = fn.body;
       if (!body || !ts.isBlock(body)) return visited;
 
-      const stateName = factory.createIdentifier(`__badui_s${counter++}`);
+      const stateName = factory.createIdentifier(`__clay_s${counter++}`);
       const names = new Set(site.lets.map((l) => l.name));
       allLets.push(...site.lets.map((l) => l.name));
 
@@ -584,14 +584,14 @@ export function transformReactiveLet(
     // Ensure state/auto are available when not using ui.*
     const needsImport =
       !/\bimport\s*\{[^}]*\bstate\b/.test(source) || !/\bimport\s*\{[^}]*\bauto\b/.test(source);
-    if (needsImport && !source.includes("from '@badui/ui'") && !source.includes('from "@badui/ui"')) {
-      // If file already imports from @badui/ui or @badui/core, leave as-is (caller must export).
+    if (needsImport && !source.includes("from '@clay/ui'") && !source.includes('from "@clay/ui"')) {
+      // If file already imports from @clay/ui or @clay/core, leave as-is (caller must export).
       // Inject a named import only when neither state nor auto appear as imports.
       const hasState = /\bimport\s*\{[^}]*\bstate\b/.test(source);
       const hasAuto = /\bimport\s*\{[^}]*\bauto\b/.test(source);
       if (!hasState || !hasAuto) {
         const names = [!hasState && 'state', !hasAuto && 'auto'].filter(Boolean).join(', ');
-        code = `import { ${names} } from '@badui/ui';\n` + code;
+        code = `import { ${names} } from '@clay/ui';\n` + code;
       }
     }
   }

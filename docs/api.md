@@ -1,15 +1,15 @@
 # API reference
 
-All public APIs use **camelCase**. Import the facade from `@badui/ui` for app code.
+All public APIs use **camelCase**. Import the facade from `@clay/ui` for app code.
 
 ```typescript
-import { ui, reactive, subscribe } from '@badui/ui';
-// Still available from core: import { reactive, subscribe } from '@badui/core';
+import { ui, reactive, subscribe } from '@clay/ui';
+// Still available from core: import { reactive, subscribe } from '@clay/core';
 ```
 
 ---
 
-## `ui` facade (`@badui/ui`)
+## `ui` facade (`@clay/ui`)
 
 ### Lifecycle
 
@@ -85,7 +85,7 @@ ui.run({
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `port` | `number` | `3000` | HTTP + WS port |
-| `title` | `string` | `'BadUI'` | HTML `<title>` |
+| `title` | `string` | `'Clay'` | HTML `<title>` |
 | `clientDir` | `string` | `packages/client/dist` | Built Vite assets |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 | `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate |
@@ -100,7 +100,7 @@ ui.run({
 
 ```typescript
 ui.run({
-  authSecret: process.env.BADUI_AUTH_SECRET!,
+  authSecret: process.env.CLAY_AUTH_SECRET!,
   sessionIdleMs: 30 * 60 * 1000,
   sessionAbsoluteMs: 12 * 60 * 60 * 1000,
   sessionExpiredPath: '/login',
@@ -114,11 +114,11 @@ ui.establishAuthSession(userId, { path: '/account' });
 ui.clearAuthSession({ path: '/login' });
 ```
 
-Password hashing, login rate limits, and `requireAuth` / `requireRole` live in optional `@badui/auth`. See `/examples/auth`.
+Password hashing, login rate limits, and `requireAuth` / `requireRole` live in optional `@clay/auth`. See `/examples/auth`.
 
-Returns `BadUIServer` with `.start()` / `.stop()` / `.port` (`.start()` is already called by `ui.run`).
+Returns `ClayServer` with `.start()` / `.stop()` / `.port` (`.start()` is already called by `ui.run`).
 
-Prefer the **`badui` CLI** for prototypes: `badui hello.ts` or `badui ./pages --app` (see [Getting started](./getting-started.md)).
+Prefer the **`clay` CLI** for prototypes: `clay hello.ts` or `clay ./pages --app` (see [Getting started](./getting-started.md)).
 
 Custom CSS is linked as `/assets/custom-0.css`, … after `/assets/index.css`. Use **shadcn-style** theme variables (`--background`, `--primary`, `--sidebar`, `--radius`, …, plus optional `.dark { … }`). Runtime CSS cannot invent new Tailwind utility classes.
 
@@ -659,7 +659,7 @@ Dates are ISO `YYYY-MM-DD` (or parseable datetime strings). `dependencies` are f
 
 #### `ui.flow(props, fn)` / `ui.flow(fn, props?)`
 
-Interactive flow diagram backed by `@xyflow/react`. **`FlowElement` owns diagram state** (edges + node positions), similar in spirit to DataTable owning rows — DataTable-style imperative APIs mutate the model and patch the client without remounting the React Flow shell. **Node interiors are live BadUI element trees**.
+Interactive flow diagram backed by `@xyflow/react`. **`FlowElement` owns diagram state** (edges + node positions), similar in spirit to DataTable owning rows — DataTable-style imperative APIs mutate the model and patch the client without remounting the React Flow shell. **Node interiors are live Clay element trees**.
 
 **Owned model + defaults**
 
@@ -756,11 +756,11 @@ const diagram = ui.flow(
 
 Edge `type` maps to React Flow built-in path kinds (`default` / `straight` / `step` / `smoothstep` / `simplebezier`) **or** a custom edgeType registry key. `variant` sets stroke/label colors (`primary` / `muted` / `destructive`). `label` / `animated` pass through to RF.
 
-`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles`, `className`, `nodeType`, `kind` (`'default' \| 'group'`), `parentId`, `width` / `height`, `extent` (`'parent'` \| `null`). When `handles` is omitted, default left-target / right-source ports are used. `kind: 'group'` (or `flow.group`) uses built-in `baduiGroup` chrome; children set `parentId` (relative positions; drag defaults to `extent: 'parent'`). Nested BadUI handlers work inside the node body. Use `flow.addNode` / `flow.addGroup` / `flow.removeNode` for runtime topology. Use `flow.layout()` for dagre packing.
+`flow.node(opts, fn)` options: `id` (graph id), `position`, optional `handles`, `className`, `nodeType`, `kind` (`'default' \| 'group'`), `parentId`, `width` / `height`, `extent` (`'parent'` \| `null`). When `handles` is omitted, default left-target / right-source ports are used. `kind: 'group'` (or `flow.group`) uses built-in `clayGroup` chrome; children set `parentId` (relative positions; drag defaults to `extent: 'parent'`). Nested Clay handlers work inside the node body. Use `flow.addNode` / `flow.addGroup` / `flow.removeNode` for runtime topology. Use `flow.layout()` for dagre packing.
 
 **Custom React node/edge types (client registry)**
 
-React components cannot cross the BadUI wire. Apps that customize the client register components once:
+React components cannot cross the Clay wire. Apps that customize the client register components once:
 
 ```ts
 import {
@@ -809,7 +809,7 @@ ui.button('Save', {
 |-------|------|-------------|
 | `rules` | `{ el: Element; check: () => string \| null \| undefined }[]` | One entry per field |
 
-Also available as `validate` from `@badui/core` / `@badui/ui`.
+Also available as `validate` from `@clay/core` / `@clay/ui`.
 
 ---
 
@@ -1031,7 +1031,8 @@ const table = ui.dataTable(tasks, {
 | `keyField` | `string` | `'__rowId'` | Row identity for actions |
 | `searchable` | `boolean` | `true` | Global filter input |
 | `searchPlaceholder` | `string` | `'Search…'` | Filter placeholder |
-| `columnFilterable` | `boolean` | `true` | Per-column filters (text row and/or facet popovers) |
+| `filterDebounceMs` | `number` | `300` | Debounce before applying global search and text column filters (`0` = immediate) |
+| `columnFilterable` | `boolean` | `true` | Per-column filters (header popovers: text and/or facet) |
 | `columnToggle` | `boolean` | `true` | Columns visibility menu |
 | `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
 | `exportFilename` | `string` | `'data'` | Download base name (no extension) |
@@ -1111,7 +1112,7 @@ When `groupBy` is set, filter/sort run first, then rows are stably partitioned s
 | `header` | `string` | Header label |
 | `align` | `'left' \| 'right' \| 'center'` | Cell alignment |
 | `sortable` | `boolean` | Default `true` |
-| `filter` | `'text' \| 'facet'` | Default text substring in the filter row; `'facet'` is multi-select exact match in a header popover |
+| `filter` | `'text' \| 'facet'` | Default text substring in a header popover; `'facet'` is multi-select exact match in a header popover |
 | `facetOptions` | `{ value, label }[]` | Facet choices; when set without `filter`, implies `filter: 'facet'`. When omitted with `filter: 'facet'`, distinct values are derived. Server adds live `count`s. |
 | `value` | `(row) => unknown` | Computed scalar for sort / filter / export / default display |
 | `render` | `(row) => Element \| scalar` | Optional cell UI (e.g. `ui.badge(...)`); display-only |
@@ -1121,7 +1122,7 @@ When `groupBy` is set, filter/sort run first, then rows are stably partitioned s
 | `aggregate` | `'sum' \| 'avg' \| 'count' \| 'min' \| 'max' \| (rows, col) => unknown` | Footer total for this column (filtered rows locally; provided/current-page rows when `manualPagination`). Announced in the footer / live region |
 | `pin` | `'left' \| 'right'` | Sticky column while scrolling horizontally (header ⋯ menu can change this at runtime; pin control exposes current state to AT) |
 
-Facet filters store selected values as a JSON string array in `columnFilters[key]` (e.g. `'["todo","done"]'`). Text columns keep substring filters in the denser filter row; facet-only tables skip that row and filter from the header popover.
+Facet filters store selected values as a JSON string array in `columnFilters[key]` (e.g. `'["todo","done"]'`). Text and facet columns both filter from a dashed ListFilter button in the header (popover input vs multi-select).
 
 Server-side column callbacks (not Vue/NiceGUI slots):
 
@@ -1160,6 +1161,7 @@ Optional sugar over `ui.dataTable`. Staged methods bundle related props; `.build
 | `.id(keyField)` | `keyField` |
 | `.columns(cols)` | `columns` |
 | `.search(placeholder?)` | `searchable: true`, `searchPlaceholder` |
+| `.filterDebounce(ms)` | `filterDebounceMs` |
 | `.pageSize(n, options?)` | `pageSize`, `pageSizeOptions` |
 | `.manualPagination(totalRows?)` | `manualPagination: true`, optional `totalRows` (forces remote filter/sort) |
 | `.manualFiltering(enabled?)` | `manualFiltering` (default `true`; hybrid without `.manualPagination()`) |
@@ -1362,7 +1364,7 @@ Disclosure panels (optimistic `value`).
 
 ```typescript
 ui.accordion({ type: 'single' }, (a) => {
-  a.item('faq1', 'What is BadUI?', () => {
+  a.item('faq1', 'What is Clay?', () => {
     ui.label('A server-driven UI toolkit.');
   });
   a.item('faq2', 'Is it reactive?', () => {
@@ -1519,7 +1521,7 @@ NiceGUI-style storage scopes:
 
 | API | Scope | Persistence |
 |-----|--------|-------------|
-| `ui.storage.tab.get/set/delete/clear/has` | This browser tab | Mirrored to client `sessionStorage` (`badui-tab-storage`); hydrated on `hello`; survives reconnect / navigate-hello; not cleared on disconnect — only via `tab.clear()` or tab close |
+| `ui.storage.tab.get/set/delete/clear/has` | This browser tab | Mirrored to client `sessionStorage` (`clay-tab-storage`); hydrated on `hello`; survives reconnect / navigate-hello; not cleared on disconnect — only via `tab.clear()` or tab close |
 | `ui.storage.browser.*` | Shared across tabs for the origin | Mirrored to client `localStorage` (hydrated on `hello`) |
 | `ui.storage.client.*` | This browser tab | Mirrored to client `sessionStorage` (hydrated on `hello`) |
 | `ui.storage.user.get/set/delete/clear/has` | Stable `userId` (hello / `resolveUserId`) | JSON bag via file or Redis adapter |
@@ -1550,9 +1552,9 @@ await messages.update((prev) => [...prev, newMessage]);
 | `.subscribe(listener)` | Listen for changes |
 | `storage.app.clearAll()` | Test helper (clears app stores only) |
 | `storage.clearAll()` | Test helper (clears app stores + user bags + both adapters) |
-| `createMemoryPersistence()` | In-memory adapter for tests (`@badui/core`) |
-| `createFilePersistence({ dir })` | File-backed adapter (`@badui/persistence-file`) |
-| `createRedisPersistence({ client, keyPrefix? })` | Redis adapter (`@badui/persistence-redis`) — multi-process app/user bags; keep WS sticky |
+| `createMemoryPersistence()` | In-memory adapter for tests (`@clay/core`) |
+| `createFilePersistence({ dir })` | File-backed adapter (`@clay/persistence-file`) |
+| `createRedisPersistence({ client, keyPrefix? })` | Redis adapter (`@clay/persistence-redis`) — multi-process app/user bags; keep WS sticky |
 
 `PersistenceAdapter`:
 
@@ -1564,7 +1566,7 @@ type PersistenceAdapter = {
 };
 ```
 
-`@badui/persistence-file` stores one JSON text file per key under `dir`. Core also provides `createMemoryPersistence()` for tests. Implement the interface yourself for Redis or other backends.
+`@clay/persistence-file` stores one JSON text file per key under `dir`. Core also provides `createMemoryPersistence()` for tests. Implement the interface yourself for Redis or other backends.
 
 ---
 
@@ -1602,14 +1604,14 @@ Sidebar layout for multi-page apps. Prefer `ui.run({ app })` so every page inher
 ```typescript
 // Preferred: configure once at startup
 ui.run({
-  app: { title: 'BadUI', nav: ui.navFromPages() },
+  app: { title: 'Clay', nav: ui.navFromPages() },
 });
 
 // Advanced: wrap a single page manually
 ui.page('/examples/counter', () => {
   ui.app(
     {
-      title: 'BadUI',
+      title: 'Clay',
       nav: [
         { label: 'Home', href: '/' },
         { label: 'Counter', href: '/examples/counter' },
@@ -1629,7 +1631,7 @@ Shared layout props:
 | `gap` | `number \| string` | `2` | Tailwind-style gap scale (`0`–`8`) |
 | `className` | `string` | | Extra classes |
 | `centered` | `boolean` | | `mx-auto` (container) |
-| `width` | `'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| 'full'` | `'lg'` for container | Max width |
+| `width` | `'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| 'full'` | `'lg'` for container | Max width |
 
 Card also accepts `title?: string`.
 
@@ -1643,7 +1645,7 @@ ui.container(() => {
 
 ---
 
-## `Element` methods (`@badui/core`)
+## `Element` methods (`@clay/core`)
 
 Returned by every `ui.*` factory.
 
@@ -1675,14 +1677,14 @@ ui.label('Title')
 
 ## Reactivity
 
-Prefer importing from `@badui/ui` (also on `ui.reactive` / `ui.subscribe` / `ui.state` / `ui.auto`). Still exported from `@badui/core`.
+Prefer importing from `@clay/ui` (also on `ui.reactive` / `ui.subscribe` / `ui.state` / `ui.auto`). Still exported from `@clay/core`.
 
-Compile-time `let` rewrite (Phase 2): [`docs/reactive-let.md`](./reactive-let.md) and `@badui/compiler`.
+Compile-time `let` rewrite (Phase 2): [`docs/reactive-let.md`](./reactive-let.md) and `@clay/compiler`.
 
 ### `reactive(target)` / `ui.state(target)`
 
 ```typescript
-import { reactive, ui } from '@badui/ui';
+import { reactive, ui } from '@clay/ui';
 
 const form = reactive({ name: '', agree: false });
 form.name = 'Ada'; // notifies subscribers
@@ -1730,7 +1732,7 @@ ui.button('+', { onClick: () => { s.count++; } });
 ### `subscribe(obj, key, listener)`
 
 ```typescript
-import { subscribe } from '@badui/ui';
+import { subscribe } from '@clay/ui';
 
 subscribe(form, 'name', () => {
   summary.refresh();
@@ -1741,7 +1743,7 @@ Returns an unsubscribe function.
 
 ---
 
-## Helpers (`@badui/core`)
+## Helpers (`@clay/core`)
 
 ### `notify(message, typeOrOptions?)`
 
@@ -1797,25 +1799,25 @@ import {
   clipboard,
   timer,
   TimerHandle,
-} from '@badui/core';
+} from '@clay/core';
 
 // App code prefers the facade (includes reactive / subscribe):
-import { ui, reactive, subscribe } from '@badui/ui';
+import { ui, reactive, subscribe } from '@clay/ui';
 
-import { BadUIServer } from '@badui/server';
-import { button, input /* … */ } from '@badui/components';
+import { ClayServer } from '@clay/server';
+import { button, input /* … */ } from '@clay/components';
 ```
 
 ---
 
-## DuckDB (`@badui/duckdb`)
+## DuckDB (`@clay/duckdb`)
 
 See [DuckDB](./duckdb.md) for the multi-database wrapper (`connect`, `attach`, CRUD).
 
-## Kibana (`@badui/kibana`)
+## Kibana (`@clay/kibana`)
 
 See [Kibana](./kibana.md) for REST access, Elasticsearch search via console proxy, and Saved Objects.
 
-## ClickHouse (`@badui/clickhouse`)
+## ClickHouse (`@clay/clickhouse`)
 
 See [ClickHouse](./clickhouse.md) for the multi-connection wrapper (`connect`, `query`, CRUD, `stream`).

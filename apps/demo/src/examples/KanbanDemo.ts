@@ -1,5 +1,5 @@
-import { ui } from '@badui/ui';
-import type { KanbanColumn, KanbanLane } from '@badui/ui';
+import { ui } from '@clay/ui';
+import type { KanbanColumn, KanbanLane } from '@clay/ui';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {

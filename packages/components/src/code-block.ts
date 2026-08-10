@@ -1,4 +1,4 @@
-import { Element } from '@badui/core';
+import { Element } from '@clay/core';
 
 export type CodeBlockProps = {
   /** Source code to display (read-only). */

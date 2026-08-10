@@ -1,4 +1,4 @@
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 
 export const pageMeta = { label: 'Home', icon: 'house', order: 0 };
 

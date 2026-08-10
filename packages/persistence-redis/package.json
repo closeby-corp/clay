@@ -1,7 +1,7 @@
 {
-  "name": "@badui/persistence-redis",
+  "name": "@clay/persistence-redis",
   "version": "0.1.0",
-  "description": "Redis PersistenceAdapter for BadUI storage.app / storage.user",
+  "description": "Redis PersistenceAdapter for Clay storage.app / storage.user",
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
@@ -16,14 +16,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tfsoares/bad-ui.git",
+    "url": "git+https://github.com/closeby-corp/clay.git",
     "directory": "packages/persistence-redis"
   },
-  "homepage": "https://github.com/tfsoares/bad-ui#readme",
+  "homepage": "https://github.com/closeby-corp/clay#readme",
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@badui/core": "workspace:*"
+    "@clay/core": "workspace:*"
   }
 }

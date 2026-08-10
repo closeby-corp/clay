@@ -1,5 +1,5 @@
-import { ui } from '@badui/ui';
-import type { FlowEdge, FlowElement, FlowPosition } from '@badui/ui';
+import { ui } from '@clay/ui';
+import type { FlowEdge, FlowElement, FlowPosition } from '@clay/ui';
 import { exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -141,7 +141,7 @@ ui.page('/examples/flow', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.flow — custom BadUI trees inside React Flow nodes: forms, branching handles, fan-in/out, groups, and dynamic stages.',
+          'ui.flow — custom Clay trees inside React Flow nodes: forms, branching handles, fan-in/out, groups, and dynamic stages.',
         );
 
         ui.auto(() => {

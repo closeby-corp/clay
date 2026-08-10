@@ -1,5 +1,5 @@
-import { Element, withDetached, withParent } from '@badui/core';
-import type { ElementNode } from '@badui/core';
+import { Element, withDetached, withParent } from '@clay/core';
+import type { ElementNode } from '@clay/core';
 
 /** Per-card detail drawer tree (`{ __ui: ElementNode }`). */
 export const KANBAN_DETAIL_FIELD = '__detail';

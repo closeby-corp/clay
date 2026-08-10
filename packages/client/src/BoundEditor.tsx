@@ -180,7 +180,7 @@ export function BoundEditor({
   return (
     <div
       className={cn(
-        'badui-editor flex w-full flex-col gap-0 overflow-hidden rounded-md border bg-background',
+        'clay-editor flex w-full flex-col gap-0 overflow-hidden rounded-md border bg-background',
         className,
       )}
       style={asStyle(style)}

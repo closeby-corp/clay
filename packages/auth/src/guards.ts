@@ -1,4 +1,4 @@
-import { getCurrentSession } from '@badui/core';
+import { getCurrentSession } from '@clay/core';
 
 /** Options for {@link createAuthGuards}. */
 export type AuthGuardsOptions<TUser> = {

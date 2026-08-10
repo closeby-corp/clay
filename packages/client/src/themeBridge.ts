@@ -1,6 +1,6 @@
 export type ThemeMode = 'light' | 'dark' | 'system';
 
-export const BADUI_THEME_KEY = 'badui-theme';
+export const CLAY_THEME_KEY = 'clay-theme';
 
 type ThemeSetter = (theme: ThemeMode) => void;
 
@@ -17,7 +17,7 @@ export function isThemeMode(value: unknown): value is ThemeMode {
 /** Apply a server `theme` op (and persist via next-themes / localStorage). */
 export function applyServerTheme(theme: ThemeMode): void {
   try {
-    localStorage.setItem(BADUI_THEME_KEY, theme);
+    localStorage.setItem(CLAY_THEME_KEY, theme);
   } catch {
     // ignore quota / private mode
   }
@@ -26,7 +26,7 @@ export function applyServerTheme(theme: ThemeMode): void {
 
 export function readStoredTheme(): ThemeMode | null {
   try {
-    const stored = localStorage.getItem(BADUI_THEME_KEY);
+    const stored = localStorage.getItem(CLAY_THEME_KEY);
     return isThemeMode(stored) ? stored : null;
   } catch {
     return null;

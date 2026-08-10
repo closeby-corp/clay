@@ -1,13 +1,13 @@
-import type { AppProps } from '@badui/ui';
+import type { AppProps } from '@clay/ui';
 
 /** Shared chrome without primary nav (nav comes from `ui.navFromPages()`). */
 export const APP_CHROME = {
-  title: 'BadUI',
+  title: 'Clay',
   variant: 'inset',
   collapsible: 'icon',
   user: {
     name: 'Demo User',
-    email: 'demo@badui.dev',
+    email: 'demo@clay.dev',
     avatar: '',
   },
   navSecondary: [

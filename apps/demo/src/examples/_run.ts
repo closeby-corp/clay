@@ -1,8 +1,8 @@
 /**
  * Optional CLI hook (leading `_` so `loadPages` skips it).
- * When `badui` loads this directory, it merges demo auth + role-aware nav into `ui.run`.
+ * When `clay` loads this directory, it merges demo auth + role-aware nav into `ui.run`.
  */
-import type { RunConfig } from '@badui/ui';
+import type { RunConfig } from '@clay/ui';
 import { demoAppShell, demoAuthOptions } from '../demo-run';
 
 export function configureRun(base: RunConfig): RunConfig {
@@ -12,7 +12,7 @@ export function configureRun(base: RunConfig): RunConfig {
     ...auth,
     // Prefer CLI port/title/clientDir; keep auth + timeouts + css from demo.
     port: base.port,
-    title: base.title ?? 'BadUI Demo',
+    title: base.title ?? 'Clay Demo',
     clientDir: base.clientDir,
   };
   if (base.app) {

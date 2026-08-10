@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Element, withDetached, withParent } from '@badui/core';
+import { Element, withDetached, withParent } from '@clay/core';
 
 describe('withDetached', () => {
   test('does not attach created elements to the current parent', () => {

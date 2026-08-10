@@ -1,8 +1,8 @@
 import { fileURLToPath } from 'url';
-import { ui, type RunConfig } from '@badui/ui';
+import { ui, type RunConfig } from '@clay/ui';
 import { getSessionUser } from './examples/_auth';
 
-const DEFAULT_AUTH_SECRET = 'badui-demo-auth-secret-change-me';
+const DEFAULT_AUTH_SECRET = 'clay-demo-auth-secret-change-me';
 
 /** Auth + session timeout defaults shared by `main.ts` and the CLI `_run` hook. */
 export function demoAuthOptions(): Pick<
@@ -10,12 +10,12 @@ export function demoAuthOptions(): Pick<
   'authSecret' | 'sessionIdleMs' | 'sessionAbsoluteMs' | 'sessionExpiredPath' | 'css'
 > {
   return {
-    authSecret: Bun.env.BADUI_AUTH_SECRET ?? DEFAULT_AUTH_SECRET,
-    sessionIdleMs: Bun.env.BADUI_SESSION_IDLE_MS
-      ? parseInt(Bun.env.BADUI_SESSION_IDLE_MS)
+    authSecret: Bun.env.CLAY_AUTH_SECRET ?? DEFAULT_AUTH_SECRET,
+    sessionIdleMs: Bun.env.CLAY_SESSION_IDLE_MS
+      ? parseInt(Bun.env.CLAY_SESSION_IDLE_MS)
       : 30 * 60 * 1000,
-    sessionAbsoluteMs: Bun.env.BADUI_SESSION_ABSOLUTE_MS
-      ? parseInt(Bun.env.BADUI_SESSION_ABSOLUTE_MS)
+    sessionAbsoluteMs: Bun.env.CLAY_SESSION_ABSOLUTE_MS
+      ? parseInt(Bun.env.CLAY_SESSION_ABSOLUTE_MS)
       : 12 * 60 * 60 * 1000,
     sessionExpiredPath: '/examples/auth/login',
     css: fileURLToPath(new URL('./globals.css', import.meta.url)),

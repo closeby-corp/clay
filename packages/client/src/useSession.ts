@@ -63,7 +63,7 @@ export type SessionState = {
   error: string | null;
 };
 
-const USER_ID_KEY = 'badui-user-id';
+const USER_ID_KEY = 'clay-user-id';
 
 function getOrCreateUserId(): string {
   try {
@@ -80,7 +80,7 @@ function getOrCreateUserId(): string {
   }
 }
 
-export function useBadUISession(path: string) {
+export function useClaySession(path: string) {
   const [state, setState] = useState<SessionState>({
     tree: null,
     connected: false,

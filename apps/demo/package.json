@@ -4,14 +4,14 @@
   "scripts": {
     "dev": "bun run --cwd ../../packages/client build && bun src/main.ts",
     "start": "bun src/main.ts",
-    "cli": "bun ../../packages/cli/bin/badui ./src/examples --app -p 4000 --title \"BadUI Demo\""
+    "cli": "bun ../../packages/cli/bin/clay ./src/examples --app -p 4000 --title \"Clay Demo\""
   },
   "dependencies": {
-    "@badui/core": "workspace:*",
-    "@badui/server": "workspace:*",
-    "@badui/components": "workspace:*",
-    "@badui/ui": "workspace:*",
-    "@badui/auth": "workspace:*",
-    "@badui/client": "workspace:*"
+    "@clay/core": "workspace:*",
+    "@clay/server": "workspace:*",
+    "@clay/components": "workspace:*",
+    "@clay/ui": "workspace:*",
+    "@clay/auth": "workspace:*",
+    "@clay/client": "workspace:*"
   }
 }

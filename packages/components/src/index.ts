@@ -1,4 +1,4 @@
-import { Element, withParent } from '@badui/core';
+import { Element, withParent } from '@clay/core';
 
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
@@ -671,7 +671,7 @@ type LayoutProps = {
   gap?: string | number;
   className?: string;
   centered?: boolean;
-  width?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  width?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
 };
 
 function layout(

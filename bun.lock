@@ -13,42 +13,42 @@
       "name": "demo",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/auth": "workspace:*",
-        "@badui/client": "workspace:*",
-        "@badui/components": "workspace:*",
-        "@badui/core": "workspace:*",
-        "@badui/server": "workspace:*",
-        "@badui/ui": "workspace:*",
+        "@clay/auth": "workspace:*",
+        "@clay/client": "workspace:*",
+        "@clay/components": "workspace:*",
+        "@clay/core": "workspace:*",
+        "@clay/server": "workspace:*",
+        "@clay/ui": "workspace:*",
       },
     },
     "packages/auth": {
-      "name": "@badui/auth",
+      "name": "@clay/auth",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/core": "workspace:*",
+        "@clay/core": "workspace:*",
       },
     },
     "packages/cli": {
-      "name": "@badui/cli",
+      "name": "@clay/cli",
       "version": "0.1.0",
       "bin": {
-        "badui": "./bin/badui",
+        "clay": "./bin/clay",
       },
       "dependencies": {
-        "@badui/compiler": "workspace:*",
-        "@badui/core": "workspace:*",
-        "@badui/ui": "workspace:*",
+        "@clay/compiler": "workspace:*",
+        "@clay/core": "workspace:*",
+        "@clay/ui": "workspace:*",
       },
     },
     "packages/clickhouse": {
-      "name": "@badui/clickhouse",
+      "name": "@clay/clickhouse",
       "version": "0.1.0",
       "dependencies": {
         "@clickhouse/client": "^1.20.0",
       },
     },
     "packages/client": {
-      "name": "@badui/client",
+      "name": "@clay/client",
       "version": "0.1.0",
       "dependencies": {
         "@base-ui/react": "^1.6.0",
@@ -111,67 +111,67 @@
       },
     },
     "packages/compiler": {
-      "name": "@badui/compiler",
+      "name": "@clay/compiler",
       "version": "0.1.0",
       "dependencies": {
         "typescript": "^5.0.0",
       },
     },
     "packages/components": {
-      "name": "@badui/components",
+      "name": "@clay/components",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/core": "workspace:*",
+        "@clay/core": "workspace:*",
         "@dagrejs/dagre": "^3.1.1",
       },
     },
     "packages/core": {
-      "name": "@badui/core",
+      "name": "@clay/core",
       "version": "0.1.0",
     },
     "packages/duckdb": {
-      "name": "@badui/duckdb",
+      "name": "@clay/duckdb",
       "version": "0.1.0",
       "dependencies": {
         "@duckdb/node-api": "^1.5.4-r.1",
       },
     },
     "packages/kibana": {
-      "name": "@badui/kibana",
+      "name": "@clay/kibana",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/duckdb": "workspace:*",
+        "@clay/duckdb": "workspace:*",
       },
     },
     "packages/persistence-file": {
-      "name": "@badui/persistence-file",
+      "name": "@clay/persistence-file",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/core": "workspace:*",
+        "@clay/core": "workspace:*",
       },
     },
     "packages/persistence-redis": {
-      "name": "@badui/persistence-redis",
+      "name": "@clay/persistence-redis",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/core": "workspace:*",
+        "@clay/core": "workspace:*",
       },
     },
     "packages/server": {
-      "name": "@badui/server",
+      "name": "@clay/server",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/core": "workspace:*",
-        "@badui/persistence-file": "workspace:*",
+        "@clay/core": "workspace:*",
+        "@clay/persistence-file": "workspace:*",
       },
     },
     "packages/ui": {
-      "name": "@badui/ui",
+      "name": "@clay/ui",
       "version": "0.1.0",
       "dependencies": {
-        "@badui/components": "workspace:*",
-        "@badui/core": "workspace:*",
-        "@badui/server": "workspace:*",
+        "@clay/components": "workspace:*",
+        "@clay/core": "workspace:*",
+        "@clay/server": "workspace:*",
       },
     },
   },
@@ -216,35 +216,35 @@
 
     "@babel/types": ["@babel/types@7.29.7", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA=="],
 
-    "@badui/auth": ["@badui/auth@workspace:packages/auth"],
-
-    "@badui/cli": ["@badui/cli@workspace:packages/cli"],
-
-    "@badui/clickhouse": ["@badui/clickhouse@workspace:packages/clickhouse"],
-
-    "@badui/client": ["@badui/client@workspace:packages/client"],
-
-    "@badui/compiler": ["@badui/compiler@workspace:packages/compiler"],
-
-    "@badui/components": ["@badui/components@workspace:packages/components"],
-
-    "@badui/core": ["@badui/core@workspace:packages/core"],
-
-    "@badui/duckdb": ["@badui/duckdb@workspace:packages/duckdb"],
-
-    "@badui/kibana": ["@badui/kibana@workspace:packages/kibana"],
-
-    "@badui/persistence-file": ["@badui/persistence-file@workspace:packages/persistence-file"],
-
-    "@badui/persistence-redis": ["@badui/persistence-redis@workspace:packages/persistence-redis"],
-
-    "@badui/server": ["@badui/server@workspace:packages/server"],
-
-    "@badui/ui": ["@badui/ui@workspace:packages/ui"],
-
     "@base-ui/react": ["@base-ui/react@1.6.0", "", { "dependencies": { "@babel/runtime": "^7.29.2", "@base-ui/utils": "0.3.1", "@floating-ui/react-dom": "^2.1.8", "@floating-ui/utils": "^0.2.11", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@date-fns/tz": "^1.2.0", "@types/react": "^17 || ^18 || ^19", "date-fns": "^4.0.0", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@date-fns/tz", "@types/react", "date-fns"] }, "sha512-/jzjTWJYXhRFO45Bev9lc3cHbmjzCMpUqbMZ2AgKy/z25mY9B6shGSNcXcjQar9n5doM0KYW1W8fcFv2jZBuMw=="],
 
     "@base-ui/utils": ["@base-ui/utils@0.3.1", "", { "dependencies": { "@babel/runtime": "^7.29.2", "@floating-ui/utils": "^0.2.11", "reselect": "^5.2.0", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-gFFiltORVmW/N6IILTGxizP3PBpVpysqML1ALY5Vk0mH+7faVkCknOU31goYHN5Aoek2dkjxva1XOD2Ce9WuIg=="],
+
+    "@clay/auth": ["@clay/auth@workspace:packages/auth"],
+
+    "@clay/cli": ["@clay/cli@workspace:packages/cli"],
+
+    "@clay/clickhouse": ["@clay/clickhouse@workspace:packages/clickhouse"],
+
+    "@clay/client": ["@clay/client@workspace:packages/client"],
+
+    "@clay/compiler": ["@clay/compiler@workspace:packages/compiler"],
+
+    "@clay/components": ["@clay/components@workspace:packages/components"],
+
+    "@clay/core": ["@clay/core@workspace:packages/core"],
+
+    "@clay/duckdb": ["@clay/duckdb@workspace:packages/duckdb"],
+
+    "@clay/kibana": ["@clay/kibana@workspace:packages/kibana"],
+
+    "@clay/persistence-file": ["@clay/persistence-file@workspace:packages/persistence-file"],
+
+    "@clay/persistence-redis": ["@clay/persistence-redis@workspace:packages/persistence-redis"],
+
+    "@clay/server": ["@clay/server@workspace:packages/server"],
+
+    "@clay/ui": ["@clay/ui@workspace:packages/ui"],
 
     "@clickhouse/client": ["@clickhouse/client@1.23.1", "", {}, "sha512-vs3/Zc1dHvT171btW5nMoPsPCJ6QVJ5pp7obxzO5sjqwFx/jjz9wwCAqcFOdc2DhprugDBaVn+4dVY8hG3A9nw=="],
 

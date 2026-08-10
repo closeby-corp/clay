@@ -1,4 +1,4 @@
-export { BadUIServer, type BadUIServerConfig, type ResolveUserIdContext } from './server';
+export { ClayServer, type ClayServerConfig, type ResolveUserIdContext } from './server';
 export {
   AUTH_COOKIE_NAME,
   signAuthToken,

@@ -47,7 +47,7 @@ export function BoundAppShell({
   children: ReactNode;
 }) {
   const active = nav.find((item) => item.active);
-  const pageTitle = headerTitle || active?.label || title || 'BadUI';
+  const pageTitle = headerTitle || active?.label || title || 'Clay';
 
   return (
     <SidebarProvider
@@ -76,7 +76,7 @@ export function BoundAppShell({
                   }}
                 >
                   <ArrowUpCircleIcon className="size-5" />
-                  <span className="text-base font-semibold">{title || 'BadUI'}</span>
+                  <span className="text-base font-semibold">{title || 'Clay'}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -98,7 +98,7 @@ export function BoundAppShell({
         <div className="@container/main flex flex-1 flex-col">
           <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
             {/* Page inset remounts on navigate; sidebar chrome stays mounted (sticky app key). */}
-            <div className="badui-animate-in px-4 lg:px-6">{children}</div>
+            <div className="clay-animate-in px-4 lg:px-6">{children}</div>
           </div>
         </div>
       </SidebarInset>

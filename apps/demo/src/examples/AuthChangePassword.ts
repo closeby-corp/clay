@@ -1,5 +1,5 @@
-import { hashPassword } from '@badui/auth';
-import { ui, reactive } from '@badui/ui';
+import { hashPassword } from '@clay/auth';
+import { ui, reactive } from '@clay/ui';
 import {
   ACCOUNT_PATH,
   clearMustChangePassword,

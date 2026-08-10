@@ -1,5 +1,5 @@
-import { Element, withDetached, withParent } from '@badui/core';
-import type { ElementNode } from '@badui/core';
+import { Element, withDetached, withParent } from '@clay/core';
+import type { ElementNode } from '@clay/core';
 
 export type TableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
 
@@ -123,6 +123,11 @@ export type DataTableProps = {
   keyField?: string;
   searchable?: boolean;
   searchPlaceholder?: string;
+  /**
+   * Debounce (ms) before applying global search and text column filters
+   * (`filter` / `columnFilter` events). Default `300`. Use `0` for immediate.
+   */
+  filterDebounceMs?: number;
   /** Page size; `0` disables pagination. Default `10`. */
   pageSize?: number;
   /** Rows-per-page options in the footer select. */
@@ -170,7 +175,7 @@ export type DataTableProps = {
     actionId: string,
     rowKeys: Array<string | number>,
   ) => void | Promise<void>;
-  /** Show per-column filters (text row and/or facet popovers). Default `true`. */
+  /** Show per-column filters (header popovers: text and/or facet). Default `true`. */
   columnFilterable?: boolean;
   /** Show Columns visibility menu. Default `true`. */
   columnToggle?: boolean;
@@ -801,6 +806,7 @@ export class DataTableElement extends Element {
   private zebra: boolean;
   private searchable: boolean;
   private searchPlaceholder: string;
+  private filterDebounceMs: number;
   private columnFilterable: boolean;
   private columnToggle: boolean;
   private exportable: boolean;
@@ -863,6 +869,10 @@ export class DataTableElement extends Element {
     const bulkActions = props.bulkActions ?? [];
     const keyField = props.keyField ?? ROW_ID_FIELD;
     const searchPlaceholder = props.searchPlaceholder ?? 'Search…';
+    const filterDebounceMs =
+      props.filterDebounceMs != null && Number.isFinite(props.filterDebounceMs)
+        ? Math.max(0, Math.floor(Number(props.filterDebounceMs)))
+        : 300;
     const columnFilterable = props.columnFilterable !== false;
     const columnToggle = props.columnToggle !== false;
     const exportable = props.exportable !== false;
@@ -888,6 +898,7 @@ export class DataTableElement extends Element {
       keyField,
       searchable,
       searchPlaceholder,
+      filterDebounceMs,
       columnFilterable,
       columnToggle,
       exportable,
@@ -944,6 +955,7 @@ export class DataTableElement extends Element {
     this.zebra = zebra;
     this.searchable = searchable;
     this.searchPlaceholder = searchPlaceholder;
+    this.filterDebounceMs = filterDebounceMs;
     this.columnFilterable = columnFilterable;
     this.columnToggle = columnToggle;
     this.exportable = exportable;
@@ -1592,6 +1604,7 @@ export class DataTableElement extends Element {
       footer,
       searchable: this.searchable,
       searchPlaceholder: this.searchPlaceholder,
+      filterDebounceMs: this.filterDebounceMs,
       columnFilterable: this.columnFilterable,
       columnToggle: this.columnToggle,
       exportable: this.exportable,

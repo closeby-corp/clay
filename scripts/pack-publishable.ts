@@ -1,8 +1,8 @@
 /**
- * Build client assets and pack publishable @badui packages into dist-pack/.
+ * Build client assets and pack publishable @clay packages into dist-pack/.
  *
  * - `bun pm pack` rewrites `workspace:*` → the package version in the tarball
- * - `@badui/client` stays private; Vite output ships inside `@badui/cli` as `client-dist`
+ * - `@clay/client` stays private; Vite output ships inside `@clay/cli` as `client-dist`
  *   (via root `build:client` → `packages/cli` `copy-client` / `prepack`)
  *
  * Usage (repo root): `bun run pack:publishable`
@@ -32,7 +32,7 @@ await mkdir(outDir, { recursive: true });
 
 const tarballs: string[] = [];
 for (const name of PACKAGES) {
-  console.log(`→ packing @badui/${name}`);
+  console.log(`→ packing @clay/${name}`);
   const expected = tarballPath(name, version);
   const proc = Bun.spawn(
     ['bun', 'pm', 'pack', '--destination', outDir, '--quiet'],
@@ -43,7 +43,7 @@ for (const name of PACKAGES) {
     },
   );
   if ((await proc.exited) !== 0) {
-    console.error(`Failed to pack @badui/${name}`);
+    console.error(`Failed to pack @clay/${name}`);
     process.exit(1);
   }
   tarballs.push(expected);
@@ -52,7 +52,7 @@ for (const name of PACKAGES) {
 console.log(`\nPacked ${tarballs.length} tarballs → ${outDir}`);
 for (const t of tarballs) console.log(`  ${t}`);
 
-const npmFiles = PACKAGES.map((p) => `./dist-pack/badui-${p}-${version}.tgz`).join(
+const npmFiles = PACKAGES.map((p) => `./dist-pack/clay-${p}-${version}.tgz`).join(
   ' \\\n    ',
 );
 
@@ -67,9 +67,9 @@ Publish to npm (requires npm login; order is baked into publish:npm):
   bun run publish:npm
 
 Or manually, in order:
-  ${PACKAGES.map((p) => `npm publish ./dist-pack/badui-${p}-${version}.tgz --access public`).join('\n  ')}
+  ${PACKAGES.map((p) => `npm publish ./dist-pack/clay-${p}-${version}.tgz --access public`).join('\n  ')}
 
 Once published (same versions):
-  bun add @badui/cli @badui/ui
-  bunx badui hello.ts
+  bun add @clay/cli @clay/ui
+  bunx clay hello.ts
 `);

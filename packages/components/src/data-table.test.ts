@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Element } from '@badui/core';
+import { Element } from '@clay/core';
 import {
   DataTableElement,
   ROW_ID_FIELD,
@@ -102,6 +102,15 @@ describe('DataTableElement', () => {
     await table.handleEvent('filter', 'done');
     expect(table.props.totalRows).toBe(2);
     expect(table.props.rows.map((r: Record<string, unknown>) => r.title)).toEqual(['Alpha', 'Charlie']);
+  });
+
+  test('filterDebounceMs defaults to 300 and accepts overrides', () => {
+    const defaults = new DataTableElement(rows, { columns });
+    expect(defaults.props.filterDebounceMs).toBe(300);
+    const custom = new DataTableElement(rows, { columns, filterDebounceMs: 500 });
+    expect(custom.props.filterDebounceMs).toBe(500);
+    const immediate = new DataTableElement(rows, { columns, filterDebounceMs: 0 });
+    expect(immediate.props.filterDebounceMs).toBe(0);
   });
 
   test('column filters AND with global filter', async () => {
@@ -291,7 +300,7 @@ describe('DataTableElement', () => {
       ],
     });
     // Attach a fake session for export
-    const { ClientSession } = await import('@badui/core');
+    const { ClientSession } = await import('@clay/core');
     const session = new ClientSession('/t', (m) => messages.push(m as { op: string; content?: string }));
     table.setSession(session);
     await table.handleEvent('export', { format: 'csv', mode: 'copy' });

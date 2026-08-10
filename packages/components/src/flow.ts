@@ -1,5 +1,5 @@
 import { graphlib, layout as dagreLayout } from '@dagrejs/dagre';
-import { Element, withParent } from '@badui/core';
+import { Element, withParent } from '@clay/core';
 
 export type FlowPosition = { x: number; y: number };
 
@@ -96,7 +96,7 @@ export type FlowNodeProps = {
   handles?: FlowHandle[];
   className?: string;
   /**
-   * RF `nodeTypes` key. Defaults to `'badui'`, or `'baduiGroup'` when
+   * RF `nodeTypes` key. Defaults to `'clay'`, or `'clayGroup'` when
    * `kind: 'group'`. Custom keys need client `registerFlowNodeTypes`.
    */
   nodeType?: string;
@@ -176,7 +176,7 @@ function clonePosition(position: FlowPosition): FlowPosition {
 
 function resolveNodeType(opts: FlowNodeProps): string {
   if (opts.nodeType) return opts.nodeType;
-  return opts.kind === 'group' ? 'baduiGroup' : 'badui';
+  return opts.kind === 'group' ? 'clayGroup' : 'clay';
 }
 
 /** Stable-ish id used by client + server when connect does not supply one. */
@@ -536,7 +536,7 @@ export class FlowElement extends Element {
   }
 
   /**
-   * Add a graph node. Children render as the BadUI body inside React Flow chrome
+   * Add a graph node. Children render as the Clay body inside React Flow chrome
    * (drag by the card; buttons/inputs stay clickable via nodrag).
    * During initial `ui.flow` build the current parent is the flow; at runtime
    * prefer {@link addNode} so children sync to the client.

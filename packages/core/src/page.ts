@@ -33,7 +33,7 @@ export function getPageWrapper(): PageWrapper | null {
 }
 
 /**
- * Register a route. Prefer `ui.page` from `@badui/ui`.
+ * Register a route. Prefer `ui.page` from `@clay/ui`.
  *
  * @example
  * ```ts

@@ -176,12 +176,9 @@ export function EditableCell({
         type={inputType}
         className={cn(
           inputHeight,
-          'border-transparent bg-transparent shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background',
+          'w-full max-w-full min-w-0 border-transparent bg-transparent shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background',
           column.align === 'right' && 'text-right',
           column.align === 'center' && 'text-center',
-          column.editor === 'number' || column.editor === 'date'
-            ? 'min-w-24 w-28 max-w-40'
-            : 'min-w-24 w-full max-w-48',
         )}
         value={local}
         aria-label={column.header}

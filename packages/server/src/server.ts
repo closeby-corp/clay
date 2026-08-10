@@ -1,5 +1,5 @@
-import { ClientSession, getRegisteredPaths, runWithSession, setCurrentSession, storage, type ClientMessage } from '@badui/core';
-import { createFilePersistence } from '@badui/persistence-file';
+import { ClientSession, getRegisteredPaths, runWithSession, setCurrentSession, storage, type ClientMessage } from '@clay/core';
+import { createFilePersistence } from '@clay/persistence-file';
 import { isAbsolute, join, resolve } from 'path';
 import {
   handleAuthSessionDelete,
@@ -34,13 +34,13 @@ export type ResolveUserIdContext = {
 };
 
 /**
- * Config for {@link BadUIServer} / `ui.run`.
+ * Config for {@link ClayServer} / `ui.run`.
  * Auth, session timeouts, uploads, and storage directories live here.
  */
-export type BadUIServerConfig = {
+export type ClayServerConfig = {
   /** Listen port. Default `3000`. */
   port?: number;
-  /** HTML `<title>`. Default `"BadUI"`. */
+  /** HTML `<title>`. Default `"Clay"`. */
   title?: string;
   /** Absolute or workspace-relative path to built client assets. */
   clientDir?: string;
@@ -51,7 +51,7 @@ export type BadUIServerConfig = {
   css?: string | string[];
   /**
    * Directory for `POST /upload` files.
-   * Absolute or relative to `process.cwd()`. Default: `.badui-uploads`.
+   * Absolute or relative to `process.cwd()`. Default: `.clay-uploads`.
    */
   uploadDir?: string;
   /** Reject uploads larger than this many bytes (server-side). */
@@ -63,7 +63,7 @@ export type BadUIServerConfig = {
   uploadAccept?: string;
   /**
    * Directory for per-user JSON bags (`storage.user`).
-   * Absolute or relative to `process.cwd()`. Default: `.badui-user-data`.
+   * Absolute or relative to `process.cwd()`. Default: `.clay-user-data`.
    * Pass `false` to skip file persistence (in-memory user bags only).
    */
   userStorageDir?: string | false;
@@ -110,8 +110,8 @@ export type BadUIServerConfig = {
 };
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
-const DEFAULT_UPLOAD_DIR = '.badui-uploads';
-const DEFAULT_USER_STORAGE_DIR = '.badui-user-data';
+const DEFAULT_UPLOAD_DIR = '.clay-uploads';
+const DEFAULT_USER_STORAGE_DIR = '.clay-user-data';
 const DEFAULT_AUTH_MAX_AGE_SEC = 12 * 60 * 60;
 const SESSION_EXPIRY_CHECK_MS = 1_000;
 
@@ -158,7 +158,7 @@ type ResolvedConfig = {
   uploadAccept?: string;
   userStorageDir: string | false;
   appStorageDir: string | false;
-  resolveUserId?: BadUIServerConfig['resolveUserId'];
+  resolveUserId?: ClayServerConfig['resolveUserId'];
   authSecret?: string;
   authCookieMaxAgeSec: number;
   sessionIdleMs?: number;
@@ -196,14 +196,14 @@ function expireSession(data: WsData, expiredPath: string): void {
 }
 
 /**
- * HTTP + WebSocket server for BadUI apps.
+ * HTTP + WebSocket server for Clay apps.
  * Prefer `ui.run(config)` which constructs and starts this.
  */
-export class BadUIServer {
+export class ClayServer {
   private config: ResolvedConfig;
   private server: ReturnType<typeof Bun.serve> | null = null;
 
-  constructor(config: BadUIServerConfig = {}) {
+  constructor(config: ClayServerConfig = {}) {
     const authSecret = config.authSecret;
     const authCookieMaxAgeSec = config.authCookieMaxAgeSec ?? DEFAULT_AUTH_MAX_AGE_SEC;
     const sessionExpiredPath = config.sessionExpiredPath ?? '/';
@@ -217,7 +217,7 @@ export class BadUIServer {
 
     this.config = {
       port: config.port ?? 3000,
-      title: config.title ?? 'BadUI',
+      title: config.title ?? 'Clay',
       clientDir: config.clientDir ?? DEFAULT_CLIENT_DIR,
       cssPaths: normalizeCssPaths(config.css),
       uploadDir: resolveDir(config.uploadDir, DEFAULT_UPLOAD_DIR),
@@ -482,7 +482,7 @@ export class BadUIServer {
       },
     });
 
-    console.log(`BadUI server listening on http://localhost:${this.port}`);
+    console.log(`Clay server listening on http://localhost:${this.port}`);
     console.log(`Registered pages: ${getRegisteredPaths().join(', ') || '(none)'}`);
     if (cssPaths.length) {
       console.log(`Custom CSS: ${cssPaths.join(', ')}`);

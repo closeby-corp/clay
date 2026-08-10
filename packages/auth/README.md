@@ -1,6 +1,6 @@
-# @badui/auth
+# @clay/auth
 
-Thin helpers for BadUI apps: password hashing, login rate limiting, `requireAuth` / `requireRole`, optional forced password change, and lightweight audit recording.
+Thin helpers for Clay apps: password hashing, login rate limiting, `requireAuth` / `requireRole`, optional forced password change, and lightweight audit recording.
 
 Not a full user database — pair with `ui.run({ authSecret })` signed cookies and your own user store.
 
@@ -11,9 +11,9 @@ import {
   createLoginLimiter,
   createAuthGuards,
   auditRecord,
-} from '@badui/auth';
+} from '@clay/auth';
 ```
 
-**Process-local defaults:** `createLoginLimiter` keeps counters in memory, and `auditRecord` writes to in-process `ui.storage.app` (non-persisted by default). Fine for a single instance; for multi-instance deployments, back both with a shared store (for example Redis via `@badui/persistence-redis` for audit, and your own shared limiter).
+**Process-local defaults:** `createLoginLimiter` keeps counters in memory, and `auditRecord` writes to in-process `ui.storage.app` (non-persisted by default). Fine for a single instance; for multi-instance deployments, back both with a shared store (for example Redis via `@clay/persistence-redis` for audit, and your own shared limiter).
 
 See the Account demo (`apps/demo/src/examples/_auth.ts`) and [docs/examples.md](../../docs/examples.md).

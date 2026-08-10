@@ -3,7 +3,7 @@ import { hashPassword, verifyPassword } from './password';
 import { createLoginLimiter } from './limiter';
 import { createAuthGuards } from './guards';
 import { auditRecord, clearAuditRecords, listAuditRecords } from './audit';
-import { storage, ClientSession, clearPages, setCurrentSession } from '@badui/core';
+import { storage, ClientSession, clearPages, setCurrentSession } from '@clay/core';
 
 describe('hashPassword / verifyPassword', () => {
   test('round-trips', () => {
@@ -89,7 +89,7 @@ describe('auditRecord', () => {
     await clearAuditRecords();
     const session = new ClientSession('/a', () => {});
     session.userId = 'alice';
-    const { setCurrentSession } = await import('@badui/core');
+    const { setCurrentSession } = await import('@clay/core');
     setCurrentSession(session);
     try {
       await auditRecord('login');

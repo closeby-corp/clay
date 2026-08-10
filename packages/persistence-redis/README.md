@@ -1,12 +1,12 @@
-# @badui/persistence-redis
+# @clay/persistence-redis
 
 Redis-backed [`PersistenceAdapter`](../core) for `ui.storage.app` / `ui.storage.user`.
 
 ## Usage
 
 ```ts
-import { storage } from '@badui/core';
-import { createRedisPersistence } from '@badui/persistence-redis';
+import { storage } from '@clay/core';
+import { createRedisPersistence } from '@clay/persistence-redis';
 import Redis from 'ioredis'; // or any client with get/set
 
 const redis = new Redis(process.env.REDIS_URL!);
@@ -18,7 +18,7 @@ storage.configure({
 
 ## Horizontal scaling
 
-- **App / user bags** — share Redis so all BadUI processes see the same `storage.app` / `storage.user` data.
+- **App / user bags** — share Redis so all Clay processes see the same `storage.app` / `storage.user` data.
 - **WebSocket sessions** — still process-local. Use a sticky load balancer (or accept a remount when the socket lands on another worker). Browser/client storage scopes ride with the client and are re-hydrated on `hello`.
 
-Keys are stored as `${keyPrefix}${key}` (default prefix `badui:`).
+Keys are stored as `${keyPrefix}${key}` (default prefix `clay:`).

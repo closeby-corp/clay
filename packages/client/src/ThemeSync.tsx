@@ -8,7 +8,7 @@ import {
   type ThemeMode,
 } from './themeBridge';
 
-/** Wires next-themes to server `theme` ops and restores `badui-theme` on load. */
+/** Wires next-themes to server `theme` ops and restores `clay-theme` on load. */
 export function ThemeSync() {
   const { setTheme } = useTheme();
 

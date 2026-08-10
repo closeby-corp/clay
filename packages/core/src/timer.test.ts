@@ -7,7 +7,7 @@ import {
   runWithSession,
   timer,
   TimerHandle,
-} from '@badui/core';
+} from '@clay/core';
 
 function wait(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));

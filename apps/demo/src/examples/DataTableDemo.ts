@@ -1,5 +1,5 @@
-import { ui } from '@badui/ui';
-import type { DataTableDensity, DataTableElement } from '@badui/ui';
+import { ui } from '@clay/ui';
+import type { DataTableDensity, DataTableElement } from '@clay/ui';
 import { exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {

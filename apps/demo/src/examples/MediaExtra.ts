@@ -1,4 +1,4 @@
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -51,7 +51,7 @@ ui.page('/examples/media-extra', () => {
         ui.row(
           () => {
             ui.qrCode({ value: 'https://example.com', size: 160 });
-            ui.qrCode({ value: 'badui://hello', size: 120, level: 'H' });
+            ui.qrCode({ value: 'clay://hello', size: 120, level: 'H' });
           },
           { gap: 6 },
         );
@@ -63,7 +63,7 @@ ui.page('/examples/media-extra', () => {
           'ui.imageZoom — click for a zoom overlay (plain ui.image stays non-interactive).',
         );
         ui.imageZoom({
-          src: 'https://picsum.photos/seed/badui-zoom/640/360',
+          src: 'https://picsum.photos/seed/clay-zoom/640/360',
           alt: 'Sample photo (click to zoom)',
           className: 'max-w-md',
         });
@@ -75,7 +75,7 @@ ui.page('/examples/media-extra', () => {
           'ui.imageCrop — drag/zoom the crop area, then Crop to emit a data URL preview.',
         );
         ui.imageCrop({
-          src: 'https://picsum.photos/seed/badui-crop/800/600',
+          src: 'https://picsum.photos/seed/clay-crop/800/600',
           aspect: 1,
           onCrop: (payload) => {
             crop.preview = payload.dataUrl;

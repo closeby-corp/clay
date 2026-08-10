@@ -1,4 +1,4 @@
-import { Element } from '@badui/core';
+import { Element } from '@clay/core';
 import { areaChart } from '../../area-chart';
 import { barChart } from '../../bar-chart';
 import { lineChart } from '../../line-chart';

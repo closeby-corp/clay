@@ -1,5 +1,5 @@
 /**
- * Copy packages/client/dist → packages/cli/client-dist so @badui/cli can
+ * Copy packages/client/dist → packages/cli/client-dist so @clay/cli can
  * publish/ship the Vite client assets with the package.
  *
  * Usage: bun run --cwd packages/cli copy-client

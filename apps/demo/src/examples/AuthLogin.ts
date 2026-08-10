@@ -1,5 +1,5 @@
-import { auditRecord } from '@badui/auth';
-import { ui, reactive } from '@badui/ui';
+import { auditRecord } from '@clay/auth';
+import { ui, reactive } from '@clay/ui';
 import {
   ACCOUNT_PATH,
   DEMO_ACCOUNTS,
@@ -30,7 +30,7 @@ ui.page(
         () => {
           ui.card(
             {
-              title: 'Sign in to BadUI Demo',
+              title: 'Sign in to Clay Demo',
               description: 'Use a demo account to open My account and try role-based access.',
               gap: 4,
             },

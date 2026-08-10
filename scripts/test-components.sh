@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# BadUI Component Test Script
+# Clay Component Test Script
 # Tests all ValueComponent types (Input, Slider, Checkbox, Select, TextArea)
 
 BASE_URL="${BASE_URL:-http://localhost:4000}"
@@ -42,15 +42,15 @@ send_event() {
     data="${data}&value=${value}"
   fi
   
-  curl -s -X POST "${BASE_URL}/badui/events" \
+  curl -s -X POST "${BASE_URL}/clay/events" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -H "X-BadUI-Client-ID: ${CONTEXT_ID}" \
+    -H "X-Clay-Client-ID: ${CONTEXT_ID}" \
     -d "$data"
 }
 
 echo ""
 echo -e "${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${YELLOW}║         BadUI - ValueComponent Test Suite                 ║${NC}"
+echo -e "${YELLOW}║         Clay - ValueComponent Test Suite                 ║${NC}"
 echo -e "${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -69,7 +69,7 @@ echo ""
 # =============================================================================
 info "Loading form demo page..."
 RESPONSE=$(curl -s "${BASE_URL}${DEMO_PATH}")
-CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__BADUI_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
+CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__CLAY_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
 
 if [ -z "$CONTEXT_ID" ]; then
   echo -e "${RED}ERROR: Could not get context ID${NC}"
@@ -142,7 +142,7 @@ echo "  Rating Slider ID: $RATING_SLIDER_ID"
 
 # Refresh page to get clean state
 RESPONSE=$(curl -s "${BASE_URL}${DEMO_PATH}")
-CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__BADUI_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
+CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__CLAY_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
 COMPONENT_IDS=($(echo "$RESPONSE" | grep -oE '"_componentId":"c-[a-z0-9]+"' | cut -d'"' -f4))
 RATING_SLIDER_ID="${COMPONENT_IDS[3]}"
 
@@ -177,7 +177,7 @@ info "[3/5] Testing CHECKBOX Component"
 
 # Refresh page
 RESPONSE=$(curl -s "${BASE_URL}${DEMO_PATH}")
-CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__BADUI_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
+CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__CLAY_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
 COMPONENT_IDS=($(echo "$RESPONSE" | grep -oE '"_componentId":"c-[a-z0-9]+"' | cut -d'"' -f4))
 SUBSCRIBE_CB_ID="${COMPONENT_IDS[5]}"
 echo "  Subscribe Checkbox ID: $SUBSCRIBE_CB_ID"
@@ -214,7 +214,7 @@ info "[4/5] Testing SELECT Component"
 
 # Refresh page
 RESPONSE=$(curl -s "${BASE_URL}${DEMO_PATH}")
-CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__BADUI_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
+CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__CLAY_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
 COMPONENT_IDS=($(echo "$RESPONSE" | grep -oE '"_componentId":"c-[a-z0-9]+"' | cut -d'"' -f4))
 COUNTRY_SELECT_ID="${COMPONENT_IDS[8]}"
 echo "  Country Select ID: $COUNTRY_SELECT_ID"
@@ -243,7 +243,7 @@ info "[5/5] Testing TEXTAREA Component"
 
 # Refresh page
 RESPONSE=$(curl -s "${BASE_URL}${DEMO_PATH}")
-CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__BADUI_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
+CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__CLAY_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
 COMPONENT_IDS=($(echo "$RESPONSE" | grep -oE '"_componentId":"c-[a-z0-9]+"' | cut -d'"' -f4))
 BIO_TEXTAREA_ID="${COMPONENT_IDS[10]}"
 echo "  TextArea ID: $BIO_TEXTAREA_ID"
@@ -272,7 +272,7 @@ info "[BONUS] Testing Programmatic Value Changes via Buttons"
 
 # Refresh page
 RESPONSE=$(curl -s "${BASE_URL}${DEMO_PATH}")
-CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__BADUI_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
+CONTEXT_ID=$(echo "$RESPONSE" | grep -oE 'window.__CLAY_CONTEXT_ID__ = "[^"]+"' | cut -d'"' -f2)
 
 # Find the Fill Sample Data button ID dynamically
 FILL_BTN_ID=$(echo "$RESPONSE" | tr '>' '\n' | grep -B1 "Fill Sample Data" | head -1 | grep -oE 'id="c-[a-z0-9]+"' | sed 's/id="//;s/"//')

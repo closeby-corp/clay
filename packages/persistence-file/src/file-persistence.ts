@@ -1,4 +1,4 @@
-import type { PersistenceAdapter } from '@badui/core';
+import type { PersistenceAdapter } from '@clay/core';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -16,12 +16,12 @@ function keyToFilename(key: string): string {
  *
  * @example
  * ```ts
- * import { storage } from '@badui/core';
- * import { createFilePersistence } from '@badui/persistence-file';
+ * import { storage } from '@clay/core';
+ * import { createFilePersistence } from '@clay/persistence-file';
  *
  * storage.configure({
- *   app: createFilePersistence({ dir: '.badui-data' }),
- *   user: createFilePersistence({ dir: '.badui-user-data' }),
+ *   app: createFilePersistence({ dir: '.clay-data' }),
+ *   user: createFilePersistence({ dir: '.clay-user-data' }),
  * });
  * ```
  */

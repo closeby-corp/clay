@@ -1,4 +1,4 @@
-import { Element, getCurrentSession, withParent } from '@badui/core';
+import { Element, getCurrentSession, withParent } from '@clay/core';
 import { AlertDialogElement } from './alert-dialog';
 import { DialogElement } from './dialog';
 

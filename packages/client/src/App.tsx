@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useBadUISession } from './useSession';
+import { useClaySession } from './useSession';
 import { ElementRenderer } from './ElementRenderer';
 import { ConnectionStatus } from './ConnectionStatus';
 
 export function App() {
   const [path, setPath] = useState(window.location.pathname || '/');
-  const { tree, connected, emit } = useBadUISession(path);
+  const { tree, connected, emit } = useClaySession(path);
 
   useEffect(() => {
     const onPop = () => setPath(window.location.pathname || '/');

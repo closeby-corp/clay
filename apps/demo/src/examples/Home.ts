@@ -1,4 +1,4 @@
-import { ui } from '@badui/ui';
+import { ui } from '@clay/ui';
 import { exampleFrame } from '../chrome';
 import { getSessionUser } from './_auth';
 
@@ -24,7 +24,7 @@ ui.page('/', () => {
         },
         () => {
           ui.icon('home').classes('size-10 text-muted-foreground');
-          ui.label('BadUI').classes('text-4xl font-semibold tracking-tight');
+          ui.label('Clay').classes('text-4xl font-semibold tracking-tight');
           ui.label(
             'Server-driven UI for TypeScript — NiceGUI-like API with a React + ShadCN client.',
           ).classes('max-w-md text-sm text-muted-foreground');

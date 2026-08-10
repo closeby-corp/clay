@@ -48,9 +48,9 @@
   --sidebar-border: oklch(0.88 0.01 250);
   --sidebar-ring: oklch(0.45 0.12 250);
 
-  --badui-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --badui-duration-fast: 120ms;
-  --badui-duration-normal: 220ms;
+  --clay-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --clay-duration-fast: 120ms;
+  --clay-duration-normal: 220ms;
 }
 
 .dark {
@@ -137,7 +137,7 @@ body {
   outline-offset: 2px;
 }
 
-@keyframes badui-fade-in {
+@keyframes clay-fade-in {
   from {
     opacity: 0;
   }
@@ -146,7 +146,7 @@ body {
   }
 }
 
-@keyframes badui-slide-up {
+@keyframes clay-slide-up {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -157,7 +157,7 @@ body {
   }
 }
 
-@keyframes badui-menu-in {
+@keyframes clay-menu-in {
   from {
     opacity: 0;
     transform: translateY(-4px) scale(0.98);
@@ -168,19 +168,19 @@ body {
   }
 }
 
-.badui-animate-in {
-  animation: badui-fade-in var(--badui-duration-normal) var(--badui-ease-out),
-    badui-slide-up var(--badui-duration-normal) var(--badui-ease-out);
+.clay-animate-in {
+  animation: clay-fade-in var(--clay-duration-normal) var(--clay-ease-out),
+    clay-slide-up var(--clay-duration-normal) var(--clay-ease-out);
 }
 
-.badui-menu-panel {
+.clay-menu-panel {
   transform-origin: top right;
-  animation: badui-menu-in var(--badui-duration-fast) var(--badui-ease-out);
+  animation: clay-menu-in var(--clay-duration-fast) var(--clay-ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .badui-animate-in,
-  .badui-menu-panel {
+  .clay-animate-in,
+  .clay-menu-panel {
     animation: none;
   }
 }
