@@ -13,6 +13,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
+| `/examples/ai` | `AiDemo.ts` | `ui.ai.*` gallery — chat, prompt bar, loader/thinking, agent cards, diff/insights/fine-tune (static props; no model runtime) |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | Multi-sort (Shift+click / badges), footer aggregates + a11y hints, column pin, remote filter/sort + pagination; density/zebra, editors (Enter/Esc + focus restore), resize, virtualization (≥40, coexists with reorder via windowed drop targets); facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |

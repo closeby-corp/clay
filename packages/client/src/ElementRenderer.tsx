@@ -23,6 +23,23 @@ import { BoundList } from './BoundList';
 import { BoundImageCrop } from './BoundImageCrop';
 import { BoundGantt } from './BoundGantt';
 import { BoundFlow } from './BoundFlow';
+import {
+  BoundAiLoader,
+  BoundAiThinking,
+  BoundAiMessage,
+  BoundAiPromptBar,
+  BoundAiChat,
+  BoundAiCodeBlock,
+  BoundAiApproval,
+  BoundAiToolChips,
+  BoundAiTasks,
+  BoundAiRecommendation,
+  BoundAiContext,
+  BoundAiDiffTable,
+  BoundAiInsights,
+  BoundAiSelectionActions,
+  BoundAiFineTune,
+} from './ai';
 import { useOptimisticValue } from './useOptimisticValue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -2803,6 +2820,55 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'flowNode':
       return null;
+
+    case 'aiLoader':
+      return <BoundAiLoader id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiThinking':
+      return <BoundAiThinking id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiMessage':
+      return <BoundAiMessage id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiPromptBar':
+      return <BoundAiPromptBar id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiChat':
+      return <BoundAiChat id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiCodeBlock':
+      return <BoundAiCodeBlock id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiApproval':
+      return <BoundAiApproval id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiToolChips':
+      return <BoundAiToolChips id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiTasks':
+      return <BoundAiTasks id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiRecommendation':
+      return (
+        <BoundAiRecommendation id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'aiContext':
+      return <BoundAiContext id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiDiffTable':
+      return <BoundAiDiffTable id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiInsights':
+      return <BoundAiInsights id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'aiSelectionActions':
+      return (
+        <BoundAiSelectionActions id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'aiFineTune':
+      return <BoundAiFineTune id={id} props={props} className={className} style={style} emit={emit} />;
 
     case 'link':
       return (

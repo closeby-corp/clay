@@ -15,6 +15,7 @@ You write imperative `ui.*` code on the server. Clay owns a per-client element t
 | [WebSocket protocol](./protocol.md) | Client ↔ server message formats |
 | [Architecture](./architecture.md) | Packages, data flow, and ownership |
 | [Examples](./examples.md) | Demo apps and patterns |
+| [AI UI](./ai.md) | `ui.ai.*` visual AI primitives (no model runtime) |
 | [DuckDB](./duckdb.md) | Multi-DB DuckDB wrapper (`@clay/duckdb`) |
 | [Kibana](./kibana.md) | Kibana REST + ES search (`@clay/kibana`) |
 | [ClickHouse](./clickhouse.md) | Multi-connection ClickHouse wrapper (`@clay/clickhouse`) |

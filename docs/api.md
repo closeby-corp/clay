@@ -443,6 +443,37 @@ Read-only syntax-highlighted code (Shiki on the client).
 | `language` | `string` | `'text'` |
 | `showCopy` | `boolean` | `true` |
 
+#### `ui.ai.*`
+
+AI-native **visual** primitives (props + events only — no model / streaming runtime). See [AI UI](./ai.md).
+
+| Factory | Wire type | Highlights |
+|---------|-----------|------------|
+| `ui.ai.loader` | `aiLoader` | `label`, `variant` (`drive`/`dots`/`orbit`/`pixel`), `startedAt?` |
+| `ui.ai.thinking` | `aiThinking` | `steps[]`, `open?`, `onToggle` |
+| `ui.ai.message` | `aiMessage` | `role`, `text`, `streaming?`, sources/actions/followUps/thinking |
+| `ui.ai.chat` | `aiChat` | Tabs + messages + composer; `AiChatElement.setMessages` / `setActiveTab` |
+| `ui.ai.promptBar` | `aiPromptBar` | Sources, models, commands, dictate stub; `onSubmit` |
+| `ui.ai.codeBlock` | `aiCodeBlock` | `filename?`, `streaming?` (+ Shiki) |
+| `ui.ai.approval` | `aiApproval` | `question`, `options`, `onApprove` / `onReject` |
+| `ui.ai.toolChips` | `aiToolChips` | Compact tool chips |
+| `ui.ai.tasks` | `aiTasks` | Nested task rows (`running`/`failed`/`completed`) |
+| `ui.ai.recommendation` | `aiRecommendation` | Confidence + alternatives |
+| `ui.ai.context` | `aiContext` | Retrieved chunks |
+| `ui.ai.diffTable` | `aiDiffTable` | Compact proposed edits (`changedKeys`) |
+| `ui.ai.insights` | `aiInsights` | Paged insights |
+| `ui.ai.selectionActions` | `aiSelectionActions` | Selection + action strip |
+| `ui.ai.fineTune` | `aiFineTune` | Number/select/text fields → `onChange` |
+
+```ts
+const chat = ui.ai.chat({
+  messages: [{ id: '1', role: 'user', text: 'Hi' }],
+  onSubmit: (text) => {
+    chat.setMessages([...chat.getMessages(), { id: String(Date.now()), role: 'user', text }]);
+  },
+});
+```
+
 #### `ui.tree(props)`
 
 Nested tree with selection and expand/collapse. Optimistic `selected` / `expanded`.

@@ -31,6 +31,21 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `imageCrop` | `imageCrop` | Image cropper (`src`, `aspect?`; emits data URL) |
 | `gantt` | `gantt` | Project timeline (`rows` + markers + dependency arrows; owns dates; `itemMove` / `markerAdd` settle defaults) |
 | `flow` | `flow` (+ `flowNode`) | Interactive diagram (`@xyflow/react`; owns edges/positions; Clay node bodies; dagre `layout()`; group/`parentId`; typed/labeled edges; custom type keys + client registries; `nodeMove`/`connect` settle defaults) |
+| `ai.loader` | `aiLoader` | AI loading state (`variant`: drive/dots/orbit/pixel; optional `startedAt` elapsed) |
+| `ai.thinking` | `aiThinking` | Expandable thinking traces |
+| `ai.message` | `aiMessage` | Chat message (markdown, sources, actions, follow-ups, streaming) |
+| `ai.chat` | `aiChat` | Tabbed thread + composer (`AiChatElement` owns messages/tab) |
+| `ai.promptBar` | `aiPromptBar` | Composer with sources / commands / model / dictate stub |
+| `ai.codeBlock` | `aiCodeBlock` | AI-styled code block (`filename?`, `streaming?`) |
+| `ai.approval` | `aiApproval` | Human-in-the-loop approval card |
+| `ai.toolChips` | `aiToolChips` | Compact tool / edit chips |
+| `ai.tasks` | `aiTasks` | Nested agent task rows |
+| `ai.recommendation` | `aiRecommendation` | Suggestion + confidence + alternatives |
+| `ai.context` | `aiContext` | Retrieved context chunks |
+| `ai.diffTable` | `aiDiffTable` | Compact proposed-edit table |
+| `ai.insights` | `aiInsights` | Paged insight cards |
+| `ai.selectionActions` | `aiSelectionActions` | Selection strip + actions |
+| `ai.fineTune` | `aiFineTune` | Inspector-style prop editors |
 | `link` | `link` | `<a>` (SPA navigation for `/…`) |
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
@@ -103,6 +118,13 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `imageCrop` | `crop` |
 | `gantt` | `itemMove`, `itemClick`, `markerAdd` (`itemMove` / `markerAdd` settle always registered; user `on*` run after owned-model update) |
 | `flow` | `connect`, `nodeMove` (drag-stop), `nodesDelete`, `edgesDelete`, `selectionChange` (settle handlers always registered; user `on*` run after owned-model update) |
+| `aiChat` / `aiPromptBar` | `submit`, `tabChange`, `followUp`, `action`, `sourceRemove`, `modelChange`, `command`, `dictate`, `change` |
+| `aiMessage` | `followUp`, `action` |
+| `aiThinking` | `toggle` |
+| `aiApproval` | `approve`, `reject` |
+| `aiToolChips` / `aiTasks` / `aiContext` | `chipClick`, `taskClick`, `chunkClick` |
+| `aiRecommendation` | `accept`, `reject`, `alternative` |
+| `aiDiffTable` / `aiInsights` / `aiSelectionActions` / `aiFineTune` | `rowClick`, `indexChange`, `prompt`, `action`, `change` |
 | `upload` | `upload`, `progress`, `error`, `abort` |
 | `dataTable` | `sort`, `filter`, `columnFilter`, `columnVisibility`, `columnPin`, `export`, `page`, `pageSize`, `action`, `bulkAction`, `reorder`, `selectionChange`, `cellChange`, `viewChange`, `groupToggle`, `primaryAction` |
 | `dialog` / `sheet` / `drawer` / `alertDialog` | `close` (`alertDialog` also `confirm`) |
