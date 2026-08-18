@@ -52,3 +52,14 @@ export async function readCoreVersion(): Promise<string> {
   };
   return corePkg.version;
 }
+
+/** True if `name@version` is already on the public npm registry. */
+export async function npmHasVersion(name: string, version: string): Promise<boolean> {
+  const url = `https://registry.npmjs.org/${name.replace('/', '%2f')}/${encodeURIComponent(version)}`;
+  const res = await fetch(url, { headers: { accept: 'application/json' } });
+  if (res.status === 404) return false;
+  if (!res.ok) {
+    throw new Error(`npm registry ${res.status} for ${name}@${version}`);
+  }
+  return true;
+}

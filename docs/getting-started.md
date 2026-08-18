@@ -60,6 +60,7 @@ npm login                          # once; needs rights on the @close-by org
 
 bun run publish:dry                # pack + validate + npm publish --dry-run (no upload)
 bun run publish:npm                # pack + validate + real npm publish (same order)
+# Re-run is safe: versions already on npm are skipped.
 ```
 
 Equivalent manual flow from packed tarballs:
@@ -76,7 +77,7 @@ npm publish ./dist-pack/close-by-clay-0.1.0.tgz --access public
 npm publish ./dist-pack/close-by-clay-cli-0.1.0.tgz --access public
 ```
 
-`publish:dry` checks each tarball for rewritten deps (no `workspace:*`), `license` / README / LICENSE, CLI `bin` + `client-dist`, then runs `npm publish --dry-run`. Use `--skip-pack` to reuse an existing `dist-pack/`: `bun scripts/publish-from-pack.ts --dry-run --skip-pack`.
+`publish:dry` checks each tarball for rewritten deps (no `workspace:*`), `license` / README / LICENSE, CLI `bin` + `client-dist`, then runs `npm publish --dry-run`. `publish:npm` looks up each `name@version` on the registry and **skips** if it is already published (resume after a partial failure). Use `--skip-pack` to reuse an existing `dist-pack/`: `bun scripts/publish-from-pack.ts --dry-run --skip-pack`.
 
 ### Run
 

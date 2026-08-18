@@ -11,6 +11,7 @@
  */
 import { existsSync } from 'fs';
 import {
+  npmHasVersion,
   npmName,
   outDir,
   PACKAGES,
@@ -143,13 +144,34 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log('\n→ npm publish --dry-run (each tarball, publish order)');
+console.log(`\n→ npm ${doPublish ? 'publish' : 'publish --dry-run'} (each tarball, publish order)`);
+const published: string[] = [];
+const skipped: string[] = [];
+
 for (const name of PACKAGES) {
+  const pkg = npmName(name);
   const tgz = tarballPath(name, version);
+  const label = `${pkg}@${version}`;
+
+  console.log(`\n=== ${pkg} ${doPublish ? 'PUBLISH' : 'dry-run'} ===`);
+
+  let already: boolean;
+  try {
+    already = await npmHasVersion(pkg, version);
+  } catch (e) {
+    console.error(`Registry check failed for ${label}: ${e instanceof Error ? e.message : e}`);
+    process.exit(1);
+  }
+
+  if (already) {
+    console.log(`  skip — ${label} already on npm`);
+    skipped.push(label);
+    continue;
+  }
+
   const npmArgs = ['publish', tgz, '--access', 'public'];
   if (!doPublish) npmArgs.push('--dry-run');
 
-  console.log(`\n=== ${npmName(name)} ${doPublish ? 'PUBLISH' : 'dry-run'} ===`);
   const proc = Bun.spawn(['npm', ...npmArgs], {
     cwd: root,
     stdout: 'inherit',
@@ -157,18 +179,28 @@ for (const name of PACKAGES) {
   });
   const code = await proc.exited;
   if (code !== 0) {
-    console.error(`npm publish failed for ${npmName(name)} (exit ${code})`);
+    console.error(`npm publish failed for ${pkg} (exit ${code})`);
     if (doPublish) {
       console.error(
-        'Stop here to avoid a partial release. Fix auth/registry, then re-run from this package onward.',
+        'Partial release is OK to resume: re-run `bun run publish:npm` (already-published versions are skipped).',
       );
+      console.error('To reuse tarballs: bun scripts/publish-from-pack.ts --publish --skip-pack');
     }
     process.exit(code);
   }
+  published.push(label);
+}
+
+if (skipped.length) {
+  console.log(`\nSkipped (already on npm): ${skipped.join(', ')}`);
 }
 
 if (doPublish) {
-  console.log(`\nPublished ${PACKAGES.map(npmName).join(', ')}@${version}`);
+  if (published.length) {
+    console.log(`Published: ${published.join(', ')}`);
+  } else {
+    console.log(`Nothing new to publish — all ${PACKAGES.length} packages already on npm at ${version}.`);
+  }
   console.log('Consumers: bun add @close-by/clay-cli @close-by/clay && bunx clay hello.ts');
 } else {
   console.log(`
