@@ -16,6 +16,7 @@ Notes for agents:
 
 - [Human README](README.md): What Clay is, what you can build, try-it commands
 - [Getting started](docs/getting-started.md): Install, `clay` CLI, first app, publishing
+- [Sample app](docs/tutorial.md): Step-by-step tasks list, then two pages + shell
 - [Concepts](docs/concepts.md): Sessions, element tree, patches, refreshable, bindings, storage
 - [API reference](docs/api.md): Complete `ui.*` and Element API
 - [Elements](docs/elements.md): Wire types and client mapping

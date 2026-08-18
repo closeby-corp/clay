@@ -10,6 +10,8 @@
 
 Consumers import `@close-by/clay` and run apps with the `clay` binary from `@close-by/clay-cli`. The CLI ships prebuilt Vite assets (`client-dist`); you do **not** need `@close-by/clay-client` or a monorepo `build:client`.
 
+Walkthrough (tasks list → two pages + `--app`): [Sample app](./tutorial.md).
+
 ### From local packs (this repo)
 
 ```bash

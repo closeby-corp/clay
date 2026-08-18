@@ -11,6 +11,7 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | Doc | Description |
 |-----|-------------|
 | [Getting started](./getting-started.md) | Install, `clay` CLI, create a page |
+| [Sample app](./tutorial.md) | Step-by-step tasks list, then two pages + shell |
 | [Concepts](./concepts.md) | Mental model: sessions, elements, patches, refreshable |
 | [API reference](./api.md) | `ui.*`, `Element` methods, `reactive`, helpers |
 | [Elements](./elements.md) | All element types and props |
