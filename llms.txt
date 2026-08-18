@@ -1,0 +1,38 @@
+# Clay
+
+> Server-driven UI for TypeScript. Write imperative `ui.*` on the server; Clay owns a per-tab element tree and syncs it to a React + ShadCN client over WebSocket. Inspired by NiceGUI.
+
+Clay is not a React app framework. Do not write React, JSX, or client components for screens. App code uses `@clay/ui` (`ui.page`, `ui.run`, `ui.button`, …). The React client is a renderer.
+
+Notes for agents:
+
+- Public API and wire protocol are camelCase (`onClick`, `bindValue`, `setText`).
+- Page builders run once per WebSocket session (per browser tab). `let` is per-tab, not shared.
+- Update existing nodes with `setText` / `setValue` / bindings. Rebuild lists with `ui.refreshable`. Shared or persisted state: `ui.storage` (`tab` / `user` / `app`).
+- Runtime is Bun. In this repo: `bun run build:client`, then `bun run demo` (http://localhost:4000) or `bun run clay hello.ts`.
+- `ui.ai.*` is visual primitives only — no model or streaming runtime.
+
+## Docs
+
+- [Human README](README.md): What Clay is, what you can build, try-it commands
+- [Getting started](docs/getting-started.md): Install, `clay` CLI, first app, publishing
+- [Concepts](docs/concepts.md): Sessions, element tree, patches, refreshable, bindings, storage
+- [API reference](docs/api.md): Complete `ui.*` and Element API
+- [Elements](docs/elements.md): Wire types and client mapping
+- [Documentation index](docs/README.md): Full guide list
+
+## Examples
+
+- [Examples catalog](docs/examples.md): Demo routes and patterns
+- [Demo pages](apps/demo/src/examples/): Runnable `ui.page` modules
+
+## Optional
+
+- [Architecture](docs/architecture.md): Packages and data flow
+- [WebSocket protocol](docs/protocol.md): Message formats
+- [AI UI](docs/ai.md): `ui.ai.*` visual primitives
+- [Reactive let](docs/reactive-let.md): `ui.state` / `ui.auto` and the compile-time `let` transform
+- [DuckDB](docs/duckdb.md): `@clay/duckdb`
+- [ClickHouse](docs/clickhouse.md): `@clay/clickhouse`
+- [Kibana](docs/kibana.md): `@clay/kibana`
+- [NiceGUI](https://nicegui.io/documentation): Inspiration for the `ui.*` style

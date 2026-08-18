@@ -1,46 +1,23 @@
 # Clay
 
-Server-driven UI for TypeScript, inspired by [NiceGUI](https://nicegui.io/).
+Write the UI in TypeScript on the server. Clay renders it in the browser as a React + ShadCN app. You do not write React for screens.
 
-You write imperative `ui.*` on the server. Clay owns a per-client element tree and syncs it to a thin **React + ShadCN** client over **WebSocket**.
+Inspired by [NiceGUI](https://nicegui.io/): imperative `ui.*` calls, per-tab sessions, patches over WebSocket.
 
-**Full documentation:** [docs/README.md](./docs/README.md)
+**Docs:** [docs/README.md](./docs/README.md) · **Agents:** [llms.txt](./llms.txt)
 
-## Features
+## What you can build
 
-- **NiceGUI-like API** — `ui.page`, `ui.run(root?)`, `ui.button`, `ui.refreshable`, `bindValue`, `setText`, `onClick`
-- **`clay` CLI** — `clay hello.ts` or `clay ./pages --app`
-- **Server-owned element tree** — per-tab sessions; incremental WS patches
-- **React + ShadCN client** — Radix/Tailwind under the hood
-- **camelCase everywhere** on the public API and wire protocol
-- **Bun monorepo** — TypeScript end-to-end
+A file or a folder of pages becomes a running app (`clay hello.ts` or `clay ./pages --app`). From there:
 
-## Quick start
+- **Pages and shell** — routes, sidebar nav from `pageMeta`, optional dashboard chrome
+- **Forms** — inputs, validation, `ui.draft` that survives reconnect
+- **Data** — DataTable (sort, filter, grouping, remote paging), charts, DuckDB / ClickHouse / Kibana helpers
+- **Auth** — signed cookies, roles, login limiter, audit log
+- **Files and state** — upload/download, clipboard, `ui.storage` (tab / user / app)
+- **Richer widgets** — dialogs, sheets, kanban, gantt, flow diagrams, editor, markdown, AI visual primitives (no model runtime)
 
-**Outside this monorepo** (packed or published packages):
-
-```bash
-# After `bun run pack:publishable` in a Clay checkout — or once packages are on npm:
-npm install ./dist-pack/clay-*-0.1.0.tgz   # local packs; see docs/getting-started.md
-# bun add @clay/cli @clay/ui               # when published to the registry
-
-bunx clay hello.ts   # ships prebuilt client-dist — no Vite build needed
-```
-
-**This monorepo:**
-
-```bash
-bun install
-bun run build:client   # Vite → packages/client/dist (+ copy into @clay/cli)
-bun run clay hello.ts # http://localhost:3000
-
-# Demo app
-bun run demo           # http://localhost:4000
-bun run demo:cli       # same via `clay … --app`
-bun run dev            # build client + start demo
-```
-
-`@clay/cli` ships prebuilt client assets. In this repo, run `build:client` (or `pack:publishable`) so the workspace CLI / demo have assets to serve.
+Public APIs are camelCase (`onClick`, `bindValue`, `setText`).
 
 ```typescript
 // hello.ts
@@ -67,63 +44,81 @@ ui.run(() => {
 });
 ```
 
+## Try it
+
+Needs [Bun](https://bun.sh/) 1.1+. In this repo:
+
+```bash
+bun install
+bun run build:client   # Vite client, copied into @clay/cli
+bun run demo           # http://localhost:4000
+```
+
+The demo is the fastest way to see the surface: counter, todo, dashboard, auth, charts, kanban, gantt, flow, and the rest.
+
+```bash
+bun run clay hello.ts          # http://localhost:3000
+bun run clay ./pages --app     # multi-page shell + nav
+bun run dev                    # build client, then demo
+```
+
+Using packed or published packages (no monorepo checkout): [Getting started](./docs/getting-started.md). The CLI ships a prebuilt client — no Vite step after install.
+
+## How it works
+
+```
+Your ui.page / ui.run code
+  → per-tab element tree on the server
+  → WebSocket: hello / mount / patch / event
+  → React client → ShadCN
+```
+
+You mutate elements (`setText`, `refreshable`, bindings). Clay sends patches. The client is a renderer, not your app.
+
 ## Documentation
 
 | Guide | Description |
 |-------|-------------|
-| [Getting started](./docs/getting-started.md) | Install, run, minimal app |
+| [Getting started](./docs/getting-started.md) | Install, CLI, first app |
 | [Concepts](./docs/concepts.md) | Sessions, elements, refreshable, bindings |
-| [API reference](./docs/api.md) | Complete `ui.*` and Element API |
+| [API reference](./docs/api.md) | `ui.*` and Element |
 | [Elements](./docs/elements.md) | Wire types and client mapping |
-| [WebSocket protocol](./docs/protocol.md) | Message formats |
-| [Architecture](./docs/architecture.md) | Packages and data flow |
 | [Examples](./docs/examples.md) | Demo routes and patterns |
+| [Architecture](./docs/architecture.md) | Packages and data flow |
+| [WebSocket protocol](./docs/protocol.md) | Message formats |
+| [AI UI](./docs/ai.md) | `ui.ai.*` primitives |
+| [DuckDB](./docs/duckdb.md) / [ClickHouse](./docs/clickhouse.md) / [Kibana](./docs/kibana.md) | Data clients |
 
 ## Packages
 
 | Package | Role |
 |---------|------|
-| `@clay/ui` | NiceGUI-style `ui` facade |
-| `@clay/cli` | `clay` runtime — run a file or page directory |
-| `@clay/core` | Element tree, session, reactive, protocol |
-| `@clay/auth` | Optional password hash, login limiter, guards, audit |
+| `@clay/ui` | App-facing `ui` facade |
+| `@clay/cli` | `clay` — run a file or page directory |
+| `@clay/core` | Element tree, session, reactive, protocol, storage |
 | `@clay/components` | Element factories |
-| `@clay/client` | React + ShadCN renderer |
 | `@clay/server` | Bun HTTP + WebSocket |
-
-## Architecture (short)
-
-```
-App (ui.page / ui.refreshable)
-  → Server element tree (per WebSocket session)
-  → WS: hello / mount / patch / event
-  → React client → ShadCN components
-```
+| `@clay/client` | React + ShadCN renderer (private; build is copied into the CLI) |
+| `@clay/auth` | Password hash, login limiter, guards, audit |
+| `@clay/compiler` | Optional compile-time reactive `let` |
+| `@clay/persistence-file` / `@clay/persistence-redis` | Storage adapters |
+| `@clay/duckdb` / `@clay/clickhouse` / `@clay/kibana` | Data clients |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `bun run build:client` | Build the React client (+ copy into `@clay/cli`) |
-| `bun run pack:publishable` | `build:client` + pack runtime packages into `dist-pack/` |
-| `bun run publish:dry` | Pack + validate + `npm publish --dry-run` (no upload) |
-| `bun run publish:npm` | Pack + validate + publish to npm (needs login; order: core → … → cli) |
-| `bun run demo` | Start the demo server |
-| `bun run demo:cli` | Demo via `clay … --app` |
-| `bun run clay …` | CLI runtime |
+| `bun run demo` | Demo server at :4000 |
+| `bun run demo:cli` | Same examples via `clay … --app` |
+| `bun run clay …` | Workspace CLI |
 | `bun run dev` | Build client, then demo |
-| `bun test` | Run package tests |
+| `bun test` | Package tests |
+| `bun run pack:publishable` | Pack runtime packages into `dist-pack/` |
+| `bun run publish:dry` / `publish:npm` | Validate / publish (maintainers) |
 
-## Current gaps vs full NiceGUI
-
-Still out: JS bridge, horizontal scaling, compile-time reactive `let`, browser/general storage + Redis, composed/scatter charts.
-
-In: facade basics, timer / markdown / html / image, **real upload** (`POST /upload` + `ui.upload`), **tab/user storage** (`ui.storage`), **chart zoo** (`area` / `bar` / `line` / `pie` / `radar` / `radial`), DataTable selection/edit/**row grouping**, and recent ShadCN wires (radio, date, tooltip, accordion, avatar, skeleton, sheet, drawer).
-
-## Publishing
-
-Maintainers: `bun run publish:dry` validates packs; `bun run publish:npm` publishes in order `core` → `auth` → `compiler` → `persistence-file` → `components` → `server` → `ui` → `cli`. Details in [docs/getting-started.md](./docs/getting-started.md#publishing-to-npm-maintainers).
+Publish order and pack details: [Getting started](./docs/getting-started.md#publishing-to-npm-maintainers).
 
 ## License
 
-MIT. Root workspace is private; runtime packages (`@clay/cli`, `@clay/ui`, …) are publishable via `bun run pack:publishable` / `publish:npm`. `@clay/client` stays private — its build is copied into `@clay/cli`.
+MIT. The root workspace is private; runtime packages (`@clay/cli`, `@clay/ui`, …) are publishable. `@clay/client` stays private — its build ships inside `@clay/cli`.

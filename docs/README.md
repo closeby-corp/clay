@@ -4,6 +4,8 @@ Server-driven UI for TypeScript, inspired by [NiceGUI](https://nicegui.io/).
 
 You write imperative `ui.*` code on the server. Clay owns a per-client element tree and syncs it to a thin React + ShadCN client over WebSocket.
 
+For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these guides.
+
 ## Guides
 
 | Doc | Description |
