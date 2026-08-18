@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 
 export type InputOtpProps = {
   /** Number of digit slots (default 6). */

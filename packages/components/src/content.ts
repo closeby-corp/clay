@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 
 export type MarkdownProps = {
   className?: string;

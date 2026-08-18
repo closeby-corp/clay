@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { runWithSession } from '@clay/core';
+import { runWithSession } from '@close-by/clay-core';
 import { app } from './app';
 
 describe('app layout', () => {

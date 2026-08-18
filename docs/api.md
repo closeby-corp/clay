@@ -1,15 +1,15 @@
 # API reference
 
-All public APIs use **camelCase**. Import the facade from `@clay/ui` for app code.
+All public APIs use **camelCase**. Import the facade from `@close-by/clay` for app code.
 
 ```typescript
-import { ui, reactive, subscribe } from '@clay/ui';
-// Still available from core: import { reactive, subscribe } from '@clay/core';
+import { ui, reactive, subscribe } from '@close-by/clay';
+// Still available from core: import { reactive, subscribe } from '@close-by/clay-core';
 ```
 
 ---
 
-## `ui` facade (`@clay/ui`)
+## `ui` facade (`@close-by/clay`)
 
 ### Lifecycle
 
@@ -114,7 +114,7 @@ ui.establishAuthSession(userId, { path: '/account' });
 ui.clearAuthSession({ path: '/login' });
 ```
 
-Password hashing, login rate limits, and `requireAuth` / `requireRole` live in optional `@clay/auth`. See `/examples/auth`.
+Password hashing, login rate limits, and `requireAuth` / `requireRole` live in optional `@close-by/clay-auth`. See `/examples/auth`.
 
 Returns `ClayServer` with `.start()` / `.stop()` / `.port` (`.start()` is already called by `ui.run`).
 
@@ -840,7 +840,7 @@ ui.button('Save', {
 |-------|------|-------------|
 | `rules` | `{ el: Element; check: () => string \| null \| undefined }[]` | One entry per field |
 
-Also available as `validate` from `@clay/core` / `@clay/ui`.
+Also available as `validate` from `@close-by/clay-core` / `@close-by/clay`.
 
 ---
 
@@ -1583,9 +1583,9 @@ await messages.update((prev) => [...prev, newMessage]);
 | `.subscribe(listener)` | Listen for changes |
 | `storage.app.clearAll()` | Test helper (clears app stores only) |
 | `storage.clearAll()` | Test helper (clears app stores + user bags + both adapters) |
-| `createMemoryPersistence()` | In-memory adapter for tests (`@clay/core`) |
-| `createFilePersistence({ dir })` | File-backed adapter (`@clay/persistence-file`) |
-| `createRedisPersistence({ client, keyPrefix? })` | Redis adapter (`@clay/persistence-redis`) — multi-process app/user bags; keep WS sticky |
+| `createMemoryPersistence()` | In-memory adapter for tests (`@close-by/clay-core`) |
+| `createFilePersistence({ dir })` | File-backed adapter (`@close-by/clay-persistence-file`) |
+| `createRedisPersistence({ client, keyPrefix? })` | Redis adapter (`@close-by/clay-persistence-redis`) — multi-process app/user bags; keep WS sticky |
 
 `PersistenceAdapter`:
 
@@ -1597,7 +1597,7 @@ type PersistenceAdapter = {
 };
 ```
 
-`@clay/persistence-file` stores one JSON text file per key under `dir`. Core also provides `createMemoryPersistence()` for tests. Implement the interface yourself for Redis or other backends.
+`@close-by/clay-persistence-file` stores one JSON text file per key under `dir`. Core also provides `createMemoryPersistence()` for tests. Implement the interface yourself for Redis or other backends.
 
 ---
 
@@ -1676,7 +1676,7 @@ ui.container(() => {
 
 ---
 
-## `Element` methods (`@clay/core`)
+## `Element` methods (`@close-by/clay-core`)
 
 Returned by every `ui.*` factory.
 
@@ -1708,14 +1708,14 @@ ui.label('Title')
 
 ## Reactivity
 
-Prefer importing from `@clay/ui` (also on `ui.reactive` / `ui.subscribe` / `ui.state` / `ui.auto`). Still exported from `@clay/core`.
+Prefer importing from `@close-by/clay` (also on `ui.reactive` / `ui.subscribe` / `ui.state` / `ui.auto`). Still exported from `@close-by/clay-core`.
 
-Compile-time `let` rewrite (Phase 2): [`docs/reactive-let.md`](./reactive-let.md) and `@clay/compiler`.
+Compile-time `let` rewrite (Phase 2): [`docs/reactive-let.md`](./reactive-let.md) and `@close-by/clay-compiler`.
 
 ### `reactive(target)` / `ui.state(target)`
 
 ```typescript
-import { reactive, ui } from '@clay/ui';
+import { reactive, ui } from '@close-by/clay';
 
 const form = reactive({ name: '', agree: false });
 form.name = 'Ada'; // notifies subscribers
@@ -1763,7 +1763,7 @@ ui.button('+', { onClick: () => { s.count++; } });
 ### `subscribe(obj, key, listener)`
 
 ```typescript
-import { subscribe } from '@clay/ui';
+import { subscribe } from '@close-by/clay';
 
 subscribe(form, 'name', () => {
   summary.refresh();
@@ -1774,7 +1774,7 @@ Returns an unsubscribe function.
 
 ---
 
-## Helpers (`@clay/core`)
+## Helpers (`@close-by/clay-core`)
 
 ### `notify(message, typeOrOptions?)`
 
@@ -1830,25 +1830,25 @@ import {
   clipboard,
   timer,
   TimerHandle,
-} from '@clay/core';
+} from '@close-by/clay-core';
 
 // App code prefers the facade (includes reactive / subscribe):
-import { ui, reactive, subscribe } from '@clay/ui';
+import { ui, reactive, subscribe } from '@close-by/clay';
 
-import { ClayServer } from '@clay/server';
-import { button, input /* … */ } from '@clay/components';
+import { ClayServer } from '@close-by/clay-server';
+import { button, input /* … */ } from '@close-by/clay-components';
 ```
 
 ---
 
-## DuckDB (`@clay/duckdb`)
+## DuckDB (`@close-by/clay-duckdb`)
 
 See [DuckDB](./duckdb.md) for the multi-database wrapper (`connect`, `attach`, CRUD).
 
-## Kibana (`@clay/kibana`)
+## Kibana (`@close-by/clay-kibana`)
 
 See [Kibana](./kibana.md) for REST access, Elasticsearch search via console proxy, and Saved Objects.
 
-## ClickHouse (`@clay/clickhouse`)
+## ClickHouse (`@close-by/clay-clickhouse`)
 
 See [ClickHouse](./clickhouse.md) for the multi-connection wrapper (`connect`, `query`, CRUD, `stream`).

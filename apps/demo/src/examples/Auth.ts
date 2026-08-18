@@ -1,5 +1,5 @@
-import { getCurrentSession, setCurrentSession } from '@clay/core';
-import { ui } from '@clay/ui';
+import { getCurrentSession, setCurrentSession } from '@close-by/clay-core';
+import { ui } from '@close-by/clay';
 import { exampleFrame } from '../chrome';
 import {
   clearSessionUser,

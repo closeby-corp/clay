@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 /**
  * Page intro under the shell SiteHeader.

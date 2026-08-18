@@ -1,9 +1,9 @@
-# @clay/cli
+# @close-by/clay-cli
 
 `clay` CLI — run a `.ts` file or page directory with **prebuilt** React client assets (`client-dist`).
 
 ```bash
-bun add @clay/cli @clay/ui
+bun add @close-by/clay-cli @close-by/clay
 bunx clay hello.ts
 # or: clay ./pages --app --title "My App"
 ```

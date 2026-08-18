@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 import {
   absoluteInsertIndex,
   kanban,

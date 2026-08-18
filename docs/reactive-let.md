@@ -1,6 +1,6 @@
 # Compile-time reactive `let`
 
-Status: **Phase 1 shipped** (`ui.state` + `ui.auto`, with in-place props sync when the tree shape is stable). **Phase 2 shipped** (`@clay/compiler` transform + `clay` CLI Bun loader; expanded beyond the original leading-`let` MVP).
+Status: **Phase 1 shipped** (`ui.state` + `ui.auto`, with in-place props sync when the tree shape is stable). **Phase 2 shipped** (`@close-by/clay-compiler` transform + `clay` CLI Bun loader; expanded beyond the original leading-`let` MVP).
 
 ## Goal
 
@@ -40,7 +40,7 @@ Tests: `packages/core/src/auto.test.ts`, `packages/core/src/element.test.ts`.
 
 ## Phase 2 (shipped)
 
-Package `@clay/compiler` rewrites a **documented subset** of `let` into Phase 1 APIs.
+Package `@close-by/clay-compiler` rewrites a **documented subset** of `let` into Phase 1 APIs.
 
 ### Opt-in
 
@@ -56,7 +56,7 @@ Any of:
 Simple `let name = <simple>` declarations **anywhere** in an eligible function body, including nested blocks (`if` / bare blocks / `try` / `switch`), but **not** inside loops or nested function scopes (nested functions are their own sites when eligible):
 
 ```ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 ui.page('/', () => {
   ui.label('hi');
@@ -93,8 +93,8 @@ clay hello.ts --no-reactive-let
 Programmatic:
 
 ```ts
-import { registerReactiveLetPlugin } from '@clay/compiler/plugin';
-import { transformReactiveLet } from '@clay/compiler';
+import { registerReactiveLetPlugin } from '@close-by/clay-compiler/plugin';
+import { transformReactiveLet } from '@close-by/clay-compiler';
 
 registerReactiveLetPlugin();
 ```

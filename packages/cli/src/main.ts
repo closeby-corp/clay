@@ -1,8 +1,8 @@
 import { isAbsolute, join, resolve } from 'path';
 import { existsSync, writeFileSync } from 'fs';
 import { stat } from 'fs/promises';
-import { registerReactiveLetPlugin } from '@clay/compiler/plugin';
-import { getRegisteredPaths } from '@clay/core';
+import { registerReactiveLetPlugin } from '@close-by/clay-compiler/plugin';
+import { getRegisteredPaths } from '@close-by/clay-core';
 import {
   ui,
   wasRunCalled,
@@ -10,7 +10,7 @@ import {
   importFresh,
   resetPageDiscovery,
   type RunConfig,
-} from '@clay/ui';
+} from '@close-by/clay';
 import { parseArgs, printUsage } from './parse-args.ts';
 import { openBrowser, resolveBundledClientDir, resolveTitle } from './helpers.ts';
 import { maybeReload } from './reload.ts';
@@ -21,7 +21,7 @@ const NO_PAGES_HINT = `No pages registered.
 
 Use one of:
   // hello.ts — root page
-  import { ui } from '@clay/ui';
+  import { ui } from '@close-by/clay';
   ui.run(() => { ui.label('Hello'); });
 
   // or export a default builder (CLI registers as /)

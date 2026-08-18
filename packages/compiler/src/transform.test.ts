@@ -15,7 +15,7 @@ describe('mightNeedReactiveLet', () => {
 
 describe('transformReactiveLet', () => {
   test('rewrites leading lets in ui.page callback', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   let count = 0;
   ui.label(\`Count: \${count}\`);
@@ -33,7 +33,7 @@ ui.page('/', () => {
 
   test('multiple leading lets + file pragma', () => {
     const src = `// @clay-reactive
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 export function demo() {
   let count = 0;
   let name = "x";
@@ -48,7 +48,7 @@ export function demo() {
   });
 
   test('"use reactive" directive opts in non-page functions', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 function counter() {
   "use reactive";
   let n = 1;
@@ -73,7 +73,7 @@ function counter() {
   });
 
   test('transforms let after other statements', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   ui.label('hi');
   let count = 0;
@@ -89,7 +89,7 @@ ui.page('/', () => {
   });
 
   test('transforms let inside nested block', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   ui.label('hi');
   {
@@ -107,7 +107,7 @@ ui.page('/', () => {
   });
 
   test('transforms nested ui callbacks inside page', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   ui.column(() => {
     let n = 1;
@@ -122,7 +122,7 @@ ui.page('/', () => {
   });
 
   test('accepts undefined / as / parenthesized initializers', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   let a = undefined;
   let b = (0);
@@ -136,7 +136,7 @@ ui.page('/', () => {
   });
 
   test('skips destructuring and complex initializers', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   let { x } = obj;
   ui.label('a');
@@ -147,7 +147,7 @@ ui.page('/', () => {
   });
 
   test('skips duplicate let names across blocks', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   let count = 0;
   {
@@ -168,13 +168,13 @@ ui.page('/', () => {
 `;
     const out = transformReactiveLet(src, 'page.ts');
     expect(out.transformed).toBe(true);
-    expect(out.code).toContain("from '@clay/ui'");
+    expect(out.code).toContain("from '@close-by/clay'");
     expect(out.code).toContain('state({ count: 0 })');
     expect(out.code).toContain('auto(');
   });
 
   test('assignment and += rewrite', () => {
-    const src = `import { ui } from '@clay/ui';
+    const src = `import { ui } from '@close-by/clay';
 ui.page('/', () => {
   let count = 0;
   ui.button('r', { onClick: () => { count = 0; count += 2; } });

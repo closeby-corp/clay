@@ -1,4 +1,4 @@
-import { Element, withParent } from '@clay/core';
+import { Element, withParent } from '@close-by/clay-core';
 
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';

@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 import type { CartesianChartProps, ChartSeries } from './chart-shared';
 
 export type AreaChartSeries = ChartSeries;

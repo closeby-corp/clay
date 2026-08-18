@@ -1,5 +1,5 @@
 {
-  "name": "@clay/persistence-file",
+  "name": "@close-by/clay-persistence-file",
   "version": "0.1.0",
   "description": "File-backed persistence adapters for Clay",
   "license": "MIT",
@@ -24,6 +24,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@clay/core": "workspace:*"
+    "@close-by/clay-core": "workspace:*"
   }
 }

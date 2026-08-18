@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 import { exampleHeader, exampleSection } from '../chrome';
 import visitorsSeed from './dashboard-visitors.json';
 

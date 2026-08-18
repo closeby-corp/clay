@@ -1,5 +1,5 @@
 /**
- * Validate (and optionally publish) packed @clay tarballs in dist-pack/.
+ * Validate (and optionally publish) packed @close-by/clay* tarballs in dist-pack/.
  *
  * Default: pack + dry-run validation (`bun run publish:dry`).
  * Live publish: `bun run publish:npm` (requires npm auth; uploads to the registry).
@@ -10,8 +10,8 @@
  *   bun scripts/publish-from-pack.ts --dry-run --skip-pack   # reuse existing dist-pack/
  */
 import { existsSync } from 'fs';
-import { join } from 'path';
 import {
+  npmName,
   outDir,
   PACKAGES,
   readCoreVersion,
@@ -79,7 +79,7 @@ function assertNoWorkspaceDeps(meta: PackedMeta, pkg: PublishableName) {
   const deps = meta.dependencies ?? {};
   for (const [dep, range] of Object.entries(deps)) {
     if (range.startsWith('workspace:')) {
-      throw new Error(`@clay/${pkg}: dependency ${dep} still has ${range} (expected rewritten version)`);
+      throw new Error(`${npmName(pkg)}: dependency ${dep} still has ${range} (expected rewritten version)`);
     }
   }
 }
@@ -96,7 +96,7 @@ for (const name of PACKAGES) {
 
   try {
     const meta = await readPackedJson(tgz);
-    const expectedName = `@clay/${name}`;
+    const expectedName = npmName(name);
     if (meta.name !== expectedName) {
       errors.push(`${name}: name is ${meta.name}, expected ${expectedName}`);
     }
@@ -131,7 +131,7 @@ for (const name of PACKAGES) {
       }
     }
 
-    console.log(`  ✓ @clay/${name}@${meta.version} (${tgz})`);
+    console.log(`  ✓ ${npmName(name)}@${meta.version} (${tgz})`);
   } catch (e) {
     errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -149,7 +149,7 @@ for (const name of PACKAGES) {
   const npmArgs = ['publish', tgz, '--access', 'public'];
   if (!doPublish) npmArgs.push('--dry-run');
 
-  console.log(`\n=== @clay/${name} ${doPublish ? 'PUBLISH' : 'dry-run'} ===`);
+  console.log(`\n=== ${npmName(name)} ${doPublish ? 'PUBLISH' : 'dry-run'} ===`);
   const proc = Bun.spawn(['npm', ...npmArgs], {
     cwd: root,
     stdout: 'inherit',
@@ -157,7 +157,7 @@ for (const name of PACKAGES) {
   });
   const code = await proc.exited;
   if (code !== 0) {
-    console.error(`npm publish failed for @clay/${name} (exit ${code})`);
+    console.error(`npm publish failed for ${npmName(name)} (exit ${code})`);
     if (doPublish) {
       console.error(
         'Stop here to avoid a partial release. Fix auth/registry, then re-run from this package onward.',
@@ -168,13 +168,13 @@ for (const name of PACKAGES) {
 }
 
 if (doPublish) {
-  console.log(`\nPublished @clay/{${PACKAGES.join(',')}}@${version}`);
-  console.log('Consumers: bun add @clay/cli @clay/ui && bunx clay hello.ts');
+  console.log(`\nPublished ${PACKAGES.map(npmName).join(', ')}@${version}`);
+  console.log('Consumers: bun add @close-by/clay-cli @close-by/clay && bunx clay hello.ts');
 } else {
   console.log(`
 Dry-run OK — packs are publish-ready (no registry upload).
 
-Live publish (requires npm login / OTP for the @clay scope):
+Live publish (requires npm login / OTP for the @close-by org):
   npm login
   bun run publish:npm
 

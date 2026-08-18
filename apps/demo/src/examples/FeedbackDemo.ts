@@ -1,4 +1,4 @@
-import { ui, type TimerHandle } from '@clay/ui';
+import { ui, type TimerHandle } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {

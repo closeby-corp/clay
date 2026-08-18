@@ -1,4 +1,4 @@
-# @clay/compiler
+# @close-by/clay-compiler
 
 Compile-time transforms for [Clay](https://github.com/closeby-corp/clay).
 

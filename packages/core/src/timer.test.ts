@@ -7,7 +7,7 @@ import {
   runWithSession,
   timer,
   TimerHandle,
-} from '@clay/core';
+} from '@close-by/clay-core';
 
 function wait(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));

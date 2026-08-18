@@ -319,7 +319,7 @@ import {
   AccordionElement,
   CollapsibleElement,
   FlowElement,
-} from '@clay/components';
+} from '@close-by/clay-components';
 import {
   Element,
   RefreshableElement,
@@ -356,13 +356,13 @@ import {
   type ThemeMode,
   type DraftStorage,
   type DraftOptions,
-} from '@clay/core';
+} from '@close-by/clay-core';
 import {
   ClayServer,
   type ClayServerConfig,
   establishAuthSession as establishAuthSessionCore,
   clearAuthSession as clearAuthSessionCore,
-} from '@clay/server';
+} from '@close-by/clay-server';
 import {
   loadPages,
   navFromPages,
@@ -1203,13 +1203,13 @@ export const storage = storageCore;
 /** Server-driven appearance (`light` | `dark` | `system`). */
 export const theme = themeCore;
 
-/** Proxy that notifies subscribers on property change. Prefer this over importing from `@clay/core`. */
+/** Proxy that notifies subscribers on property change. Prefer this over importing from `@close-by/clay-core`. */
 export const reactive = reactiveCore;
 
 /** Alias for `reactive` — NiceGUI-ish mutable page state. Prefer `ui.state`. */
 export const state = stateCore;
 
-/** Listen for a reactive property change. Prefer this over importing from `@clay/core`. */
+/** Listen for a reactive property change. Prefer this over importing from `@close-by/clay-core`. */
 export const subscribe = subscribeCore;
 
 /**

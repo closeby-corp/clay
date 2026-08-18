@@ -1,13 +1,13 @@
-# @clay/ui
+# @close-by/clay
 
 NiceGUI-like `ui.*` facade for [Clay](https://github.com/closeby-corp/clay) apps.
 
 ```bash
-bun add @clay/cli @clay/ui
+bun add @close-by/clay-cli @close-by/clay
 ```
 
 ```typescript
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 export default function () {
   ui.label('Hello Clay');

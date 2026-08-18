@@ -4,16 +4,16 @@
 
 | Package | Role |
 |---------|------|
-| `@clay/ui` | App-facing `ui` object: factories, `page`, `loadPages`, `navFromPages`, `run` |
-| `@clay/cli` | `clay` binary: run a `.ts` file or page directory with sane defaults |
-| `@clay/components` | Thin `Element` factories (no HTML strings) |
-| `@clay/core` | Element tree, session, page wrapper, reactive, protocol, `storage` (`tab` / `user` / `app`) + PersistenceAdapter |
-| `@clay/persistence-file` | File-backed `PersistenceAdapter` for `storage.configure` |
-| `@clay/server` | Bun.serve: static SPA assets + `/ws` upgrade, `/auth/session`, session timeouts |
-| `@clay/auth` | Optional helpers: password hash, login limiter, `requireAuth` / `requireRole`, `auditRecord` |
-| `@clay/client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@clay/cli` via `bun run build:client` / `pack:publishable`. |
+| `@close-by/clay` | App-facing `ui` object: factories, `page`, `loadPages`, `navFromPages`, `run` |
+| `@close-by/clay-cli` | `clay` binary: run a `.ts` file or page directory with sane defaults |
+| `@close-by/clay-components` | Thin `Element` factories (no HTML strings) |
+| `@close-by/clay-core` | Element tree, session, page wrapper, reactive, protocol, `storage` (`tab` / `user` / `app`) + PersistenceAdapter |
+| `@close-by/clay-persistence-file` | File-backed `PersistenceAdapter` for `storage.configure` |
+| `@close-by/clay-server` | Bun.serve: static SPA assets + `/ws` upgrade, `/auth/session`, session timeouts |
+| `@close-by/clay-auth` | Optional helpers: password hash, login limiter, `requireAuth` / `requireRole`, `auditRecord` |
+| `@close-by/clay-client` | Vite/React app: WS session hook + element → ShadCN (Sonner, BoundDataTable, …). **Private** — build output is copied into `@close-by/clay-cli` via `bun run build:client` / `pack:publishable`. |
 
-`@clay/compiler` (old Datastar `let` transform) was removed; compile-time reactive `let` remains a Later backlog item.
+`@close-by/clay-compiler` (old Datastar `let` transform) was removed; compile-time reactive `let` remains a Later backlog item.
 
 ## Runtime data flow
 
@@ -62,7 +62,7 @@ ClayServer ──HTTP──► SPA shell (index.html + assets)
 
 On the client, a durable WebSocket + sticky React key for `type: 'app'` keeps sidebar/header mounted across navigate when chrome identity matches; only the inset tree remounts.
 
-Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `ui.storage.app` when you need a process-wide store. Optional `PersistenceAdapter` (via `storage.configure({ app })` or `ui.run({ appStorageDir })`) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@clay/persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
+Per-tab isolation: local `let` / `reactive` state inside a page builder is not shared across tabs. Use `ui.storage.app` when you need a process-wide store. Optional `PersistenceAdapter` (via `storage.configure({ app })` or `ui.run({ appStorageDir })`) persists keys by default; `{ persist: false }` keeps a key in memory only. Use `createFilePersistence` from `@close-by/clay-persistence-file` for disk-backed JSON, or bring your own adapter. Persisted `get()` always reloads from the adapter.
 
 ## Extending the system
 
@@ -76,9 +76,9 @@ Per-tab isolation: local `let` / `reactive` state inside a page builder is not s
 ### Custom server
 
 ```typescript
-import { ClayServer } from '@clay/server';
-import { setPageWrapper } from '@clay/core';
-import { app } from '@clay/components';
+import { ClayServer } from '@close-by/clay-server';
+import { setPageWrapper } from '@close-by/clay-core';
+import { app } from '@close-by/clay-components';
 import './pages';
 
 setPageWrapper((pageFn) =>

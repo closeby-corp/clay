@@ -1,5 +1,5 @@
-import { ui } from '@clay/ui';
-import type { DataTableDensity, DataTableElement } from '@clay/ui';
+import { ui } from '@close-by/clay';
+import type { DataTableDensity, DataTableElement } from '@close-by/clay';
 import { exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {

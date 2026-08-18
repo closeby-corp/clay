@@ -1,11 +1,11 @@
-import { getCurrentSession } from '@clay/core';
+import { getCurrentSession } from '@close-by/clay-core';
 import {
   createAuthGuards,
   createLoginLimiter,
   hashPassword,
   verifyPassword,
-} from '@clay/auth';
-import { ui } from '@clay/ui';
+} from '@close-by/clay-auth';
+import { ui } from '@close-by/clay';
 
 export type Role = 'admin' | 'user';
 

@@ -1,4 +1,4 @@
-import { getCurrentSession } from '@clay/core';
+import { getCurrentSession } from '@close-by/clay-core';
 
 /** Options for {@link createAuthGuards}. */
 export type AuthGuardsOptions<TUser> = {

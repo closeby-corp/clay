@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 export const pageMeta = { label: 'Other', icon: 'zap', order: 10 };
 

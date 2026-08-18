@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -8,7 +8,7 @@ export const pageMeta = {
 };
 
 /**
- * Lightweight integration story for @clay/duckdb / kibana / clickhouse.
+ * Lightweight integration story for @close-by/clay-duckdb / kibana / clickhouse.
  * Sidecars are optional at runtime — demos degrade to documented snippets + mocks.
  */
 ui.page('/examples/data-clients', () => {
@@ -16,10 +16,10 @@ ui.page('/examples/data-clients', () => {
     ui.column(() => {
       exampleHeader(
         undefined,
-        'Optional packages: @clay/duckdb, @clay/kibana, @clay/clickhouse. This page runs without live DBs.',
+        'Optional packages: @close-by/clay-duckdb, @close-by/clay-kibana, @close-by/clay-clickhouse. This page runs without live DBs.',
       );
 
-      exampleSection('DuckDB', 'In-process analytics via @clay/duckdb (skipped if native module unavailable).');
+      exampleSection('DuckDB', 'In-process analytics via @close-by/clay-duckdb (skipped if native module unavailable).');
       ui.refreshable(() => {
         void (async () => {
           // Render sync UI; attempt is fire-and-forget for the label below.
@@ -32,7 +32,7 @@ ui.page('/examples/data-clients', () => {
         ).classes('text-sm text-muted-foreground');
       });
 
-      exampleSection('Kibana / Elasticsearch', '@clay/kibana QueryBuilder + saved objects.');
+      exampleSection('Kibana / Elasticsearch', '@close-by/clay-kibana QueryBuilder + saved objects.');
       ui.label(
         'Example: const kibana = new Kibana({ baseUrl, apiKey }); await kibana.search({ index: "logs-*", size: 10 });',
       ).classes('font-mono text-xs text-muted-foreground');
@@ -52,7 +52,7 @@ ui.page('/examples/data-clients', () => {
         },
       );
 
-      exampleSection('ClickHouse', '@clay/clickhouse Connection for SQL analytics.');
+      exampleSection('ClickHouse', '@close-by/clay-clickhouse Connection for SQL analytics.');
       ui.label(
         'Example: const ch = ClickHouse.create({ url }); const rows = await ch.query("SELECT now()");',
       ).classes('font-mono text-xs text-muted-foreground');

@@ -1,5 +1,5 @@
 import { graphlib, layout as dagreLayout } from '@dagrejs/dagre';
-import { Element, withParent } from '@clay/core';
+import { Element, withParent } from '@close-by/clay-core';
 
 export type FlowPosition = { x: number; y: number };
 

@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 import type { AiToolChip } from './types';
 
 export type AiToolChipsProps = {

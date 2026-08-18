@@ -9,7 +9,7 @@ import {
   setCurrentSession,
   storage,
   type PersistenceAdapter,
-} from '@clay/core';
+} from '@close-by/clay-core';
 
 beforeEach(() => {
   clearPages();

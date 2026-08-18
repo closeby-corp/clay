@@ -1,12 +1,12 @@
-# @clay/persistence-redis
+# @close-by/clay-persistence-redis
 
 Redis-backed [`PersistenceAdapter`](../core) for `ui.storage.app` / `ui.storage.user`.
 
 ## Usage
 
 ```ts
-import { storage } from '@clay/core';
-import { createRedisPersistence } from '@clay/persistence-redis';
+import { storage } from '@close-by/clay-core';
+import { createRedisPersistence } from '@close-by/clay-persistence-redis';
 import Redis from 'ioredis'; // or any client with get/set
 
 const redis = new Redis(process.env.REDIS_URL!);

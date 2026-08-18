@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {

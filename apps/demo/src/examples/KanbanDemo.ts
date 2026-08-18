@@ -1,5 +1,5 @@
-import { ui } from '@clay/ui';
-import type { KanbanColumn, KanbanLane } from '@clay/ui';
+import { ui } from '@close-by/clay';
+import type { KanbanColumn, KanbanLane } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {

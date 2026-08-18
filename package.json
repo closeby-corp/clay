@@ -1,6 +1,7 @@
 {
-  "name": "@close-by/clay",
-  "version": "0.0.1",
+  "name": "clay",
+  "private": true,
+  "version": "0.1.0",
   "workspaces": [
     "packages/*",
     "apps/*"

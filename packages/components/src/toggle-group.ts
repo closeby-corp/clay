@@ -1,4 +1,4 @@
-import { Element, withParent } from '@clay/core';
+import { Element, withParent } from '@close-by/clay-core';
 
 export type ToggleGroupType = 'single' | 'multiple';
 export type ToggleGroupVariant = 'default' | 'outline';

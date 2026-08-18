@@ -1,4 +1,4 @@
-import type { PersistenceAdapter } from '@clay/core';
+import type { PersistenceAdapter } from '@close-by/clay-core';
 
 /** Minimal Redis surface used by the adapter (ioredis, node-redis, Bun, mocks). */
 export type RedisLikeClient = {
@@ -26,8 +26,8 @@ export type RedisPersistenceOptions = {
  *
  * @example
  * ```ts
- * import { storage } from '@clay/core';
- * import { createRedisPersistence } from '@clay/persistence-redis';
+ * import { storage } from '@close-by/clay-core';
+ * import { createRedisPersistence } from '@close-by/clay-persistence-redis';
  * import Redis from 'ioredis';
  *
  * const redis = new Redis(process.env.REDIS_URL!);

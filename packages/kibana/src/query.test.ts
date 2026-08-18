@@ -111,7 +111,7 @@ describe('QueryBuilder', () => {
     const { mkdtemp, rm } = await import('node:fs/promises');
     const { tmpdir } = await import('node:os');
     const { join } = await import('node:path');
-    const { DuckDB } = await import('@clay/duckdb');
+    const { DuckDB } = await import('@close-by/clay-duckdb');
 
     let page = 0;
     const kbn = new Kibana({

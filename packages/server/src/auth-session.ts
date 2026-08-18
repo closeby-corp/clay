@@ -1,4 +1,4 @@
-import { getCurrentSession } from '@clay/core';
+import { getCurrentSession } from '@close-by/clay-core';
 import { signAuthToken } from './auth-cookie';
 
 /** Runtime config for signed auth cookies (set by ClayServer when `authSecret` is set). */

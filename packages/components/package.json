@@ -1,5 +1,5 @@
 {
-  "name": "@clay/components",
+  "name": "@close-by/clay-components",
   "version": "0.1.0",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
   },
   "main": "src/index.ts",
   "dependencies": {
-    "@clay/core": "workspace:*",
+    "@close-by/clay-core": "workspace:*",
     "@dagrejs/dagre": "^3.1.1"
   },
   "exports": {

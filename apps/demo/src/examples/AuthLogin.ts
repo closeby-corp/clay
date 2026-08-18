@@ -1,5 +1,5 @@
-import { auditRecord } from '@clay/auth';
-import { ui, reactive } from '@clay/ui';
+import { auditRecord } from '@close-by/clay-auth';
+import { ui, reactive } from '@close-by/clay';
 import {
   ACCOUNT_PATH,
   DEMO_ACCOUNTS,

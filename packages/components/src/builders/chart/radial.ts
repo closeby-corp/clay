@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 import { radialChart } from '../../radial-chart';
 import type { ChartSeries } from '../../chart-shared';
 import {

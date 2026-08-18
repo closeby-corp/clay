@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { DuckDB } from '@clay/duckdb';
+import { DuckDB } from '@close-by/clay-duckdb';
 import type { Kibana } from './kibana';
 import { sourceOnly, sqlQuote, type ToParquetOptions, type ToParquetResult } from './parquet';
 import type { EsHit, EsSearchBody, EsSearchResponse, PaginateSearchOptions } from './types';

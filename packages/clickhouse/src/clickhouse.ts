@@ -9,7 +9,7 @@ type NamedEntry = {
 };
 
 /**
- * Multi-connection ClickHouse manager — same shape as `@clay/duckdb`.
+ * Multi-connection ClickHouse manager — same shape as `@close-by/clay-duckdb`.
  */
 export class ClickHouse {
   private readonly dbs = new Map<string, NamedEntry>();

@@ -1,4 +1,4 @@
-import { Element, getCurrentSession, withParent } from '@clay/core';
+import { Element, getCurrentSession, withParent } from '@close-by/clay-core';
 
 export type AppNavItem = {
   label: string;

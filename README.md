@@ -21,7 +21,7 @@ Public APIs are camelCase (`onClick`, `bindValue`, `setText`).
 
 ```typescript
 // hello.ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 ui.run(() => {
   let count = 0;
@@ -50,7 +50,7 @@ Needs [Bun](https://bun.sh/) 1.1+. In this repo:
 
 ```bash
 bun install
-bun run build:client   # Vite client, copied into @clay/cli
+bun run build:client   # Vite client, copied into @close-by/clay-cli
 bun run demo           # http://localhost:4000
 ```
 
@@ -93,22 +93,22 @@ You mutate elements (`setText`, `refreshable`, bindings). Clay sends patches. Th
 
 | Package | Role |
 |---------|------|
-| `@clay/ui` | App-facing `ui` facade |
-| `@clay/cli` | `clay` — run a file or page directory |
-| `@clay/core` | Element tree, session, reactive, protocol, storage |
-| `@clay/components` | Element factories |
-| `@clay/server` | Bun HTTP + WebSocket |
-| `@clay/client` | React + ShadCN renderer (private; build is copied into the CLI) |
-| `@clay/auth` | Password hash, login limiter, guards, audit |
-| `@clay/compiler` | Optional compile-time reactive `let` |
-| `@clay/persistence-file` / `@clay/persistence-redis` | Storage adapters |
-| `@clay/duckdb` / `@clay/clickhouse` / `@clay/kibana` | Data clients |
+| `@close-by/clay` | App-facing `ui` facade |
+| `@close-by/clay-cli` | `clay` — run a file or page directory |
+| `@close-by/clay-core` | Element tree, session, reactive, protocol, storage |
+| `@close-by/clay-components` | Element factories |
+| `@close-by/clay-server` | Bun HTTP + WebSocket |
+| `@close-by/clay-client` | React + ShadCN renderer (private; build is copied into the CLI) |
+| `@close-by/clay-auth` | Password hash, login limiter, guards, audit |
+| `@close-by/clay-compiler` | Optional compile-time reactive `let` |
+| `@close-by/clay-persistence-file` / `@close-by/clay-persistence-redis` | Storage adapters |
+| `@close-by/clay-duckdb` / `@close-by/clay-clickhouse` / `@close-by/clay-kibana` | Data clients |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `bun run build:client` | Build the React client (+ copy into `@clay/cli`) |
+| `bun run build:client` | Build the React client (+ copy into `@close-by/clay-cli`) |
 | `bun run demo` | Demo server at :4000 |
 | `bun run demo:cli` | Same examples via `clay … --app` |
 | `bun run clay …` | Workspace CLI |
@@ -121,4 +121,4 @@ Publish order and pack details: [Getting started](./docs/getting-started.md#publ
 
 ## License
 
-MIT. The root workspace is private; runtime packages (`@clay/cli`, `@clay/ui`, …) are publishable. `@clay/client` stays private — its build ships inside `@clay/cli`.
+MIT. The root workspace is private; runtime packages (`@close-by/clay-cli`, `@close-by/clay`, …) are publishable. `@close-by/clay-client` stays private — its build ships inside `@close-by/clay-cli`.

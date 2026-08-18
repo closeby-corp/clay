@@ -1,8 +1,8 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { clearPages, getRegisteredPaths, setPageWrapper } from '@clay/core';
-import { ui, resetRunState, wasRunCalled } from '@clay/ui';
+import { clearPages, getRegisteredPaths, setPageWrapper } from '@close-by/clay-core';
+import { ui, resetRunState, wasRunCalled } from '@close-by/clay';
 import { applyDirRunConfig } from './main.ts';
 
 const fixtures = join(fileURLToPath(new URL('.', import.meta.url)), '../fixtures');

@@ -2,7 +2,7 @@
 
 > Server-driven UI for TypeScript. Write imperative `ui.*` on the server; Clay owns a per-tab element tree and syncs it to a React + ShadCN client over WebSocket. Inspired by NiceGUI.
 
-Clay is not a React app framework. Do not write React, JSX, or client components for screens. App code uses `@clay/ui` (`ui.page`, `ui.run`, `ui.button`, …). The React client is a renderer.
+Clay is not a React app framework. Do not write React, JSX, or client components for screens. App code uses `@close-by/clay` (`ui.page`, `ui.run`, `ui.button`, …). The React client is a renderer.
 
 Notes for agents:
 
@@ -32,7 +32,7 @@ Notes for agents:
 - [WebSocket protocol](docs/protocol.md): Message formats
 - [AI UI](docs/ai.md): `ui.ai.*` visual primitives
 - [Reactive let](docs/reactive-let.md): `ui.state` / `ui.auto` and the compile-time `let` transform
-- [DuckDB](docs/duckdb.md): `@clay/duckdb`
-- [ClickHouse](docs/clickhouse.md): `@clay/clickhouse`
-- [Kibana](docs/kibana.md): `@clay/kibana`
+- [DuckDB](docs/duckdb.md): `@close-by/clay-duckdb`
+- [ClickHouse](docs/clickhouse.md): `@close-by/clay-clickhouse`
+- [Kibana](docs/kibana.md): `@close-by/clay-kibana`
 - [NiceGUI](https://nicegui.io/documentation): Inspiration for the `ui.*` style

@@ -1,5 +1,5 @@
-import { ClientSession, getRegisteredPaths, runWithSession, setCurrentSession, storage, type ClientMessage } from '@clay/core';
-import { createFilePersistence } from '@clay/persistence-file';
+import { ClientSession, getRegisteredPaths, runWithSession, setCurrentSession, storage, type ClientMessage } from '@close-by/clay-core';
+import { createFilePersistence } from '@close-by/clay-persistence-file';
 import { isAbsolute, join, resolve } from 'path';
 import {
   handleAuthSessionDelete,

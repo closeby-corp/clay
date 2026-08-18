@@ -1,11 +1,11 @@
 {
-  "name": "@clay/kibana",
+  "name": "@close-by/clay-kibana",
   "version": "0.1.0",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@clay/duckdb": "workspace:*"
+    "@close-by/clay-duckdb": "workspace:*"
   }
 }

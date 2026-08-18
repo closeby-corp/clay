@@ -1,5 +1,5 @@
-import { ui } from '@clay/ui';
-import type { GanttRow } from '@clay/ui';
+import { ui } from '@close-by/clay';
+import type { GanttRow } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {

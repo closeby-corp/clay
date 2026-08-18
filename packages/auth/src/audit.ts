@@ -1,4 +1,4 @@
-import { getCurrentSession, storage } from '@clay/core';
+import { getCurrentSession, storage } from '@close-by/clay-core';
 
 /** One row in the in-app audit log (`auditRecord` / `listAuditRecords`). */
 export type AuditEntry = {

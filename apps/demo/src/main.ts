@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 import { createDemoRunConfig } from './demo-run';
 
 const port = Bun.env.PORT ? parseInt(Bun.env.PORT) : 4000;

@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { fileURLToPath } from 'url';
 import { join } from 'path';
-import { getRegisteredPaths, page, setPageWrapper } from '@clay/core';
+import { getRegisteredPaths, page, setPageWrapper } from '@close-by/clay-core';
 import {
   attachPageMeta,
   loadPages,

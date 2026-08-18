@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 /** Minimal single-file app for CLI smoke tests / docs. */
 ui.run(() => {

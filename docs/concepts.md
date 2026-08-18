@@ -29,7 +29,7 @@ ui.page('/examples/todo', () => {
 });
 ```
 
-- Register routes with `ui.page(path, fn)` (or `page` from `@clay/core`).
+- Register routes with `ui.page(path, fn)` (or `page` from `@close-by/clay-core`).
 - On `hello`, the server creates a session, runs the page builder, and sends `mount`.
 - State in local variables (`let count = 0`) is **per session** (per tab), not shared.
 - Use `ui.storage.app` for process-wide shared data (e.g. chat messages). Configure a `PersistenceAdapter` via `storage.configure({ app })` or `ui.run({ appStorageDir })` to persist stores (default on when configured; opt out with `{ persist: false }`). `await state.get()` reloads from the adapter when persisted.
@@ -86,7 +86,7 @@ list.refresh(); // rebuilds children and sends setChildren
 Two-way bind form controls to a reactive object:
 
 ```typescript
-import { ui, reactive } from '@clay/ui';
+import { ui, reactive } from '@close-by/clay';
 
 const draft = reactive({ text: '' });
 const input = ui.input({ placeholder: '…' });
@@ -181,7 +181,7 @@ ui.notify('Look here', {
 });
 
 // still available:
-import { notify, navigate } from '@clay/core';
+import { notify, navigate } from '@close-by/clay-core';
 navigate('/examples/todo');
 ```
 

@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 
 /** Metadata returned after a successful HTTP upload (not file bytes). */
 export type UploadedFile = {

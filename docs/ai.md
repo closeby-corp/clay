@@ -7,7 +7,7 @@ Inspired by [Beautiful UI](https://www.beautifului.dev/) patterns; reimplemented
 ## Quick start
 
 ```ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 ui.ai.chat({
   tabs: [{ id: 'flavors', label: 'Flavors' }],

@@ -48,7 +48,7 @@ Try the journey as an end user (sidebar **Account**, or `/examples/auth` while l
 4. **Sign out** clears the HttpOnly auth cookie and soft-reconnects; visiting Account/Admin while signed out redirects to Sign in.
 5. Kill the WebSocket / refresh — cookie identity keeps you signed in. Idle timeout (`sessionIdleMs` on `ui.run`) signs out.
 
-Helpers live in `_auth.ts` (skipped by `loadPages`): `@clay/auth` password hash + login limiter, cookie session via `ui.establishAuthSession`, online roster in `ui.storage.app`, plus `requireAuth` / `requireRole`.
+Helpers live in `_auth.ts` (skipped by `loadPages`): `@close-by/clay-auth` password hash + login limiter, cookie session via `ui.establishAuthSession`, online roster in `ui.storage.app`, plus `requireAuth` / `requireRole`.
 
 ## Pattern: app entry + discovered pages
 
@@ -109,7 +109,7 @@ Use `setText` / `setValue` when the node identity stays the same.
 ## Pattern: todo list (refreshable + bindValue)
 
 ```typescript
-import { ui, reactive } from '@clay/ui';
+import { ui, reactive } from '@close-by/clay';
 
 const draft = reactive({ text: '' });
 const input = ui.input({ placeholder: 'What needs to be done?' });
@@ -133,7 +133,7 @@ ui.button('Add', {
 ## Pattern: form + live summary + validate
 
 ```typescript
-import { ui, reactive, subscribe } from '@clay/ui';
+import { ui, reactive, subscribe } from '@close-by/clay';
 
 const form = reactive({ name: '', terms: false });
 
@@ -166,8 +166,8 @@ for (const key of Object.keys(form)) {
 
 ```typescript
 // main.ts (optional persistence)
-import { createFilePersistence } from '@clay/persistence-file';
-import { storage } from '@clay/core';
+import { createFilePersistence } from '@close-by/clay-persistence-file';
+import { storage } from '@close-by/clay-core';
 // or: ui.run({ appStorageDir: '.clay-data' })
 
 storage.configure({

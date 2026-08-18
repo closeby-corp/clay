@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 
 export type ColorPickerProps = {
   /** Hex color string (e.g. `#3b82f6`). */

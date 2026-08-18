@@ -4,7 +4,9 @@
  * Order matters for registry publish (deps first):
  *   core → auth → compiler → persistence-file → components → server → ui → cli
  *
- * `@clay/client` stays private; Vite output ships inside `@clay/cli` as `client-dist`.
+ * `@close-by/clay` is the app-facing `ui` facade (folder `packages/ui`).
+ * Other folders publish as `@close-by/clay-<folder>`.
+ * `@close-by/clay-client` stays private; Vite output ships inside `@close-by/clay-cli` as `client-dist`.
  */
 import { join } from 'path';
 
@@ -30,8 +32,18 @@ export const REPOSITORY = {
   url: 'git+https://github.com/closeby-corp/clay.git',
 } as const;
 
+/** Workspace folder → npm package name. */
+export function npmName(folder: PublishableName): string {
+  return folder === 'ui' ? '@close-by/clay' : `@close-by/clay-${folder}`;
+}
+
+/** npm pack filename for a scoped package (`@close-by/clay` → `close-by-clay-0.1.0.tgz`). */
+export function tarballFilename(folder: PublishableName, version: string): string {
+  return `${npmName(folder).slice(1).replace('/', '-')}-${version}.tgz`;
+}
+
 export function tarballPath(name: PublishableName, version: string): string {
-  return join(outDir, `clay-${name}-${version}.tgz`);
+  return join(outDir, tarballFilename(name, version));
 }
 
 export async function readCoreVersion(): Promise<string> {

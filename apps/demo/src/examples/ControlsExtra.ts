@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -24,7 +24,7 @@ ui.page('/examples/controls-extra', () => {
         exampleSection('Code block', 'ui.codeBlock — Shiki highlight + optional copy.');
         ui.codeBlock({
           language: 'typescript',
-          code: `import { ui } from '@clay/ui';
+          code: `import { ui } from '@close-by/clay';
 
 ui.page('/hello', () => {
   ui.label('Hello').classes('text-lg font-semibold');

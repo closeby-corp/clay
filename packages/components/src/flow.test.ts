@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ClientSession, runWithSession } from '@clay/core';
+import { ClientSession, runWithSession } from '@close-by/clay-core';
 import {
   computeFlowLayout,
   flow,

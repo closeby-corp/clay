@@ -7,11 +7,11 @@
     "cli": "bun ../../packages/cli/bin/clay ./src/examples --app -p 4000 --title \"Clay Demo\""
   },
   "dependencies": {
-    "@clay/core": "workspace:*",
-    "@clay/server": "workspace:*",
-    "@clay/components": "workspace:*",
-    "@clay/ui": "workspace:*",
-    "@clay/auth": "workspace:*",
-    "@clay/client": "workspace:*"
+    "@close-by/clay-core": "workspace:*",
+    "@close-by/clay-server": "workspace:*",
+    "@close-by/clay-components": "workspace:*",
+    "@close-by/clay": "workspace:*",
+    "@close-by/clay-auth": "workspace:*",
+    "@close-by/clay-client": "workspace:*"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@clay/auth",
+  "name": "@close-by/clay-auth",
   "version": "0.1.0",
   "description": "Thin auth helpers for Clay apps (password hash, login rate limit, requireAuth/requireRole, audit)",
   "license": "MIT",
@@ -24,6 +24,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@clay/core": "workspace:*"
+    "@close-by/clay-core": "workspace:*"
   }
 }

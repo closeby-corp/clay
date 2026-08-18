@@ -1,4 +1,4 @@
-import type { PersistenceAdapter } from '@clay/core';
+import type { PersistenceAdapter } from '@close-by/clay-core';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -16,8 +16,8 @@ function keyToFilename(key: string): string {
  *
  * @example
  * ```ts
- * import { storage } from '@clay/core';
- * import { createFilePersistence } from '@clay/persistence-file';
+ * import { storage } from '@close-by/clay-core';
+ * import { createFilePersistence } from '@close-by/clay-persistence-file';
  *
  * storage.configure({
  *   app: createFilePersistence({ dir: '.clay-data' }),

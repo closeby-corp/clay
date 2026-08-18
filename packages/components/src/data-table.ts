@@ -1,5 +1,5 @@
-import { Element, withDetached, withParent } from '@clay/core';
-import type { ElementNode } from '@clay/core';
+import { Element, withDetached, withParent } from '@close-by/clay-core';
+import type { ElementNode } from '@close-by/clay-core';
 
 export type TableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
 

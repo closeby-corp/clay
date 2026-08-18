@@ -7,7 +7,7 @@ import {
   resetIdSequence,
   runWithSession,
   storage,
-} from '@clay/core';
+} from '@close-by/clay-core';
 
 beforeEach(() => {
   clearPages();

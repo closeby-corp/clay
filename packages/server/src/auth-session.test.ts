@@ -8,7 +8,7 @@ import {
   page,
   storage,
   type ServerMessage,
-} from '@clay/core';
+} from '@close-by/clay-core';
 import { AUTH_COOKIE_NAME, signAuthToken } from './auth-cookie';
 import { ClayServer } from './server';
 

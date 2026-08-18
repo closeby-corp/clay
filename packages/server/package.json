@@ -1,5 +1,5 @@
 {
-  "name": "@clay/server",
+  "name": "@close-by/clay-server",
   "version": "0.1.0",
   "description": "HTTP + WebSocket server runtime for Clay",
   "license": "MIT",
@@ -24,7 +24,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@clay/core": "workspace:*",
-    "@clay/persistence-file": "workspace:*"
+    "@close-by/clay-core": "workspace:*",
+    "@close-by/clay-persistence-file": "workspace:*"
   }
 }

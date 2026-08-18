@@ -8,7 +8,7 @@
 
 ## Outside the monorepo
 
-Consumers import `@clay/ui` and run apps with the `clay` binary from `@clay/cli`. The CLI ships prebuilt Vite assets (`client-dist`); you do **not** need `@clay/client` or a monorepo `build:client`.
+Consumers import `@close-by/clay` and run apps with the `clay` binary from `@close-by/clay-cli`. The CLI ships prebuilt Vite assets (`client-dist`); you do **not** need `@close-by/clay-client` or a monorepo `build:client`.
 
 ### From local packs (this repo)
 
@@ -20,43 +20,43 @@ bun run pack:publishable   # build:client + bun pm pack → dist-pack/*.tgz
 
 # In your app directory:
 npm install \
-  /path/to/bad-ui/dist-pack/clay-core-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/clay-auth-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/clay-compiler-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/clay-persistence-file-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/clay-components-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/clay-server-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/clay-ui-0.1.0.tgz \
-  /path/to/bad-ui/dist-pack/clay-cli-0.1.0.tgz
+  /path/to/clay/dist-pack/close-by-clay-core-0.1.0.tgz \
+  /path/to/clay/dist-pack/close-by-clay-auth-0.1.0.tgz \
+  /path/to/clay/dist-pack/close-by-clay-compiler-0.1.0.tgz \
+  /path/to/clay/dist-pack/close-by-clay-persistence-file-0.1.0.tgz \
+  /path/to/clay/dist-pack/close-by-clay-components-0.1.0.tgz \
+  /path/to/clay/dist-pack/close-by-clay-server-0.1.0.tgz \
+  /path/to/clay/dist-pack/close-by-clay-0.1.0.tgz \
+  /path/to/clay/dist-pack/close-by-clay-cli-0.1.0.tgz
 ```
 
-Install **all** runtime tarballs together so `@clay/*@0.1.0` resolves from the co-installed packs (they are not on the public registry yet).
+Install **all** runtime tarballs together so `@close-by/clay` and `@close-by/clay-*@0.1.0` resolve from the co-installed packs (they are not on the public registry yet).
 
 ### When published to npm
 
 ```bash
-bun add @clay/cli @clay/ui
+bun add @close-by/clay-cli @close-by/clay
 # transitive: core, components, server, persistence-file
-# optional: bun add @clay/auth
+# optional: bun add @close-by/clay-auth
 ```
 
 ### Publishing to npm (maintainers)
 
-Runtime packages are scoped (`@clay/*`) and public (`publishConfig.access: public`). Publish **in dependency order** so the registry can resolve rewritten versions:
+Runtime packages are scoped (`@close-by/clay` and `@close-by/clay-*`) and public (`publishConfig.access: public`). Publish **in dependency order** so the registry can resolve rewritten versions:
 
-1. `@clay/core`
-2. `@clay/auth`
-3. `@clay/compiler`
-4. `@clay/persistence-file`
-5. `@clay/components`
-6. `@clay/server`
-7. `@clay/ui`
-8. `@clay/cli`
+1. `@close-by/clay-core`
+2. `@close-by/clay-auth`
+3. `@close-by/clay-compiler`
+4. `@close-by/clay-persistence-file`
+5. `@close-by/clay-components`
+6. `@close-by/clay-server`
+7. `@close-by/clay`
+8. `@close-by/clay-cli`
 
 ```bash
 # In the Clay checkout:
 bun install
-npm login                          # once; needs rights on the @clay scope
+npm login                          # once; needs rights on the @close-by org
 
 bun run publish:dry                # pack + validate + npm publish --dry-run (no upload)
 bun run publish:npm                # pack + validate + real npm publish (same order)
@@ -66,14 +66,14 @@ Equivalent manual flow from packed tarballs:
 
 ```bash
 bun run pack:publishable
-npm publish ./dist-pack/clay-core-0.1.0.tgz --access public
-npm publish ./dist-pack/clay-auth-0.1.0.tgz --access public
-npm publish ./dist-pack/clay-compiler-0.1.0.tgz --access public
-npm publish ./dist-pack/clay-persistence-file-0.1.0.tgz --access public
-npm publish ./dist-pack/clay-components-0.1.0.tgz --access public
-npm publish ./dist-pack/clay-server-0.1.0.tgz --access public
-npm publish ./dist-pack/clay-ui-0.1.0.tgz --access public
-npm publish ./dist-pack/clay-cli-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-core-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-auth-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-compiler-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-persistence-file-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-components-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-server-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-0.1.0.tgz --access public
+npm publish ./dist-pack/close-by-clay-cli-0.1.0.tgz --access public
 ```
 
 `publish:dry` checks each tarball for rewritten deps (no `workspace:*`), `license` / README / LICENSE, CLI `bin` + `client-dist`, then runs `npm publish --dry-run`. Use `--skip-pack` to reuse an existing `dist-pack/`: `bun scripts/publish-from-pack.ts --dry-run --skip-pack`.
@@ -82,7 +82,7 @@ npm publish ./dist-pack/clay-cli-0.1.0.tgz --access public
 
 ```typescript
 // hello.ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 export default function () {
   ui.label('Hello Clay');
@@ -100,7 +100,7 @@ bunx clay hello.ts   # → http://localhost:3000 (opens browser)
 
 ```typescript
 // hello.ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 ui.run(() => {
   ui.label('Hello Clay');
@@ -108,7 +108,7 @@ ui.run(() => {
 });
 ```
 
-**This monorepo:** build the client once (also copies assets into `@clay/cli` for packaging), then use the workspace CLI:
+**This monorepo:** build the client once (also copies assets into `@close-by/clay-cli` for packaging), then use the workspace CLI:
 
 ```bash
 bun install
@@ -121,7 +121,7 @@ The CLI prefers `packages/cli/client-dist` when present, otherwise falls back to
 Or a default export (CLI registers `/` and starts the server for you):
 
 ```typescript
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 export default function () {
   ui.label('Hello Clay');
@@ -155,7 +155,7 @@ See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto`, `ui.
 
 ```bash
 bun install
-bun run build:client   # builds packages/client → dist, copies into @clay/cli
+bun run build:client   # builds packages/client → dist, copies into @close-by/clay-cli
 bun run demo           # starts apps/demo on :4000
 # or
 bun run demo:cli       # same examples via `clay … --app`
@@ -177,20 +177,20 @@ Open:
 
 | Script | What it does |
 |--------|----------------|
-| `bun run build:client` | Vite production build of the React client + copy into `@clay/cli` |
-| `bun run pack:publishable` | `build:client` + pack `@clay/{core,auth,compiler,persistence-file,components,server,ui,cli}` → `dist-pack/` |
+| `bun run build:client` | Vite production build of the React client + copy into `@close-by/clay-cli` |
+| `bun run pack:publishable` | `build:client` + pack `@close-by/clay-core` … `@close-by/clay` … `@close-by/clay-cli` → `dist-pack/` |
 | `bun run publish:dry` | Pack + validate tarballs + `npm publish --dry-run` (no registry upload) |
 | `bun run publish:npm` | Pack + validate + `npm publish` in order (requires `npm login`) |
 | `bun run demo` | Start demo server (`main.ts`; expects client already built) |
 | `bun run demo:cli` | Start demo via `clay apps/demo/src/examples --app` (loads `_run.ts` auth config) |
-| `bun run clay …` | CLI runtime (`@clay/cli`) |
+| `bun run clay …` | CLI runtime (`@close-by/clay-cli`) |
 | `bun run dev` | Build client, then start demo |
 | `bun test` | Run package tests |
 
 ### Packaging notes (maintainers)
 
 - Source packages keep `workspace:*` for the monorepo; `bun pm pack` / publish rewrites them to the package version.
-- `@clay/client` is **private**; only its Vite `dist` is copied into `@clay/cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
+- `@close-by/clay-client` is **private**; only its Vite `dist` is copied into `@close-by/clay-cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
 - Root stays `private: true`. Each runtime package ships `license`, `README.md`, `LICENSE`, and `publishConfig.access: public`.
 - Publish order: `core` → `auth` → `compiler` → `persistence-file` → `components` → `server` → `ui` → `cli` (see **Publishing to npm** above).
 
@@ -200,7 +200,7 @@ Create a page file and an entrypoint:
 
 ```typescript
 // pages/counter.ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 export const pageMeta = { label: 'Counter', icon: 'hash', order: 10 };
 
@@ -228,7 +228,7 @@ ui.page('/counter', () => {
 
 ```typescript
 // main.ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 await ui.loadPages(new URL('./pages', import.meta.url));
 
@@ -243,7 +243,7 @@ ui.run({
 });
 ```
 
-Point `clientDir` at a built `@clay/client` dist only if the default (`packages/client/dist`) is wrong for your layout. The `clay` CLI serves shipped assets from `packages/cli/client-dist` (or the monorepo `packages/client/dist` fallback).
+Point `clientDir` at a built `@close-by/clay-client` dist only if the default (`packages/client/dist`) is wrong for your layout. The `clay` CLI serves shipped assets from `packages/cli/client-dist` (or the monorepo `packages/client/dist` fallback).
 
 Use `css` to inject your own `globals.css` after the built client styles — override shadcn-style tokens such as `--primary`, `--background`, and `--sidebar` (and optional `.dark`) without rebuilding the client. Runtime CSS cannot add new Tailwind utilities; use those variables or plain CSS.
 

@@ -1,5 +1,5 @@
 {
-  "name": "@clay/persistence-redis",
+  "name": "@close-by/clay-persistence-redis",
   "version": "0.1.0",
   "description": "Redis PersistenceAdapter for Clay storage.app / storage.user",
   "license": "MIT",
@@ -24,6 +24,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@clay/core": "workspace:*"
+    "@close-by/clay-core": "workspace:*"
   }
 }

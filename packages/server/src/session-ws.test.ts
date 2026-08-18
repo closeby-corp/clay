@@ -12,7 +12,7 @@ import {
   type ClientMessage,
   type ElementNode,
   type ServerMessage,
-} from '@clay/core';
+} from '@close-by/clay-core';
 import { ClayServer } from './server';
 
 function findByType(node: ElementNode, type: string): ElementNode[] {

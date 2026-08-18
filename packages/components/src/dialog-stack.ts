@@ -1,4 +1,4 @@
-import { Element, withParent } from '@clay/core';
+import { Element, withParent } from '@close-by/clay-core';
 
 export type DialogStackProps = {
   /** Optional stack-level heading (shown when the active step has no title). */

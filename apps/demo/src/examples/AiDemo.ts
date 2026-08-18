@@ -1,5 +1,5 @@
-import { ui } from '@clay/ui';
-import type { AiChatMessage } from '@clay/ui';
+import { ui } from '@close-by/clay';
+import type { AiChatMessage } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {

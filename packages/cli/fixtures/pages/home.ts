@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 export const pageMeta = { label: 'Home', icon: 'house', order: 0 };
 

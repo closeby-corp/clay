@@ -1,5 +1,5 @@
-import { ui } from '@clay/ui';
-import type { DataTableElement } from '@clay/ui';
+import { ui } from '@close-by/clay';
+import type { DataTableElement } from '@close-by/clay';
 import { exampleHeader } from '../chrome';
 import documentsSeed from './dashboard-documents.json';
 import visitorsSeed from './dashboard-visitors.json';

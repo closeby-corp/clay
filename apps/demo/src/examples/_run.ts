@@ -2,7 +2,7 @@
  * Optional CLI hook (leading `_` so `loadPages` skips it).
  * When `clay` loads this directory, it merges demo auth + role-aware nav into `ui.run`.
  */
-import type { RunConfig } from '@clay/ui';
+import type { RunConfig } from '@close-by/clay';
 import { demoAppShell, demoAuthOptions } from '../demo-run';
 
 export function configureRun(base: RunConfig): RunConfig {

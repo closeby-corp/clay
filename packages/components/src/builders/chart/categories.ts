@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 import { areaChart } from '../../area-chart';
 import { barChart } from '../../bar-chart';
 import { lineChart } from '../../line-chart';

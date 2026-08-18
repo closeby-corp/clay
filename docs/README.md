@@ -18,24 +18,24 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | [Architecture](./architecture.md) | Packages, data flow, and ownership |
 | [Examples](./examples.md) | Demo apps and patterns |
 | [AI UI](./ai.md) | `ui.ai.*` visual AI primitives (no model runtime) |
-| [DuckDB](./duckdb.md) | Multi-DB DuckDB wrapper (`@clay/duckdb`) |
-| [Kibana](./kibana.md) | Kibana REST + ES search (`@clay/kibana`) |
-| [ClickHouse](./clickhouse.md) | Multi-connection ClickHouse wrapper (`@clay/clickhouse`) |
+| [DuckDB](./duckdb.md) | Multi-DB DuckDB wrapper (`@close-by/clay-duckdb`) |
+| [Kibana](./kibana.md) | Kibana REST + ES search (`@close-by/clay-kibana`) |
+| [ClickHouse](./clickhouse.md) | Multi-connection ClickHouse wrapper (`@close-by/clay-clickhouse`) |
 
 ## Quick start
 
 ```bash
 bun install
-bun run build:client   # monorepo: build + copy client into @clay/cli
+bun run build:client   # monorepo: build + copy client into @close-by/clay-cli
 bun run clay hello.ts
 # → http://localhost:3000
 ```
 
-Outside the monorepo: `bun run pack:publishable` then install the `dist-pack/*.tgz` set (see [Getting started](./getting-started.md)), or `bun add @clay/cli @clay/ui` once published. Maintainers: `bun run publish:dry` / `publish:npm` (order core → … → cli). Shipped CLI includes prebuilt client assets — no separate `build:client` after install.
+Outside the monorepo: `bun run pack:publishable` then install the `dist-pack/*.tgz` set (see [Getting started](./getting-started.md)), or `bun add @close-by/clay-cli @close-by/clay` once published. Maintainers: `bun run publish:dry` / `publish:npm` (order core → … → cli). Shipped CLI includes prebuilt client assets — no separate `build:client` after install.
 
 ```typescript
 // hello.ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 ui.run(() => {
   let count = 0;
@@ -70,4 +70,4 @@ Or library-style entry (`loadPages` + `ui.run({ app })`) — see [Getting starte
 
 Public Clay APIs and the wire protocol use **camelCase** (`onClick`, `bindValue`, `setText`, element `type: "button"`).
 
-React/ShadCN components inside `@clay/client` stay PascalCase because React requires it — that layer is an implementation detail.
+React/ShadCN components inside `@close-by/clay-client` stay PascalCase because React requires it — that layer is an implementation detail.

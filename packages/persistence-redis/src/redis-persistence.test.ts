@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createMemoryPersistence, storage, AppStore } from '@clay/core';
+import { createMemoryPersistence, storage, AppStore } from '@close-by/clay-core';
 import { createRedisPersistence, type RedisLikeClient } from './redis-persistence';
 
 function memoryRedis(): RedisLikeClient & { store: Map<string, string> } {

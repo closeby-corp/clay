@@ -1,4 +1,4 @@
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 import { exampleFrame } from '../chrome';
 import { getSessionUser } from './_auth';
 

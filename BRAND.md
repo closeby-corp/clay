@@ -27,11 +27,11 @@ Tagline family: “close by your ___.”
 | **Product** | clay |
 | **Site** | `clay.close-by.org` |
 | **CLI** | `clay` (or `cbclay` if bare `clay` is awkward on PATH) |
-| **Packages** | `@clay/*` monorepo (`@clay/ui` exports the familiar `ui` facade) |
+| **Packages** | `@close-by/clay-*` monorepo (`@close-by/clay` exports the familiar `ui` facade) |
 | **API in code** | Keep `ui.*` — NiceGUI muscle memory; soul lives in the product name |
 
 ```ts
-import { ui } from '@clay/ui';
+import { ui } from '@close-by/clay';
 
 ui.run(() => {
   ui.button('Save', { onClick: () => { /* … */ } });

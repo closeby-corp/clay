@@ -584,14 +584,14 @@ export function transformReactiveLet(
     // Ensure state/auto are available when not using ui.*
     const needsImport =
       !/\bimport\s*\{[^}]*\bstate\b/.test(source) || !/\bimport\s*\{[^}]*\bauto\b/.test(source);
-    if (needsImport && !source.includes("from '@clay/ui'") && !source.includes('from "@clay/ui"')) {
-      // If file already imports from @clay/ui or @clay/core, leave as-is (caller must export).
+    if (needsImport && !source.includes("from '@close-by/clay'") && !source.includes('from "@close-by/clay"')) {
+      // If file already imports from @close-by/clay or @close-by/clay-core, leave as-is (caller must export).
       // Inject a named import only when neither state nor auto appear as imports.
       const hasState = /\bimport\s*\{[^}]*\bstate\b/.test(source);
       const hasAuto = /\bimport\s*\{[^}]*\bauto\b/.test(source);
       if (!hasState || !hasAuto) {
         const names = [!hasState && 'state', !hasAuto && 'auto'].filter(Boolean).join(', ');
-        code = `import { ${names} } from '@clay/ui';\n` + code;
+        code = `import { ${names} } from '@close-by/clay';\n` + code;
       }
     }
   }

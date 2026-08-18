@@ -1,4 +1,4 @@
-import { Element, withParent } from '@clay/core';
+import { Element, withParent } from '@close-by/clay-core';
 
 export type TabsProps = {
   /** Active tab value (server-owned). Defaults to the first panel. */

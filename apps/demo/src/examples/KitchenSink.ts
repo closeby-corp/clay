@@ -1,5 +1,5 @@
-import { Element } from '@clay/core';
-import { ui } from '@clay/ui';
+import { Element } from '@close-by/clay-core';
+import { ui } from '@close-by/clay';
 
 export const pageMeta = {
   label: 'Kitchen Sink',

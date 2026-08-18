@@ -1,5 +1,5 @@
-import { auditRecord, listAuditRecords, clearAuditRecords } from '@clay/auth';
-import { ui } from '@clay/ui';
+import { auditRecord, listAuditRecords, clearAuditRecords } from '@close-by/clay-auth';
+import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
 import {
   ACCOUNT_PATH,

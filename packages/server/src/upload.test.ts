@@ -83,7 +83,7 @@ describe('POST /upload integration', () => {
 
   test('serves multipart upload endpoint', async () => {
     const { ClayServer } = await import('./server');
-    const { clearPages, page } = await import('@clay/core');
+    const { clearPages, page } = await import('@close-by/clay-core');
     clearPages();
     page('/tmp', () => {});
 

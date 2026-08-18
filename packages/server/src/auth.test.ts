@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { clearPages, page, storage } from '@clay/core';
+import { clearPages, page, storage } from '@close-by/clay-core';
 import { ClayServer } from './server';
 
 function waitFor(ws: WebSocket, predicate: (data: unknown) => boolean, ms = 4000): Promise<unknown> {

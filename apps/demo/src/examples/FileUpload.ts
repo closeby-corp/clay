@@ -1,5 +1,5 @@
-import { ui } from '@clay/ui';
-import type { UploadedFile } from '@clay/ui';
+import { ui } from '@close-by/clay';
+import type { UploadedFile } from '@close-by/clay';
 import { unlink } from 'node:fs/promises';
 import { exampleFrame, exampleHeader } from '../chrome';
 

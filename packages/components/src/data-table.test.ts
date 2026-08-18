@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 import {
   DataTableElement,
   ROW_ID_FIELD,
@@ -300,7 +300,7 @@ describe('DataTableElement', () => {
       ],
     });
     // Attach a fake session for export
-    const { ClientSession } = await import('@clay/core');
+    const { ClientSession } = await import('@close-by/clay-core');
     const session = new ClientSession('/t', (m) => messages.push(m as { op: string; content?: string }));
     table.setSession(session);
     await table.handleEvent('export', { format: 'csv', mode: 'copy' });

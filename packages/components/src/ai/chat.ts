@@ -1,4 +1,4 @@
-import { Element } from '@clay/core';
+import { Element } from '@close-by/clay-core';
 import type { AiChatMessage, AiChatTab, AiIdLabel } from './types';
 import { serializeChatMessage } from './message';
 

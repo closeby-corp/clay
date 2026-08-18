@@ -1,4 +1,4 @@
-import type { AppProps } from '@clay/ui';
+import type { AppProps } from '@close-by/clay';
 
 /** Shared chrome without primary nav (nav comes from `ui.navFromPages()`). */
 export const APP_CHROME = {

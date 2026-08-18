@@ -1,4 +1,4 @@
-import { Element, withParent } from '@clay/core';
+import { Element, withParent } from '@close-by/clay-core';
 
 export type ContextMenuProps = {
   /** Visible label on the trigger (default: right-click target text). */

@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'url';
-import { ui, type RunConfig } from '@clay/ui';
+import { ui, type RunConfig } from '@close-by/clay';
 import { getSessionUser } from './examples/_auth';
 
 const DEFAULT_AUTH_SECRET = 'clay-demo-auth-secret-change-me';

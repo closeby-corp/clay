@@ -1,4 +1,4 @@
-import type { RunConfig } from '@clay/ui';
+import type { RunConfig } from '@close-by/clay';
 
 export function configureRun(base: RunConfig): RunConfig {
   return {

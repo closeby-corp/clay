@@ -1,5 +1,5 @@
 {
-  "name": "@clay/clickhouse",
+  "name": "@close-by/clay-clickhouse",
   "version": "0.1.0",
   "main": "src/index.ts",
   "exports": {

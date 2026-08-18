@@ -1,5 +1,5 @@
 {
-  "name": "@clay/compiler",
+  "name": "@close-by/clay-compiler",
   "version": "0.1.0",
   "description": "Compile-time transforms for Clay (reactive let → ui.state / ui.auto)",
   "license": "MIT",

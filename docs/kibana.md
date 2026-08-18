@@ -1,9 +1,9 @@
-# Kibana (`@clay/kibana`)
+# Kibana (`@close-by/clay-kibana`)
 
 Authenticated (or internal) Kibana REST client: arbitrary API calls, Elasticsearch via console proxy or `/elasticsearch`, and `search_after` pagination for walking every matching log line.
 
 ```typescript
-import { Kibana } from '@clay/kibana';
+import { Kibana } from '@close-by/clay-kibana';
 
 // Modern Kibana (console proxy)
 const kbn = new Kibana({
