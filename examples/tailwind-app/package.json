@@ -7,7 +7,7 @@
     "start": "bun ./index.ts"
   },
   "dependencies": {
-    "@close-by/clay": "^0.2.4",
-    "@close-by/clay-cli": "^0.2.4"
+    "@close-by/clay": "^0.2.5",
+    "@close-by/clay-cli": "^0.2.5"
   }
 }
