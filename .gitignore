@@ -31,6 +31,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .eslintcache
 .cache
 *.tsbuildinfo
+.clay-reload
+
 
 # IntelliJ based IDEs
 .idea

@@ -17,9 +17,9 @@ import { NavMain } from './shell/nav-main';
 import { NavSecondary } from './shell/nav-secondary';
 import { NavUser } from './shell/nav-user';
 import { SiteHeader } from './shell/site-header';
-import { go, type ShellNavItem, type ShellUser } from './shell/types';
+import { go, type ShellNavItem, type ShellPrimaryAction, type ShellUser } from './shell/types';
 
-export type { ShellNavItem, ShellUser };
+export type { ShellNavItem, ShellPrimaryAction, ShellUser };
 
 export function BoundAppShell({
   title,
@@ -30,6 +30,7 @@ export function BoundAppShell({
   nav,
   navSecondary = [],
   documents = [],
+  primaryAction,
   className,
   style,
   children,
@@ -42,6 +43,7 @@ export function BoundAppShell({
   nav: ShellNavItem[];
   navSecondary?: ShellNavItem[];
   documents?: ShellNavItem[];
+  primaryAction?: ShellPrimaryAction | null;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -83,7 +85,7 @@ export function BoundAppShell({
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <NavMain items={nav} />
+          <NavMain items={nav} primaryAction={primaryAction} />
           <NavDocuments items={documents} />
           <NavSecondary items={navSecondary} className="mt-auto" />
         </SidebarContent>

@@ -225,7 +225,8 @@ bunx clay ./pages --app --title Tasks --reload
 | Default export | Single-file `/` (file mode only) |
 | `ui.page` + `pageMeta` | Routes and sidebar (directory mode) |
 | `reactive` / `bindValue` | Input without manual `setValue` |
-| `ui.refreshable` | Rebuild a list when items change |
+| `ui.refreshable` | Rebuild a list when items change (simple panels) |
+| `ui.state` / `ui.auto` / `ui.timer` | Preferred for async / live / multi-region UIs — see [Concepts](./concepts.md#canonical-recipe-state--auto--timer) |
 | `let` in the builder | Per-tab state (not shared across users) |
 
 Next: [Concepts](./concepts.md), [API reference](./api.md), or the [demo catalog](./examples.md).

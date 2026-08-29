@@ -16,10 +16,10 @@ On unexpected socket close, the client reconnects with exponential backoff (500m
 ### `hello`
 
 ```json
-{ "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "browserStorage": {}, "clientStorage": {}, "tabStorage": {} }
+{ "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "hash": "optional-hash-without-hash-sign", "browserStorage": {}, "clientStorage": {}, "tabStorage": {} }
 ```
 
-Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`.
+Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `hash` (no leading `#`) hydrates `ui.getUrlHash()`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`.
 
 Sent on connect and after client-side navigation. The React client keeps matching `app` shell chrome mounted across remounts; only inset content is replaced.
 
@@ -153,7 +153,23 @@ Client triggers a file download via a temporary Blob URL.
 { "op": "clipboard", "content": "Title\tStatus\nAlpha\tdone" }
 ```
 
-Client writes `content` with `navigator.clipboard.writeText` (shows an error toast on failure).
+Client writes `content` with `navigator.clipboard.writeText` (shows an error toast on failure). Prefer `ui.clipboard` from page code.
+
+### `setUrlHash`
+
+```json
+{ "op": "setUrlHash", "hash": "trace-abc" }
+```
+
+Client sets `location.hash` via `history.replaceState` (`hash` has no leading `#`; empty string clears). Hydrated the other way on `hello.hash`. Prefer `ui.setUrlHash` / `ui.getUrlHash`.
+
+### `openExternal`
+
+```json
+{ "op": "openExternal", "url": "https://example.com" }
+```
+
+Client runs `window.open(url, '_blank', 'noopener,noreferrer')`. Prefer `ui.openExternal`.
 
 ### `theme`
 

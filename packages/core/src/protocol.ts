@@ -32,6 +32,10 @@ export type ServerMessage =
   | { op: 'clipboard'; content: string }
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
   | { op: 'runJavaScript'; code: string }
+  /** Set `location.hash` on the client (no leading `#` in `hash`; empty clears). */
+  | { op: 'setUrlHash'; hash: string }
+  /** `window.open(url, '_blank', 'noopener,noreferrer')` on the client. */
+  | { op: 'openExternal'; url: string }
   | {
       op: 'scroll';
       target: 'window' | 'selector';
@@ -69,6 +73,8 @@ export type ClientMessage =
       op: 'hello';
       path: string;
       userId?: string;
+      /** Current `location.hash` without leading `#` (empty if none). */
+      hash?: string;
       /** localStorage bag mirror for `storage.browser`. */
       browserStorage?: Record<string, unknown>;
       /** sessionStorage bag mirror for `storage.client`. */

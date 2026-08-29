@@ -1,11 +1,29 @@
 {
   "name": "@close-by/clay-clickhouse",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/closeby-corp/clay.git",
+    "directory": "packages/clickhouse"
+  },
   "main": "src/index.ts",
+  "dependencies": {
+    "@clickhouse/client": "^1.20.0"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
-    "@clickhouse/client": "^1.20.0"
-  }
+  "description": "Multi-connection ClickHouse client helpers for Clay apps",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "!src/**/*.test.ts"
+  ],
+  "homepage": "https://github.com/closeby-corp/clay#readme",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module"
 }

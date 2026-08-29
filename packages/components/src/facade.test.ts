@@ -8,6 +8,9 @@ import {
   download,
   clipboard,
   navigate,
+  setUrlHash,
+  openExternal,
+  getUrlHash,
   type ServerMessage,
 } from '@close-by/clay-core';
 import {
@@ -61,10 +64,47 @@ import {
   select,
   slider,
   label,
+  button,
+  iconButton,
+  badge,
+  externalLink,
 } from './index';
 import { reactive } from '@close-by/clay-core';
 
 describe('facade feedback / layout elements', () => {
+  test('button accepts icon props', () => {
+    const el = button('Copy', { icon: 'copy', iconPosition: 'end', variant: 'outline' });
+    expect(el.type).toBe('button');
+    expect(el.props).toMatchObject({
+      text: 'Copy',
+      icon: 'copy',
+      iconPosition: 'end',
+      variant: 'outline',
+    });
+  });
+
+  test('badge size xs and color', () => {
+    const el = badge('ok', { size: 'xs', color: 'emerald' });
+    expect(el.props).toMatchObject({ text: 'ok', size: 'xs', color: 'emerald' });
+  });
+
+  test('externalLink sets external flag', () => {
+    const el = externalLink('SigNoz', 'https://example.com');
+    expect(el.type).toBe('link');
+    expect(el.props).toMatchObject({ text: 'SigNoz', href: 'https://example.com', external: true });
+  });
+
+  test('iconButton defaults size icon when label omitted', () => {
+    const el = iconButton({ icon: 'copy', onClick: () => {} });
+    expect(el.type).toBe('button');
+    expect(el.props).toMatchObject({ text: '', icon: 'copy', size: 'icon', iconPosition: 'start' });
+  });
+
+  test('iconButton keeps label + default size', () => {
+    const el = iconButton({ icon: 'search', label: 'Refresh', size: 'sm' });
+    expect(el.props).toMatchObject({ text: 'Refresh', icon: 'search', size: 'sm' });
+  });
+
   test('label accepts compute fn via bindText', async () => {
     const s = reactive({ n: 3 });
     const el = label(() => `n=${s.n}`);
@@ -306,6 +346,27 @@ describe('download / clipboard / navigate helpers', () => {
       ]),
     );
   });
+
+  test('setUrlHash / openExternal / getUrlHash', () => {
+    const messages: ServerMessage[] = [];
+    const session = new ClientSession('/helpers-test', (m) => messages.push(m));
+    session.urlHash = 'from-hello';
+    session.mount();
+
+    runWithSession(session, () => {
+      expect(getUrlHash()).toBe('from-hello');
+      setUrlHash('#trace-abc');
+      expect(getUrlHash()).toBe('trace-abc');
+      openExternal('https://example.com/x');
+    });
+
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        { op: 'setUrlHash', hash: 'trace-abc' },
+        { op: 'openExternal', url: 'https://example.com/x' },
+      ]),
+    );
+  });
 });
 
 describe('upload', () => {
@@ -364,6 +425,11 @@ describe('rating / colorPicker / tags / codeBlock / tree / editor / kanban', () 
     expect(el.type).toBe('codeBlock');
     expect(el.props).toMatchObject({ code: 'const x = 1', language: 'ts', showCopy: false });
     expect(el.props.events ?? []).toEqual([]);
+  });
+
+  test('codeBlock sensitive flag', () => {
+    const el = codeBlock({ code: 'secret=abc', sensitive: true });
+    expect(el.props.sensitive).toBe(true);
   });
 
   test('tree wires nodes and select/expand', () => {

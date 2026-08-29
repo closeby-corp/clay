@@ -1,34 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import {
-  Boxes,
-  ChartArea,
-  ChartBar,
-  ChartLine,
-  ChartPie,
-  CircleGauge,
-  ClipboardList,
-  Clock,
-  ChartNoAxesGantt,
-  Columns3,
-  Database,
-  File,
-  FilePen,
-  FormInput,
-  Gauge,
-  HelpCircle,
-  Home,
-  LayoutDashboard,
-  Layers,
-  ListTodo,
-  MessageSquare,
-  Radar,
-  Search,
-  Settings,
-  SlidersHorizontal,
-  Table2,
-  Upload,
-  Workflow,
-} from 'lucide-react';
+import { resolveIcon } from '../icons';
 
 export type ShellNavItem = {
   label: string;
@@ -38,46 +9,22 @@ export type ShellNavItem = {
   active?: boolean;
 };
 
+/** Optional CTA above primary nav (e.g. “New …”); omitted by default. */
+export type ShellPrimaryAction = {
+  label: string;
+  href?: string;
+  icon?: string;
+};
+
 export type ShellUser = {
   name: string;
   email: string;
   avatar?: string;
 };
 
-const iconMap: Record<string, LucideIcon> = {
-  home: Home,
-  gauge: Gauge,
-  'list-todo': ListTodo,
-  'message-square': MessageSquare,
-  upload: Upload,
-  'layout-dashboard': LayoutDashboard,
-  'table-2': Table2,
-  'sliders-horizontal': SlidersHorizontal,
-  layers: Layers,
-  'form-input': FormInput,
-  'chart-area': ChartArea,
-  'chart-bar': ChartBar,
-  'chart-line': ChartLine,
-  'chart-pie': ChartPie,
-  'chart-radar': Radar,
-  'chart-radial': CircleGauge,
-  boxes: Boxes,
-  clock: Clock,
-  settings: Settings,
-  'help-circle': HelpCircle,
-  search: Search,
-  database: Database,
-  'clipboard-list': ClipboardList,
-  'columns-3': Columns3,
-  'chart-gantt': ChartNoAxesGantt,
-  workflow: Workflow,
-  file: File,
-  'file-pen': FilePen,
-};
-
+/** Resolve Lucide kebab-case icon name (full set; see `src/icons.ts`). */
 export function resolveNavIcon(icon?: string): LucideIcon {
-  if (!icon) return Boxes;
-  return iconMap[icon] ?? Boxes;
+  return resolveIcon(icon);
 }
 
 export function go(href: string) {

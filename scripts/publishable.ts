@@ -2,7 +2,7 @@
  * Shared publishable package list and helpers for pack / dry-run / publish.
  *
  * Order matters for registry publish (deps first):
- *   core → auth → compiler → persistence-file → components → server → ui → cli
+ *   core → auth → compiler → persistence-file → components → server → ui → cli → clickhouse
  *
  * `@close-by/clay` is the app-facing `ui` facade (folder `packages/ui`).
  * Other folders publish as `@close-by/clay-<folder>`.
@@ -23,6 +23,7 @@ export const PACKAGES = [
   'server',
   'ui',
   'cli',
+  'clickhouse',
 ] as const;
 
 export type PublishableName = (typeof PACKAGES)[number];

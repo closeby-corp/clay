@@ -86,7 +86,7 @@ ui.run({
 |--------|------|---------|-------------|
 | `port` | `number` | `3000` | HTTP + WS port |
 | `title` | `string` | `'Clay'` | HTML `<title>` |
-| `clientDir` | `string` | `packages/client/dist` | Built Vite assets |
+| `clientDir` | `string` | `resolveClayClientDir()` | Built Vite assets (`@close-by/clay-cli/client-dist` when installed). Prefer `resolveClayClientDir()` over hardcoding `node_modules` paths — see [Boot](./boot.md). |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 | `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate |
 | `authSecret` | `string` | | Enables signed auth cookies (`POST`/`DELETE /auth/session`), `ui.establishAuthSession` / `ui.clearAuthSession`, and default `resolveUserId` from the cookie |
@@ -154,18 +154,43 @@ ui.label(() => `Count: ${s.count}`);
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `text` | `string` | `''` | Button label |
+| `icon` | `string` | | Lucide kebab-case name (full set; same as `ui.icon` / nav) |
+| `iconPosition` | `'start' \| 'end'` | `'start'` | Icon placement relative to label |
 | `variant` | `'default' \| 'destructive' \| 'outline' \| 'secondary' \| 'ghost' \| 'link'` | `'default'` | Visual style |
 | `size` | `'default' \| 'sm' \| 'lg' \| 'icon'` | `'default'` | Size |
 | `disabled` | `boolean` | `false` | Disabled state |
 | `className` | `string` | | Extra classes |
 | `onClick` | `() => void \| Promise<void>` | | Click handler |
 
+```typescript
+ui.button('Copy', { icon: 'copy', variant: 'outline', onClick: () => ui.clipboard(id) });
+```
+
+#### `ui.iconButton(props)`
+
+Toolbar-friendly button with a required `icon`. If `label` is omitted, `size` defaults to `'icon'`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `icon` | `string` | | Lucide kebab-case name (required) |
+| `label` | `string` | | Visible label; omit for icon-only |
+| `iconPosition` | `'start' \| 'end'` | `'start'` | |
+| `variant` / `size` / `disabled` / `className` / `onClick` | | | Same as `ui.button` |
+
+```typescript
+ui.iconButton({ icon: 'copy', label: 'Copy', size: 'sm', onClick: () => ui.clipboard(id) });
+ui.iconButton({ icon: 'refresh-cw', variant: 'ghost', onClick: () => void reload() });
+```
+
+Types: `ButtonProps`, `IconButtonProps`, `ButtonVariant`, `ButtonSize` are exported from `@close-by/clay`.
+
 #### `ui.link(text, href, props?)`
 
-Client-side navigation for paths starting with `/`.
+Client-side navigation for paths starting with `/`. Use `external: true` (or `ui.externalLink`) for new-tab http(s) URLs.
 
 | Prop | Type | Description |
 |------|------|-------------|
+| `external` | `boolean` | Open in a new tab (`noopener`) instead of SPA navigate |
 | `className` | `string` | Extra classes |
 
 #### `ui.badge(text?, props?)`
@@ -173,8 +198,26 @@ Client-side navigation for paths starting with `/`.
 | Prop | Type | Default |
 |------|------|---------|
 | `variant` | `'default' \| 'secondary' \| 'destructive' \| 'outline'` | `'default'` |
+| `size` | `'default' \| 'xs'` | `'default'` |
 | `color` | `string` | Named (`green`, `red`, `amber`, …) or CSS (`#22c55e`). Overrides `variant` when set. |
 | `className` | `string` | |
+
+```typescript
+ui.badge('live', { size: 'xs', color: 'emerald' });
+```
+
+#### `ui.copyButton(content, props?)`
+
+Icon button that calls `ui.clipboard(content)` and `ui.notify('Copied', 'success')`. Props match `ui.iconButton` (`label?`, `size?`, `variant?`, …) plus optional `notifyMessage`.
+
+```typescript
+ui.copyButton(traceId);
+ui.copyButton(traceId, { label: 'Copy', size: 'sm' });
+```
+
+#### `ui.externalLink(text, url, props?)`
+
+Same as `ui.link(text, url, { external: true })` — opens in a new tab. http(s) `ui.link` hrefs also open externally by default on the client.
 
 #### `ui.alert(message?, props?)`
 
@@ -240,7 +283,7 @@ ui.tooltip({ text: 'Edit item', side: 'top' }, () => {
 
 #### `ui.icon(name, props?)`
 
-Curated Lucide icon — same key set as `AppNavItem.icon` (e.g. `home`, `gauge`, `settings`).
+Lucide icon by kebab-case name. The **full** Lucide set is bundled in the client (string keys can’t be tree-shaken). Same names as `AppNavItem.icon` / `button({ icon })` (e.g. `home`, `gauge`, `sparkles`, `refresh-cw`). Unknown names fall back to `boxes`.
 
 | Prop | Type |
 |------|------|
@@ -442,6 +485,9 @@ Read-only syntax-highlighted code (Shiki on the client).
 | `code` | `string` | required |
 | `language` | `string` | `'text'` |
 | `showCopy` | `boolean` | `true` |
+| `sensitive` | `boolean` | `false` |
+
+When `sensitive` is true, the client blurs content until Reveal (logs/secrets). Scrubbing remains the app’s job — see [Ops patterns](./ops-patterns.md#logs--traces--sensitive-bodies).
 
 #### `ui.ai.*`
 
@@ -1178,7 +1224,7 @@ Server-side column callbacks (not Vue/NiceGUI slots):
 |--------------|------|
 | `id` | `string` |
 | `label` | `string` |
-| `icon` | Lucide name (`pencil`, `trash-2`, …) from a curated action set |
+| `icon` | Lucide kebab-case name (`pencil`, `trash-2`, `sparkles`, …) |
 | `variant` | Button variant (e.g. `destructive`, `ghost`) |
 
 Client emits `sort` / `filter` / `columnFilter` / `columnVisibility` / `columnPin` / `export` / `page` / `pageSize` / `action` / `bulkAction` / `reorder` / `selectionChange` / `cellChange` / `viewChange` / `groupToggle` / `primaryAction`. `page` accepts a page number or `{ page }`. `pageSize` accepts a number or `{ pageSize }`. `sort` payload is `{ key, dir?, multi? }` or `{ sorts }` (full ordered list). `bulkAction` payload is `{ actionId, rowKeys }`. `columnPin` payload is `{ key, pin: 'left' \| 'right' \| null }`. Export uses filtered + sorted rows and **visible** columns only (full result set, not just the current page — except in `manualPagination` mode, where export is the current page), then the server sends `download` or `clipboard` protocol messages. Cell `render` output is not exported — only `value` / field scalars.
@@ -1385,7 +1431,7 @@ ui.tabs({ value: 'one', onChange: (v) => console.log(v) }, (t) => {
 | `onChange` | `(value: string) => void` | Tab change |
 | `t.tab(value, fn)` | | Panel; label = `value` |
 | `t.tab(value, label, fn)` | | Panel with explicit label |
-| `t.tab(..., { icon? })` | | Optional curated Lucide key |
+| `t.tab(..., { icon? })` | | Optional Lucide kebab-case name |
 
 Supports `bindValue` / `setValue` like other value controls.
 
@@ -1499,7 +1545,10 @@ onClick: async () => {
 | `ui.notify(message, typeOrOptions?)` | `void` | ShadCN Sonner toast; types `info\|success\|warning\|error` |
 | `ui.navigate(path)` | `void` | Client SPA navigate + same-WS `hello` remount (sticky `app` chrome) |
 | `ui.download(filename, mime, content)` | `void` | Trigger browser download |
-| `ui.clipboard(content)` | `void` | Write text to clipboard |
+| `ui.clipboard(content)` | `void` | Write text to clipboard (prefer over `navigator.clipboard`) |
+| `ui.getUrlHash()` | `string` | Current hash without `#` (from hello / last set) |
+| `ui.setUrlHash(hash)` | `void` | Set `location.hash` on the client |
+| `ui.openExternal(url)` | `void` | `window.open` in a new tab (`noopener`) |
 | `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
 | `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |
 | `ui.runJavaScript(code)` | `void` | Eval trusted snippet in the browser |
@@ -1512,6 +1561,8 @@ onClick: async () => {
 | `ui.storage.client` | | Mirrored to client `sessionStorage` |
 | `ui.storage.user` | | Per-browser-user JSON bag (file/Redis-backed) |
 | `ui.storage.app` | | Process-wide typed stores |
+
+Never use `window` / `navigator` / `location` in page code — see [Browser APIs](./browser-apis.md).
 
 `ui.notify` options: `{ type?, duration?, position?, description? }` — `duration: 0` is sticky; `description` is Sonner’s secondary line; positions `top-left` \| `top-right` \| `bottom-left` \| `bottom-right`.
 
@@ -1625,12 +1676,13 @@ Sidebar layout for multi-page apps. Prefer `ui.run({ app })` so every page inher
 | `nav` | `AppNavItem[]` | Primary sidebar links (SPA `pushState` for `/…`) |
 | `navSecondary` | `AppNavItem[]` | Optional secondary links (e.g. Settings) |
 | `documents` | `AppNavItem[]` | Optional documents group |
+| `primaryAction` | `{ label, href?, icon? }` | Optional CTA above primary nav (no default) |
 | `user` | `AppUser` | Optional user menu (`name`, `email`, `avatar?`) |
 | `variant` | `'sidebar' \| 'inset'` | Shell layout variant |
 | `collapsible` | `'offcanvas' \| 'icon' \| 'none'` | Sidebar collapse behavior |
 | `className` | `string` | Extra classes on the shell |
 
-`AppNavItem`: `{ label, href, icon?, description? }` — `icon` is a curated Lucide key (e.g. `home`, `gauge`).
+`AppNavItem`: `{ label, href, icon?, description? }` — `icon` is a Lucide kebab-case name (full set; e.g. `home`, `gauge`, `sparkles`).
 
 ```typescript
 // Preferred: configure once at startup

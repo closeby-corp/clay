@@ -8,7 +8,8 @@ Notes for agents:
 
 - Public API and wire protocol are camelCase (`onClick`, `bindValue`, `setText`).
 - Page builders run once per WebSocket session (per browser tab). `let` is per-tab, not shared.
-- Update existing nodes with `setText` / `setValue` / bindings. Rebuild lists with `ui.refreshable`. Shared or persisted state: `ui.storage` (`tab` / `user` / `app`).
+- Update existing nodes with `setText` / `setValue` / bindings. Prefer `ui.state` + `ui.auto` (+ `ui.timer`) for async/live UIs; `ui.refreshable` for simple one-shot rebuilds. Shared or persisted state: `ui.storage` (`tab` / `user` / `app`).
+- Never use `window` / `navigator` in page code — use `ui.clipboard`, `ui.setUrlHash`, `ui.openExternal`.
 - Runtime is Bun. In this repo: `bun run build:client`, then `bun run demo` (http://localhost:4000) or `bun run clay hello.ts`.
 - `ui.ai.*` is visual primitives only — no model or streaming runtime.
 
@@ -16,8 +17,12 @@ Notes for agents:
 
 - [Human README](README.md): What Clay is, what you can build, try-it commands
 - [Getting started](docs/getting-started.md): Install, `clay` CLI, first app, publishing
+- [Boot](docs/boot.md): CLI vs library, `clientDir`, `_run.ts`, reload stubs
+- [Tailwind](docs/tailwind.md): Scanned utilities + `ui.run({ css })`
 - [Sample app](docs/tutorial.md): Step-by-step tasks list, then two pages + shell
 - [Concepts](docs/concepts.md): Sessions, element tree, patches, refreshable, bindings, storage
+- [Browser APIs](docs/browser-apis.md): `ui.clipboard` / hash / `openExternal` — no `window` in page code
+- [Ops patterns](docs/ops-patterns.md): Dense consoles — chips, feeds, sensitive codeBlock, auth nav
 - [API reference](docs/api.md): Complete `ui.*` and Element API
 - [Elements](docs/elements.md): Wire types and client mapping
 - [Documentation index](docs/README.md): Full guide list

@@ -8,7 +8,8 @@
     "clay": "./bin/clay"
   },
   "exports": {
-    ".": "./src/main.ts"
+    ".": "./src/main.ts",
+    "./helpers": "./src/helpers.ts"
   },
   "files": [
     "bin",

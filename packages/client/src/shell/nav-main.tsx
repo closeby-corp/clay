@@ -1,5 +1,3 @@
-import { MailIcon, PlusCircleIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -8,33 +6,56 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { go, resolveNavIcon, type ShellNavItem } from './types';
+import { go, resolveNavIcon, type ShellNavItem, type ShellPrimaryAction } from './types';
 
-export function NavMain({ items }: { items: ShellNavItem[] }) {
+export function NavMain({
+  items,
+  primaryAction,
+}: {
+  items: ShellNavItem[];
+  primaryAction?: ShellPrimaryAction | null;
+}) {
   const { isMobile, setOpenMobile } = useSidebar();
+  const PrimaryIcon = primaryAction
+    ? resolveNavIcon(primaryAction.icon ?? 'plus-circle')
+    : null;
 
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <SidebarMenuButton
-              tooltip="Quick Create"
-              className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
-            >
-              <PlusCircleIcon />
-              <span>Quick Create</span>
-            </SidebarMenuButton>
-            <Button
-              size="icon"
-              className="h-9 w-9 shrink-0 group-data-[collapsible=icon]:opacity-0"
-              variant="outline"
-            >
-              <MailIcon />
-              <span className="sr-only">Inbox</span>
-            </Button>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {primaryAction && PrimaryIcon ? (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              {primaryAction.href ? (
+                <SidebarMenuButton
+                  asChild
+                  tooltip={primaryAction.label}
+                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                >
+                  <a
+                    href={primaryAction.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      go(primaryAction.href!);
+                      if (isMobile) setOpenMobile(false);
+                    }}
+                  >
+                    <PrimaryIcon />
+                    <span>{primaryAction.label}</span>
+                  </a>
+                </SidebarMenuButton>
+              ) : (
+                <SidebarMenuButton
+                  tooltip={primaryAction.label}
+                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                >
+                  <PrimaryIcon />
+                  <span>{primaryAction.label}</span>
+                </SidebarMenuButton>
+              )}
+            </SidebarMenuItem>
+          </SidebarMenu>
+        ) : null}
         <SidebarMenu>
           {items.map((item) => {
             const Icon = resolveNavIcon(item.icon);

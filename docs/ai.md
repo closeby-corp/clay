@@ -36,6 +36,8 @@ ui.ai.promptBar({
 
 Demo gallery: `/examples/ai` (`AiDemo.ts`).
 
+**State note:** `ui.ai.chat` is intentionally imperative (`var messages` + `chat.setMessages`). Surrounding controls can use `ui.state`; do not wrap the whole chat in `ui.auto` (remounts the composer). See [Ops patterns — ai.chat](./ops-patterns.md#uiaichat-and-state).
+
 ## Wire types
 
 | `ui.ai.*` | Wire `type` | Notes |

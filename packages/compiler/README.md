@@ -4,7 +4,9 @@ Compile-time transforms for [Clay](https://github.com/closeby-corp/clay).
 
 ## Phase 2 MVP: reactive `let`
 
-Rewrites a documented subset of top-level `let` declarations into `ui.state` + `ui.auto`. See [docs/reactive-let.md](../../docs/reactive-let.md).
+Rewrites a documented subset of `let` declarations into `ui.state` + `ui.auto`. See [docs/reactive-let.md](../../docs/reactive-let.md).
+
+**Opt-in only:** file pragma or `"use reactive";` — `ui.page` alone does not transform. The `clay` CLI leaves the Bun loader **off** unless you pass `--reactive-let`.
 
 ```ts
 // @clay-reactive
@@ -15,4 +17,6 @@ ui.page('/', () => {
 });
 ```
 
-The `clay` CLI registers the Bun loader plugin automatically. Opt out with `--no-reactive-let`.
+```bash
+clay hello.ts --reactive-let
+```

@@ -81,6 +81,61 @@ list.refresh(); // rebuilds children and sends setChildren
 
 `refresh()` clears the refreshable’s children, re-runs the builder, and patches the client.
 
+## Canonical recipe: `state` + `auto` (+ `timer`)
+
+For async loads, filters, and live panels, prefer Phase 1 APIs over `refreshable` + manual `.refresh()`:
+
+```typescript
+const live = ui.state({
+  units: [] as Unit[],
+  loading: true,
+  error: null as string | null,
+});
+
+async function load() {
+  live.loading = true;
+  try {
+    live.units = await fetchUnits();
+    live.error = null;
+  } catch (e) {
+    live.error = e instanceof Error ? e.message : String(e);
+  } finally {
+    live.loading = false;
+  }
+}
+
+ui.auto(() => {
+  if (live.loading) ui.spinner();
+  else if (live.error) ui.alert(live.error, { variant: 'destructive' });
+  else {
+    for (const u of live.units) {
+      ui.button(u.id, { onClick: () => { /* … */ } });
+    }
+  }
+});
+
+void load();
+ui.timer(30, () => void load()); // poll; mutates `live` → auto rebuilds
+```
+
+**Rules**
+
+- Keep mutable state in `ui.state` **outside** `ui.auto` (locals inside the builder reset each rebuild).
+- One `auto` can wrap many widgets that share the same reads; split `auto` regions when list vs detail should update independently.
+- Prefer `ui.label(() => …)` / `bindValue` when only text/value changes.
+
+### When to use what
+
+| Need | Use |
+|------|-----|
+| Data that drives the tree (lists, loading, selection) | `ui.state` + `ui.auto` |
+| Polling / intervals | `ui.timer` mutating state |
+| One-shot structural rebuild you trigger yourself | `ui.refreshable` + `.refresh()` |
+| Single label/input sync | `ui.label(() => …)` / `bindValue` / `bindText` |
+| NiceGUI-style `let` sugar | Opt-in Phase 2 only — see [reactive-let](./reactive-let.md) |
+
+Dense ops screens (filters + live feed + detail) should default to `state`/`auto`/`timer`. Treat `refreshable` as the escape hatch for simple one-shot panels, not the primary list pattern.
+
 ## Bindings and `reactive`
 
 Two-way bind form controls to a reactive object:

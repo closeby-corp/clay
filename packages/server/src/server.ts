@@ -446,6 +446,9 @@ export class ClayServer {
                 if (isJsonSafeStorageValue(v)) session.tab.set(k, v);
               }
             }
+            if (typeof msg.hash === 'string') {
+              session.urlHash = msg.hash.startsWith('#') ? msg.hash.slice(1) : msg.hash;
+            }
             data.session = session;
             session.mount();
 

@@ -1,0 +1,51 @@
+# Production image: compile a Clay app into a single Bun binary + static client assets.
+#
+# Uses `bun build --compile` (not `@close-by/clay-compiler`, which is only for reactive-let).
+# Pages are statically imported at build time — no runtime `clay` CLI, no `--reload`,
+# no mounting loose .ts files.
+#
+# Build:
+#   docker build -f Dockerfile.compile -t my-clay-app .
+#
+# Expects:
+#   app/pages/   — page modules (each calls ui.page(...); optional pageMeta export)
+#
+# Run:
+#   docker run --rm -p 3000:3000 -e CLAY_APP=1 -e CLAY_TITLE="My App" my-clay-app
+#
+# Runtime is minimal Alpine + libstdc++ (~163 MB). `FROM scratch` needs a libc;
+# `oven/bun:distroless` still ships a full Bun runtime and is better for the CLI
+# image (`Dockerfile`) than for a compiled binary.
+
+FROM oven/bun:1.2-alpine AS build
+
+WORKDIR /build
+
+ARG CLAY_VERSION=0.1.0
+RUN printf '%s\n' '{"name":"clay-app","private":true,"type":"module"}' > package.json \
+  && bun add --production "@close-by/clay-cli@${CLAY_VERSION}" "@close-by/clay@${CLAY_VERSION}" \
+  && rm -rf /root/.bun/install/cache
+
+COPY app/pages ./app/pages
+COPY docker/generate-server.ts ./docker/generate-server.ts
+
+RUN bun docker/generate-server.ts ./app/pages > compile-server.ts \
+  && bun build compile-server.ts --compile --minify --outfile /build/clay-app \
+  && cp -R node_modules/@close-by/clay-cli/client-dist /build/client-dist
+
+# musl-linked Bun binary — needs libstdc++/libgcc, not `FROM scratch` or glibc distroless.
+FROM alpine:3.20
+
+RUN apk add --no-cache libstdc++ libgcc
+
+WORKDIR /app
+
+COPY --from=build /build/clay-app /app/clay-app
+COPY --from=build /build/client-dist /app/client-dist
+
+ENV CLAY_PORT=3000
+ENV CLAY_CLIENT_DIR=/app/client-dist
+
+EXPOSE 3000
+
+ENTRYPOINT ["/app/clay-app"]

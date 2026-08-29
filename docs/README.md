@@ -11,8 +11,12 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | Doc | Description |
 |-----|-------------|
 | [Getting started](./getting-started.md) | Install, `clay` CLI, create a page |
+| [Boot: CLI vs library](./boot.md) | Production `ui.run` path, `clientDir`, `_run.ts`, reload stubs |
+| [Tailwind](./tailwind.md) | Scan `pages/`, inject CSS; token-only vs full utilities |
 | [Sample app](./tutorial.md) | Step-by-step tasks list, then two pages + shell |
-| [Concepts](./concepts.md) | Mental model: sessions, elements, patches, refreshable |
+| [Concepts](./concepts.md) | Mental model: sessions, elements, patches; **canonical `state`/`auto`/`timer` recipe** |
+| [Browser APIs](./browser-apis.md) | Prefer `ui.clipboard` / hash / `openExternal` — never `window` in page code |
+| [Ops patterns](./ops-patterns.md) | Dense consoles: chips, master–detail, feeds, sensitive logs, auth nav |
 | [API reference](./api.md) | `ui.*`, `Element` methods, `reactive`, helpers |
 | [Elements](./elements.md) | All element types and props |
 | [WebSocket protocol](./protocol.md) | Client ↔ server message formats |

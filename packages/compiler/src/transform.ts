@@ -49,16 +49,69 @@ function isSimpleInitializer(expr: ts.Expression | undefined): boolean {
   ) {
     return true;
   }
-  if (ts.isIdentifier(expr) && expr.text === 'undefined') return true;
+  if (ts.isIdentifier(expr)) return true; // includes `undefined` and outer bindings
 
   if (ts.isPrefixUnaryExpression(expr)) {
-    if (ts.isNumericLiteral(expr.operand) || ts.isBigIntLiteral(expr.operand)) {
-      return (
-        expr.operator === ts.SyntaxKind.MinusToken ||
-        expr.operator === ts.SyntaxKind.PlusToken
-      );
+    const op = expr.operator;
+    if (
+      op === ts.SyntaxKind.MinusToken ||
+      op === ts.SyntaxKind.PlusToken ||
+      op === ts.SyntaxKind.ExclamationToken ||
+      op === ts.SyntaxKind.TildeToken
+    ) {
+      return isSimpleInitializer(expr.operand);
     }
     return false;
+  }
+
+  if (ts.isBinaryExpression(expr)) {
+    // No `=` / compound assigns as initializers.
+    const op = expr.operatorToken.kind;
+    if (
+      op === ts.SyntaxKind.EqualsToken ||
+      op === ts.SyntaxKind.PlusEqualsToken ||
+      op === ts.SyntaxKind.MinusEqualsToken ||
+      op === ts.SyntaxKind.AsteriskEqualsToken ||
+      op === ts.SyntaxKind.SlashEqualsToken ||
+      op === ts.SyntaxKind.PercentEqualsToken ||
+      op === ts.SyntaxKind.BarEqualsToken ||
+      op === ts.SyntaxKind.AmpersandEqualsToken ||
+      op === ts.SyntaxKind.CaretEqualsToken ||
+      op === ts.SyntaxKind.LessThanLessThanEqualsToken ||
+      op === ts.SyntaxKind.GreaterThanGreaterThanEqualsToken ||
+      op === ts.SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken ||
+      op === ts.SyntaxKind.AsteriskAsteriskEqualsToken ||
+      op === ts.SyntaxKind.BarBarEqualsToken ||
+      op === ts.SyntaxKind.AmpersandAmpersandEqualsToken ||
+      op === ts.SyntaxKind.QuestionQuestionEqualsToken
+    ) {
+      return false;
+    }
+    return isSimpleInitializer(expr.left) && isSimpleInitializer(expr.right);
+  }
+
+  if (ts.isConditionalExpression(expr)) {
+    return (
+      isSimpleInitializer(expr.condition) &&
+      isSimpleInitializer(expr.whenTrue) &&
+      isSimpleInitializer(expr.whenFalse)
+    );
+  }
+
+  if (ts.isTemplateExpression(expr)) {
+    return expr.templateSpans.every((span) => isSimpleInitializer(span.expression));
+  }
+
+  if (ts.isPropertyAccessExpression(expr)) {
+    return isSimpleInitializer(expr.expression);
+  }
+
+  if (ts.isElementAccessExpression(expr)) {
+    return (
+      isSimpleInitializer(expr.expression) &&
+      !!expr.argumentExpression &&
+      isSimpleInitializer(expr.argumentExpression)
+    );
   }
 
   if (ts.isArrayLiteralExpression(expr)) {
@@ -73,6 +126,8 @@ function isSimpleInitializer(expr: ts.Expression | undefined): boolean {
       return false;
     });
   }
+
+  // No call / new / await — those stay as plain `let` (or Phase 1).
   return false;
 }
 
@@ -187,7 +242,40 @@ function collectLetsInFunctionBody(
   };
 
   if (!walkBlock(body, true)) return null;
+
+  // Initializers must not reference sibling lifted lets (`let a = 1; let b = a + 1`)
+  // — object-literal state init cannot see those bindings once stripped.
+  const nameSet = new Set(lets.map((l) => l.name));
+  for (const l of lets) {
+    if (initializerRefsLiftedLets(l.initializer, nameSet)) return null;
+  }
+
   return { lets, hadDirective };
+}
+
+function initializerRefsLiftedLets(expr: ts.Expression, names: Set<string>): boolean {
+  let found = false;
+  const walk = (n: ts.Node) => {
+    if (found) return;
+    if (
+      ts.isArrowFunction(n) ||
+      ts.isFunctionExpression(n) ||
+      ts.isFunctionDeclaration(n)
+    ) {
+      return;
+    }
+    if (ts.isIdentifier(n) && names.has(n.text)) {
+      // Property names / labels are not refs; only value positions matter.
+      const p = n.parent;
+      if (p && ts.isPropertyAccessExpression(p) && p.name === n) return;
+      if (p && ts.isPropertyAssignment(p) && p.name === n) return;
+      found = true;
+      return;
+    }
+    ts.forEachChild(n, walk);
+  };
+  walk(expr);
+  return found;
 }
 
 function stripLetsAndDirective(
@@ -290,26 +378,6 @@ function stripLetsAndDirective(
   return filterStatements(body.statements, true);
 }
 
-function isPageBuilderCallback(node: ts.ArrowFunction | ts.FunctionExpression): boolean {
-  const parent = node.parent;
-  if (!parent || !ts.isCallExpression(parent)) return false;
-  // Callback is typically the 2nd arg: page(path, fn) / ui.page(path, fn)
-  const args = parent.arguments;
-  const idx = args.indexOf(node as unknown as ts.Expression);
-  if (idx < 0) return false;
-
-  const callee = parent.expression;
-  if (ts.isIdentifier(callee) && callee.text === 'page') return true;
-  if (
-    ts.isPropertyAccessExpression(callee) &&
-    callee.name.text === 'page' &&
-    ts.isIdentifier(callee.expression)
-  ) {
-    return true;
-  }
-  return false;
-}
-
 function fileHasUiImport(sourceFile: ts.SourceFile): boolean {
   for (const stmt of sourceFile.statements) {
     if (!ts.isImportDeclaration(stmt) || !stmt.importClause) continue;
@@ -364,6 +432,375 @@ function rewriteIdents(
   return visit(node);
 }
 
+function isFunctionLike(node: ts.Node): boolean {
+  return (
+    ts.isArrowFunction(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isFunctionDeclaration(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isConstructorDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node)
+  );
+}
+
+function isStatePropAccess(
+  n: ts.Node,
+  stateIdent: ts.Identifier,
+  names: Set<string>,
+): n is ts.PropertyAccessExpression {
+  return (
+    ts.isPropertyAccessExpression(n) &&
+    ts.isIdentifier(n.expression) &&
+    n.expression.text === stateIdent.text &&
+    ts.isIdentifier(n.name) &&
+    names.has(n.name.text)
+  );
+}
+
+/** True when `node` is the write target of an assignment or ±± update. */
+function isWriteTarget(node: ts.Node, parent: ts.Node | undefined): boolean {
+  if (!parent) return false;
+  if (ts.isPostfixUnaryExpression(parent) || ts.isPrefixUnaryExpression(parent)) {
+    return (
+      parent.operand === node &&
+      (parent.operator === ts.SyntaxKind.PlusPlusToken ||
+        parent.operator === ts.SyntaxKind.MinusMinusToken)
+    );
+  }
+  if (ts.isBinaryExpression(parent) && parent.left === node) {
+    const op = parent.operatorToken.kind;
+    return (
+      op === ts.SyntaxKind.EqualsToken ||
+      op === ts.SyntaxKind.PlusEqualsToken ||
+      op === ts.SyntaxKind.MinusEqualsToken ||
+      op === ts.SyntaxKind.AsteriskEqualsToken ||
+      op === ts.SyntaxKind.SlashEqualsToken ||
+      op === ts.SyntaxKind.PercentEqualsToken ||
+      op === ts.SyntaxKind.BarEqualsToken ||
+      op === ts.SyntaxKind.AmpersandEqualsToken ||
+      op === ts.SyntaxKind.CaretEqualsToken ||
+      op === ts.SyntaxKind.LessThanLessThanEqualsToken ||
+      op === ts.SyntaxKind.GreaterThanGreaterThanEqualsToken ||
+      op === ts.SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken ||
+      op === ts.SyntaxKind.AsteriskAsteriskEqualsToken ||
+      op === ts.SyntaxKind.BarBarEqualsToken ||
+      op === ts.SyntaxKind.AmpersandAmpersandEqualsToken ||
+      op === ts.SyntaxKind.QuestionQuestionEqualsToken
+    );
+  }
+  return false;
+}
+
+/**
+ * True if `node` **reads** `stateIdent.name` while building UI (not inside nested
+ * function bodies — those are handler / child-builder closures). Writes alone
+ * (`s.n++`, `s.n = …`) do not count — they must not force an `auto` region.
+ */
+function readsStateDuringBuild(
+  node: ts.Node,
+  stateIdent: ts.Identifier,
+  names: Set<string>,
+): boolean {
+  return collectStateReadsDuringBuild(node, stateIdent, names).size > 0;
+}
+
+/** Build-time state property reads (skips nested functions; ignores writes). */
+function collectStateReadsDuringBuild(
+  node: ts.Node,
+  stateIdent: ts.Identifier,
+  names: Set<string>,
+): Set<string> {
+  const reads = new Set<string>();
+  const walk = (n: ts.Node, parent: ts.Node | undefined) => {
+    if (isFunctionLike(n)) return;
+    if (isStatePropAccess(n, stateIdent, names) && !isWriteTarget(n, parent)) {
+      reads.add(n.name.text);
+    }
+    ts.forEachChild(n, (child) => walk(child, n));
+  };
+  walk(node, undefined);
+  return reads;
+}
+
+function setsIntersect(a: Set<string>, b: Set<string>): boolean {
+  for (const x of a) {
+    if (b.has(x)) return true;
+  }
+  return false;
+}
+
+function createAutoCall(
+  factory: ts.NodeFactory,
+  stmts: ts.Statement[],
+  useUi: boolean,
+): ts.ExpressionStatement {
+  const autoArg = factory.createArrowFunction(
+    undefined,
+    undefined,
+    [],
+    undefined,
+    factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+    factory.createBlock(stmts, true),
+  );
+  const autoCall = useUi
+    ? factory.createCallExpression(
+        factory.createPropertyAccessExpression(factory.createIdentifier('ui'), 'auto'),
+        undefined,
+        [autoArg],
+      )
+    : factory.createCallExpression(factory.createIdentifier('auto'), undefined, [autoArg]);
+  return factory.createExpressionStatement(autoCall);
+}
+
+function isAutoCallStatement(stmt: ts.Statement): boolean {
+  if (!ts.isExpressionStatement(stmt) || !ts.isCallExpression(stmt.expression)) return false;
+  const callee = stmt.expression.expression;
+  if (ts.isIdentifier(callee) && callee.text === 'auto') return true;
+  return (
+    ts.isPropertyAccessExpression(callee) &&
+    ts.isIdentifier(callee.expression) &&
+    callee.name.text === 'auto'
+  );
+}
+
+function isLabelCallee(expr: ts.Expression): boolean {
+  if (ts.isIdentifier(expr) && expr.text === 'label') return true;
+  return (
+    ts.isPropertyAccessExpression(expr) &&
+    ts.isIdentifier(expr.expression) &&
+    expr.expression.text === 'ui' &&
+    ts.isIdentifier(expr.name) &&
+    expr.name.text === 'label'
+  );
+}
+
+/**
+ * `ui.label(expr)` / `label(expr)` (optionally chained `.classes(...)`) whose
+ * text reads state → `ui.label(() => expr)` (runtime `bindText`).
+ */
+function tryRewriteLabelBindText(
+  factory: ts.NodeFactory,
+  stmt: ts.Statement,
+  stateIdent: ts.Identifier,
+  names: Set<string>,
+): ts.Statement | null {
+  if (!ts.isExpressionStatement(stmt)) return null;
+
+  // Unwrap trailing `.classes(...)` / `.className(...)` calls to find `label(...)`.
+  let expr: ts.Expression = stmt.expression;
+  const trail: ts.CallExpression[] = [];
+  while (ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression)) {
+    const method = expr.expression.name.text;
+    if (method !== 'classes' && method !== 'className') break;
+    trail.unshift(expr);
+    expr = expr.expression.expression;
+  }
+
+  if (!ts.isCallExpression(expr) || !isLabelCallee(expr.expression) || expr.arguments.length === 0) {
+    return null;
+  }
+
+  const textArg = expr.arguments[0]!;
+  if (ts.isArrowFunction(textArg) || ts.isFunctionExpression(textArg)) return null;
+  if (!readsStateDuringBuild(textArg, stateIdent, names)) return null;
+
+  const compute = factory.createArrowFunction(
+    undefined,
+    undefined,
+    [],
+    undefined,
+    factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+    textArg,
+  );
+  const newArgs = factory.createNodeArray([compute, ...expr.arguments.slice(1)]);
+  let rebuilt: ts.Expression = factory.updateCallExpression(
+    expr,
+    expr.expression,
+    expr.typeArguments,
+    newArgs,
+  );
+  for (const call of trail) {
+    rebuilt = factory.updateCallExpression(
+      call,
+      factory.createPropertyAccessExpression(
+        rebuilt,
+        (call.expression as ts.PropertyAccessExpression).name,
+      ),
+      call.typeArguments,
+      call.arguments,
+    );
+  }
+  return factory.updateExpressionStatement(stmt, rebuilt);
+}
+
+/**
+ * Split statements into inert vs reactive regions:
+ * - `ui.label(expr)` reading state → compile-time `bindText` (`label(() => expr)`)
+ * - other build-time reads → `ui.auto`, **dependency-isolated** when read-sets are
+ *   disjoint — but statements that use locals declared in the current run stay
+ *   glued together (avoids `const row = …` inside auto and `if (!row)` outside)
+ * - nested UI callbacks that read outer state get their own inner regions
+ */
+function emitWithRegions(
+  context: ts.TransformationContext,
+  statements: readonly ts.Statement[],
+  stateIdent: ts.Identifier,
+  names: Set<string>,
+  useUi: boolean,
+): ts.Statement[] {
+  const { factory } = context;
+
+  const injectNested = (stmt: ts.Statement): ts.Statement => {
+    const visit = (n: ts.Node): ts.Node => {
+      if (
+        (ts.isArrowFunction(n) || ts.isFunctionExpression(n)) &&
+        n.body &&
+        ts.isBlock(n.body)
+      ) {
+        const innerVisited = ts.visitEachChild(n, visit, context) as
+          | ts.ArrowFunction
+          | ts.FunctionExpression;
+        const body = innerVisited.body as ts.Block;
+        if (!body.statements.some((s) => readsStateDuringBuild(s, stateIdent, names))) {
+          return innerVisited;
+        }
+
+        const withChildRegions = emitWithRegions(
+          context,
+          body.statements,
+          stateIdent,
+          names,
+          useUi,
+        );
+
+        if (ts.isArrowFunction(innerVisited)) {
+          return factory.updateArrowFunction(
+            innerVisited,
+            innerVisited.modifiers,
+            innerVisited.typeParameters,
+            innerVisited.parameters,
+            innerVisited.type,
+            innerVisited.equalsGreaterThanToken,
+            factory.updateBlock(body, withChildRegions),
+          );
+        }
+        return factory.updateFunctionExpression(
+          innerVisited,
+          innerVisited.modifiers,
+          innerVisited.asteriskToken,
+          innerVisited.name,
+          innerVisited.typeParameters,
+          innerVisited.parameters,
+          innerVisited.type,
+          factory.updateBlock(body, withChildRegions),
+        );
+      }
+      return ts.visitEachChild(n, visit, context);
+    };
+    return visit(stmt) as ts.Statement;
+  };
+
+  const prepared = statements.map(injectNested);
+  const out: ts.Statement[] = [];
+  let reactiveRun: ts.Statement[] = [];
+  let runDeps = new Set<string>();
+  let runLocals = new Set<string>();
+
+  const flush = () => {
+    if (reactiveRun.length === 0) return;
+    if (reactiveRun.length === 1 && isAutoCallStatement(reactiveRun[0]!)) {
+      out.push(reactiveRun[0]!);
+    } else {
+      out.push(createAutoCall(factory, reactiveRun, useUi));
+    }
+    reactiveRun = [];
+    runDeps = new Set();
+    runLocals = new Set();
+  };
+
+  const absorb = (stmt: ts.Statement, deps: Set<string>) => {
+    reactiveRun.push(stmt);
+    for (const d of deps) runDeps.add(d);
+    for (const loc of collectDeclaredLocals(stmt)) runLocals.add(loc);
+  };
+
+  for (const stmt of prepared) {
+    const deps = collectStateReadsDuringBuild(stmt, stateIdent, names);
+    const usesLocals = runLocals.size > 0 && statementUsesNames(stmt, runLocals);
+
+    // Once this run declared locals (`const row = …`), keep the rest of the
+    // block in the same auto — otherwise `if (!row) return` / trailing actions
+    // (Clear) split out and break control flow.
+    if (reactiveRun.length > 0 && (usesLocals || runLocals.size > 0)) {
+      absorb(stmt, deps);
+      continue;
+    }
+
+    if (deps.size === 0) {
+      flush();
+      out.push(stmt);
+      continue;
+    }
+
+    const bound = tryRewriteLabelBindText(factory, stmt, stateIdent, names);
+    if (bound) {
+      flush();
+      out.push(bound);
+      continue;
+    }
+
+    if (reactiveRun.length > 0 && !setsIntersect(runDeps, deps)) {
+      flush();
+    }
+    absorb(stmt, deps);
+  }
+  flush();
+  return out;
+}
+
+/** Names declared by `const` / `let` / `var` in this statement (top-level decl only). */
+function collectDeclaredLocals(stmt: ts.Statement): string[] {
+  if (!ts.isVariableStatement(stmt)) return [];
+  const out: string[] = [];
+  for (const decl of stmt.declarationList.declarations) {
+    collectBindingNames(decl.name, out);
+  }
+  return out;
+}
+
+function collectBindingNames(name: ts.BindingName, out: string[]): void {
+  if (ts.isIdentifier(name)) {
+    out.push(name.text);
+    return;
+  }
+  if (ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)) {
+    for (const el of name.elements) {
+      if (ts.isBindingElement(el)) collectBindingNames(el.name, out);
+    }
+  }
+}
+
+/** True if `stmt` references any of `names` as a value (not as a new declaration). */
+function statementUsesNames(stmt: ts.Statement, names: Set<string>): boolean {
+  let found = false;
+  const walk = (n: ts.Node, parent: ts.Node | undefined) => {
+    if (found) return;
+    if (ts.isIdentifier(n) && names.has(n.text)) {
+      if (parent && ts.isVariableDeclaration(parent) && parent.name === n) return;
+      if (parent && ts.isBindingElement(parent) && parent.name === n) return;
+      if (parent && ts.isPropertyAccessExpression(parent) && parent.name === n) return;
+      if (parent && ts.isPropertyAssignment(parent) && parent.name === n) return;
+      if (parent && ts.isParameter(parent) && parent.name === n) return;
+      found = true;
+      return;
+    }
+    ts.forEachChild(n, (child) => walk(child, n));
+  };
+  walk(stmt, undefined);
+  return found;
+}
+
 type TransformSite = {
   fn: ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration;
   lets: Array<{ name: string; initializer: ts.Expression }>;
@@ -383,21 +820,13 @@ function findSites(sourceFile: ts.SourceFile, filePragma: boolean): TransformSit
     if (!body || !ts.isBlock(body)) return;
     const collected = collectLetsInFunctionBody(body);
     if (!collected || collected.lets.length === 0) {
-      if (
-        nestedInEligible ||
-        filePragma ||
-        collected?.hadDirective ||
-        ((ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) && isPageBuilderCallback(fn))
-      ) {
+      // No lets here — still mark eligible so nested callbacks inherit (pragma / directive / parent).
+      if (nestedInEligible || filePragma || collected?.hadDirective) {
         eligibleFns.add(fn);
       }
       return;
     }
-    const eligible =
-      collected.hadDirective ||
-      filePragma ||
-      nestedInEligible ||
-      (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn) ? isPageBuilderCallback(fn) : false);
+    const eligible = collected.hadDirective || filePragma || nestedInEligible;
     if (!eligible) return;
     eligibleFns.add(fn);
     sites.push({ fn, lets: collected.lets, hadDirective: collected.hadDirective });
@@ -419,12 +848,16 @@ function findSites(sourceFile: ts.SourceFile, filePragma: boolean): TransformSit
 /**
  * Rewrite tracked `let` bindings into `ui.state` / `ui.auto` (or `state` / `auto`).
  *
- * Opt-in via file pragma `// @clay-reactive`, block directive `"use reactive";`,
- * a `page` / `ui.page` callback, or nesting inside an already-eligible function.
+ * Opt-in via file pragma `// @clay-reactive` or block directive `"use reactive";`.
+ * Nested function callbacks inside an already-eligible site inherit eligibility.
+ * `ui.page` alone does **not** opt in (avoids silent rewrites of dense apps).
  *
  * Lifts simple `let`s anywhere in the function body (including nested blocks,
- * but not loops or nested function scopes). Remaining statements are wrapped in
- * `auto`; identifiers rewritten to state props.
+ * but not loops or nested function scopes). Remaining statements use implicit
+ * regions: `ui.label(expr)` reading state becomes `ui.label(() => expr)`
+ * (`bindText`); other build-time reads go in dependency-isolated `auto`s;
+ * inert shell / handler-only writes stay outside. Nested UI callbacks that
+ * read outer state get their own inner regions.
  */
 export function transformReactiveLet(
   source: string,
@@ -514,25 +947,8 @@ export function transformReactiveLet(
         (stmt) => rewriteIdents(context, stmt, names, stateName) as ts.Statement,
       );
 
-      const autoArg = factory.createArrowFunction(
-        undefined,
-        undefined,
-        [],
-        undefined,
-        factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
-        factory.createBlock(rewrittenRest, true),
-      );
-
-      const autoCall = useUi
-        ? factory.createCallExpression(
-            factory.createPropertyAccessExpression(factory.createIdentifier('ui'), 'auto'),
-            undefined,
-            [autoArg],
-          )
-        : factory.createCallExpression(factory.createIdentifier('auto'), undefined, [autoArg]);
-
-      const autoStmt = factory.createExpressionStatement(autoCall);
-      const newBody = factory.createBlock([stateDecl, autoStmt], true);
+      const regionStmts = emitWithRegions(context, rewrittenRest, stateName, names, useUi);
+      const newBody = factory.createBlock([stateDecl, ...regionStmts], true);
 
       if (ts.isArrowFunction(fn)) {
         return factory.updateArrowFunction(
@@ -582,17 +998,15 @@ export function transformReactiveLet(
 
   if (!useUi) {
     // Ensure state/auto are available when not using ui.*
-    const needsImport =
-      !/\bimport\s*\{[^}]*\bstate\b/.test(source) || !/\bimport\s*\{[^}]*\bauto\b/.test(source);
-    if (needsImport && !source.includes("from '@close-by/clay'") && !source.includes('from "@close-by/clay"')) {
-      // If file already imports from @close-by/clay or @close-by/clay-core, leave as-is (caller must export).
-      // Inject a named import only when neither state nor auto appear as imports.
-      const hasState = /\bimport\s*\{[^}]*\bstate\b/.test(source);
-      const hasAuto = /\bimport\s*\{[^}]*\bauto\b/.test(source);
-      if (!hasState || !hasAuto) {
-        const names = [!hasState && 'state', !hasAuto && 'auto'].filter(Boolean).join(', ');
-        code = `import { ${names} } from '@close-by/clay';\n` + code;
-      }
+    const needsState = /\bstate\s*\(/.test(code) && !/\bimport\s*\{[^}]*\bstate\b/.test(source);
+    const needsAuto = /\bauto\s*\(/.test(code) && !/\bimport\s*\{[^}]*\bauto\b/.test(source);
+    if (
+      (needsState || needsAuto) &&
+      !source.includes("from '@close-by/clay'") &&
+      !source.includes('from "@close-by/clay"')
+    ) {
+      const names = [needsState && 'state', needsAuto && 'auto'].filter(Boolean).join(', ');
+      code = `import { ${names} } from '@close-by/clay';\n` + code;
     }
   }
 
@@ -602,9 +1016,5 @@ export function transformReactiveLet(
 /** True if the source looks like it might need a reactive-let pass (cheap prefilter). */
 export function mightNeedReactiveLet(source: string): boolean {
   if (!/\blet\b/.test(source)) return false;
-  return (
-    hasFilePragma(source) ||
-    /["']use reactive["']/.test(source) ||
-    /\b(?:ui\.)?page\s*\(/.test(source)
-  );
+  return hasFilePragma(source) || /["']use reactive["']/.test(source);
 }

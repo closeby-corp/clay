@@ -14,6 +14,13 @@ export type AppUser = {
   avatar?: string;
 };
 
+export type AppPrimaryAction = {
+  label: string;
+  href?: string;
+  /** Lucide kebab-case icon; defaults to `plus-circle`. */
+  icon?: string;
+};
+
 export type AppProps = {
   /** Brand label in the sidebar header. */
   title?: string;
@@ -25,6 +32,8 @@ export type AppProps = {
   nav: AppNavItem[];
   navSecondary?: AppNavItem[];
   documents?: AppNavItem[];
+  /** Optional CTA above primary nav; omitted by default (no Quick Create). */
+  primaryAction?: AppPrimaryAction;
   className?: string;
 };
 
@@ -63,6 +72,7 @@ export function app(props: AppProps, fn: () => void): Element {
     nav,
     navSecondary: serializeNav(props.navSecondary, path),
     documents: serializeNav(props.documents, path),
+    primaryAction: props.primaryAction ?? null,
     className: props.className,
   });
   withParent(el, fn);

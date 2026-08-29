@@ -63,6 +63,11 @@ export class ClientSession {
    * Mirror of tab `sessionStorage` bag (`storage.client`), hydrated on hello.
    */
   readonly client = new Map<string, unknown>();
+  /**
+   * Last known `location.hash` without leading `#` (from hello / `setUrlHash`).
+   * Prefer `getUrlHash` / `setUrlHash` over reading `window` in page code.
+   */
+  urlHash = '';
   root: Element | null = null;
   isMounted = false;
 
@@ -223,6 +228,18 @@ export class ClientSession {
 
   setTheme(theme: 'light' | 'dark' | 'system'): void {
     this.send({ op: 'theme', theme });
+  }
+
+  /** Sync client `location.hash` (pass without `#`; empty clears). */
+  setUrlHash(hash: string): void {
+    const normalized = hash.startsWith('#') ? hash.slice(1) : hash;
+    this.urlHash = normalized;
+    this.send({ op: 'setUrlHash', hash: normalized });
+  }
+
+  /** Open `url` in a new tab on the client (`noopener`). */
+  openExternal(url: string): void {
+    this.send({ op: 'openExternal', url });
   }
 
   runJavaScript(code: string): void {

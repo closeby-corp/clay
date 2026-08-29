@@ -5,10 +5,12 @@ import { fileURLToPath } from 'url';
 import {
   buildReloadChildCommand,
   buildReloadStubSource,
+  ensureReloadDir,
   filterReloadArgv,
   reloadOpenMarkerFileName,
   reloadStubFileName,
   resolveEntryPath,
+  resolveReloadDir,
   resolveWatchRoot,
   writeReloadStubNudge,
 } from './reload.ts';
@@ -35,15 +37,15 @@ describe('reload helpers', () => {
     expect(resolveWatchRoot('/proj/pages', true)).toBe('/proj/pages');
   });
 
-  test('reload stub is skipped by page discovery naming', () => {
+  test('reload stubs live under .clay-reload, not pages/', () => {
+    expect(resolveReloadDir('/proj')).toBe(join('/proj', '.clay-reload'));
     expect(reloadStubFileName(42)).toBe('_clay-reload-42.ts');
-    expect(reloadStubFileName(42).startsWith('_')).toBe(true);
     expect(reloadOpenMarkerFileName(42)).toBe('_clay-reload-opened-42');
   });
 
   test('buildReloadChildCommand watches the stub, not the CLI module', () => {
-    const cmd = buildReloadChildCommand('/usr/bin/bun', '/proj/_clay-reload-1.ts');
-    expect(cmd).toEqual(['/usr/bin/bun', '--watch', '/proj/_clay-reload-1.ts']);
+    const cmd = buildReloadChildCommand('/usr/bin/bun', '/proj/.clay-reload/_clay-reload-1.ts');
+    expect(cmd).toEqual(['/usr/bin/bun', '--watch', '/proj/.clay-reload/_clay-reload-1.ts']);
     expect(cmd.join(' ')).not.toContain('/packages/cli/');
   });
 
@@ -61,19 +63,20 @@ describe('reload helpers', () => {
     expect(src).not.toContain('--reload');
   });
 
-  test('stub write lands next to entry watch root', async () => {
+  test('ensureReloadDir creates .clay-reload outside pages', () => {
     rmSync(tmpRoot, { recursive: true, force: true });
-    const pages = join(tmpRoot, 'pages');
-    mkdirSync(pages, { recursive: true });
-    writeFileSync(join(pages, 'home.ts'), 'export {}');
+    mkdirSync(join(tmpRoot, 'pages'), { recursive: true });
+    writeFileSync(join(tmpRoot, 'pages', 'home.ts'), 'export {}');
 
-    const stubPath = join(resolveWatchRoot(pages, true), reloadStubFileName(7));
-    await Bun.write(
-      stubPath,
-      buildReloadStubSource('/cli/main.ts', [pages, '--no-open']),
-    );
+    const dir = ensureReloadDir(tmpRoot);
+    expect(dir).toBe(join(tmpRoot, '.clay-reload'));
+    expect(existsSync(dir)).toBe(true);
+
+    const stubPath = join(dir, reloadStubFileName(7));
+    writeFileSync(stubPath, buildReloadStubSource('/cli/main.ts', [join(tmpRoot, 'pages'), '--no-open']));
     expect(existsSync(stubPath)).toBe(true);
-    expect(stubPath.startsWith(pages)).toBe(true);
+    expect(stubPath.includes(`${join('pages')}${join('/', '')}`)).toBe(false);
+    expect(stubPath).not.toContain('/pages/');
 
     rmSync(tmpRoot, { recursive: true, force: true });
   });

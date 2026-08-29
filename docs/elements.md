@@ -20,7 +20,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `rating` | `rating` | Star rating (`value` / `max`; optional `error`) |
 | `colorPicker` | `colorPicker` | Hex color picker (swatches + native input; optional `error`) |
 | `tags` | `tags` | Multi-tag chip input (`options?`, `creatable?`; optional `error`) |
-| `codeBlock` | `codeBlock` | Read-only Shiki-highlighted code (`language?`, `showCopy?`) |
+| `codeBlock` | `codeBlock` | Read-only Shiki-highlighted code (`language?`, `showCopy?`, `sensitive?`) |
 | `tree` | `tree` | Nested tree (`nodes`, `selected?`, `expanded?`) |
 | `editor` | `editor` | Domternal rich text (`format?: 'html' \| 'markdown'`) |
 | `kanban` | `kanban` | Board (`columns` with cards; optional `lanes`; owns order + selection; card drawer; `cardMove`/`cardSelect` settle defaults) |
@@ -54,7 +54,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `avatar` | `avatar` | ShadCN `Avatar` (+ fallback) |
 | `progress` | `progress` | ShadCN `Progress` (0–100) |
 | `separator` | `separator` | ShadCN `Separator` |
-| `icon` | `icon` | Curated Lucide icon (same keys as nav) |
+| `icon` | `icon` | Lucide kebab-case name (full set; same as nav / `ui.icon`) |
 | `tooltip` | `tooltip` | ShadCN `Tooltip` wrapping children |
 | `hoverCard` | `hovercard` | ShadCN `HoverCard` wrapping children |
 | `popover` | `popover` | ShadCN `Popover` (server-owned `open`) |

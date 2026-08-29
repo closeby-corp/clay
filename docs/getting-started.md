@@ -149,10 +149,10 @@ bun run clay ./pages --app --title "My App"
 | `--app` | Dashboard shell + nav from discovered pages |
 | `--no-open` | Do not open the browser |
 | `--reload` | Restart on file changes (`bun --watch`); opens the browser once; prints `↻ clay: reloading…` and re-imports pages (clears `require.cache`) |
-| `--reactive-let` | Enable compile-time reactive `let` Bun loader (default) |
-| `--no-reactive-let` | Disable the reactive-let plugin |
+| `--reactive-let` | Enable compile-time reactive `let` Bun loader (**off** by default; still needs `// @clay-reactive` or `"use reactive";` in source) |
+| `--no-reactive-let` | Disable the reactive-let plugin (default) |
 
-See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto`, `ui.label(() => …)`, and the Phase 2 `let` transform.
+See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto` (recommended), `ui.label(() => …)`, and the opt-in Phase 2 `let` transform.
 
 ## Install and run the demo
 
@@ -246,9 +246,9 @@ ui.run({
 });
 ```
 
-Point `clientDir` at a built `@close-by/clay-client` dist only if the default (`packages/client/dist`) is wrong for your layout. The `clay` CLI serves shipped assets from `packages/cli/client-dist` (or the monorepo `packages/client/dist` fallback).
+Point `clientDir` with `resolveClayClientDir()` (or omit it — `ui.run` does the same) instead of hardcoding `node_modules/@close-by/clay-cli/client-dist`. Details: [Boot](./boot.md).
 
-Use `css` to inject your own `globals.css` after the built client styles — override shadcn-style tokens such as `--primary`, `--background`, and `--sidebar` (and optional `.dark`) without rebuilding the client. Runtime CSS cannot add new Tailwind utilities; use those variables or plain CSS.
+Use `css` to inject your own stylesheet after the built client styles. **Token overrides** (`--primary`, `--background`, …) always work. **New Tailwind utilities** only work if you build them with a scanned Tailwind pipeline — see [Tailwind](./tailwind.md). Runtime CSS cannot invent unscanned utilities.
 
 ## Project layout (monorepo)
 

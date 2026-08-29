@@ -20,6 +20,7 @@ describe('app layout', () => {
           ],
           navSecondary: [{ label: 'Settings', href: '#settings', icon: 'settings' }],
           documents: [{ label: 'Reports', href: '#reports', icon: 'clipboard-list' }],
+          primaryAction: { label: 'New report', href: '/reports/new', icon: 'plus' },
           user: { name: 'Ada', email: 'ada@example.com' },
         },
         () => {},
@@ -32,9 +33,26 @@ describe('app layout', () => {
       expect(el.props.collapsible).toBe('icon');
       expect(el.props.variant).toBe('inset');
       expect(el.props.user).toEqual({ name: 'Ada', email: 'ada@example.com' });
+      expect(el.props.primaryAction).toEqual({
+        label: 'New report',
+        href: '/reports/new',
+        icon: 'plus',
+      });
       expect((el.props.navSecondary as unknown[]).length).toBe(1);
       expect((el.props.documents as unknown[]).length).toBe(1);
       expect(nav.find((n) => n.href === '/examples/counter')?.icon).toBe('gauge');
+    });
+  });
+
+  test('omits primaryAction by default', () => {
+    const session = {
+      path: '/',
+      register() {},
+      unregister() {},
+    } as any;
+    runWithSession(session, () => {
+      const el = app({ title: 'Clay', nav: [{ label: 'Home', href: '/' }] }, () => {});
+      expect(el.props.primaryAction).toBeNull();
     });
   });
 });

@@ -32,6 +32,8 @@ export type ServerMessage =
   | { op: 'clipboard'; content: string }
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
   | { op: 'runJavaScript'; code: string }
+  | { op: 'setUrlHash'; hash: string }
+  | { op: 'openExternal'; url: string }
   | {
       op: 'scroll';
       target: 'window' | 'selector';
@@ -63,6 +65,7 @@ export type ClientMessage =
       op: 'hello';
       path: string;
       userId?: string;
+      hash?: string;
       browserStorage?: Record<string, unknown>;
       clientStorage?: Record<string, unknown>;
       tabStorage?: Record<string, unknown>;

@@ -1,4 +1,4 @@
-import { watch, unlinkSync, writeFileSync, type FSWatcher } from 'fs';
+import { watch, unlinkSync, writeFileSync, mkdirSync, type FSWatcher } from 'fs';
 import { isAbsolute, join, dirname, resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { stat } from 'fs/promises';
@@ -17,7 +17,21 @@ export function resolveWatchRoot(absEntry: string, isDirectory: boolean): string
   return isDirectory ? absEntry : dirname(absEntry);
 }
 
-/** Leading `_` so `ui.loadPages` skips this stub if it lands inside a pages dir. */
+/**
+ * Project-local dir for reload stubs / open markers — kept out of `pages/` so
+ * `tsc` and page discovery stay clean. Gitignore `.clay-reload/`.
+ */
+export function resolveReloadDir(cwd = process.cwd()): string {
+  return join(cwd, '.clay-reload');
+}
+
+export function ensureReloadDir(cwd = process.cwd()): string {
+  const dir = resolveReloadDir(cwd);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+/** Stub filename inside `.clay-reload/` (leading `_` still safe if ever copied under pages). */
 export function reloadStubFileName(pid = process.pid): string {
   return `_clay-reload-${pid}.ts`;
 }
@@ -46,8 +60,8 @@ export function writeReloadStubNudge(stubPath: string, baseSource: string, now =
 }
 
 /**
- * `bun --watch <stub>` so Bun tracks the stub (in the app tree) and, after load,
- * the entry module graph — not the CLI package as the watch root.
+ * `bun --watch <stub>` so Bun tracks the stub; page-dir changes nudge the stub
+ * via {@link watchDirectoryForNewModules}.
  */
 export function buildReloadChildCommand(
   execPath: string,
@@ -81,9 +95,8 @@ export function watchDirectoryForNewModules(
 }
 
 /**
- * When `--reload` is set, run the CLI under `bun --watch` with a stub living next
- * to the user's entry so restarts follow the app entry / page dir (and imports),
- * not the CLI module path.
+ * When `--reload` is set, run the CLI under `bun --watch` with a stub under
+ * `.clay-reload/` (not inside `pages/`) so restarts follow the app entry.
  */
 export async function maybeReload(
   argv: string[],
@@ -120,9 +133,9 @@ export async function maybeReload(
   }
 
   const isDirectory = entryStat.isDirectory();
-  const watchRoot = resolveWatchRoot(absEntry, isDirectory);
-  const stubPath = join(watchRoot, reloadStubFileName());
-  const openMarkerPath = join(watchRoot, reloadOpenMarkerFileName());
+  const reloadDir = ensureReloadDir(cwd);
+  const stubPath = join(reloadDir, reloadStubFileName());
+  const openMarkerPath = join(reloadDir, reloadOpenMarkerFileName());
   // Absolute entry so the child resolves correctly regardless of stub location.
   const filtered = filterReloadArgv(argv).map((a) => (a === entry ? absEntry : a));
   const execPath = opts.execPath ?? process.execPath;

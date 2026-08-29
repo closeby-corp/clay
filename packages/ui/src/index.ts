@@ -1,5 +1,6 @@
 import {
   button as buttonFactory,
+  iconButton as iconButtonFactory,
   label as labelFactory,
   input as inputFactory,
   checkbox as checkboxFactory,
@@ -14,6 +15,7 @@ import {
   slider as sliderFactory,
   textArea as textAreaFactory,
   link as linkFactory,
+  externalLink as externalLinkFactory,
   badge as badgeFactory,
   alert as alertFactory,
   spinner as spinnerFactory,
@@ -84,6 +86,9 @@ import {
   ai as aiNamespace,
   AiChatElement,
   type ButtonProps,
+  type IconButtonProps,
+  type ButtonVariant,
+  type ButtonSize,
   type LabelProps,
   type InputProps,
   type CheckboxProps,
@@ -190,6 +195,7 @@ import {
   type ChooseOption,
   type AppProps,
   type AppNavItem,
+  type AppPrimaryAction,
   type AppUser,
   type MarkdownProps,
   type HtmlProps,
@@ -332,6 +338,9 @@ import {
   download as downloadCore,
   clipboard as clipboardCore,
   runJavaScript as runJavaScriptCore,
+  getUrlHash as getUrlHashCore,
+  setUrlHash as setUrlHashCore,
+  openExternal as openExternalCore,
   scroll as scrollCore,
   timer as timerCore,
   storage as storageCore,
@@ -373,8 +382,20 @@ import {
   type PageMeta,
   type NavFromPagesOptions,
 } from './pages';
+import { resolveClayClientDir } from './client-dir';
+
+export { resolveClayClientDir } from './client-dir';
 
 export type {
+  ButtonProps,
+  IconButtonProps,
+  ButtonVariant,
+  ButtonSize,
+  LabelProps,
+  InputProps,
+  CheckboxProps,
+  BadgeProps,
+  LinkProps,
   DataTableProps,
   DataTableAction,
   DataTableView,
@@ -433,6 +454,7 @@ export type {
   ChooseOption,
   AppProps,
   AppNavItem,
+  AppPrimaryAction,
   AppUser,
   MarkdownProps,
   HtmlProps,
@@ -584,6 +606,11 @@ export function button(text?: string, props?: Omit<ButtonProps, 'text'>): Elemen
   return buttonFactory(text, props);
 }
 
+/** Button with a Lucide icon (label optional). Prefer `ui.iconButton`. See {@link IconButtonProps}. */
+export function iconButton(props: IconButtonProps): Element {
+  return iconButtonFactory(props);
+}
+
 /** Text input. Prefer `ui.input`. See {@link InputProps}. */
 export function input(props?: InputProps): Element {
   return inputFactory(props);
@@ -654,9 +681,42 @@ export function link(text: string, href: string, props?: Omit<LinkProps, 'href' 
   return linkFactory(text, href, props);
 }
 
+/** Open `url` in a new tab (`target=_blank`). Prefer `ui.externalLink`. */
+export function externalLink(
+  text: string,
+  url: string,
+  props?: Omit<LinkProps, 'href' | 'text' | 'external'>,
+): Element {
+  return externalLinkFactory(text, url, props);
+}
+
 /** Small status badge. Prefer `ui.badge`. See {@link BadgeProps}. */
 export function badge(text?: string, props?: Omit<BadgeProps, 'text'>): Element {
   return badgeFactory(text, props);
+}
+
+/**
+ * Icon button that copies `content` via `ui.clipboard` and notifies on success.
+ * Prefer over `navigator.clipboard` in page code.
+ *
+ * @example
+ * ui.copyButton(orderId);
+ * ui.copyButton(orderId, { label: 'Copy id', size: 'sm' });
+ */
+export function copyButton(
+  content: string,
+  props: Omit<IconButtonProps, 'icon' | 'onClick'> & { notifyMessage?: string } = {},
+): Element {
+  const { notifyMessage, label, ...rest } = props;
+  return iconButtonFactory({
+    ...rest,
+    icon: 'copy',
+    label,
+    onClick: () => {
+      clipboardCore(content);
+      notifyCore(notifyMessage ?? 'Copied', 'success');
+    },
+  });
 }
 
 /** Inline alert banner. Prefer `ui.alert`. See {@link AlertProps}. */
@@ -679,7 +739,7 @@ export function separator(props?: SeparatorProps): Element {
   return separatorFactory(props);
 }
 
-/** Lucide icon by name. Prefer `ui.icon`. See {@link IconProps}. */
+/** Lucide icon by kebab-case name (full set in client). Prefer `ui.icon`. See {@link IconProps}. */
 export function icon(name: string, props?: Omit<IconProps, 'name'>): Element {
   return iconFactory(name, props);
 }
@@ -1177,6 +1237,21 @@ export function clipboard(content: string): void {
   clipboardCore(content);
 }
 
+/** URL hash without `#` (from hello / last `setUrlHash`). Prefer over `window.location`. */
+export function getUrlHash(): string {
+  return getUrlHashCore();
+}
+
+/** Set the browser URL hash. Prefer over `window.history` / `location.hash`. */
+export function setUrlHash(hash: string): void {
+  setUrlHashCore(hash);
+}
+
+/** Open a URL in a new tab. Prefer over `runJavaScript('window.open…')`. */
+export function openExternal(url: string): void {
+  openExternalCore(url);
+}
+
 /** Run trusted JavaScript in the connected browser. */
 export function runJavaScript(code: string): void {
   runJavaScriptCore(code);
@@ -1295,6 +1370,10 @@ export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {
     corePage('/', root);
   }
 
+  if (!cfg.clientDir) {
+    cfg = { ...cfg, clientDir: resolveClayClientDir() };
+  }
+
   const { app: appProps, ...serverConfig } = cfg;
   if (appProps) {
     setPageWrapper((pageFn) => app(appProps, pageFn));
@@ -1311,6 +1390,7 @@ export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {
 export const ui = {
   label,
   button,
+  iconButton,
   input,
   checkbox,
   switch: switch_,
@@ -1324,6 +1404,8 @@ export const ui = {
   slider,
   textArea,
   link,
+  externalLink,
+  copyButton,
   badge,
   alert,
   spinner,
@@ -1399,6 +1481,9 @@ export const ui = {
   clearAuthSession,
   download,
   clipboard,
+  getUrlHash,
+  setUrlHash,
+  openExternal,
   runJavaScript,
   scroll,
   timer,

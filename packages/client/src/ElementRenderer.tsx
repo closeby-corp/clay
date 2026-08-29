@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, Fragment, type CSSProperties, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, Fragment, type CSSProperties, type ReactNode, type MouseEvent } from 'react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
 import { elementReactKey } from './stickyShell';
@@ -2559,6 +2559,10 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
       }>;
       const navSecondary = (Array.isArray(props.navSecondary) ? props.navSecondary : []) as typeof nav;
       const documents = (Array.isArray(props.documents) ? props.documents : []) as typeof nav;
+      const primaryAction =
+        props.primaryAction && typeof props.primaryAction === 'object'
+          ? (props.primaryAction as { label: string; href?: string; icon?: string })
+          : null;
       const user =
         props.user && typeof props.user === 'object'
           ? (props.user as { name: string; email: string; avatar?: string })
@@ -2574,6 +2578,7 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           nav={nav}
           navSecondary={navSecondary}
           documents={documents}
+          primaryAction={primaryAction}
           className={className}
           style={asStyle(style)}
         >
@@ -2712,7 +2717,11 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         </div>
       );
 
-    case 'button':
+    case 'button': {
+      const Icon = props.icon ? resolveNavIcon(String(props.icon)) : null;
+      const iconPos = props.iconPosition === 'end' ? 'end' : 'start';
+      const label = String(props.text ?? '');
+      const iconOnly = !!Icon && !label;
       return (
         <Button
           variant={(props.variant as any) ?? 'default'}
@@ -2720,13 +2729,21 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           disabled={!!props.disabled}
           className={className}
           style={asStyle(style)}
+          aria-label={iconOnly ? String(props.icon) : undefined}
           onClick={() => {
             if (hasEvent(props, 'click')) emit(id, 'click');
           }}
         >
-          {String(props.text ?? '')}
+          {Icon && iconPos === 'start' ? (
+            <Icon className={cn('size-4 shrink-0', label && 'mr-0')} aria-hidden />
+          ) : null}
+          {label || null}
+          {Icon && iconPos === 'end' ? (
+            <Icon className={cn('size-4 shrink-0', label && 'ml-0')} aria-hidden />
+          ) : null}
         </Button>
       );
+    }
 
     case 'input':
       return <BoundInput id={id} props={props} className={className} style={style} emit={emit} />;
@@ -2870,29 +2887,36 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
     case 'aiFineTune':
       return <BoundAiFineTune id={id} props={props} className={className} style={style} emit={emit} />;
 
-    case 'link':
+    case 'link': {
+      const href = String(props.href ?? '#');
+      const external = !!props.external || /^https?:\/\//i.test(href);
       return (
         <a
-          href={String(props.href ?? '#')}
+          href={href}
           className={cn('text-primary underline-offset-4 hover:underline', className)}
           style={asStyle(style)}
-          onClick={(e) => {
-            const href = String(props.href ?? '');
-            if (href.startsWith('/')) {
-              e.preventDefault();
-              window.history.pushState({}, '', href);
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }
-          }}
+          {...(external
+            ? { target: '_blank', rel: 'noopener noreferrer' }
+            : {
+                onClick: (e: MouseEvent) => {
+                  if (href.startsWith('/')) {
+                    e.preventDefault();
+                    window.history.pushState({}, '', href);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                },
+              })}
         >
           {String(props.text ?? '')}
         </a>
       );
+    }
 
     case 'badge':
       return (
         <Badge
           variant={(props.variant as any) ?? 'default'}
+          size={props.size === 'xs' ? 'xs' : 'default'}
           color={typeof props.color === 'string' ? props.color : undefined}
           className={className}
           style={asStyle(style)}

@@ -5,6 +5,10 @@ export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 
 export type ButtonProps = {
   text?: string;
+  /** Lucide kebab-case name (full set shipped in the client). */
+  icon?: string;
+  /** Where to place `icon` relative to the label. Default `'start'`. */
+  iconPosition?: 'start' | 'end';
   variant?: ButtonVariant;
   size?: ButtonSize;
   disabled?: boolean;
@@ -15,11 +19,31 @@ export type ButtonProps = {
 export function button(text?: string, props: Omit<ButtonProps, 'text'> = {}): Element {
   return new Element('button', {
     text: text ?? '',
+    icon: props.icon,
+    iconPosition: props.iconPosition ?? 'start',
     variant: props.variant ?? 'default',
     size: props.size ?? 'default',
     disabled: props.disabled ?? false,
     className: props.className,
     onClick: props.onClick,
+  });
+}
+
+export type IconButtonProps = Omit<ButtonProps, 'text' | 'icon'> & {
+  /** Lucide kebab-case name (required). */
+  icon: string;
+  /** Accessible / visible label. Omit for icon-only (`size` defaults to `'icon'`). */
+  label?: string;
+};
+
+/** Toolbar-friendly button with a leading (or trailing) icon. Prefer `ui.iconButton`. */
+export function iconButton(props: IconButtonProps): Element {
+  const { icon, label, size, iconPosition, ...rest } = props;
+  return button(label ?? '', {
+    ...rest,
+    icon,
+    iconPosition: iconPosition ?? 'start',
+    size: size ?? (label ? 'default' : 'icon'),
   });
 }
 
@@ -146,7 +170,10 @@ export function separator(props: SeparatorProps = {}): Element {
 }
 
 export type IconProps = {
-  /** Curated Lucide key (same set as `AppNavItem.icon`). */
+  /**
+   * Lucide kebab-case name (full library is bundled in the client).
+   * Examples: `home`, `gauge`, `copy`, `refresh-cw`, `external-link`, `sparkles`.
+   */
   name?: string;
   className?: string;
 };
@@ -376,6 +403,11 @@ export function textArea(props: TextAreaProps = {}): Element {
 export type LinkProps = {
   href: string;
   text?: string;
+  /**
+   * When true, open in a new tab (`target=_blank`, `noopener`) instead of SPA navigate.
+   * Prefer for http(s) URLs; same as `ui.externalLink`.
+   */
+  external?: boolean;
   className?: string;
 };
 
@@ -383,14 +415,26 @@ export function link(text: string, href: string, props: Omit<LinkProps, 'href' |
   return new Element('link', {
     text,
     href,
+    external: props.external ?? false,
     className: props.className,
   });
+}
+
+/** Anchor that opens `url` in a new tab. Prefer over `runJavaScript('window.open…')`. */
+export function externalLink(
+  text: string,
+  url: string,
+  props: Omit<LinkProps, 'href' | 'text' | 'external'> = {},
+): Element {
+  return link(text, url, { ...props, external: true });
 }
 
 export type BadgeProps = {
   text?: string;
   variant?: 'default' | 'secondary' | 'destructive' | 'outline';
-  /** Named palette color (`green`, `red`, …) or any CSS color (`#22c55e`, `rgb(…)`). Overrides variant when set. */
+  /** Dense ops chip (`text-[10px]` / `h-5`). */
+  size?: 'default' | 'xs';
+  /** Named palette color (`green`, `red`, `amber`, …) or any CSS color (`#22c55e`, `rgb(…)`). Overrides variant when set. */
   color?: string;
   className?: string;
 };
@@ -399,6 +443,7 @@ export function badge(text?: string, props: Omit<BadgeProps, 'text'> = {}): Elem
   return new Element('badge', {
     text: text ?? '',
     variant: props.variant ?? 'default',
+    size: props.size ?? 'default',
     color: props.color,
     className: props.className,
   });
@@ -757,7 +802,7 @@ export function card(
   return el;
 }
 
-export { app, type AppNavItem, type AppProps, type AppUser } from './app';
+export { app, type AppNavItem, type AppPrimaryAction, type AppProps, type AppUser } from './app';
 
 export {
   markdown,

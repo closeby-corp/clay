@@ -73,6 +73,20 @@ export class Element {
     return this;
   }
 
+  /**
+   * Move `child` under this element (for JSX children-first evaluation).
+   * Detaches from any previous parent without destroying the child.
+   */
+  adopt(child: Element): this {
+    if (child.parent) {
+      const prev = child.parent;
+      const idx = prev.children.indexOf(child);
+      if (idx >= 0) prev.children.splice(idx, 1);
+      child.parent = null;
+    }
+    return this.add(child);
+  }
+
   clearChildren(): void {
     for (const child of this.children) {
       child.destroy();

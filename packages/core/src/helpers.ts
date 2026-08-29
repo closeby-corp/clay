@@ -35,6 +35,21 @@ export function clipboard(content: string): void {
   getCurrentSession()?.clipboard(content);
 }
 
+/** Current URL hash without `#` (from last hello / `setUrlHash`). Empty if none. */
+export function getUrlHash(): string {
+  return getCurrentSession()?.urlHash ?? '';
+}
+
+/** Set the browser URL hash (no leading `#` required; empty clears). */
+export function setUrlHash(hash: string): void {
+  getCurrentSession()?.setUrlHash(hash);
+}
+
+/** Open `url` in a new browser tab (`noopener,noreferrer`). */
+export function openExternal(url: string): void {
+  getCurrentSession()?.openExternal(url);
+}
+
 export {
   runJavaScript,
   scroll,

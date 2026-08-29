@@ -5,7 +5,7 @@ export type CliArgs = {
   app: boolean;
   open: boolean;
   reload: boolean;
-  /** Register Bun loader for compile-time reactive `let` (default true). */
+  /** Register Bun loader for compile-time reactive `let` (default false — opt in with --reactive-let). */
   reactiveLet: boolean;
   help: boolean;
 };
@@ -24,8 +24,8 @@ Options:
   --no-open          Do not open the browser
   --reload           Restart on file changes (Bun --watch); opens browser once;
                      prints ↻ on each reload and re-imports pages with a cache bust
-  --reactive-let     Enable compile-time reactive let (default)
-  --no-reactive-let  Disable reactive-let Bun loader plugin
+  --reactive-let     Enable compile-time reactive let Bun loader (off by default)
+  --no-reactive-let  Disable reactive-let (default; explicit no-op)
   -h, --help         Show help
 
 Directory entries may include optional _run.ts exporting configureRun(base)
@@ -42,7 +42,7 @@ export function parseArgs(argv: string[]): CliArgs {
     app: false,
     open: true,
     reload: false,
-    reactiveLet: true,
+    reactiveLet: false,
     help: false,
   };
 

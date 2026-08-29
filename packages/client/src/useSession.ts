@@ -234,6 +234,17 @@ export function useClaySession(path: string) {
           }
         };
         void write();
+      } else if (msg.op === 'setUrlHash') {
+        const next = msg.hash ? `#${msg.hash}` : '';
+        if (window.location.hash !== next) {
+          window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${next}`);
+        }
+      } else if (msg.op === 'openExternal') {
+        try {
+          window.open(msg.url, '_blank', 'noopener,noreferrer');
+        } catch {
+          showToast('Could not open link', { type: 'error' });
+        }
       } else if (msg.op === 'error') {
         showToast(msg.message, { type: 'error' });
       }
@@ -258,6 +269,7 @@ export function useClaySession(path: string) {
             op: 'hello',
             path: pathRef.current,
             userId,
+            hash: window.location.hash.replace(/^#/, ''),
             browserStorage: loadBrowserStorageBag(),
             clientStorage: loadClientStorageBag(),
             tabStorage: loadTabStorageBag(),
@@ -323,6 +335,7 @@ export function useClaySession(path: string) {
           op: 'hello',
           path,
           userId: userIdRef.current,
+          hash: window.location.hash.replace(/^#/, ''),
           browserStorage: loadBrowserStorageBag(),
           clientStorage: loadClientStorageBag(),
           tabStorage: loadTabStorageBag(),
