@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-duckdb",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"
