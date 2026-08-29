@@ -660,6 +660,20 @@ ui.page('/', () => {
     expect(out.code.match(/ui\.auto\(/g)?.length ?? 0).toBe(0);
   });
 
+  test('bindText on iconText', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let n = 1;
+  ui.iconText(String(n), { icon: 'hash' });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.code).toContain("ui.iconText(() => String(__clay_s0.n), { icon: 'hash' })");
+    expect(out.code.match(/ui\.auto\(/g)?.length ?? 0).toBe(0);
+  });
+
   test('dep-isolated: overlapping deps share one bindText on badge', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';

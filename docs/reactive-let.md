@@ -130,7 +130,7 @@ ui.page('/', () => {
 | Pattern | Result |
 |---------|--------|
 | `ui.label(expr)` that reads tracked state | `ui.label(() => expr)` — runtime `bindText`, no `auto` |
-| Other build-time reads (e.g. `ui.badge({ text: String(n) })`, `ui.badge(String(n))`, `ui.button(String(n))`) | compile-time bindText when the text expr reads state |
+| Other build-time reads (e.g. `ui.badge({ text: String(n) })`, `ui.badge(String(n))`, `ui.button(String(n))`, `ui.iconText(String(n), { icon })`) | compile-time bindText when the text expr reads state |
 | Other build-time reads without bindText sugar | `ui.auto` around that statement |
 | Contiguous autos with **disjoint** deps | Separate `auto` regions |
 | Contiguous autos with **overlapping** deps | One shared `auto` |
