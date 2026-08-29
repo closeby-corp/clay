@@ -9,6 +9,8 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `label` | `label` | Text div (optional `icon`) |
 | `iconText` | `iconText` | Inline icon + text row |
 | `statusDot` | `statusDot` | Status dot/icon + label |
+| `feedList` | `container` | Bordered divided container for live feed rows (layout recipe) |
+| `feedRow` | `row` | One live-feed row: status, link title, meta/issue, trailing time (layout recipe) |
 | `button` | `button` | ShadCN `Button` |
 | `input` | `input` | ShadCN `Input` (+ optional label / `error`) |
 | `textArea` | `textarea` | Native textarea (+ optional `error`) |
