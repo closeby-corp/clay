@@ -1,8 +1,10 @@
 # Compile-time reactive `let`
 
-Status: **Phase 1 shipped** (`ui.state` + `ui.auto`, with in-place props sync when the tree shape is stable). **Phase 2 shipped** (`@close-by/clay-compiler` transform + optional `clay --reactive-let` Bun loader; implicit regions, dep-isolated `auto`, compile-time `bindText` for labels).
+Status: **Phase 1 shipped** (`ui.state` + `ui.auto`). **Phase 2 shipped** (`@close-by/clay-compiler` transform + optional `clay --reactive-let`; implicit regions, dep-isolated `auto`, compile-time `bindText` for labels, rest/nested destructuring, loop-scoped keyed state, shadow renames).
 
-**Default:** Prefer Phase 1 (`ui.state` / `ui.auto`) for real apps. The Phase 2 `let` rewrite is **opt-in** (CLI plugin off unless `--reactive-let`; transform only with a pragma or `"use reactive";`). Silent page-wide rewrites caused blank mounts and CJS interop pain in production hubs — see [Known failure modes](#known-failure-modes).
+**Recommended for new demos and toy pages:** write plain `let` with `// @clay-reactive` and `clay --reactive-let` — see [Happy path](#happy-path-let--clay-reactive) below.
+
+**Production / dense apps:** Prefer Phase 1 (`ui.state` / `ui.auto`) when you need explicit control, async load patterns, or want zero compiler surface. Phase 2 remains **opt-in** (CLI plugin off unless `--reactive-let`; transform only with a pragma or `"use reactive";`). Silent page-wide rewrites caused blank mounts and CJS interop pain in production hubs — see [Known failure modes](#known-failure-modes).
 
 ## Goal
 
@@ -40,6 +42,35 @@ ui.label(() => `Count: ${s.count}`);
 
 Tests: `packages/core/src/auto.test.ts`, `packages/core/src/element.test.ts`.
 
+## Happy path: `let` + `@clay-reactive`
+
+For counter-style pages and demos, you can skip manual `ui.auto` / `label.setText`:
+
+```ts
+// counter-let.ts — run: clay counter-let.ts --reactive-let
+// @clay-reactive
+import { ui } from '@close-by/clay';
+
+export default function () {
+  let count = 0;
+  ui.label(`Count: ${count}`);
+  ui.row({ gap: 2 }, () => {
+    ui.button('-', { onClick: () => { count--; } });
+    ui.button('+', { onClick: () => { count++; } });
+  });
+}
+```
+
+Clay lifts `count` into `ui.state`, turns the label into `bindText`, and leaves buttons as handler-only writes. No `refresh()` calls.
+
+| When to use `let` + pragma | When to stay on Phase 1 |
+|-----------------------------|-------------------------|
+| Counters, toggles, filters on demo pages | Async fetch before first paint, heavy CJS imports |
+| Orders-shaped proof pages (`ReactiveLetOrdersLet.ts`) | Per-row mutable state without stable row keys |
+| Teaching / prototyping NiceGUI-style UX | You want zero Bun loader / compiler in the path |
+
+Phase 1 remains the **escape hatch** — copy patterns from [`ReactiveLetOrders.ts`](../apps/demo/src/examples/ReactiveLetOrders.ts) when Phase 2 limits bite.
+
 ## Phase 2 (shipped, opt-in)
 
 Package `@close-by/clay-compiler` rewrites a **documented subset** of `let` into Phase 1 APIs.
@@ -69,7 +100,7 @@ Bare top-level `renderFeed()` calls that read lifted lets are **auto-wrapped** i
 
 ### What transforms
 
-Simple `let` / `const` declarations (identifier or **simple** object/array destructuring) with a simple initializer **anywhere** in an eligible function body, including nested blocks (`if` / bare blocks / `try` / `switch`), but **not** inside loops or nested function scopes (nested functions are separate sites only with their own `"use reactive";`):
+Simple `let` / `const` declarations (identifier or object/array destructuring, including **nested** and **rest** patterns) with a simple initializer **anywhere** in an eligible function body, including nested blocks (`if` / bare blocks / `try` / `switch`) and **inside loops** (loop-scoped bindings use keyed `ui.state` maps), but **not** inside nested function scopes (nested functions are separate sites only with their own `"use reactive";`):
 
 ```ts
 // @clay-reactive
@@ -105,7 +136,9 @@ ui.page('/', () => {
 | Shell / layout / handler-only writes | Stay outside any `auto` |
 | Nested `ui.column(() => …)` reading outer state | Inner region / bindText inside the callback |
 
-**Simple initializers:** literals; `undefined`; unary `±!~`; binary / conditional / template expressions of simples; property / element access of simples; identifiers (outer bindings); shallow array/object literals; **call / `new`** with simple callees and args (`Date.now()`, `defaultRangeFrom()`, `new Map()`); nullish coalescing (`??`) for destructuring defaults. **Rest destructuring:** named bindings lift to state; the rest pattern stays as `const { ...rest } = init` / `const [, ...rest] = init`. **Not** transformed: `await`, nested destructuring (`let { a: { b } }`), sibling-let refs (`let a = 1; let b = a + 1` aborts the site), loop-scoped `let`, spread args.
+**Simple initializers:** literals; `undefined`; unary `±!~`; binary / conditional / template expressions of simples; property / element access of simples; identifiers (outer bindings); shallow array/object literals; **call / `new`** with simple callees and args; nullish coalescing (`??`) for destructuring defaults. **Destructuring:** simple and **nested** patterns (`let { a: { b } }`); **rest** (`let { x, ...rest }`) lifts named fields and keeps `const { ...rest }`. **Loop-scoped** `let` inside `for` / `for-of` bodies becomes keyed state (`__clay_l0_open[key]`) so each iteration keeps its own mutable slot. **Not** transformed: `await`, sibling-let refs (`let a = 1; let b = a + 1` aborts the site), spread args in initializers.
+
+**Shadowing:** a later local `const detail = …` that reuses a lifted name is **renamed** in emit by default (`renameShadowedLocals: true`). Pass `{ renameShadowedLocals: false }` to only warn.
 
 Type positions are never rewritten — a lifted `let loading` may share a name with `type DetailState { loading: boolean }` without breaking emit.
 
@@ -137,12 +170,12 @@ When the transform or Bun loader was on by default (pre–opt-in), dense apps hi
 
 Mitigation today: leave the plugin off; use Phase 1 APIs. If you enable `--reactive-let`, only mark intentional toy/demo files with the pragma.
 
-### Limits (still open)
+### Limits
 
-- No nested destructuring (`let { a: { b } }`) or `var`. Simple defaults and **rest** patterns are supported (`let { x = 1, ...rest }`, `let [a, ...rest] = arr`).
+- No `var`. Deeply nested patterns with rest at inner levels may abort the site.
 - Sibling initializers abort the site (`let b = a + 1` when both would lift).
-- No loop-scoped bindings (would re-init incorrectly if hoisted).
-- Duplicate binding names in nested blocks abort the transform for that function (shadowing). A **warning** is emitted when a non-lifted local reuses a lifted name in the same site.
+- Duplicate binding names in nested blocks abort the transform for that function.
+- Loop-scoped state keys use loop index (`for-of`) or `for (let i = …)` index — ensure stable ordering when mutating per-row UI state.
 - Compile-time `bindText` covers `ui.label` / `label` only (not badge/button text props).
 - Running the demo via plain `bun apps/demo/...` does **not** load the plugin unless you register it; use `clay --reactive-let` or `--preload`.
 - `const` is lifted like `let` (assignments become state writes). Prefer `let` in typed source if you reassign — `const` reassignment is a TS error before the transform runs.
@@ -151,10 +184,8 @@ Tests: `packages/compiler/src/transform.test.ts`.
 
 ## Still Later
 
-1. Loop-scoped reactive bindings where safe; nested destructuring.
-2. Optional: bindText-style rewrite for more widgets (`badge` text, etc.).
-3. Docs: sell `let` as the tutorial happy path once ops apps adopt the proof page in anger.
-4. P2: emit renames for shadowing (warnings exist today).
+1. Optional: bindText-style rewrite for more widgets (`badge` text, etc.).
+2. Loop-scoped state keyed by row id (not just index) when the loop variable exposes `.id`.
 
 **Runtime:** nested `auto` / `refreshable` trees reuse in place when structure matches (`canReuseElementTree` in `@close-by/clay-core`) — inner regions keep their ids when an outer `auto` refreshes without touching inner deps.
 

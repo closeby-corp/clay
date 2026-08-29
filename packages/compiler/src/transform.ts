@@ -8,6 +8,18 @@ export type TransformReactiveLetOptions = {
    * (default `true`). When `false`, only emit warnings.
    */
   autoWrapBuilders?: boolean;
+  /**
+   * Rename locals that shadow lifted state (`const detail` after `let detail`)
+   * instead of only warning (default `true`).
+   */
+  renameShadowedLocals?: boolean;
+};
+
+type CollectedLet = {
+  name: string;
+  initializer: ts.Expression;
+  /** Present when the binding lives inside a loop body (keyed state map). */
+  loopId?: number;
 };
 
 export type TransformReactiveLetResult = {
@@ -212,6 +224,35 @@ function collectLiftableBindings(stmt: ts.Statement): LiftableBindings | null {
   return null;
 }
 
+function subInitForProperty(init: ts.Expression, propName: string): ts.Expression | null {
+  if (ts.isObjectLiteralExpression(init)) {
+    for (const p of init.properties) {
+      if (!ts.isPropertyAssignment(p)) continue;
+      const key = ts.isIdentifier(p.name)
+        ? p.name.text
+        : ts.isStringLiteral(p.name) || ts.isNumericLiteral(p.name)
+          ? p.name.text
+          : null;
+      if (key === propName) return p.initializer;
+    }
+    return null;
+  }
+  if (isSimpleInitializer(init)) {
+    return ts.factory.createPropertyAccessExpression(init, propName);
+  }
+  return null;
+}
+
+function mergeNestedBindings(
+  target: Array<{ name: string; initializer: ts.Expression }>,
+  nested: LiftableBindings | null,
+  hasRest: boolean,
+): boolean | null {
+  if (!nested) return null;
+  target.push(...nested.bindings);
+  return hasRest || nested.hasRest;
+}
+
 function expandObjectBinding(
   pattern: ts.ObjectBindingPattern,
   init: ts.Expression,
@@ -226,13 +267,13 @@ function expandObjectBinding(
       hasRest = true;
       continue;
     }
-    if (!ts.isIdentifier(el.name)) return null; // no nested patterns yet
 
     const defaultInit =
       el.initializer && isSimpleInitializer(el.initializer) ? el.initializer : null;
 
     let propName: string;
     if (!el.propertyName) {
+      if (!ts.isIdentifier(el.name)) return null;
       propName = el.name.text;
     } else if (ts.isIdentifier(el.propertyName)) {
       propName = el.propertyName.text;
@@ -275,6 +316,22 @@ function expandObjectBinding(
     } else {
       return null;
     }
+
+    if (ts.isObjectBindingPattern(el.name)) {
+      const nested = expandObjectBinding(el.name, value);
+      const merged = mergeNestedBindings(out, nested, hasRest);
+      if (merged === null) return null;
+      hasRest = merged;
+      continue;
+    }
+    if (ts.isArrayBindingPattern(el.name)) {
+      const nested = expandArrayBinding(el.name, value);
+      const merged = mergeNestedBindings(out, nested, hasRest);
+      if (merged === null) return null;
+      hasRest = merged;
+      continue;
+    }
+    if (!ts.isIdentifier(el.name)) return null;
     out.push({ name: el.name.text, initializer: value });
   }
   return out.length > 0 ? { bindings: out, hasRest } : null;
@@ -299,7 +356,32 @@ function expandArrayBinding(
       hasRest = true;
       continue;
     }
-    if (!ts.isIdentifier(el.name)) return null;
+    if (!ts.isIdentifier(el.name)) {
+      if (ts.isObjectBindingPattern(el.name)) {
+        let value: ts.Expression;
+        if (ts.isArrayLiteralExpression(init)) {
+          const elem = init.elements[index];
+          if (!elem || ts.isSpreadElement(elem) || !isSimpleInitializer(elem as ts.Expression)) {
+            return null;
+          }
+          value = elem as ts.Expression;
+        } else if (isSimpleInitializer(init)) {
+          value = ts.factory.createElementAccessExpression(
+            init,
+            ts.factory.createNumericLiteral(index),
+          );
+        } else {
+          return null;
+        }
+        const nested = expandObjectBinding(el.name, value);
+        const merged = mergeNestedBindings(out, nested, hasRest);
+        if (merged === null) return null;
+        hasRest = merged;
+        index++;
+        continue;
+      }
+      return null;
+    }
 
     const defaultInit =
       el.initializer && isSimpleInitializer(el.initializer) ? el.initializer : null;
@@ -426,25 +508,26 @@ function processLiftedVariableStmt(
  */
 function collectLetsInFunctionBody(
   body: ts.Block,
-): { lets: Array<{ name: string; initializer: ts.Expression }>; hadDirective: boolean } | null {
+): { lets: CollectedLet[]; hadDirective: boolean } | null {
   let hadDirective = false;
-  const lets: Array<{ name: string; initializer: ts.Expression }> = [];
+  const lets: CollectedLet[] = [];
   const names = new Set<string>();
+  let loopCounter = 0;
 
-  const considerStmt = (stmt: ts.Statement): boolean => {
+  const considerStmt = (stmt: ts.Statement, loopId?: number): boolean => {
     const lifted = collectLiftableBindings(stmt);
     if (!lifted) return true;
     for (const b of lifted.bindings) {
-      if (names.has(b.name)) return false; // shadowing / duplicate → skip site
+      if (names.has(b.name)) return false;
     }
     for (const b of lifted.bindings) {
       names.add(b.name);
-      lets.push(b);
+      lets.push(loopId === undefined ? b : { ...b, loopId });
     }
     return true;
   };
 
-  const walkBlock = (block: ts.Block, isFnBody: boolean): boolean => {
+  const walkBlock = (block: ts.Block, isFnBody: boolean, loopId?: number): boolean => {
     let i = 0;
     if (isFnBody && block.statements[0] && isUseReactiveDirective(block.statements[0])) {
       hadDirective = true;
@@ -452,14 +535,40 @@ function collectLetsInFunctionBody(
     }
     for (; i < block.statements.length; i++) {
       const stmt = block.statements[i]!;
-      if (!considerStmt(stmt)) return false;
-      if (!walkNested(stmt)) return false;
+      if (!considerStmt(stmt, loopId)) return false;
+      if (!walkNested(stmt, loopId)) return false;
     }
     return true;
   };
 
-  const walkNested = (node: ts.Node): boolean => {
-    // Do not enter nested function scopes — those are separate transform sites.
+  const walkLoopBody = (stmt: ts.Statement, loopId: number): boolean => {
+    if (ts.isBlock(stmt)) return walkBlock(stmt, false, loopId);
+    if (!considerStmt(stmt, loopId)) return false;
+    return walkNested(stmt, loopId);
+  };
+
+  const walkLoop = (node: ts.Node): boolean => {
+    const loopId = loopCounter++;
+    if (ts.isForStatement(node)) {
+      if (node.statement && !walkLoopBody(node.statement, loopId)) return false;
+      return true;
+    }
+    if (ts.isForOfStatement(node) || ts.isForInStatement(node)) {
+      if (!walkLoopBody(node.statement, loopId)) return false;
+      return true;
+    }
+    if (ts.isWhileStatement(node)) {
+      if (!walkLoopBody(node.statement, loopId)) return false;
+      return true;
+    }
+    if (ts.isDoStatement(node)) {
+      if (!walkLoopBody(node.statement, loopId)) return false;
+      return true;
+    }
+    return true;
+  };
+
+  const walkNested = (node: ts.Node, loopId?: number): boolean => {
     if (
       ts.isArrowFunction(node) ||
       ts.isFunctionExpression(node) ||
@@ -470,18 +579,21 @@ function collectLetsInFunctionBody(
       return true;
     }
     if (ts.isBlock(node)) {
-      return walkBlock(node, false);
+      return walkBlock(node, false, loopId);
     }
     if (ts.isIfStatement(node)) {
       if (ts.isBlock(node.thenStatement)) {
-        if (!walkBlock(node.thenStatement, false)) return false;
-      } else if (!considerStmt(node.thenStatement) || !walkNested(node.thenStatement)) {
+        if (!walkBlock(node.thenStatement, false, loopId)) return false;
+      } else if (!considerStmt(node.thenStatement, loopId) || !walkNested(node.thenStatement, loopId)) {
         return false;
       }
       if (node.elseStatement) {
         if (ts.isBlock(node.elseStatement)) {
-          if (!walkBlock(node.elseStatement, false)) return false;
-        } else if (!considerStmt(node.elseStatement) || !walkNested(node.elseStatement)) {
+          if (!walkBlock(node.elseStatement, false, loopId)) return false;
+        } else if (
+          !considerStmt(node.elseStatement, loopId) ||
+          !walkNested(node.elseStatement, loopId)
+        ) {
           return false;
         }
       }
@@ -494,8 +606,7 @@ function collectLetsInFunctionBody(
       ts.isWhileStatement(node) ||
       ts.isDoStatement(node)
     ) {
-      // Skip loop-scoped lets (would re-init every iteration if hoisted).
-      return true;
+      return walkLoop(node);
     }
     if (ts.isTryStatement(node)) {
       if (!walkBlock(node.tryBlock, false)) return false;
@@ -739,6 +850,536 @@ function rewriteIdents(
     return ts.visitEachChild(n, visit, context);
   };
   return visit(node);
+}
+
+function renameBindingInVariableStmt(
+  factory: ts.NodeFactory,
+  stmt: ts.VariableStatement,
+  oldName: string,
+  newName: string,
+): ts.VariableStatement {
+  const decl = stmt.declarationList.declarations[0];
+  if (!decl) return stmt;
+
+  const renamePattern = (name: ts.BindingName): ts.BindingName => {
+    if (ts.isIdentifier(name) && name.text === oldName) {
+      return factory.createIdentifier(newName);
+    }
+    if (ts.isObjectBindingPattern(name)) {
+      return factory.createObjectBindingPattern(
+        name.elements.map((el) => {
+          if (!ts.isBindingElement(el)) return el;
+          return factory.updateBindingElement(
+            el,
+            el.dotDotDotToken,
+            el.propertyName,
+            renamePattern(el.name),
+            el.initializer,
+          );
+        }),
+      );
+    }
+    if (ts.isArrayBindingPattern(name)) {
+      return factory.createArrayBindingPattern(
+        name.elements.map((el) => {
+          if (!ts.isBindingElement(el)) return el;
+          return factory.updateBindingElement(
+            el,
+            el.dotDotDotToken,
+            el.propertyName,
+            renamePattern(el.name),
+            el.initializer,
+          );
+        }),
+      );
+    }
+    return name;
+  };
+
+  return factory.updateVariableStatement(
+    stmt,
+    stmt.modifiers,
+    factory.createVariableDeclarationList(
+      stmt.declarationList.declarations.map((d) =>
+        factory.updateVariableDeclaration(
+          d,
+          renamePattern(d.name),
+          d.exclamationToken,
+          d.type,
+          d.initializer,
+        ),
+      ),
+      stmt.declarationList.flags,
+    ),
+  );
+}
+
+function isShadowingDecl(stmt: ts.Statement, liftedNames: Set<string>): string | null {
+  if (!ts.isVariableStatement(stmt)) return null;
+  const lifted = collectLiftableBindings(stmt);
+  if (
+    lifted &&
+    !lifted.hasRest &&
+    lifted.bindings.length > 0 &&
+    lifted.bindings.every((b) => liftedNames.has(b.name))
+  ) {
+    return null;
+  }
+  for (const name of namesFromBindingStmt(stmt)) {
+    if (liftedNames.has(name)) return name;
+  }
+  return null;
+}
+
+type LoopPlan = {
+  loopId: number;
+  bindings: CollectedLet[];
+  indexIdent: ts.Identifier;
+  keyIdent: ts.Identifier;
+  stateIdents: Map<string, ts.Identifier>;
+};
+
+function buildLoopPlans(
+  lets: CollectedLet[],
+  factory: ts.NodeFactory,
+  idBase: number,
+): LoopPlan[] {
+  const byLoop = new Map<number, CollectedLet[]>();
+  for (const l of lets) {
+    if (l.loopId === undefined) continue;
+    const group = byLoop.get(l.loopId) ?? [];
+    group.push(l);
+    byLoop.set(l.loopId, group);
+  }
+  const plans: LoopPlan[] = [];
+  for (const [loopId, bindings] of byLoop) {
+    const stateIdents = new Map<string, ts.Identifier>();
+    for (const b of bindings) {
+      stateIdents.set(b.name, factory.createIdentifier(`__clay_l${loopId}_${b.name}`));
+    }
+    plans.push({
+      loopId,
+      bindings,
+      indexIdent: factory.createIdentifier(`__clay_li_${idBase}_${loopId}`),
+      keyIdent: factory.createIdentifier(`__clay_lk_${idBase}_${loopId}`),
+      stateIdents,
+    });
+  }
+  return plans.sort((a, b) => a.loopId - b.loopId);
+}
+
+function planForLoopId(plans: LoopPlan[], loopId: number): LoopPlan | undefined {
+  return plans.find((p) => p.loopId === loopId);
+}
+
+function forLoopIndexIdent(forStmt: ts.ForStatement): ts.Identifier | null {
+  if (!forStmt.initializer || !ts.isVariableDeclarationList(forStmt.initializer)) return null;
+  const decl = forStmt.initializer.declarations[0];
+  if (decl && ts.isIdentifier(decl.name)) return decl.name;
+  return null;
+}
+
+function loopStateRead(
+  factory: ts.NodeFactory,
+  stateIdent: ts.Identifier,
+  keyExpr: ts.Expression,
+  fallback: ts.Expression,
+): ts.Expression {
+  return factory.createBinaryExpression(
+    factory.createElementAccessExpression(stateIdent, keyExpr),
+    ts.SyntaxKind.QuestionQuestionToken,
+    fallback,
+  );
+}
+
+function rewriteIdentsWithEnv(
+  context: ts.TransformationContext,
+  node: ts.Node,
+  fnNames: Set<string>,
+  stateIdent: ts.Identifier,
+  shadowEnv: Map<string, string>,
+  loopPlan?: LoopPlan,
+  loopKeyExpr?: ts.Expression,
+): ts.Node {
+  const { factory } = context;
+  const visit = (n: ts.Node): ts.Node => {
+    if (
+      ts.isTypeAliasDeclaration(n) ||
+      ts.isInterfaceDeclaration(n) ||
+      ts.isTypeParameterDeclaration(n) ||
+      ts.isTypeNode(n)
+    ) {
+      return n;
+    }
+    if (ts.isShorthandPropertyAssignment(n) && fnNames.has(n.name.text) && !shadowEnv.has(n.name.text)) {
+      if (loopPlan?.stateIdents.has(n.name.text) && loopKeyExpr) {
+        const init =
+          loopPlan.bindings.find((b) => b.name === n.name.text)?.initializer ??
+          factory.createIdentifier('undefined');
+        return factory.createPropertyAssignment(
+          n.name,
+          loopStateRead(
+            factory,
+            loopPlan.stateIdents.get(n.name.text)!,
+            loopKeyExpr,
+            init,
+          ),
+        );
+      }
+      return factory.createPropertyAssignment(
+        n.name,
+        factory.createPropertyAccessExpression(stateIdent, n.name.text),
+      );
+    }
+    if (ts.isIdentifier(n) && shouldRewriteIdent(n, fnNames)) {
+      if (shadowEnv.has(n.text)) {
+        return factory.createIdentifier(shadowEnv.get(n.text)!);
+      }
+      if (loopPlan?.stateIdents.has(n.text) && loopKeyExpr) {
+        const p = n.parent;
+        if (p && isWriteTarget(n, p)) {
+          return factory.createElementAccessExpression(
+            loopPlan.stateIdents.get(n.text)!,
+            loopKeyExpr,
+          );
+        }
+        const init =
+          loopPlan.bindings.find((b) => b.name === n.text)?.initializer ??
+          factory.createIdentifier('undefined');
+        return loopStateRead(factory, loopPlan.stateIdents.get(n.text)!, loopKeyExpr, init);
+      }
+      return factory.createPropertyAccessExpression(stateIdent, n.text);
+    }
+    return ts.visitEachChild(n, visit, context);
+  };
+  return visit(node);
+}
+
+function rewriteBlockStatementsWithScopes(
+  context: ts.TransformationContext,
+  statements: readonly ts.Statement[],
+  fnNames: Set<string>,
+  stateIdent: ts.Identifier,
+  renameShadowedLocals: boolean,
+  shadowCounter: { n: number },
+  shadowEnv: Map<string, string>,
+): ts.Statement[] {
+  const { factory } = context;
+  const out: ts.Statement[] = [];
+  for (const stmt of statements) {
+    let current = stmt;
+    if (renameShadowedLocals) {
+      const shadowed = isShadowingDecl(current, fnNames);
+      if (shadowed) {
+        const newName = `__clay_local_${shadowed}_${shadowCounter.n++}`;
+        current = renameBindingInVariableStmt(
+          factory,
+          current as ts.VariableStatement,
+          shadowed,
+          newName,
+        );
+        shadowEnv.set(shadowed, newName);
+      }
+    }
+    out.push(
+      rewriteIdentsWithEnv(context, current, fnNames, stateIdent, shadowEnv) as ts.Statement,
+    );
+  }
+  return out;
+}
+
+function prependToLoopBody(
+  factory: ts.NodeFactory,
+  body: ts.Statement,
+  prefix: ts.Statement[],
+): ts.Statement {
+  if (ts.isBlock(body)) {
+    return factory.updateBlock(body, [...prefix, ...body.statements]);
+  }
+  return factory.createBlock([...prefix, body], true);
+}
+
+function transformLoopsInStatements(
+  context: ts.TransformationContext,
+  statements: readonly ts.Statement[],
+  fnNames: Set<string>,
+  stateIdent: ts.Identifier,
+  loopPlans: LoopPlan[],
+  renameShadowedLocals: boolean,
+  shadowCounter: { n: number },
+  shadowEnv: Map<string, string>,
+  activeLoopId?: number,
+  activeKeyExpr?: ts.Expression,
+): ts.Statement[] {
+  const { factory } = context;
+  const out: ts.Statement[] = [];
+  let loopWalkId = 0;
+
+  for (const stmt of statements) {
+    if (ts.isForOfStatement(stmt) || ts.isForInStatement(stmt)) {
+      const plan = planForLoopId(loopPlans, loopWalkId);
+      loopWalkId++;
+      if (!plan) {
+        out.push(
+          rewriteIdentsWithEnv(
+            context,
+            stmt,
+            fnNames,
+            stateIdent,
+            shadowEnv,
+            undefined,
+            activeKeyExpr,
+          ) as ts.Statement,
+        );
+        continue;
+      }
+      const indexDecl = factory.createVariableStatement(
+        undefined,
+        factory.createVariableDeclarationList(
+          [
+            factory.createVariableDeclaration(
+              plan.indexIdent,
+              undefined,
+              undefined,
+              factory.createNumericLiteral(0),
+            ),
+          ],
+          ts.NodeFlags.Let,
+        ),
+      );
+      const keyDecl = factory.createVariableStatement(
+        undefined,
+        factory.createVariableDeclarationList(
+          [
+            factory.createVariableDeclaration(
+              plan.keyIdent,
+              undefined,
+              undefined,
+              factory.createCallExpression(factory.createIdentifier('String'), undefined, [
+                factory.createPostfixUnaryExpression(
+                  plan.indexIdent,
+                  ts.SyntaxKind.PlusPlusToken,
+                ),
+              ]),
+            ),
+          ],
+          ts.NodeFlags.Const,
+        ),
+      );
+      const keyExpr = plan.keyIdent;
+      const newBody = prependToLoopBody(factory, stmt.statement, [keyDecl]);
+      const inner = transformLoopsInStatements(
+        context,
+        ts.isBlock(newBody) ? newBody.statements : [newBody],
+        fnNames,
+        stateIdent,
+        loopPlans,
+        renameShadowedLocals,
+        shadowCounter,
+        new Map(shadowEnv),
+        plan.loopId,
+        keyExpr,
+      );
+      const finalBody = ts.isBlock(newBody)
+        ? factory.updateBlock(newBody, inner)
+        : inner[0] ?? factory.createBlock([], true);
+      out.push(indexDecl);
+      out.push(
+        ts.isForOfStatement(stmt)
+          ? factory.updateForOfStatement(
+              stmt,
+              stmt.awaitModifier,
+              stmt.initializer,
+              stmt.expression,
+              finalBody,
+            )
+          : factory.updateForInStatement(stmt, stmt.initializer, stmt.expression, finalBody),
+      );
+      continue;
+    }
+
+    if (ts.isForStatement(stmt)) {
+      const plan = planForLoopId(loopPlans, loopWalkId);
+      loopWalkId++;
+      const indexFromFor = forLoopIndexIdent(stmt);
+      const keyExpr =
+        indexFromFor != null
+          ? factory.createCallExpression(factory.createIdentifier('String'), undefined, [
+              indexFromFor,
+            ])
+          : plan?.keyIdent;
+      if (plan && !indexFromFor) {
+        const indexDecl = factory.createVariableStatement(
+          undefined,
+          factory.createVariableDeclarationList(
+            [
+              factory.createVariableDeclaration(
+                plan.indexIdent,
+                undefined,
+                undefined,
+                factory.createNumericLiteral(0),
+              ),
+            ],
+            ts.NodeFlags.Let,
+          ),
+        );
+        const keyDecl = factory.createVariableStatement(
+          undefined,
+          factory.createVariableDeclarationList(
+            [
+              factory.createVariableDeclaration(
+                plan.keyIdent,
+                undefined,
+                undefined,
+                factory.createCallExpression(factory.createIdentifier('String'), undefined, [
+                  factory.createPostfixUnaryExpression(
+                    plan.indexIdent,
+                    ts.SyntaxKind.PlusPlusToken,
+                  ),
+                ]),
+              ),
+            ],
+            ts.NodeFlags.Const,
+          ),
+        );
+        const newBody = prependToLoopBody(factory, stmt.statement, [keyDecl]);
+        const inner = transformLoopsInStatements(
+          context,
+          ts.isBlock(newBody) ? newBody.statements : [newBody],
+          fnNames,
+          stateIdent,
+          loopPlans,
+          renameShadowedLocals,
+          shadowCounter,
+          new Map(shadowEnv),
+          plan.loopId,
+          plan.keyIdent,
+        );
+        const finalBody = ts.isBlock(newBody)
+          ? factory.updateBlock(newBody, inner)
+          : inner[0] ?? factory.createBlock([], true);
+        out.push(indexDecl);
+        out.push(
+          factory.updateForStatement(
+            stmt,
+            stmt.initializer,
+            stmt.condition,
+            stmt.incrementor,
+            finalBody,
+          ),
+        );
+        continue;
+      }
+      const planForBody = plan ?? (activeLoopId !== undefined ? planForLoopId(loopPlans, activeLoopId) : undefined);
+      const newBody = transformLoopsInStatements(
+        context,
+        ts.isBlock(stmt.statement) ? stmt.statement.statements : [stmt.statement],
+        fnNames,
+        stateIdent,
+        loopPlans,
+        renameShadowedLocals,
+        shadowCounter,
+        new Map(shadowEnv),
+        plan?.loopId ?? activeLoopId,
+        keyExpr ?? activeKeyExpr,
+      );
+      out.push(
+        factory.updateForStatement(
+          stmt,
+          stmt.initializer,
+          stmt.condition,
+          stmt.incrementor,
+          newBody.length === 1 && !ts.isBlock(stmt.statement)
+            ? newBody[0]!
+            : factory.createBlock(newBody, true),
+        ),
+      );
+      continue;
+    }
+
+    if (ts.isWhileStatement(stmt) || ts.isDoStatement(stmt)) {
+      const plan = planForLoopId(loopPlans, loopWalkId);
+      loopWalkId++;
+      // while/do loops with loop-scoped bindings are rare; recurse with plan if present.
+      const bodyStmt = ts.isWhileStatement(stmt) ? stmt.statement : stmt.statement;
+      const inner = transformLoopsInStatements(
+        context,
+        ts.isBlock(bodyStmt) ? bodyStmt.statements : [bodyStmt],
+        fnNames,
+        stateIdent,
+        loopPlans,
+        renameShadowedLocals,
+        shadowCounter,
+        new Map(shadowEnv),
+        plan?.loopId ?? activeLoopId,
+        plan?.keyIdent ?? activeKeyExpr,
+      );
+      const newBody =
+        inner.length === 1 && !ts.isBlock(bodyStmt)
+          ? inner[0]!
+          : factory.createBlock(inner, true);
+      out.push(
+        ts.isWhileStatement(stmt)
+          ? factory.updateWhileStatement(stmt, stmt.expression, newBody)
+          : factory.updateDoStatement(stmt, newBody, stmt.expression),
+      );
+      continue;
+    }
+
+    if (ts.isBlock(stmt)) {
+      out.push(
+        factory.updateBlock(
+          stmt,
+          transformLoopsInStatements(
+            context,
+            stmt.statements,
+            fnNames,
+            stateIdent,
+            loopPlans,
+            renameShadowedLocals,
+            shadowCounter,
+            shadowEnv,
+            activeLoopId,
+            activeKeyExpr,
+          ),
+        ),
+      );
+      continue;
+    }
+
+    const plan =
+      activeLoopId !== undefined ? planForLoopId(loopPlans, activeLoopId) : undefined;
+    let current = stmt;
+    if (renameShadowedLocals) {
+      const shadowed = isShadowingDecl(current, fnNames);
+      if (shadowed) {
+        const newName = `__clay_local_${shadowed}_${shadowCounter.n++}`;
+        current = renameBindingInVariableStmt(
+          factory,
+          current as ts.VariableStatement,
+          shadowed,
+          newName,
+        );
+        shadowEnv.set(shadowed, newName);
+      }
+    }
+    out.push(
+      rewriteIdentsWithEnv(
+        context,
+        current,
+        fnNames,
+        stateIdent,
+        shadowEnv,
+        plan,
+        activeKeyExpr,
+      ) as ts.Statement,
+    );
+  }
+  return out;
+}
+
+function functionLevelLets(lets: CollectedLet[]): CollectedLet[] {
+  return lets.filter((l) => l.loopId === undefined);
 }
 
 function isFunctionLike(node: ts.Node): boolean {
@@ -1112,7 +1753,7 @@ function statementUsesNames(stmt: ts.Statement, names: Set<string>): boolean {
 
 type TransformSite = {
   fn: ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration;
-  lets: Array<{ name: string; initializer: ts.Expression }>;
+  lets: CollectedLet[];
   hadDirective: boolean;
 };
 
@@ -1320,6 +1961,7 @@ export function transformReactiveLet(
 
   const useUi = preferUi && fileHasUiImport(sourceFile);
   const autoWrapBuilders = options.autoWrapBuilders !== false;
+  const renameShadowedLocals = options.renameShadowedLocals !== false;
   const allLets: string[] = [];
   const warnings: string[] = [];
   const buildersBySite = new Map<ts.Node, Set<string>>();
@@ -1328,10 +1970,12 @@ export function transformReactiveLet(
   for (const site of sites) {
     const body = site.fn.body;
     if (!body || !ts.isBlock(body)) continue;
-    const names = new Set(site.lets.map((l) => l.name));
-    const builders = collectStateReadingBuilders(body, names);
+    const allNames = new Set(site.lets.map((l) => l.name));
+    const builders = collectStateReadingBuilders(body, allNames);
     buildersBySite.set(site.fn, builders);
-    warnings.push(...collectShadowingWarnings(body, names));
+    if (!renameShadowedLocals) {
+      warnings.push(...collectShadowingWarnings(body, allNames));
+    }
     if (!autoWrapBuilders) {
       warnings.push(...collectAutoRegionWarnings(body, builders));
     }
@@ -1357,51 +2001,91 @@ export function transformReactiveLet(
       const body = fn.body;
       if (!body || !ts.isBlock(body)) return visited;
 
-      const stateName = factory.createIdentifier(`__clay_s${counter++}`);
-      const names = new Set(site.lets.map((l) => l.name));
+      const stateName = factory.createIdentifier(`__clay_s${counter}`);
+      const fnLets = functionLevelLets(site.lets);
+      const fnNames = new Set(fnLets.map((l) => l.name));
+      const allNames = new Set(site.lets.map((l) => l.name));
+      const loopPlans = buildLoopPlans(site.lets, factory, counter);
+      counter++;
+
       allLets.push(...site.lets.map((l) => l.name));
 
-      // Prefer initializers from the visited tree when names still resolve.
       const initByName = new Map<string, ts.Expression>();
       const collectInits = (block: ts.Block) => {
         for (const stmt of block.statements) {
           const lifted = collectLiftableBindings(stmt);
           if (!lifted) continue;
           for (const b of lifted.bindings) {
-            if (names.has(b.name)) initByName.set(b.name, b.initializer);
+            if (fnNames.has(b.name)) initByName.set(b.name, b.initializer);
           }
         }
       };
       collectInits(body);
 
-      const props = site.lets.map((l) =>
-        factory.createPropertyAssignment(l.name, initByName.get(l.name) ?? l.initializer),
-      );
-      const stateCall = useUi
-        ? factory.createCallExpression(
-            factory.createPropertyAccessExpression(factory.createIdentifier('ui'), 'state'),
+      const stateDecls: ts.Statement[] = [];
+      if (fnLets.length > 0) {
+        const props = fnLets.map((l) =>
+          factory.createPropertyAssignment(l.name, initByName.get(l.name) ?? l.initializer),
+        );
+        const stateCall = useUi
+          ? factory.createCallExpression(
+              factory.createPropertyAccessExpression(factory.createIdentifier('ui'), 'state'),
+              undefined,
+              [factory.createObjectLiteralExpression(props, false)],
+            )
+          : factory.createCallExpression(factory.createIdentifier('state'), undefined, [
+              factory.createObjectLiteralExpression(props, false),
+            ]);
+        stateDecls.push(
+          factory.createVariableStatement(
             undefined,
-            [factory.createObjectLiteralExpression(props, false)],
-          )
-        : factory.createCallExpression(factory.createIdentifier('state'), undefined, [
-            factory.createObjectLiteralExpression(props, false),
-          ]);
+            factory.createVariableDeclarationList(
+              [factory.createVariableDeclaration(stateName, undefined, undefined, stateCall)],
+              ts.NodeFlags.Const,
+            ),
+          ),
+        );
+      }
 
-      const stateDecl = factory.createVariableStatement(
-        undefined,
-        factory.createVariableDeclarationList(
-          [factory.createVariableDeclaration(stateName, undefined, undefined, stateCall)],
-          ts.NodeFlags.Const,
-        ),
-      );
+      for (const plan of loopPlans) {
+        for (const b of plan.bindings) {
+          const ident = plan.stateIdents.get(b.name)!;
+          const emptyState = useUi
+            ? factory.createCallExpression(
+                factory.createPropertyAccessExpression(factory.createIdentifier('ui'), 'state'),
+                undefined,
+                [factory.createObjectLiteralExpression([], false)],
+              )
+            : factory.createCallExpression(factory.createIdentifier('state'), undefined, [
+                factory.createObjectLiteralExpression([], false),
+              ]);
+          stateDecls.push(
+            factory.createVariableStatement(
+              undefined,
+              factory.createVariableDeclarationList(
+                [factory.createVariableDeclaration(ident, undefined, undefined, emptyState)],
+                ts.NodeFlags.Const,
+              ),
+            ),
+          );
+        }
+      }
 
-      const stripped = stripLetsAndDirective(context, body, names);
-      if (stripped.length === 0) {
+      const stripped = stripLetsAndDirective(context, body, allNames);
+      if (stripped.length === 0 && stateDecls.length === 0) {
         return visited;
       }
 
-      const rewrittenRest = stripped.map(
-        (stmt) => rewriteIdents(context, stmt, names, stateName) as ts.Statement,
+      const shadowCounter = { n: 0 };
+      const rewrittenRest = transformLoopsInStatements(
+        context,
+        stripped,
+        fnNames,
+        stateName,
+        loopPlans,
+        renameShadowedLocals,
+        shadowCounter,
+        new Map(),
       );
 
       const builders = buildersBySite.get(node) ?? new Set<string>();
@@ -1409,8 +2093,8 @@ export function transformReactiveLet(
         ? autoWrapBuilderCalls(context, rewrittenRest, builders, useUi)
         : rewrittenRest;
 
-      const regionStmts = emitWithRegions(context, withBuilders, stateName, names, useUi);
-      const newBody = factory.createBlock([stateDecl, ...regionStmts], true);
+      const regionStmts = emitWithRegions(context, withBuilders, stateName, fnNames, useUi);
+      const newBody = factory.createBlock([...stateDecls, ...regionStmts], true);
 
       if (ts.isArrowFunction(fn)) {
         return factory.updateArrowFunction(

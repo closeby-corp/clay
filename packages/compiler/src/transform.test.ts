@@ -291,7 +291,7 @@ ui.page('/', () => {
     expect(transformReactiveLet(src, 'page.ts').transformed).toBe(false);
   });
 
-  test('skips await / nested destructuring patterns', () => {
+  test('skips await', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
@@ -300,15 +300,41 @@ ui.page('/', () => {
 });
 `;
     expect(transformReactiveLet(src, 'page.ts').transformed).toBe(false);
+  });
 
-    const nested = `// @clay-reactive
+  test('lifts nested object destructuring', () => {
+    const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
-  let { a: { b } } = obj;
+  let { a: { b } } = { a: { b: 1 } };
   ui.label(String(b));
 });
 `;
-    expect(transformReactiveLet(nested, 'page.ts').transformed).toBe(false);
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['b']);
+    expect(out.code).toContain('b: 1');
+  });
+
+  test('lifts loop-scoped mutable bindings via keyed state', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let rows = [{ id: 'a' }, { id: 'b' }];
+  for (const row of rows) {
+    let open = false;
+    ui.button(row.id, {
+      onClick: () => { open = !open; },
+    });
+    if (open) ui.label('open');
+  }
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets.sort()).toEqual(['open', 'rows'].sort());
+    expect(out.code).toContain('__clay_l0_open');
+    expect(out.code).toMatch(/__clay_lk_/);
   });
 
   test('lifts named bindings from rest destructuring', () => {
@@ -375,9 +401,29 @@ ui.page('/', () => {
   ui.label(String(detail));
 });
 `;
-    const out = transformReactiveLet(src, 'page.ts', { autoWrapBuilders: false });
+    const out = transformReactiveLet(src, 'page.ts', {
+      autoWrapBuilders: false,
+      renameShadowedLocals: false,
+    });
     expect(out.transformed).toBe(true);
     expect(out.warnings.some((w) => w.includes("shadows lifted state"))).toBe(true);
+  });
+
+  test('renames shadowing locals by default', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let detail = false;
+  const detail = rows.find((r) => r.id === id);
+  ui.label(String(detail));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.warnings.some((w) => w.includes("shadows lifted state"))).toBe(false);
+    expect(out.code).toMatch(/__clay_local_detail_/);
+    expect(out.code).toContain('ui.label(String(__clay_local_detail_');
+    expect(out.code).not.toContain('ui.state({ detail: false }).detail');
   });
 
   test('lifts simple object / array destructuring', () => {

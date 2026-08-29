@@ -76,12 +76,10 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
   - [x] NiceGUI-style: lift `const` with the same initializer rules as `let`
   - [x] NiceGUI-style: simple object/array destructuring (`let { a, b } = {…}`, `let [x, y] = […]`)
   - [x] NiceGUI-style: rest destructuring — lift named bindings, keep `...rest` as local `const`
-  - [ ] NiceGUI-style: loop-scoped bindings; nested destructuring
-  - [x] NiceGUI-style: destructuring defaults (`let { x = 1 }`, `let [y = 10] = []`)
-  - [x] Nested `auto` reuse without remounting when only inner props change
-  - [ ] Docs: sell `let` as the happy path once stable; keep Phase 1 as the escape hatch for complex screens
-  - [x] P2: shadowing warnings (local `const`/`let` reusing lifted names)
-  - [ ] P2: emit renames for shadowing
+  - [x] NiceGUI-style: loop-scoped bindings via keyed state maps inside loops
+  - [x] NiceGUI-style: nested destructuring (`let { a: { b } }`)
+  - [x] Docs: sell `let` as the happy path once stable; keep Phase 1 as the escape hatch for complex screens
+  - [x] P2: emit renames for shadowing (`renameShadowedLocals`, default on)
 - [x] **Investigate: `ui.jsx` / JSX trees instead of HTML strings** — writeup [`docs/jsx-investigation.md`](./docs/jsx-investigation.md)
   - Pain: `ui.html('<div…>')` is opaque (no IDE structure) and blocks real custom components; client path is `dangerouslySetInnerHTML`
   - Goal: author markup as markup (JSX) with IDE support for tags + user-defined components — not hyperscript `ui.jsx('div', props)`, and not a second UI stack

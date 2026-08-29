@@ -4,6 +4,8 @@ A short walkthrough with the `clay` CLI: a tasks list, then two pages and a side
 
 You will use a default export (the CLI registers `/` and starts the server), `bindValue` for the input, and `ui.refreshable` when the list changes.
 
+**Alternative:** for a counter-style app without manual `.refresh()`, see [reactive `let`](./reactive-let.md#happy-path-let--clay-reactive) (`// @clay-reactive` + `clay --reactive-let`). This tutorial teaches Phase 1 explicitly so the update model stays visible.
+
 ## 1. Create a project
 
 ```bash

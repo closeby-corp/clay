@@ -132,9 +132,25 @@ ui.timer(30, () => void load()); // poll; mutates `live` → auto rebuilds
 | Polling / intervals | `ui.timer` mutating state |
 | One-shot structural rebuild you trigger yourself | `ui.refreshable` + `.refresh()` |
 | Single label/input sync | `ui.label(() => …)` / `bindValue` / `bindText` |
-| NiceGUI-style `let` sugar | Opt-in Phase 2 only — see [reactive-let](./reactive-let.md) |
+| NiceGUI-style `let` sugar (demos, counters) | `// @clay-reactive` + `clay --reactive-let` — see [reactive-let](./reactive-let.md#happy-path-let--clay-reactive) |
+| Production async / dense ops consoles | `ui.state` + `ui.auto` (Phase 1) |
 
-Dense ops screens (filters + live feed + detail) should default to `state`/`auto`/`timer`. Treat `refreshable` as the escape hatch for simple one-shot panels, not the primary list pattern.
+### Alternative: reactive `let` (Phase 2)
+
+For teaching and small demos you can write plain `let` and opt in with a file pragma:
+
+```typescript
+// @clay-reactive
+import { ui } from '@close-by/clay';
+
+export default function () {
+  let count = 0;
+  ui.label(`Count: ${count}`);
+  ui.button('+', { onClick: () => { count++; } });
+}
+```
+
+Run with `clay page.ts --reactive-let`. The compiler lifts `count` to `ui.state` and wires labels automatically. Full rules and limits: [reactive-let.md](./reactive-let.md).
 
 ## Bindings and `reactive`
 
