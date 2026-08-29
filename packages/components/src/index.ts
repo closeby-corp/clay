@@ -1058,6 +1058,14 @@ export {
 } from './timeline';
 
 export {
+  feedRow,
+  feedList,
+  type FeedRowProps,
+  type FeedRowStatus,
+  type FeedListProps,
+} from './feed-row';
+
+export {
   stepper,
   StepperElement,
   type StepperProps,

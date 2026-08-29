@@ -70,6 +70,24 @@ Keep `_run.ts` as the single place for port/CSS/auth so CLI and library mode sta
 .clay-reload
 ```
 
+Stubs are dev-only transient files (`_clay-reload-<pid>.ts`). They must not land in `pages/` or page discovery will pick them up.
+
+### CI and `tsc`
+
+`bunx clay --reload` is for local dev only — do **not** pass `--reload` in CI or production starts.
+
+If you run **`tsc --noEmit`** (or IDE typecheck) on the app repo, exclude reload artifacts explicitly — **`tsc` does not read `.gitignore`**:
+
+```json
+{
+  "exclude": [".clay-reload", "**/_clay-reload-*.ts"]
+}
+```
+
+Without that exclude, a leftover stub from a crashed dev session can produce spurious TS errors until you delete `.clay-reload/`. Clay apps that only typecheck `pages/` and `src/` rarely need more; monorepos should exclude `.clay-reload` at the app root `tsconfig.json`.
+
+Legacy `_clay-reload-*.ts` files under `pages/` (pre-0.2.5) should be deleted; modern Clay writes outside the tree.
+
 ## Reactive-let
 
 The CLI leaves the compile-time `let` transform **off** unless you pass `--reactive-let`. Library mode never registers the Bun loader unless you call `registerReactiveLetPlugin()` yourself. Prefer Phase 1 `ui.state` / `ui.auto` for real apps — see [reactive-let](./reactive-let.md).

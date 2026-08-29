@@ -27,6 +27,8 @@ import {
   icon as iconFactory,
   iconText as iconTextFactory,
   statusDot as statusDotFactory,
+  feedRow as feedRowFactory,
+  feedList as feedListFactory,
   stat as statFactory,
   dataTable as dataTableFactory,
   areaChart as areaChartFactory,
@@ -129,6 +131,9 @@ import {
   type IconSlotProps,
   type StatusDotProps,
   type StatusDotColor,
+  type FeedRowProps,
+  type FeedRowStatus,
+  type FeedListProps,
   type StatItem,
   type DataTableProps,
   type DataTableAction,
@@ -839,6 +844,24 @@ export function iconText(
 /** Status dot (or icon) + label for feeds and tables. See {@link StatusDotProps}. */
 export function statusDot(props?: StatusDotProps): Element {
   return statusDotFactory(props);
+}
+
+/** Bordered container for live feed rows. See {@link FeedListProps}. */
+export function feedList(props: FeedListProps, fn: () => void): Element;
+export function feedList(fn: () => void): Element;
+export function feedList(
+  propsOrFn: FeedListProps | (() => void),
+  fn?: () => void,
+): Element {
+  if (typeof propsOrFn === 'function') {
+    return feedListFactory(propsOrFn);
+  }
+  return feedListFactory(propsOrFn, fn!);
+}
+
+/** One live-feed row (status, link title, meta/issue, trailing time). See {@link FeedRowProps}. */
+export function feedRow(props: FeedRowProps, footer?: () => void): Element {
+  return feedRowFactory(props, footer);
 }
 
 /** Render markdown to HTML. Prefer `ui.markdown`. See {@link MarkdownProps}. */
@@ -1594,6 +1617,10 @@ export const ui = {
   progress,
   separator,
   icon,
+  iconText,
+  statusDot,
+  feedRow,
+  feedList,
   markdown,
   html,
   image,

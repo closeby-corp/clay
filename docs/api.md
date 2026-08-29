@@ -338,6 +338,48 @@ ui.statusDot({ label: 'Healthy', color: 'emerald' });
 ui.statusDot({ label: () => status, color: 'amber', icon: 'alert-circle' });
 ```
 
+#### `ui.feedList(props?, fn)` / `ui.feedRow(props, footer?)`
+
+Live ops feed chrome — **not** `ui.list` (that widget owns grouped DnD state). Your app owns items, polling, and filters; wrap the loop in `ui.auto` or reactive-let.
+
+**`ui.feedList`** — bordered, `divide-y` container (`width: full`, `rounded-md border`, …).
+
+**`ui.feedRow`** — one selectable row:
+
+| Prop | Type | Notes |
+|------|------|--------|
+| `selected` | `boolean` | Highlights row (`bg-primary/10`) |
+| `status` | `{ color?, icon?, className? }` | Leading `ui.statusDot` (dot only) |
+| `title` | `string \| (() => string)` | Link-style primary line |
+| `onClick` | `() => void` | Title click |
+| `meta` | `string \| (() => string)` | Muted line under title |
+| `issue` | `string \| (() => string)` | Destructive line (errors) |
+| `hint` | `string \| (() => string)` | Muted fallback when no issue/footer |
+| `marker` | `string` | Small label beside title (e.g. `new`) |
+| `trailing` | `string \| (() => string)` | Right column (usually time) |
+| `onTrailingClick` | `() => void` | Trailing click |
+| `footer` | `() => void` | Second arg — chips etc. when `issue` unset |
+
+```typescript
+ui.feedList(() => {
+  for (const row of live.rows) {
+    ui.feedRow(
+      {
+        selected: row.id === live.selectedId,
+        status: { color: 'emerald' },
+        title: row.id,
+        meta: row.summary,
+        trailing: () => formatRelative(row.at),
+        onClick: () => { live.selectedId = row.id; },
+      },
+      () => ui.badge(row.status, { size: 'xs' }),
+    );
+  }
+});
+```
+
+See [Ops patterns — live feeds](./ops-patterns.md#live-feed-rows-not-uilist).
+
 #### `ui.markdown(text?, props?)`
 
 Client renders Markdown (`marked`) and sanitizes with DOMPurify. Update with `.setText(...)`.

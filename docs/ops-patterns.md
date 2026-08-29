@@ -72,26 +72,44 @@ Keep **separate** `ui.auto` regions for list vs detail so selection updates do n
 
 ## Live feed rows (not `ui.list`)
 
-`ui.list` is a **grouped drag-and-drop** list — wrong tool for a live ops feed. Build rows yourself:
+`ui.list` is a **grouped drag-and-drop** list — wrong tool for a live ops feed. Use **`ui.feedList`** + **`ui.feedRow`** (app still owns polling, merge, and filters):
 
 ```ts
 ui.auto(() => {
-  for (const unit of live.units) {
-    ui.row({ gap: 2, className: 'items-center border-b py-2' }, () => {
-      ui.badge(unit.status, { size: 'xs', color: unit.ok ? 'emerald' : 'red' });
-      ui.button(unit.id, {
-        variant: 'link',
-        className: 'h-auto p-0 font-mono text-xs',
-        onClick: () => {
-          live.selectedId = unit.id;
+  ui.feedList(() => {
+    for (const unit of live.units) {
+      ui.feedRow(
+        {
+          selected: live.selectedId === unit.id,
+          status: { color: unit.ok ? 'emerald' : 'red' },
+          title: unit.id,
+          meta: unit.summary,
+          issue: unit.error ?? undefined,
+          marker: unit.isNew ? 'new' : undefined,
+          trailing: () => formatRelative(unit.at, live.clock),
+          onClick: () => {
+            live.selectedId = unit.id;
+          },
+          onTrailingClick: () => toggleAbsoluteTime(unit.id),
         },
-      });
-      ui.copyButton(unit.id, { size: 'sm', variant: 'ghost' });
-      ui.label(unit.summary).classes('text-xs text-muted-foreground truncate');
-    });
-  }
+        () => {
+          for (const chip of unit.chips) {
+            ui.badge(chip.label, { size: 'xs', color: chip.color });
+          }
+        },
+      );
+    }
+  });
 });
 ```
+
+| Primitive | Role |
+|-----------|------|
+| `ui.feedList` | Bordered `divide-y` container — default ops feed chrome |
+| `ui.feedRow` | One row: status dot, link title, meta / issue / hint, trailing time |
+| Footer callback | Optional chips or extra content when there is no `issue` line |
+
+Manual `ui.row` composition still works when you need a custom layout.
 
 ## Logs / traces — sensitive bodies
 
