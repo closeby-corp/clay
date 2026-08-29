@@ -1,9 +1,0 @@
-@import "tailwindcss";
-
-/* Scan Clay pages + local helpers for className / .classes(...) strings */
-@source "../pages";
-@source ".";
-
-:root {
-  --primary: oklch(0.45 0.14 150);
-}

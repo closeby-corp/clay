@@ -383,8 +383,23 @@ import {
   type NavFromPagesOptions,
 } from './pages';
 import { resolveClayClientDir } from './client-dir';
+import {
+  detectClayTailwindContent,
+  ensureClayTailwindCss,
+  mergeClayCss,
+  type ClayTailwindOptions,
+} from './tailwind';
+
 
 export { resolveClayClientDir } from './client-dir';
+export {
+  detectClayTailwindContent,
+  ensureClayTailwindCss,
+  mergeClayCss,
+  type ClayTailwindOptions,
+  type ClayTailwindResult,
+} from './tailwind';
+
 
 export type {
   ButtonProps,
@@ -1333,7 +1348,60 @@ export function page(path: string, fn: () => void, options?: PageOptions): void 
 export type RunConfig = ClayServerConfig & {
   /** Global dashboard shell; wraps every page unless `ui.page(..., { shell: false })`. */
   app?: AppProps;
+  /**
+   * Auto-build Tailwind utilities from app modules and inject after the client CSS.
+   *
+   * - `undefined` — on when `pages/`, `src/`, or `app/` exists under cwd
+   * - `true` — same auto-detect
+   * - `false` — off
+   * - object — custom `content` paths, `watch`, `appendCss`, …
+   *
+   * Scans `className` / `.classes(...)` strings; no app-level Tailwind config required.
+   */
+  tailwind?: boolean | (Omit<ClayTailwindOptions, 'content'> & { content?: string[] });
 };
+
+const pathDelimiter = process.platform === 'win32' ? ';' : ':';
+
+function applyClayTailwind(cfg: RunConfig): RunConfig {
+  if (cfg.tailwind === false || process.env.CLAY_NO_TAILWIND === '1') {
+    return { ...cfg, tailwind: false };
+  }
+
+  const tw = cfg.tailwind;
+  const cwd = process.cwd();
+  const envContent = process.env.CLAY_TAILWIND_CONTENT?.split(pathDelimiter).filter(Boolean) ?? [];
+
+  const opts =
+    tw === undefined || tw === true
+      ? {
+          content: envContent.length ? envContent : detectClayTailwindContent(cwd),
+          watch: process.env.CLAY_TAILWIND_WATCH === '1',
+        }
+      : {
+          content: tw.content?.length
+            ? tw.content
+            : envContent.length
+              ? envContent
+              : detectClayTailwindContent(cwd),
+          watch: tw.watch ?? process.env.CLAY_TAILWIND_WATCH === '1',
+          appendCss: tw.appendCss,
+          outFile: tw.outFile,
+          cwd: tw.cwd ?? cwd,
+        };
+
+  if (!opts.content.length) return cfg;
+
+  const { cssPath } = ensureClayTailwindCss({
+    content: opts.content,
+    cwd: opts.cwd ?? cwd,
+    watch: opts.watch,
+    appendCss: opts.appendCss,
+    outFile: opts.outFile,
+  });
+
+  return { ...cfg, css: mergeClayCss(cfg.css, cssPath) };
+}
 
 let runCalled = false;
 
@@ -1374,7 +1442,9 @@ export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {
     cfg = { ...cfg, clientDir: resolveClayClientDir() };
   }
 
-  const { app: appProps, ...serverConfig } = cfg;
+  cfg = applyClayTailwind(cfg);
+
+  const { app: appProps, tailwind: _tailwind, ...serverConfig } = cfg;
   if (appProps) {
     setPageWrapper((pageFn) => app(appProps, pageFn));
   } else {

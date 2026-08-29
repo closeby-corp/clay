@@ -32,7 +32,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 .clay-reload
-
+.clay/
 
 # IntelliJ based IDEs
 .idea

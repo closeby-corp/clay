@@ -6,6 +6,6 @@ export function configureRun(base: RunConfig): RunConfig {
   return {
     ...base,
     port: base.port || 4300,
-    css: resolve(import.meta.dir, '../src/globals.generated.css'),
+    css: resolve(import.meta.dir, '../src/tokens.css'),
   };
 }

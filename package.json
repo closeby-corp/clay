@@ -1,7 +1,7 @@
 {
   "name": "clay",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -18,7 +18,9 @@
     "test": "bun test packages/core packages/ui packages/server packages/components packages/compiler packages/cli packages/persistence-file packages/persistence-redis packages/duckdb packages/kibana packages/clickhouse packages/auth packages/client/src"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "@types/bun": "latest",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.0.0"
   },
   "type": "module"

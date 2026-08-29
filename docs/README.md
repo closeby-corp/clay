@@ -12,7 +12,7 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 |-----|-------------|
 | [Getting started](./getting-started.md) | Install, `clay` CLI, create a page |
 | [Boot: CLI vs library](./boot.md) | Production `ui.run` path, `clientDir`, `_run.ts`, reload stubs |
-| [Tailwind](./tailwind.md) | Scan `pages/`, inject CSS; token-only vs full utilities |
+| [Tailwind](./tailwind.md) | Zero-config utilities from page modules; optional tokens |
 | [Sample app](./tutorial.md) | Step-by-step tasks list, then two pages + shell |
 | [Concepts](./concepts.md) | Mental model: sessions, elements, patches; **canonical `state`/`auto`/`timer` recipe** |
 | [Browser APIs](./browser-apis.md) | Prefer `ui.clipboard` / hash / `openExternal` — never `window` in page code |

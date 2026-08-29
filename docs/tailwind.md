@@ -1,93 +1,73 @@
 # Tailwind CSS for Clay apps
 
-Clay’s shipped client already includes a Tailwind + shadcn token baseline. App-level CSS is for:
+Clay auto-builds Tailwind utilities from your page modules. Use `.classes(...)` / `className` freely — no app Tailwind config, no separate CSS build step.
 
-1. **Token overrides** (`--primary`, `--background`, …) — always works via `ui.run({ css })`
-2. **Extra utilities** used in `className` / `.classes(...)` (e.g. `text-[10px]`, `w-[32rem]`, custom `@keyframes`) — only if those classes are **scanned and built** into a CSS file you inject
+## Zero-config (default)
 
-Runtime CSS **cannot invent** Tailwind utilities that were never generated. If a class is missing from the built stylesheet, it will not appear in the browser.
+**CLI** (`clay ./pages` or `clay ./pages --reload`):
 
-## Recommended setup (Tailwind v4 CLI)
+- On by default; scans the entry directory
+- With `--reload`, rebuilds utilities on file changes
+- Opt out: `--no-tailwind`
 
-```bash
-bun add -d tailwindcss @tailwindcss/cli
+**Library mode** (`ui.run`):
+
+```typescript
+ui.run({
+  // default when `pages/`, `src/`, or `app/` exists under cwd
+  // tailwind: true,
+  // or: tailwind: { content: ['./pages'], watch: true },
+});
 ```
 
-`src/globals.css`:
+Generated CSS lands in `.clay/tailwind.css` and is injected via `css`. Add `.clay/` to `.gitignore`.
+
+`@close-by/clay` depends on `tailwindcss` and `@tailwindcss/cli` — you do not need to install them yourself.
+
+## What you get
+
+| Need | How |
+|------|-----|
+| Utilities in pages (`text-[10px]`, `w-[32rem]`, …) | Automatic scan + build |
+| Theme tokens (`--primary`, `--background`, …) | Optional extra `css` file (merged after utilities) |
+| Disable | `--no-tailwind` / `ui.run({ tailwind: false })` / `CLAY_NO_TAILWIND=1` |
+
+Clay’s shipped client already includes a Tailwind + shadcn **baseline**. Auto Tailwind adds **app-scanned** utilities on top (theme + utilities only — not a second full preflight).
+
+## Token overrides
 
 ```css
-@import "tailwindcss";
-
-/* Scan Clay page modules (and any helpers that use className strings) */
-@source "../pages";
-@source ".";
-
-/* Optional: override Clay / shadcn tokens after the import */
+/* src/tokens.css */
 :root {
   --primary: oklch(0.45 0.12 150);
 }
 ```
 
-`package.json`:
-
-```json
-{
-  "scripts": {
-    "css:build": "bunx @tailwindcss/cli -i ./src/globals.css -o ./src/globals.generated.css",
-    "css:watch": "bunx @tailwindcss/cli -i ./src/globals.css -o ./src/globals.generated.css --watch",
-    "dev": "bun run css:build && bunx concurrently \"bun run css:watch\" \"bunx clay ./pages --app --reload\"",
-    "start": "bun run css:build && bun ./index.ts"
-  }
-}
-```
-
-Gitignore the generated file (or commit it for simpler deploys):
-
-```
-src/globals.generated.css
-```
-
-Wire into Clay:
-
-**CLI + `_run.ts`** (dev):
-
 ```typescript
-// pages/_run.ts
-import type { RunConfig } from '@close-by/clay';
-import { resolve } from 'path';
-
-export function configureRun(base: RunConfig): RunConfig {
-  return {
-    ...base,
-    css: resolve(import.meta.dir, '../src/globals.generated.css'),
-  };
-}
-```
-
-**Library mode** (prod — recommended single path):
-
-```typescript
-// index.ts
-import { ui, resolveClayClientDir } from '@close-by/clay';
-import { join } from 'path';
-
-await ui.loadPages(new URL('./pages', import.meta.url));
-
 ui.run({
-  port: 4200,
-  title: 'My App',
-  clientDir: resolveClayClientDir(), // do not hardcode node_modules paths
-  css: join(import.meta.dir, 'src/globals.generated.css'),
-  app: { title: 'My App', nav: ui.navFromPages() },
+  css: './src/tokens.css', // merged with auto Tailwind output
 });
 ```
 
-See also [Boot: CLI vs library](./boot.md).
+## Custom scan roots
 
-## Minimal example
+```typescript
+ui.run({
+  tailwind: {
+    content: ['./pages', './lib/ui-helpers'],
+    watch: true,
+    appendCss: '/* optional extra CSS in the Tailwind input */',
+  },
+});
+```
 
-A copy-paste starter lives at [`examples/tailwind-app/`](../examples/tailwind-app/).
+## Manual pipeline (optional)
 
-## Token-only (no Tailwind CLI)
+If you prefer your own Tailwind input/`@source` setup, turn auto off and inject a prebuilt file:
 
-If you only need theme colors, skip the CLI and inject a small CSS file of `:root` / `.dark` variables — same as the [demo `globals.css`](../apps/demo/src/globals.css). Arbitrary utilities like `text-[10px]` will **not** work until you add a scanned Tailwind build.
+```bash
+bunx clay ./pages --no-tailwind
+# and ui.run({ tailwind: false, css: './src/globals.generated.css' })
+```
+
+See [`examples/tailwind-app/`](../examples/tailwind-app/) for a minimal zero-config app.

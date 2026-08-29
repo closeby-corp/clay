@@ -37,10 +37,10 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
 
 ### P2 — App toolchain
 
-- [x] **Tailwind v4 for Clay apps**
-  - [x] Document recommended setup (scan `pages/`, inject via `ui.run({ css })`)
-  - [x] Optional `@close-by/clay-tailwind` preset or example app template (watch + inject) — `examples/tailwind-app/` + `docs/tailwind.md`
-  - [x] Clarify: runtime CSS can override tokens; cannot invent unscanned utilities
+- [x] **Tailwind v4 for Clay apps** (zero-config via `ui.run` / `clay`; `--no-tailwind` to opt out)
+  - [x] Document recommended setup — auto scan + inject; optional tokens via `css`
+  - [x] Example app — `examples/tailwind-app/` + `docs/tailwind.md`
+  - [x] Clarify: runtime CSS can override tokens; app utilities come from auto scan (or `--no-tailwind` + manual build)
 - [x] **CLI reload stubs**
   - [x] Write `_clay-reload-*.ts` outside the pages tree (temp/gitignored dir), or otherwise keep them out of `tsc` / app source — now under `.clay-reload/`
 - [x] **CLI vs library boot contract**

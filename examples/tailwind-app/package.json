@@ -3,17 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "css:build": "bunx @tailwindcss/cli -i ./src/globals.css -o ./src/globals.generated.css",
-    "css:watch": "bunx @tailwindcss/cli -i ./src/globals.css -o ./src/globals.generated.css --watch",
-    "dev": "bun ./scripts/dev.ts",
-    "start": "bun run css:build && bun ./index.ts"
+    "dev": "bunx clay ./pages --app --title \"Clay Tailwind App\" --reload",
+    "start": "bun ./index.ts"
   },
   "dependencies": {
-    "@close-by/clay": "^0.1.0",
-    "@close-by/clay-cli": "^0.1.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.3.3",
-    "tailwindcss": "^4.3.3"
+    "@close-by/clay": "^0.2.2",
+    "@close-by/clay-cli": "^0.2.2"
   }
 }

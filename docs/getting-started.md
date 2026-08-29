@@ -248,7 +248,7 @@ ui.run({
 
 Point `clientDir` with `resolveClayClientDir()` (or omit it — `ui.run` does the same) instead of hardcoding `node_modules/@close-by/clay-cli/client-dist`. Details: [Boot](./boot.md).
 
-Use `css` to inject your own stylesheet after the built client styles. **Token overrides** (`--primary`, `--background`, …) always work. **New Tailwind utilities** only work if you build them with a scanned Tailwind pipeline — see [Tailwind](./tailwind.md). Runtime CSS cannot invent unscanned utilities.
+Use `css` to inject your own stylesheet after the built client styles. **Token overrides** (`--primary`, `--background`, …) always work. **Tailwind utilities** in page modules are auto-scanned by default (`clay` / `ui.run`) — see [Tailwind](./tailwind.md).
 
 ## Project layout (monorepo)
 

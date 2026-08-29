@@ -1,4 +1,4 @@
-import { isAbsolute, join, resolve } from 'path';
+import { dirname, isAbsolute, join, resolve } from 'path';
 import { existsSync, writeFileSync } from 'fs';
 import { stat } from 'fs/promises';
 import { registerReactiveLetPlugin } from '@close-by/clay-compiler/plugin';
@@ -191,6 +191,16 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   const isDir = entryStat.isDirectory();
   const title = await resolveTitle(args.title, process.cwd());
 
+  const contentRoot = isDir ? absEntry : dirname(absEntry);
+  if (args.tailwind) {
+    process.env.CLAY_TAILWIND_CONTENT = contentRoot;
+    if (args.reload) process.env.CLAY_TAILWIND_WATCH = '1';
+    delete process.env.CLAY_NO_TAILWIND;
+  } else {
+    process.env.CLAY_NO_TAILWIND = '1';
+    delete process.env.CLAY_TAILWIND_CONTENT;
+  }
+
   try {
     if (isDir) {
       await loadEntryDir(absEntry);
@@ -214,6 +224,20 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   });
   if (isDir) {
     config = await applyDirRunConfig(absEntry, config);
+  }
+
+  if (args.tailwind) {
+    const contentRoot = isDir ? absEntry : dirname(absEntry);
+    config = {
+      ...config,
+      // Prefer explicit entry scan; still allow configureRun css to merge.
+      tailwind: {
+        content: [contentRoot],
+        watch: args.reload,
+      },
+    };
+  } else {
+    config = { ...config, tailwind: false };
   }
 
   // Entry modules that call ui.run() themselves — nothing left for the CLI to do.

@@ -354,7 +354,10 @@ export class ClayServer {
               return new Response('CSS file not found', { status: 404 });
             }
             return new Response(file, {
-              headers: { 'Content-Type': 'text/css; charset=utf-8' },
+              headers: {
+                'Content-Type': 'text/css; charset=utf-8',
+                'Cache-Control': 'no-store',
+              },
             });
           }
 

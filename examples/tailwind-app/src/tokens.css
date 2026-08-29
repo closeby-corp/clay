@@ -1,0 +1,4 @@
+/* Optional theme overrides — utilities come from Clay auto Tailwind. */
+:root {
+  --primary: oklch(0.45 0.14 150);
+}

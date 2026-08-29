@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "NiceGUI-like ui.* facade for Clay apps",
   "license": "MIT",
   "type": "module",
@@ -27,6 +27,8 @@
   "dependencies": {
     "@close-by/clay-core": "workspace:*",
     "@close-by/clay-components": "workspace:*",
-    "@close-by/clay-server": "workspace:*"
+    "@close-by/clay-server": "workspace:*",
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   }
 }

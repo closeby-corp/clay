@@ -120,7 +120,7 @@ Returns `ClayServer` with `.start()` / `.stop()` / `.port` (`.start()` is alread
 
 Prefer the **`clay` CLI** for prototypes: `clay hello.ts` or `clay ./pages --app` (see [Getting started](./getting-started.md)).
 
-Custom CSS is linked as `/assets/custom-0.css`, … after `/assets/index.css`. Use **shadcn-style** theme variables (`--background`, `--primary`, `--sidebar`, `--radius`, …, plus optional `.dark { … }`). Runtime CSS cannot invent new Tailwind utility classes.
+Custom CSS is linked as `/assets/custom-0.css`, … after `/assets/index.css`. Use **shadcn-style** theme variables (`--background`, `--primary`, `--sidebar`, `--radius`, …, plus optional `.dark { … }`). App Tailwind utilities are auto-built by default from page modules — see [Tailwind](./tailwind.md).
 
 #### `ui.refreshable(fn)`
 

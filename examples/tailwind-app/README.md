@@ -1,20 +1,17 @@
-# Clay + Tailwind v4 example
+# Clay + Tailwind (zero-config)
 
-Minimal app showing scanned Tailwind utilities injected via `ui.run({ css })`.
+Use arbitrary Tailwind utilities in pages — Clay scans and injects CSS automatically.
 
 ```bash
 cd examples/tailwind-app
 bun install
-bun run dev          # Tailwind watch + clay --reload
+bun run dev          # clay --reload (auto Tailwind watch)
 # or
 bun run start        # library mode (index.ts)
 ```
 
-See [docs/tailwind.md](../../docs/tailwind.md) and [docs/boot.md](../../docs/boot.md).
+No Tailwind config or CSS build scripts. Output: `.clay/tailwind.css`.
 
-Add to `.gitignore`:
+Optional theme tokens: `src/tokens.css` (wired in `_run.ts` / `index.ts`).
 
-```
-src/globals.generated.css
-.clay-reload
-```
+See [docs/tailwind.md](../../docs/tailwind.md).

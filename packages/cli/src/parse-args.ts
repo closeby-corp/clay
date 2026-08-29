@@ -7,6 +7,11 @@ export type CliArgs = {
   reload: boolean;
   /** Register Bun loader for compile-time reactive `let` (default false — opt in with --reactive-let). */
   reactiveLet: boolean;
+  /**
+   * Auto-build + inject Tailwind for the entry (default true).
+   * Scans the entry directory (or the file’s folder) for className strings.
+   */
+  tailwind: boolean;
   help: boolean;
 };
 
@@ -24,12 +29,18 @@ Options:
   --no-open          Do not open the browser
   --reload           Restart on file changes (Bun --watch); opens browser once;
                      prints ↻ on each reload and re-imports pages with a cache bust
+  --tailwind         Auto-build Tailwind from the entry (default)
+  --no-tailwind      Disable auto Tailwind injection
   --reactive-let     Enable compile-time reactive let Bun loader (off by default)
   --no-reactive-let  Disable reactive-let (default; explicit no-op)
   -h, --help         Show help
 
 Directory entries may include optional _run.ts exporting configureRun(base)
 to merge into ui.run (skipped by loadPages).
+
+Tailwind: by default Clay scans your entry for className / .classes(...) and
+injects generated utilities (no app Tailwind config required). Use --no-tailwind
+to turn this off. Output lives under .clay/tailwind.css.
 `;
 
 export function printUsage(): void {
@@ -43,6 +54,7 @@ export function parseArgs(argv: string[]): CliArgs {
     open: true,
     reload: false,
     reactiveLet: false,
+    tailwind: true,
     help: false,
   };
 
@@ -60,6 +72,10 @@ export function parseArgs(argv: string[]): CliArgs {
       args.open = false;
     } else if (a === '--reload') {
       args.reload = true;
+    } else if (a === '--tailwind') {
+      args.tailwind = true;
+    } else if (a === '--no-tailwind') {
+      args.tailwind = false;
     } else if (a === '--reactive-let') {
       args.reactiveLet = true;
     } else if (a === '--no-reactive-let') {

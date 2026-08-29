@@ -10,6 +10,7 @@ describe('parseArgs', () => {
       open: true,
       reload: false,
       reactiveLet: false,
+      tailwind: true,
     });
   });
 
@@ -24,6 +25,7 @@ describe('parseArgs', () => {
       open: false,
       reload: true,
       reactiveLet: false,
+      tailwind: true,
       help: false,
     });
   });
@@ -34,6 +36,10 @@ describe('parseArgs', () => {
 
   test('--no-reactive-let', () => {
     expect(parseArgs(['app.ts', '--no-reactive-let']).reactiveLet).toBe(false);
+  });
+
+  test('--no-tailwind', () => {
+    expect(parseArgs(['./pages', '--no-tailwind']).tailwind).toBe(false);
   });
 
   test('help flag', () => {
