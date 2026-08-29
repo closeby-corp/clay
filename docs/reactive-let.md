@@ -130,7 +130,8 @@ ui.page('/', () => {
 | Pattern | Result |
 |---------|--------|
 | `ui.label(expr)` that reads tracked state | `ui.label(() => expr)` — runtime `bindText`, no `auto` |
-| Other build-time reads (e.g. `ui.badge({ text: String(n) })`) | `ui.auto` around that statement |
+| Other build-time reads (e.g. `ui.badge({ text: String(n) })`, `ui.badge(String(n))`, `ui.button(String(n))`) | compile-time bindText when the text expr reads state |
+| Other build-time reads without bindText sugar | `ui.auto` around that statement |
 | Contiguous autos with **disjoint** deps | Separate `auto` regions |
 | Contiguous autos with **overlapping** deps | One shared `auto` |
 | Shell / layout / handler-only writes | Stay outside any `auto` |
@@ -175,8 +176,8 @@ Mitigation today: leave the plugin off; use Phase 1 APIs. If you enable `--react
 - No `var`. Deeply nested patterns with rest at inner levels may abort the site.
 - Sibling initializers abort the site (`let b = a + 1` when both would lift).
 - Duplicate binding names in nested blocks abort the transform for that function.
-- Loop-scoped state keys use loop index (`for-of`) or `for (let i = …)` index — ensure stable ordering when mutating per-row UI state.
-- Compile-time `bindText` covers `ui.label` / `label` only (not badge/button text props).
+- Loop-scoped state keys prefer `String(row.id)` for `for (const row of …)` loops, with loop-index fallback when `.id` is missing.
+- Compile-time bindText covers `ui.label` / `label`, `ui.badge` / `badge` (positional + `{ text }`), and `ui.button` / `button` text.
 - Running the demo via plain `bun apps/demo/...` does **not** load the plugin unless you register it; use `clay --reactive-let` or `--preload`.
 - `const` is lifted like `let` (assignments become state writes). Prefer `let` in typed source if you reassign — `const` reassignment is a TS error before the transform runs.
 

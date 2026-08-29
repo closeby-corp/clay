@@ -16,7 +16,19 @@ export type ButtonProps = {
   onClick?: () => void | Promise<void>;
 };
 
-export function button(text?: string, props: Omit<ButtonProps, 'text'> = {}): Element {
+export function button(text?: string | (() => string), props: Omit<ButtonProps, 'text'> = {}): Element {
+  if (typeof text === 'function') {
+    return new Element('button', {
+      text: '',
+      icon: props.icon,
+      iconPosition: props.iconPosition ?? 'start',
+      variant: props.variant ?? 'default',
+      size: props.size ?? 'default',
+      disabled: props.disabled ?? false,
+      className: props.className,
+      onClick: props.onClick,
+    }).bindText(text);
+  }
   return new Element('button', {
     text: text ?? '',
     icon: props.icon,
@@ -430,7 +442,7 @@ export function externalLink(
 }
 
 export type BadgeProps = {
-  text?: string;
+  text?: string | (() => string);
   variant?: 'default' | 'secondary' | 'destructive' | 'outline';
   /** Dense ops chip (`text-[10px]` / `h-5`). */
   size?: 'default' | 'xs';
@@ -439,9 +451,44 @@ export type BadgeProps = {
   className?: string;
 };
 
-export function badge(text?: string, props: Omit<BadgeProps, 'text'> = {}): Element {
+function isBadgeProps(value: unknown): value is BadgeProps {
+  return typeof value === 'object' && value !== null;
+}
+
+export function badge(
+  textOrProps?: string | (() => string) | BadgeProps,
+  props: Omit<BadgeProps, 'text'> = {},
+): Element {
+  if (isBadgeProps(textOrProps)) {
+    const { text, ...rest } = textOrProps;
+    if (typeof text === 'function') {
+      return new Element('badge', {
+        text: '',
+        variant: rest.variant ?? 'default',
+        size: rest.size ?? 'default',
+        color: rest.color,
+        className: rest.className,
+      }).bindText(text);
+    }
+    return new Element('badge', {
+      text: text ?? '',
+      variant: rest.variant ?? 'default',
+      size: rest.size ?? 'default',
+      color: rest.color,
+      className: rest.className,
+    });
+  }
+  if (typeof textOrProps === 'function') {
+    return new Element('badge', {
+      text: '',
+      variant: props.variant ?? 'default',
+      size: props.size ?? 'default',
+      color: props.color,
+      className: props.className,
+    }).bindText(textOrProps);
+  }
   return new Element('badge', {
-    text: text ?? '',
+    text: textOrProps ?? '',
     variant: props.variant ?? 'default',
     size: props.size ?? 'default',
     color: props.color,

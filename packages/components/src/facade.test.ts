@@ -115,6 +115,19 @@ describe('facade feedback / layout elements', () => {
     expect(el.props.text).toBe('n=4');
   });
 
+  test('badge and button accept compute fn via bindText', async () => {
+    const s = reactive({ n: 2 });
+    const chip = badge(() => `v=${s.n}`);
+    const btn = button(() => `v=${s.n}`);
+    expect(chip.props.text).toBe('v=2');
+    expect(btn.props.text).toBe('v=2');
+    s.n = 5;
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(chip.props.text).toBe('v=5');
+    expect(btn.props.text).toBe('v=5');
+  });
+
   test('input error prop wires through', () => {
     const el = input({ label: 'Name', error: 'Required' });
     expect(el.type).toBe('input');

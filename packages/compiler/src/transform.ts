@@ -972,6 +972,41 @@ function planForLoopId(plans: LoopPlan[], loopId: number): LoopPlan | undefined 
   return plans.find((p) => p.loopId === loopId);
 }
 
+function forOfLoopVarIdent(stmt: ts.ForOfStatement): ts.Identifier | null {
+  if (!ts.isVariableDeclarationList(stmt.initializer)) return null;
+  const decl = stmt.initializer.declarations[0];
+  if (!decl || !ts.isIdentifier(decl.name)) return null;
+  return decl.name;
+}
+
+function loopKeyDeclForForOf(
+  factory: ts.NodeFactory,
+  plan: LoopPlan,
+  loopVar: ts.Identifier,
+  indexIdent: ts.Identifier,
+): ts.VariableStatement {
+  return factory.createVariableStatement(
+    undefined,
+    factory.createVariableDeclarationList(
+      [
+        factory.createVariableDeclaration(
+          plan.keyIdent,
+          undefined,
+          undefined,
+          factory.createCallExpression(factory.createIdentifier('String'), undefined, [
+            factory.createBinaryExpression(
+              factory.createPropertyAccessExpression(loopVar, 'id'),
+              ts.SyntaxKind.QuestionQuestionToken,
+              factory.createPostfixUnaryExpression(indexIdent, ts.SyntaxKind.PlusPlusToken),
+            ),
+          ]),
+        ),
+      ],
+      ts.NodeFlags.Const,
+    ),
+  );
+}
+
 function forLoopIndexIdent(forStmt: ts.ForStatement): ts.Identifier | null {
   if (!forStmt.initializer || !ts.isVariableDeclarationList(forStmt.initializer)) return null;
   const decl = forStmt.initializer.declarations[0];
@@ -1133,6 +1168,7 @@ function transformLoopsInStatements(
         );
         continue;
       }
+      const loopVar = ts.isForOfStatement(stmt) ? forOfLoopVarIdent(stmt) : null;
       const indexDecl = factory.createVariableStatement(
         undefined,
         factory.createVariableDeclarationList(
@@ -1147,25 +1183,27 @@ function transformLoopsInStatements(
           ts.NodeFlags.Let,
         ),
       );
-      const keyDecl = factory.createVariableStatement(
-        undefined,
-        factory.createVariableDeclarationList(
-          [
-            factory.createVariableDeclaration(
-              plan.keyIdent,
-              undefined,
-              undefined,
-              factory.createCallExpression(factory.createIdentifier('String'), undefined, [
-                factory.createPostfixUnaryExpression(
-                  plan.indexIdent,
-                  ts.SyntaxKind.PlusPlusToken,
+      const keyDecl = loopVar
+        ? loopKeyDeclForForOf(factory, plan, loopVar, plan.indexIdent)
+        : factory.createVariableStatement(
+            undefined,
+            factory.createVariableDeclarationList(
+              [
+                factory.createVariableDeclaration(
+                  plan.keyIdent,
+                  undefined,
+                  undefined,
+                  factory.createCallExpression(factory.createIdentifier('String'), undefined, [
+                    factory.createPostfixUnaryExpression(
+                      plan.indexIdent,
+                      ts.SyntaxKind.PlusPlusToken,
+                    ),
+                  ]),
                 ),
-              ]),
+              ],
+              ts.NodeFlags.Const,
             ),
-          ],
-          ts.NodeFlags.Const,
-        ),
-      );
+          );
       const keyExpr = plan.keyIdent;
       const newBody = prependToLoopBody(factory, stmt.statement, [keyDecl]);
       const inner = transformLoopsInStatements(
@@ -1514,62 +1552,33 @@ function isAutoCallStatement(stmt: ts.Statement): boolean {
   );
 }
 
-function isLabelCallee(expr: ts.Expression): boolean {
-  if (ts.isIdentifier(expr) && expr.text === 'label') return true;
-  return (
+function isBindTextCallee(expr: ts.Expression): 'label' | 'badge' | 'button' | null {
+  if (ts.isIdentifier(expr)) {
+    if (expr.text === 'label' || expr.text === 'badge' || expr.text === 'button') return expr.text;
+    return null;
+  }
+  if (
     ts.isPropertyAccessExpression(expr) &&
     ts.isIdentifier(expr.expression) &&
     expr.expression.text === 'ui' &&
-    ts.isIdentifier(expr.name) &&
-    expr.name.text === 'label'
-  );
+    ts.isIdentifier(expr.name)
+  ) {
+    const n = expr.name.text;
+    if (n === 'label' || n === 'badge' || n === 'button') return n;
+  }
+  return null;
 }
 
-/**
- * `ui.label(expr)` / `label(expr)` (optionally chained `.classes(...)`) whose
- * text reads state → `ui.label(() => expr)` (runtime `bindText`).
- */
-function tryRewriteLabelBindText(
+function isLabelCallee(expr: ts.Expression): boolean {
+  return isBindTextCallee(expr) === 'label';
+}
+
+function applyTrail(
   factory: ts.NodeFactory,
-  stmt: ts.Statement,
-  stateIdent: ts.Identifier,
-  names: Set<string>,
-): ts.Statement | null {
-  if (!ts.isExpressionStatement(stmt)) return null;
-
-  // Unwrap trailing `.classes(...)` / `.className(...)` calls to find `label(...)`.
-  let expr: ts.Expression = stmt.expression;
-  const trail: ts.CallExpression[] = [];
-  while (ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression)) {
-    const method = expr.expression.name.text;
-    if (method !== 'classes' && method !== 'className') break;
-    trail.unshift(expr);
-    expr = expr.expression.expression;
-  }
-
-  if (!ts.isCallExpression(expr) || !isLabelCallee(expr.expression) || expr.arguments.length === 0) {
-    return null;
-  }
-
-  const textArg = expr.arguments[0]!;
-  if (ts.isArrowFunction(textArg) || ts.isFunctionExpression(textArg)) return null;
-  if (!readsStateDuringBuild(textArg, stateIdent, names)) return null;
-
-  const compute = factory.createArrowFunction(
-    undefined,
-    undefined,
-    [],
-    undefined,
-    factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
-    textArg,
-  );
-  const newArgs = factory.createNodeArray([compute, ...expr.arguments.slice(1)]);
-  let rebuilt: ts.Expression = factory.updateCallExpression(
-    expr,
-    expr.expression,
-    expr.typeArguments,
-    newArgs,
-  );
+  core: ts.Expression,
+  trail: ts.CallExpression[],
+): ts.Expression {
+  let rebuilt = core;
   for (const call of trail) {
     rebuilt = factory.updateCallExpression(
       call,
@@ -1581,12 +1590,112 @@ function tryRewriteLabelBindText(
       call.arguments,
     );
   }
+  return rebuilt;
+}
+
+/**
+ * `ui.label|badge|button(expr)` (optionally chained `.classes(...)`) or
+ * `ui.badge({ text: expr, … })` when text reads state → bindText-style `(() => expr)`.
+ */
+function tryRewriteBindText(
+  factory: ts.NodeFactory,
+  stmt: ts.Statement,
+  stateIdent: ts.Identifier,
+  names: Set<string>,
+): ts.Statement | null {
+  if (!ts.isExpressionStatement(stmt)) return null;
+
+  let expr: ts.Expression = stmt.expression;
+  const trail: ts.CallExpression[] = [];
+  while (ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression)) {
+    const method = expr.expression.name.text;
+    if (method !== 'classes' && method !== 'className') break;
+    trail.unshift(expr);
+    expr = expr.expression.expression;
+  }
+
+  if (!ts.isCallExpression(expr) || expr.arguments.length === 0) return null;
+  const widget = isBindTextCallee(expr.expression);
+  if (!widget) return null;
+
+  const textArg = expr.arguments[0]!;
+  if (ts.isObjectLiteralExpression(textArg) && widget === 'badge') {
+    let changed = false;
+    const props = textArg.properties.map((prop) => {
+      if (!ts.isPropertyAssignment(prop)) return prop;
+      const key =
+        ts.isIdentifier(prop.name) ? prop.name.text
+        : ts.isStringLiteral(prop.name) ? prop.name.text
+        : null;
+      if (key !== 'text') return prop;
+      if (ts.isArrowFunction(prop.initializer) || ts.isFunctionExpression(prop.initializer)) {
+        return prop;
+      }
+      if (!readsStateDuringBuild(prop.initializer, stateIdent, names)) return prop;
+      changed = true;
+      return factory.updatePropertyAssignment(
+        prop,
+        prop.name,
+        factory.createArrowFunction(
+          undefined,
+          undefined,
+          [],
+          undefined,
+          factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+          prop.initializer,
+        ),
+      );
+    });
+    if (!changed) return null;
+    const rebuilt = applyTrail(
+      factory,
+      factory.updateCallExpression(
+        expr,
+        expr.expression,
+        expr.typeArguments,
+        factory.createNodeArray([factory.updateObjectLiteralExpression(textArg, props)]),
+      ),
+      trail,
+    );
+    return factory.updateExpressionStatement(stmt, rebuilt);
+  }
+
+  if (ts.isArrowFunction(textArg) || ts.isFunctionExpression(textArg)) return null;
+  if (!readsStateDuringBuild(textArg, stateIdent, names)) return null;
+
+  const compute = factory.createArrowFunction(
+    undefined,
+    undefined,
+    [],
+    undefined,
+    factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+    textArg,
+  );
+  const rebuilt = applyTrail(
+    factory,
+    factory.updateCallExpression(
+      expr,
+      expr.expression,
+      expr.typeArguments,
+      factory.createNodeArray([compute, ...expr.arguments.slice(1)]),
+    ),
+    trail,
+  );
   return factory.updateExpressionStatement(stmt, rebuilt);
+}
+
+function tryRewriteLabelBindText(
+  factory: ts.NodeFactory,
+  stmt: ts.Statement,
+  stateIdent: ts.Identifier,
+  names: Set<string>,
+): ts.Statement | null {
+  return tryRewriteBindText(factory, stmt, stateIdent, names);
 }
 
 /**
  * Split statements into inert vs reactive regions:
- * - `ui.label(expr)` reading state → compile-time `bindText` (`label(() => expr)`)
+ * - `ui.label|badge|button(expr)` reading state → compile-time bindText
  * - other build-time reads → `ui.auto`, **dependency-isolated** when read-sets are
  *   disjoint — but statements that use locals declared in the current run stay
  *   glued together (avoids `const row = …` inside auto and `if (!row)` outside)
@@ -1693,7 +1802,7 @@ function emitWithRegions(
       continue;
     }
 
-    const bound = tryRewriteLabelBindText(factory, stmt, stateIdent, names);
+    const bound = tryRewriteBindText(factory, stmt, stateIdent, names);
     if (bound) {
       flush();
       out.push(bound);

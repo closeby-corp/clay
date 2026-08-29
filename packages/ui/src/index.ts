@@ -713,8 +713,11 @@ export function externalLink(
 }
 
 /** Small status badge. Prefer `ui.badge`. See {@link BadgeProps}. */
-export function badge(text?: string, props?: Omit<BadgeProps, 'text'>): Element {
-  return badgeFactory(text, props);
+export function badge(
+  text?: string | (() => string) | BadgeProps,
+  props?: Omit<BadgeProps, 'text'>,
+): Element {
+  return badgeFactory(text as Parameters<typeof badgeFactory>[0], props);
 }
 
 /**

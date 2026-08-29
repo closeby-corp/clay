@@ -77,9 +77,8 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
   - [x] Nested `auto` reuse without remounting when only inner props change
   - [x] Docs: `let` happy path for demos; Phase 1 escape hatch for production/async
   - [x] P2: shadowing warnings + emit renames (`renameShadowedLocals`, default on)
-- [ ] **NiceGUI let — optional follow-ups** (not blocking)
-  - [ ] Compile-time `bindText` for more widgets (`badge` text, button labels, …)
-  - [ ] Loop-scoped state keyed by row `.id` (today: loop index / `for (let i …)`)
+  - [x] Compile-time bindText for `badge` / `button` (positional + `badge({ text })`)
+  - [x] Loop-scoped state keyed by `row.id` with index fallback (`for-of` identifier bindings)
 - [x] **Investigate: `ui.jsx` / JSX trees instead of HTML strings** — writeup [`docs/jsx-investigation.md`](./docs/jsx-investigation.md)
   - Pain: `ui.html('<div…>')` is opaque (no IDE structure) and blocks real custom components; client path is `dangerouslySetInnerHTML`
   - Goal: author markup as markup (JSX) with IDE support for tags + user-defined components — not hyperscript `ui.jsx('div', props)`, and not a second UI stack
@@ -120,6 +119,7 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
 
 ## Done (recent)
 
+- NiceGUI let follow-ups: badge/button bindText, loop keys from `row.id`; north-star checklist complete
 - NiceGUI let parity: nested/rest destructuring, loop-scoped keyed state, shadow renames, nested `auto` reuse; docs happy path ([`docs/reactive-let.md`](./docs/reactive-let.md))
 - Reactive follow-up: `ui.auto` in-place `updateProps` when tree shape is stable; expanded `let` transform (non-leading / nested blocks / more initializers); `ui.label(() => …)` + `bindText`
 - Reactive Phase 2 MVP: `@close-by/clay-compiler` transform + `clay --reactive-let` Bun loader (subset `let` → `ui.state` / `ui.auto`)

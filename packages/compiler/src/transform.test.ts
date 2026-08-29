@@ -334,6 +334,7 @@ ui.page('/', () => {
     expect(out.transformed).toBe(true);
     expect(out.lets.sort()).toEqual(['open', 'rows'].sort());
     expect(out.code).toContain('__clay_l0_open');
+    expect(out.code).toContain('row.id');
     expect(out.code).toMatch(/__clay_lk_/);
   });
 
@@ -627,7 +628,7 @@ ui.page('/', () => {
     expect(out.code.match(/ui\.label\(\(\) =>/g)?.length).toBe(2);
   });
 
-  test('dep-isolated: non-label reads with disjoint deps get separate autos', () => {
+  test('dep-isolated: non-label reads with disjoint deps get bindText on badge', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
@@ -639,22 +640,39 @@ ui.page('/', () => {
 `;
     const out = transformReactiveLet(src, 'page.ts');
     expect(out.transformed).toBe(true);
-    expect(out.code.match(/ui\.auto\(/g)?.length).toBe(2);
+    expect(out.code.match(/ui\.auto\(/g)?.length ?? 0).toBe(0);
+    expect(out.code.match(/text: \(\) =>/g)?.length).toBe(2);
   });
 
-  test('dep-isolated: overlapping deps share one auto', () => {
+  test('bindText on positional badge and button', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let n = 1;
+  ui.badge(String(n));
+  ui.button(String(n), { onClick: () => { n++; } });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.code).toContain('ui.badge(() => String(__clay_s0.n))');
+    expect(out.code).toContain('ui.button(() => String(__clay_s0.n)');
+    expect(out.code.match(/ui\.auto\(/g)?.length ?? 0).toBe(0);
+  });
+
+  test('dep-isolated: overlapping deps share one bindText on badge', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
   let a = 1;
   let b = 2;
-  ui.badge({ text: String(a) });
   ui.badge({ text: String(a) + String(b) });
 });
 `;
     const out = transformReactiveLet(src, 'page.ts');
     expect(out.transformed).toBe(true);
-    expect(out.code.match(/ui\.auto\(/g)?.length).toBe(1);
+    expect(out.code.match(/ui\.auto\(/g)?.length ?? 0).toBe(0);
+    expect(out.code).toMatch(/text: \(\) => String\(__clay_s0\.a\) \+ String\(__clay_s0\.b\)/);
   });
 
   test('glues locals: const row + if (!row) stay in one auto', () => {
