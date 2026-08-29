@@ -28,7 +28,8 @@ export function demoAppShell(title?: string): NonNullable<RunConfig['app']> {
     title,
     get nav() {
       const user = getSessionUser();
-      return ui.navFromPages(user ? { role: user.role } : undefined);
+      const roleOpts = user ? { role: user.role } : {};
+      return ui.navFromPages({ ...roleOpts, groupExamples: true });
     },
   };
 }

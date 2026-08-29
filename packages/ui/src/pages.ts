@@ -58,6 +58,10 @@ export type PageMeta = {
    * UX only — still call `requireRole` in the page builder.
    */
   roles?: string[];
+  /** Nest this page under a collapsible sidebar group with the given label. */
+  group?: string;
+  /** Lucide icon for the group parent row (first page in the group with this set wins). */
+  groupIcon?: string;
 };
 
 const pageMetaByPath = new Map<string, PageMeta>();
@@ -140,7 +144,75 @@ export type NavFromPagesOptions = {
   role?: string;
   /** Viewer roles — page is shown if it has no `roles` meta, or any overlap. */
   roles?: string[];
+  /**
+   * When true, nest `/examples/*` routes (except `/examples/auth`) under an
+   * "Examples" group. Individual pages can override with `pageMeta.group`.
+   */
+  groupExamples?: boolean;
+  /** Label for the auto examples group. Default `"Examples"`. */
+  groupExamplesLabel?: string;
+  /** Icon for the auto examples group. Default `"layout-grid"`. */
+  groupExamplesIcon?: string;
 };
+
+type RankedNavPage = {
+  href: string;
+  label: string;
+  icon: string;
+  order: number;
+  group?: string;
+  groupIcon?: string;
+};
+
+function resolvePageGroup(
+  href: string,
+  meta: PageMeta,
+  opts?: NavFromPagesOptions,
+): { group?: string; groupIcon?: string } {
+  if (meta.group !== undefined) {
+    return meta.group ? { group: meta.group, groupIcon: meta.groupIcon } : {};
+  }
+  if (opts?.groupExamples && href.startsWith('/examples/') && href !== '/examples/auth') {
+    return {
+      group: opts.groupExamplesLabel ?? 'Examples',
+      groupIcon: opts.groupExamplesIcon ?? 'layout-grid',
+    };
+  }
+  return {};
+}
+
+function buildNavFromRanked(ranked: RankedNavPage[]): AppNavItem[] {
+  const top: Array<{ order: number; node: AppNavItem }> = [];
+  const groups = new Map<string, AppNavItem>();
+
+  for (const row of ranked) {
+    const leaf: AppNavItem = { label: row.label, href: row.href, icon: row.icon };
+    if (!row.group) {
+      top.push({ order: row.order, node: leaf });
+      continue;
+    }
+
+    let parent = groups.get(row.group);
+    if (!parent) {
+      parent = {
+        label: row.group,
+        href: row.href,
+        icon: row.groupIcon ?? 'folder',
+        items: [],
+      };
+      groups.set(row.group, parent);
+      top.push({ order: row.order, node: parent });
+    } else {
+      const entry = top.find((t) => t.node === parent);
+      if (entry) entry.order = Math.min(entry.order, row.order);
+      if (row.groupIcon && parent.icon === 'folder') parent.icon = row.groupIcon;
+    }
+    parent.items!.push(leaf);
+  }
+
+  top.sort((a, b) => a.order - b.order || a.node.label.localeCompare(b.node.label));
+  return top.map((t) => t.node);
+}
 
 /**
  * Build primary sidebar nav from registered pages + collected `pageMeta`.
@@ -160,10 +232,11 @@ export function navFromPages(opts?: NavFromPagesOptions): AppNavItem[] {
   }
 
   const paths = getRegisteredPaths();
-  const ranked = paths
+  const ranked: RankedNavPage[] = paths
     .map((href) => {
       const meta = pageMetaByPath.get(href) ?? {};
       const order = href === '/' ? 0 : (meta.order ?? 100);
+      const { group, groupIcon } = resolvePageGroup(href, meta, opts);
       return {
         href,
         label: meta.label ?? labelFromPath(href),
@@ -171,6 +244,8 @@ export function navFromPages(opts?: NavFromPagesOptions): AppNavItem[] {
         order,
         nav: meta.nav !== false,
         roles: meta.roles,
+        group,
+        groupIcon,
       };
     })
     .filter((item) => {
@@ -178,9 +253,10 @@ export function navFromPages(opts?: NavFromPagesOptions): AppNavItem[] {
       if (!item.roles || item.roles.length === 0) return true;
       if (viewer.size === 0) return false;
       return item.roles.some((r) => viewer.has(r));
-    });
+    })
+    .map(({ nav: _nav, roles: _roles, ...rest }) => rest);
   ranked.sort((a, b) => a.order - b.order || a.href.localeCompare(b.href));
-  return ranked.map(({ href, label, icon }) => ({ href, label, icon }));
+  return buildNavFromRanked(ranked);
 }
 
 /** Test helper: clear page registry + meta map. */

@@ -44,6 +44,43 @@ describe('app layout', () => {
     });
   });
 
+  test('marks nested nav child active and uses child label in header', () => {
+    const session = {
+      path: '/examples/charts',
+      register() {},
+      unregister() {},
+    } as any;
+    runWithSession(session, () => {
+      const el = app(
+        {
+          title: 'Clay',
+          nav: [
+            { label: 'Home', href: '/', icon: 'home' },
+            {
+              label: 'Examples',
+              href: '/examples/counter',
+              icon: 'layout-grid',
+              items: [
+                { label: 'Counter', href: '/examples/counter', icon: 'gauge' },
+                { label: 'Charts', href: '/examples/charts', icon: 'chart-area' },
+              ],
+            },
+          ],
+        },
+        () => {},
+      );
+      const nav = el.props.nav as Array<{
+        label: string;
+        active: boolean;
+        items?: Array<{ href: string; active: boolean; label: string }>;
+      }>;
+      const examples = nav.find((n) => n.label === 'Examples');
+      expect(examples?.active).toBe(true);
+      expect(examples?.items?.find((n) => n.href === '/examples/charts')?.active).toBe(true);
+      expect(el.props.headerTitle).toBe('Charts');
+    });
+  });
+
   test('omits primaryAction by default', () => {
     const session = {
       path: '/',

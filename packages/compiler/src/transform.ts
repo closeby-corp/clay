@@ -1560,6 +1560,33 @@ function isClayUiBuilderCallback(
   return false;
 }
 
+/** True when `fn` is an event-handler closure (`onClick`, `onChange`, …). */
+function isHandlerCallback(
+  fn: ts.ArrowFunction | ts.FunctionExpression,
+  parent: ts.Node | undefined,
+): boolean {
+  if (!parent || !ts.isPropertyAssignment(parent)) return false;
+  if (parent.initializer !== fn) return false;
+  const key = propertyAssignmentName(parent.name);
+  return key ? isHandlerPropName(key) : false;
+}
+
+type BuilderSiteCtx = { inAuto: boolean; inWidget: boolean; inHandler: boolean };
+
+function builderSiteChildCtx(
+  fn: ts.ArrowFunction | ts.FunctionExpression,
+  parent: ts.Node | undefined,
+  ctx: BuilderSiteCtx,
+): BuilderSiteCtx {
+  return {
+    inAuto: ctx.inAuto || isAutoOrRefreshableCallback(fn, parent),
+    inHandler: ctx.inHandler || isHandlerCallback(fn, parent),
+    inWidget:
+      ctx.inWidget ||
+      (isClayUiBuilderCallback(fn, parent) && !isHandlerCallback(fn, parent)),
+  };
+}
+
 function noteShadowRename(
   shadowWarnings: string[],
   shadowed: string,
@@ -2201,25 +2228,21 @@ function isBareBuilderCallExpr(
 function collectWidgetBuilderCallWarnings(body: ts.Block, builders: Set<string>): string[] {
   if (builders.size === 0) return [];
   const warnings: string[] = [];
-  type Ctx = { inAuto: boolean; inWidget: boolean };
 
-  const visit = (node: ts.Node, parent: ts.Node | undefined, ctx: Ctx) => {
+  const visit = (node: ts.Node, parent: ts.Node | undefined, ctx: BuilderSiteCtx) => {
     if (
       (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
       node.body &&
       ts.isBlock(node.body)
     ) {
-      const childCtx: Ctx = {
-        inAuto: ctx.inAuto || isAutoOrRefreshableCallback(node, parent),
-        inWidget: ctx.inWidget || isClayUiBuilderCallback(node, parent),
-      };
+      const childCtx = builderSiteChildCtx(node, parent, ctx);
       for (const stmt of node.body.statements) {
         visit(stmt, node, childCtx);
       }
       return;
     }
 
-    if (ts.isExpressionStatement(node) && ctx.inWidget && !ctx.inAuto) {
+    if (ts.isExpressionStatement(node) && ctx.inWidget && !ctx.inAuto && !ctx.inHandler) {
       const builder = isBareBuilderCallExpr(node.expression, builders);
       if (builder) {
         warnings.push(
@@ -2233,7 +2256,7 @@ function collectWidgetBuilderCallWarnings(body: ts.Block, builders: Set<string>)
   };
 
   for (const stmt of body.statements) {
-    visit(stmt, body, { inAuto: false, inWidget: false });
+    visit(stmt, body, { inAuto: false, inWidget: false, inHandler: false });
   }
   return warnings;
 }
@@ -2251,6 +2274,65 @@ function autoWrapBuilderCalls(
     if (!isBareBuilderCall(stmt, builders)) return stmt;
     return createAutoCall(factory, [stmt], useUi);
   });
+}
+
+/** Auto-wrap state-reading builder calls inside Clay widget callbacks (not handlers). */
+function autoWrapBuilderCallsInWidgetCallbacks(
+  context: ts.TransformationContext,
+  statements: readonly ts.Statement[],
+  builders: Set<string>,
+  useUi: boolean,
+): ts.Statement[] {
+  if (builders.size === 0) return [...statements];
+  const { factory } = context;
+
+  const visit = (node: ts.Node, parent: ts.Node | undefined, ctx: BuilderSiteCtx): ts.Node => {
+    if (
+      (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+      node.body &&
+      ts.isBlock(node.body)
+    ) {
+      const childCtx = builderSiteChildCtx(node, parent, ctx);
+      const body = node.body;
+      const newStmts = body.statements.map((s) => visit(s, node, childCtx) as ts.Statement);
+      const newBody = factory.updateBlock(body, newStmts);
+      if (ts.isArrowFunction(node)) {
+        return factory.updateArrowFunction(
+          node,
+          node.modifiers,
+          node.typeParameters,
+          node.parameters,
+          node.type,
+          node.equalsGreaterThanToken,
+          newBody,
+        );
+      }
+      return factory.updateFunctionExpression(
+        node,
+        node.modifiers,
+        node.asteriskToken,
+        node.name,
+        node.typeParameters,
+        node.parameters,
+        node.type,
+        newBody,
+      );
+    }
+
+    if (
+      ts.isExpressionStatement(node) &&
+      ctx.inWidget &&
+      !ctx.inAuto &&
+      !ctx.inHandler &&
+      isBareBuilderCallExpr(node.expression, builders)
+    ) {
+      return createAutoCall(factory, [node], useUi);
+    }
+
+    return ts.visitEachChild(node, (child) => visit(child, node, ctx), context);
+  };
+
+  return statements.map((s) => visit(s, undefined, { inAuto: false, inWidget: false, inHandler: false }) as ts.Statement);
 }
 
 /**
@@ -2307,8 +2389,8 @@ export function transformReactiveLet(
     }
     if (!autoWrapBuilders) {
       warnings.push(...collectAutoRegionWarnings(body, builders));
+      warnings.push(...collectWidgetBuilderCallWarnings(body, builders));
     }
-    warnings.push(...collectWidgetBuilderCallWarnings(body, builders));
   }
 
   const transformer: ts.TransformerFactory<ts.SourceFile> = (context) => {
@@ -2423,7 +2505,12 @@ export function transformReactiveLet(
 
       const builders = buildersBySite.get(node) ?? new Set<string>();
       const withBuilders = autoWrapBuilders
-        ? autoWrapBuilderCalls(context, rewrittenRest, builders, useUi)
+        ? autoWrapBuilderCallsInWidgetCallbacks(
+            context,
+            autoWrapBuilderCalls(context, rewrittenRest, builders, useUi),
+            builders,
+            useUi,
+          )
         : rewrittenRest;
 
       const regionStmts = emitWithRegions(context, withBuilders, stateName, fnNames, useUi);

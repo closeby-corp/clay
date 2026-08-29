@@ -1,12 +1,107 @@
+import { ChevronRightIcon } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { go, resolveNavIcon, type ShellNavItem, type ShellPrimaryAction } from './types';
+
+function NavLink({
+  item,
+  onNavigate,
+  sub = false,
+}: {
+  item: ShellNavItem;
+  onNavigate: (href: string) => void;
+  sub?: boolean;
+}) {
+  const Icon = resolveNavIcon(item.icon);
+  const content = (
+    <>
+      {!sub ? <Icon /> : null}
+      <span>{item.label}</span>
+    </>
+  );
+
+  if (sub) {
+    return (
+      <SidebarMenuSubButton asChild isActive={!!item.active}>
+        <a
+          href={item.href}
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate(item.href);
+          }}
+        >
+          {content}
+        </a>
+      </SidebarMenuSubButton>
+    );
+  }
+
+  return (
+    <SidebarMenuButton asChild tooltip={item.label} isActive={!!item.active}>
+      <a
+        href={item.href}
+        onClick={(e) => {
+          e.preventDefault();
+          onNavigate(item.href);
+        }}
+      >
+        {content}
+      </a>
+    </SidebarMenuButton>
+  );
+}
+
+function NavMainItem({
+  item,
+  onNavigate,
+}: {
+  item: ShellNavItem;
+  onNavigate: (href: string) => void;
+}) {
+  const subItems = item.items ?? [];
+  if (subItems.length === 0) {
+    return (
+      <SidebarMenuItem>
+        <NavLink item={item} onNavigate={onNavigate} />
+      </SidebarMenuItem>
+    );
+  }
+
+  const Icon = resolveNavIcon(item.icon);
+
+  return (
+    <SidebarMenuItem>
+      <Collapsible defaultOpen={!!item.active} className="group/collapsible w-full">
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton tooltip={item.label} isActive={!!item.active}>
+            <Icon />
+            <span>{item.label}</span>
+            <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {subItems.map((sub) => (
+              <SidebarMenuSubItem key={sub.href}>
+                <NavLink item={sub} onNavigate={onNavigate} sub />
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuItem>
+  );
+}
 
 export function NavMain({
   items,
@@ -19,6 +114,11 @@ export function NavMain({
   const PrimaryIcon = primaryAction
     ? resolveNavIcon(primaryAction.icon ?? 'plus-circle')
     : null;
+
+  const onNavigate = (href: string) => {
+    go(href);
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <SidebarGroup>
@@ -36,8 +136,7 @@ export function NavMain({
                     href={primaryAction.href}
                     onClick={(e) => {
                       e.preventDefault();
-                      go(primaryAction.href!);
-                      if (isMobile) setOpenMobile(false);
+                      onNavigate(primaryAction.href!);
                     }}
                   >
                     <PrimaryIcon />
@@ -57,26 +156,13 @@ export function NavMain({
           </SidebarMenu>
         ) : null}
         <SidebarMenu>
-          {items.map((item) => {
-            const Icon = resolveNavIcon(item.icon);
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild tooltip={item.label} isActive={!!item.active}>
-                  <a
-                    href={item.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      go(item.href);
-                      if (isMobile) setOpenMobile(false);
-                    }}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
+          {items.map((item) => (
+            <NavMainItem
+              key={item.items?.length ? `${item.label}:${item.href}` : item.href}
+              item={item}
+              onNavigate={onNavigate}
+            />
+          ))}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

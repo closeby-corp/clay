@@ -96,18 +96,21 @@ Compile-time region analysis **does not** see into nested function bodies. Autho
 | Named `renderX()` builders | **Author** — `ui.auto(() => { renderFeed(); })` |
 | UI inside widget callbacks (`row` / `column` / `dialog` / …) that need rebuild | **Author**, **or** read lets at the site top level so the transform can see them |
 
-Bare top-level `renderFeed()` calls that read lifted lets are **auto-wrapped** in `ui.auto(() => { renderFeed(); })` by default (`autoWrapBuilders: true`). Pass `{ autoWrapBuilders: false }` to the transform to only **warn** instead.
+Bare top-level `renderFeed()` calls that read lifted lets are **auto-wrapped** in `ui.auto(() => { renderFeed(); })` by default (`autoWrapBuilders: true`). The same applies to bare builder calls **inside Clay widget callbacks** (`ui.row`, `ui.column`, `ui.dialog`, …) — but **not** inside event handlers (`onClick`, `onChange`, …). Pass `{ autoWrapBuilders: false }` to the transform to **warn** instead.
+
+Inline UI in widget callbacks (`ui.label(expr)`, `ui.icon(…, { className: expr })`, …) gets **bindText** or nested **`ui.auto`** via region analysis — no manual wrap when the transform can see the reads.
 
 ### Decision table (complex pages)
 
 | You wrote… | Clay does… | You must… |
 |------------|------------|-----------|
 | `let x = Date.now()` / `defaultRangeFrom()` / `new Map()` | Lifts into `ui.state({ x: … })` one-shot | Nothing |
-| `renderList()` at page top level (bare call) | Wraps in `ui.auto(() => { renderList(); })` | Nothing |
-| `renderList()` inside `ui.row(() => …)` / other widget child | **No** auto-wrap; compile **warning** | Add `ui.auto` yourself |
-| State read inside `units.filter(u => { … })` block body | **No** `ui.auto` injection (plain JS) | Nothing — or hoist with a scratch local if clearer |
-| `onClick` / `ui.timer` / handler closures | Handler-only — no nested `auto` | Nothing |
-| `const live = ui.state({…})` (no pragma) | Unchanged | Explicit `ui.auto` as in Phase 1 |
+| `renderList()` at page top level (bare call) | Wraps in `ui.auto` | Nothing |
+| `renderList()` inside `ui.row(() => …)` (bare call) | Wraps in `ui.auto` inside the widget callback | Nothing |
+| Inline `ui.label` / `ui.icon` reads in widget callback | `bindText` or nested `ui.auto` | Nothing (when reads are visible to the transform) |
+| `units.filter(u => { … })` reading lifted state | Plain JS (no `ui.auto` inside filter) | Nothing |
+| `onClick` / `onChange` / `ui.timer` handler | Not a build region | Normal JS |
+| `const live = ui.state({…})` (no pragma) | Unchanged | Explicit `ui.auto` (Phase 1) |
 | Local `const detail = …` shadows lifted `let detail` | Renames in emit + compile warning | Prefer distinct names |
 
 ### What transforms

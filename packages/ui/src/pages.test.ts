@@ -81,6 +81,43 @@ describe('loadPages + navFromPages', () => {
     expect(navFromPages().map((n) => n.href)).not.toContain('/examples/admin-only');
   });
 
+  test('groupExamples nests example routes under a parent item', () => {
+    page('/', () => {});
+    page('/examples/alpha', () => {});
+    page('/examples/zeta', () => {});
+    page('/examples/auth', () => {});
+    attachPageMeta('/', { label: 'Home', icon: 'house', order: 0 });
+    attachPageMeta('/examples/alpha', { label: 'Alpha', icon: 'activity', order: 10 });
+    attachPageMeta('/examples/zeta', { label: 'Zeta', icon: 'zap', order: 20 });
+    attachPageMeta('/examples/auth', { label: 'Account', icon: 'lock', order: 30 });
+
+    const nav = navFromPages({ groupExamples: true });
+    expect(nav.map((n) => n.label)).toEqual(['Home', 'Examples', 'Account']);
+    const examples = nav.find((n) => n.label === 'Examples');
+    expect(examples?.items?.map((n) => n.href)).toEqual(['/examples/alpha', '/examples/zeta']);
+    expect(nav.find((n) => n.label === 'Account')?.href).toBe('/examples/auth');
+  });
+
+  test('pageMeta.group nests pages under a custom parent', () => {
+    page('/', () => {});
+    page('/docs/a', () => {});
+    page('/docs/b', () => {});
+    attachPageMeta('/', { label: 'Home', order: 0 });
+    attachPageMeta('/docs/a', { label: 'Guide', order: 10, group: 'Docs', groupIcon: 'book' });
+    attachPageMeta('/docs/b', { label: 'API', order: 20, group: 'Docs' });
+
+    const nav = navFromPages();
+    expect(nav.map((n) => n.label)).toEqual(['Home', 'Docs']);
+    expect(nav[1]).toMatchObject({
+      label: 'Docs',
+      icon: 'book',
+      items: [
+        { label: 'Guide', href: '/docs/a' },
+        { label: 'API', href: '/docs/b' },
+      ],
+    });
+  });
+
   test('loadPages clears prior registrations before re-import', async () => {
     page('/stale', () => {});
     expect(getRegisteredPaths()).toContain('/stale');

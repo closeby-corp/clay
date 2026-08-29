@@ -55,4 +55,33 @@ ui.page('/', () => {
     expect(looksLikePage).toBe(false);
     expect(warnings).toHaveLength(0);
   });
+
+  test('ignores local bindings named history', () => {
+    const src = `import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  const history = [{ id: 'a' }];
+  ui.label(String(history.length));
+});`;
+    const { warnings } = checkClayPageModule(src);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('ignores property access named history', () => {
+    const src = `import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  const row = { history: 'v1' };
+  ui.label(row.history);
+});`;
+    const { warnings } = checkClayPageModule(src);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('still warns on bare history global', () => {
+    const src = `import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  history.pushState({}, '', '#x');
+});`;
+    const { warnings } = checkClayPageModule(src);
+    expect(warnings.some((w) => w.includes('`history`'))).toBe(true);
+  });
 });

@@ -46,13 +46,16 @@ await ui.loadPages(new URL('./pages', import.meta.url));
 
 Build primary `AppNavItem[]` from registered routes + collected `pageMeta` (label/icon/order). Home `/` sorts first; others by `order` (default `100`) then path. Missing meta falls back to a title-cased path segment and icon `'boxes'`. Set `nav: false` to register a route without a sidebar item (e.g. login/admin under Account).
 
+Nest pages under collapsible sidebar groups with `pageMeta.group` / `groupIcon`, or pass `groupExamples: true` to auto-nest `/examples/*` (except `/examples/auth`) under **Examples**. Manual nav trees use `items` on `AppNavItem`.
+
 ```typescript
 export const pageMeta = { label: 'Charts', icon: 'chart-area', order: 90 };
 // export const pageMeta = { nav: false }; // route only
 // export const pageMeta = { label: 'Admin', roles: ['admin'] }; // nav UX filter
-```
+// export const pageMeta = { label: 'Guide', group: 'Docs', groupIcon: 'book' };
 
-`ui.navFromPages({ role })` / `ui.navFromPages({ roles })` hides items whose `pageMeta.roles` do not overlap (omit `roles` on meta = visible to everyone). Nav filtering is UX only — still call `requireRole` in the page builder.
+ui.navFromPages({ role: user.role, groupExamples: true });
+```
 
 #### `ui.run(root?, config?)`
 
@@ -1867,7 +1870,7 @@ Sidebar layout for multi-page apps. Prefer `ui.run({ app })` so every page inher
 | `collapsible` | `'offcanvas' \| 'icon' \| 'none'` | Sidebar collapse behavior |
 | `className` | `string` | Extra classes on the shell |
 
-`AppNavItem`: `{ label, href, icon?, description? }` — `icon` is a Lucide kebab-case name (full set; e.g. `home`, `gauge`, `sparkles`).
+`AppNavItem`: `{ label, href, icon?, description?, items? }` — `icon` is a Lucide kebab-case name (full set; e.g. `home`, `gauge`, `sparkles`). Nested `items` render as collapsible sub-links in the sidebar.
 
 ```typescript
 // Preferred: configure once at startup

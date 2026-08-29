@@ -2877,6 +2877,13 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         icon?: string;
         description?: string;
         active?: boolean;
+        items?: Array<{
+          label: string;
+          href: string;
+          icon?: string;
+          description?: string;
+          active?: boolean;
+        }>;
       }>;
       const navSecondary = (Array.isArray(props.navSecondary) ? props.navSecondary : []) as typeof nav;
       const documents = (Array.isArray(props.documents) ? props.documents : []) as typeof nav;

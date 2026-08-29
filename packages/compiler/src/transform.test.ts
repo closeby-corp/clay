@@ -553,9 +553,64 @@ ui.page('/', () => {
   });
 });
 `;
-    const out = transformReactiveLet(src, 'page.ts');
+    const out = transformReactiveLet(src, 'page.ts', { autoWrapBuilders: false });
     expect(out.transformed).toBe(true);
     expect(out.warnings.some((w) => w.includes('widget callback without ui.auto'))).toBe(true);
+  });
+
+  test('auto-wraps builder calls inside widget callbacks', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function renderHeader() {
+    ui.label(String(count));
+  }
+  ui.row(() => {
+    renderHeader();
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.warnings).toEqual([]);
+    expect(out.code).toMatch(/ui\.row\([\s\S]*ui\.auto\(\(\) => \{\s*renderHeader\(\);/);
+  });
+
+  test('inline widget callback reads get bindText or auto', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let autoRefresh = false;
+  let lastUpdated = null as string | null;
+  ui.row({ gap: 2 }, () => {
+    ui.icon('clock', { className: autoRefresh ? 'animate-pulse' : 'opacity-40' });
+    ui.label(lastUpdated ? \`Updated \${lastUpdated}\` : 'Loading…');
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.code).toContain('ui.label(() =>');
+    expect(out.code).toMatch(/ui\.auto\(\(\) => \{\s*ui\.icon\(/);
+  });
+
+  test('does not warn when builder is only called from event handlers inside widgets', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function bump() {
+    count++;
+  }
+  ui.row(() => {
+    ui.button('y', { onClick: () => { bump(); } });
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts', { autoWrapBuilders: false });
+    expect(out.transformed).toBe(true);
+    expect(out.warnings.some((w) => w.includes('bump()'))).toBe(false);
   });
 
   test('auto-wraps bare builder calls that read lifted state', () => {

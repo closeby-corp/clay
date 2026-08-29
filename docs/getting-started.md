@@ -154,6 +154,10 @@ bun run clay ./pages --app --title "My App"
 
 See [`docs/reactive-let.md`](./reactive-let.md) for `ui.state` / `ui.auto` (recommended), `ui.label(() => …)`, and the opt-in Phase 2 `let` transform.
 
+**Complex pages (Orders-scale):** use Phase 1 `ui.state` + `ui.auto`, or opt-in reactive `let` with the [region decision table](./reactive-let.md#decision-table-complex-pages) — who wraps `ui.auto` for top-level helpers, widget callbacks, inline UI, and handlers.
+
+For production deployment, auth, and server exposure, see [Production & security](./production.md).
+
 ## Install and run the demo
 
 ```bash

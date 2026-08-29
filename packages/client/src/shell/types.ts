@@ -7,6 +7,7 @@ export type ShellNavItem = {
   icon?: string;
   description?: string;
   active?: boolean;
+  items?: ShellNavItem[];
 };
 
 /** Optional CTA above primary nav (e.g. “New …”); omitted by default. */

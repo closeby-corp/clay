@@ -16,6 +16,7 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | [Sample app](./tutorial.md) | Step-by-step tasks list, then two pages + shell |
 | [Concepts](./concepts.md) | Mental model: sessions, elements, patches; **canonical `state`/`auto`/`timer` recipe**; reactive `let` alternative |
 | [Browser APIs](./browser-apis.md) | Prefer `ui.clipboard` / hash / `openExternal` — never `window` in page code |
+| [Production & security](./production.md) | Auth, server exposure, rate limits, boot parity |
 | [Ops patterns](./ops-patterns.md) | Dense consoles: chips, master–detail, feeds, sensitive logs, auth nav |
 | [API reference](./api.md) | `ui.*`, `Element` methods, `reactive`, helpers |
 | [Elements](./elements.md) | All element types and props |

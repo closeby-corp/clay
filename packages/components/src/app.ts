@@ -6,6 +6,8 @@ export type AppNavItem = {
   /** Curated Lucide icon key resolved on the client (e.g. `home`, `gauge`). */
   icon?: string;
   description?: string;
+  /** Nested sidebar links under a collapsible group. */
+  items?: AppNavItem[];
 };
 
 export type AppUser = {
@@ -37,20 +39,50 @@ export type AppProps = {
   className?: string;
 };
 
+export type SerializedNavItem = {
+  label: string;
+  href: string;
+  icon?: string;
+  description?: string;
+  active: boolean;
+  items?: SerializedNavItem[];
+};
+
 function isActivePath(current: string, href: string): boolean {
   if (href === '/') return current === '/';
   if (href === '#' || !href) return false;
   return current === href || current.startsWith(`${href}/`);
 }
 
-function serializeNav(items: AppNavItem[] | undefined, path: string) {
-  return (items ?? []).map((item) => ({
-    label: item.label,
-    href: item.href,
-    icon: item.icon,
-    description: item.description,
-    active: isActivePath(path, item.href),
-  }));
+function serializeNav(items: AppNavItem[] | undefined, path: string): SerializedNavItem[] {
+  return (items ?? []).map((item) => {
+    const items = item.items?.length ? serializeNav(item.items, path) : undefined;
+    const childActive = items?.some((child) => child.active) ?? false;
+    const selfActive = isActivePath(path, item.href);
+    return {
+      label: item.label,
+      href: item.href,
+      icon: item.icon,
+      description: item.description,
+      active: selfActive || childActive,
+      items,
+    };
+  });
+}
+
+/** Prefer the deepest active leaf for the site header title. */
+export function findActiveNavLabel(items: SerializedNavItem[]): string | undefined {
+  for (const item of items) {
+    if (item.items?.length) {
+      for (const child of item.items) {
+        if (child.active) return child.label;
+      }
+      const nested = findActiveNavLabel(item.items);
+      if (nested) return nested;
+    }
+    if (item.active && item.href !== '#') return item.label;
+  }
+  return undefined;
 }
 
 /**
@@ -61,11 +93,11 @@ function serializeNav(items: AppNavItem[] | undefined, path: string) {
 export function app(props: AppProps, fn: () => void): Element {
   const path = getCurrentSession()?.path ?? '/';
   const nav = serializeNav(props.nav, path);
-  const active = nav.find((item) => item.active);
+  const activeLabel = findActiveNavLabel(nav);
 
   const el = new Element('app', {
     title: props.title ?? '',
-    headerTitle: props.headerTitle ?? active?.label ?? props.title ?? '',
+    headerTitle: props.headerTitle ?? activeLabel ?? props.title ?? '',
     collapsible: props.collapsible ?? 'icon',
     variant: props.variant ?? 'inset',
     user: props.user ?? null,
