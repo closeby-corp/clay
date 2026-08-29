@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "HTTP + WebSocket server runtime for Clay",
   "license": "MIT",
   "type": "module",
