@@ -180,14 +180,9 @@ Mitigation today: leave the plugin off; use Phase 1 APIs. If you enable `--react
 - Running the demo via plain `bun apps/demo/...` does **not** load the plugin unless you register it; use `clay --reactive-let` or `--preload`.
 - `const` is lifted like `let` (assignments become state writes). Prefer `let` in typed source if you reassign — `const` reassignment is a TS error before the transform runs.
 
-Tests: `packages/compiler/src/transform.test.ts`.
-
-## Still Later
-
-1. Optional: bindText-style rewrite for more widgets (`badge` text, etc.).
-2. Loop-scoped state keyed by row id (not just index) when the loop variable exposes `.id`.
-
 **Runtime:** nested `auto` / `refreshable` trees reuse in place when structure matches (`canReuseElementTree` in `@close-by/clay-core`) — inner regions keep their ids when an outer `auto` refreshes without touching inner deps.
+
+Tests: `packages/compiler/src/transform.test.ts`, `packages/core/src/auto.test.ts`.
 
 ## Proof (Orders-shaped)
 

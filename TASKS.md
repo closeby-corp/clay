@@ -63,23 +63,23 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
 
 ### NiceGUI / scale
 
-- [ ] **North-star: write `let`, get implicit dependency tracking** (NiceGUI-style — no manual `ui.auto` wrapping)
-  - Goal UX: plain `let` in an opted-in page; Clay tracks reads/writes and rebuilds the right UI without explicit `state`/`auto` regions
-  - Today’s Phase 2 transform: simple initializers → `state` + **bindText** / dependency-isolated **`auto` regions**; still opt-in, not yet the tutorial default
-  - [x] Broader safe initializers (binary / template / unary / ident / property access; still no call/`new`/await; sibling-let refs abort)
-  - [x] Implicit **regions** — build-time reads vs inert shell / handler-only writes; nested UI callbacks get inner regions ([`docs/reactive-let.md`](./docs/reactive-let.md))
+- [x] **North-star: write `let`, get implicit dependency tracking** (NiceGUI-style — no manual `ui.auto` wrapping)
+  - Shipped as opt-in Phase 2 (`// @clay-reactive` + `clay --reactive-let`): plain `let` → `ui.state` + **bindText** / dependency-isolated **`auto` regions**; demos/docs happy path in [`docs/reactive-let.md`](./docs/reactive-let.md)
+  - [x] Broader safe initializers (binary / template / unary / ident / property access; sibling-let refs abort)
+  - [x] Implicit **regions** — build-time reads vs inert shell / handler-only writes; nested UI callbacks get inner regions
   - [x] Dependency-isolated regions (separate `auto` when read-sets are disjoint; overlapping deps share)
   - [x] Compile-time `bindText` for `ui.label(expr)` / `label(expr)` reading state (incl. `.classes()` chains)
-  - [x] Prove on Orders-shaped multi-region page — Phase 1 demo `ReactiveLetOrders` (always interactive) + let-syntax fixture/`orders-proof.test.ts`; glue locals so `const row` + dependents stay in one `auto`
+  - [x] Prove on Orders-shaped multi-region page — Phase 1 demo `ReactiveLetOrders` + let-syntax fixture/`orders-proof.test.ts`
   - [x] P0 from UQ Hub dogfood: skip type-position rewrites; nested fns don’t inherit file pragma; docs + warn when bare builders need `ui.auto`
   - [x] P1: call / `new` let initializers; auto-wrap bare local builder calls (`autoWrapBuilders`, default on)
-  - [x] NiceGUI-style: lift `const` with the same initializer rules as `let`
-  - [x] NiceGUI-style: simple object/array destructuring (`let { a, b } = {…}`, `let [x, y] = […]`)
-  - [x] NiceGUI-style: rest destructuring — lift named bindings, keep `...rest` as local `const`
-  - [x] NiceGUI-style: loop-scoped bindings via keyed state maps inside loops
-  - [x] NiceGUI-style: nested destructuring (`let { a: { b } }`)
-  - [x] Docs: sell `let` as the happy path once stable; keep Phase 1 as the escape hatch for complex screens
-  - [x] P2: emit renames for shadowing (`renameShadowedLocals`, default on)
+  - [x] NiceGUI-style: lift `const`; simple / rest / nested destructuring; destructuring defaults
+  - [x] Loop-scoped bindings via keyed state maps inside loops
+  - [x] Nested `auto` reuse without remounting when only inner props change
+  - [x] Docs: `let` happy path for demos; Phase 1 escape hatch for production/async
+  - [x] P2: shadowing warnings + emit renames (`renameShadowedLocals`, default on)
+- [ ] **NiceGUI let — optional follow-ups** (not blocking)
+  - [ ] Compile-time `bindText` for more widgets (`badge` text, button labels, …)
+  - [ ] Loop-scoped state keyed by row `.id` (today: loop index / `for (let i …)`)
 - [x] **Investigate: `ui.jsx` / JSX trees instead of HTML strings** — writeup [`docs/jsx-investigation.md`](./docs/jsx-investigation.md)
   - Pain: `ui.html('<div…>')` is opaque (no IDE structure) and blocks real custom components; client path is `dangerouslySetInnerHTML`
   - Goal: author markup as markup (JSX) with IDE support for tags + user-defined components — not hyperscript `ui.jsx('div', props)`, and not a second UI stack
@@ -91,7 +91,7 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
   - [ ] Phase 0 primitives to cut most strings without JSX: status-dot / tiny circle helper (`ui.iframe` done)
 - [x] Thin JS bridge (`runJavaScript` / scroll helpers)
 - [x] Browser / client / general storage scopes + Redis adapter (multi-process / horizontal scaling)
-- [x] Compile-time reactive `let` MVP (Phase 1: `ui.state` + `ui.auto`; Phase 2: `@close-by/clay-compiler` + Bun loader subset — see [`docs/reactive-let.md`](./docs/reactive-let.md)); full NiceGUI parity still open above
+- [x] Compile-time reactive `let` (Phase 1: `ui.state` + `ui.auto`; Phase 2: `@close-by/clay-compiler` + `--reactive-let` — see [`docs/reactive-let.md`](./docs/reactive-let.md))
 - [x] Composed / scatter charts
 - [x] `ui.label(() => string)` / `Element.bindText` computed-label sugar
 
@@ -120,6 +120,7 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
 
 ## Done (recent)
 
+- NiceGUI let parity: nested/rest destructuring, loop-scoped keyed state, shadow renames, nested `auto` reuse; docs happy path ([`docs/reactive-let.md`](./docs/reactive-let.md))
 - Reactive follow-up: `ui.auto` in-place `updateProps` when tree shape is stable; expanded `let` transform (non-leading / nested blocks / more initializers); `ui.label(() => …)` + `bindText`
 - Reactive Phase 2 MVP: `@close-by/clay-compiler` transform + `clay --reactive-let` Bun loader (subset `let` → `ui.state` / `ui.auto`)
 - Menubar: submenu, checkbox, radio group; command: `mode: 'inline'`
