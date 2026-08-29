@@ -75,7 +75,8 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
   - [x] P1: call / `new` let initializers; auto-wrap bare local builder calls (`autoWrapBuilders`, default on)
   - [x] NiceGUI-style: lift `const` with the same initializer rules as `let`
   - [x] NiceGUI-style: simple object/array destructuring (`let { a, b } = {…}`, `let [x, y] = […]`)
-  - [ ] NiceGUI-style: loop-scoped bindings; rest/nested destructuring
+  - [x] NiceGUI-style: rest destructuring — lift named bindings, keep `...rest` as local `const`
+  - [ ] NiceGUI-style: loop-scoped bindings; nested destructuring
   - [x] NiceGUI-style: destructuring defaults (`let { x = 1 }`, `let [y = 10] = []`)
   - [x] Nested `auto` reuse without remounting when only inner props change
   - [ ] Docs: sell `let` as the happy path once stable; keep Phase 1 as the escape hatch for complex screens

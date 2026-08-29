@@ -176,11 +176,15 @@ function isSimpleInitializer(expr: ts.Expression | undefined): boolean {
 
 /**
  * Expand a single `let`/`const` statement into one or more state bindings.
- * Supports identifier bindings and simple object/array destructuring.
+ * Supports identifier bindings and simple object/array destructuring (incl. rest).
  */
-function collectLiftableBindings(
-  stmt: ts.Statement,
-): Array<{ name: string; initializer: ts.Expression }> | null {
+type LiftableBindings = {
+  bindings: Array<{ name: string; initializer: ts.Expression }>;
+  /** Pattern includes `...rest` — named bindings lift; rest stays as a local `const`. */
+  hasRest: boolean;
+};
+
+function collectLiftableBindings(stmt: ts.Statement): LiftableBindings | null {
   if (!ts.isVariableStatement(stmt)) return null;
   const flags = stmt.declarationList.flags;
   const isLet = (flags & ts.NodeFlags.Let) !== 0;
@@ -192,14 +196,18 @@ function collectLiftableBindings(
 
   if (ts.isIdentifier(decl.name)) {
     if (!isSimpleInitializer(decl.initializer)) return null;
-    return [{ name: decl.name.text, initializer: decl.initializer }];
+    return { bindings: [{ name: decl.name.text, initializer: decl.initializer }], hasRest: false };
   }
 
   if (ts.isObjectBindingPattern(decl.name)) {
-    return expandObjectBinding(decl.name, decl.initializer);
+    const expanded = expandObjectBinding(decl.name, decl.initializer);
+    if (!expanded) return null;
+    return expanded;
   }
   if (ts.isArrayBindingPattern(decl.name)) {
-    return expandArrayBinding(decl.name, decl.initializer);
+    const expanded = expandArrayBinding(decl.name, decl.initializer);
+    if (!expanded) return null;
+    return expanded;
   }
   return null;
 }
@@ -207,13 +215,17 @@ function collectLiftableBindings(
 function expandObjectBinding(
   pattern: ts.ObjectBindingPattern,
   init: ts.Expression,
-): Array<{ name: string; initializer: ts.Expression }> | null {
+): LiftableBindings | null {
   if (pattern.elements.length === 0) return null;
   const out: Array<{ name: string; initializer: ts.Expression }> = [];
+  let hasRest = false;
 
   for (const el of pattern.elements) {
     if (!ts.isBindingElement(el)) return null;
-    if (el.dotDotDotToken) return null;
+    if (el.dotDotDotToken) {
+      hasRest = true;
+      continue;
+    }
     if (!ts.isIdentifier(el.name)) return null; // no nested patterns yet
 
     const defaultInit =
@@ -265,16 +277,17 @@ function expandObjectBinding(
     }
     out.push({ name: el.name.text, initializer: value });
   }
-  return out.length > 0 ? out : null;
+  return out.length > 0 ? { bindings: out, hasRest } : null;
 }
 
 function expandArrayBinding(
   pattern: ts.ArrayBindingPattern,
   init: ts.Expression,
-): Array<{ name: string; initializer: ts.Expression }> | null {
+): LiftableBindings | null {
   if (pattern.elements.length === 0) return null;
   const out: Array<{ name: string; initializer: ts.Expression }> = [];
   let index = 0;
+  let hasRest = false;
 
   for (const el of pattern.elements) {
     if (ts.isOmittedExpression(el)) {
@@ -282,7 +295,10 @@ function expandArrayBinding(
       continue;
     }
     if (!ts.isBindingElement(el)) return null;
-    if (el.dotDotDotToken) return null;
+    if (el.dotDotDotToken) {
+      hasRest = true;
+      continue;
+    }
     if (!ts.isIdentifier(el.name)) return null;
 
     const defaultInit =
@@ -318,13 +334,89 @@ function expandArrayBinding(
     out.push({ name: el.name.text, initializer: value });
     index++;
   }
-  return out.length > 0 ? out : null;
+  return out.length > 0 ? { bindings: out, hasRest } : null;
 }
 
 /** True when this statement lifts any of `names` (whole stmt should be stripped). */
 function statementLiftsNames(stmt: ts.Statement, names: Set<string>): boolean {
-  const bindings = collectLiftableBindings(stmt);
-  return !!bindings && bindings.some((b) => names.has(b.name));
+  const lifted = collectLiftableBindings(stmt);
+  if (!lifted || lifted.hasRest) return false;
+  return lifted.bindings.some((b) => names.has(b.name));
+}
+
+/** After lifting named bindings, keep `...rest` as a local const destructuring. */
+function rewriteRestDestructuringStmt(
+  context: ts.TransformationContext,
+  stmt: ts.VariableStatement,
+  liftedNames: Set<string>,
+): ts.Statement | null {
+  const lifted = collectLiftableBindings(stmt);
+  if (!lifted?.hasRest) return null;
+  if (!lifted.bindings.some((b) => liftedNames.has(b.name))) return null;
+
+  const { factory } = context;
+  const decl = stmt.declarationList.declarations[0];
+  if (!decl?.initializer) return null;
+
+  let newName: ts.BindingName;
+  if (ts.isObjectBindingPattern(decl.name)) {
+    const restEl = decl.name.elements.find(
+      (el) => ts.isBindingElement(el) && !!el.dotDotDotToken,
+    );
+    if (!restEl || !ts.isBindingElement(restEl)) return null;
+    newName = factory.createObjectBindingPattern([restEl]);
+  } else if (ts.isArrayBindingPattern(decl.name)) {
+    const elements: Array<ts.BindingElement | ts.OmittedExpression> = [];
+    for (const el of decl.name.elements) {
+      if (ts.isBindingElement(el) && el.dotDotDotToken) {
+        elements.push(el);
+        continue;
+      }
+      if (!ts.isBindingElement(el)) {
+        elements.push(el);
+        continue;
+      }
+      const bindingName = ts.isIdentifier(el.name) ? el.name.text : null;
+      if (bindingName && liftedNames.has(bindingName)) {
+        elements.push(factory.createOmittedExpression());
+      } else {
+        elements.push(el);
+      }
+    }
+    newName = factory.createArrayBindingPattern(elements);
+  } else {
+    return null;
+  }
+
+  return factory.updateVariableStatement(
+    stmt,
+    stmt.modifiers,
+    factory.createVariableDeclarationList(
+      [
+        factory.createVariableDeclaration(
+          newName,
+          undefined,
+          undefined,
+          decl.initializer,
+        ),
+      ],
+      ts.NodeFlags.Const,
+    ),
+  );
+}
+
+function processLiftedVariableStmt(
+  context: ts.TransformationContext,
+  stmt: ts.Statement,
+  names: Set<string>,
+  rewriteStatement: (stmt: ts.Statement) => ts.Statement,
+): ts.Statement | 'skip' {
+  if (statementLiftsNames(stmt, names)) return 'skip';
+  const restRewritten = ts.isVariableStatement(stmt)
+    ? rewriteRestDestructuringStmt(context, stmt, names)
+    : null;
+  if (restRewritten) return rewriteStatement(restRewritten);
+  return rewriteStatement(stmt);
 }
 
 /**
@@ -340,12 +432,12 @@ function collectLetsInFunctionBody(
   const names = new Set<string>();
 
   const considerStmt = (stmt: ts.Statement): boolean => {
-    const bindings = collectLiftableBindings(stmt);
-    if (!bindings) return true;
-    for (const b of bindings) {
+    const lifted = collectLiftableBindings(stmt);
+    if (!lifted) return true;
+    for (const b of lifted.bindings) {
       if (names.has(b.name)) return false; // shadowing / duplicate → skip site
     }
-    for (const b of bindings) {
+    for (const b of lifted.bindings) {
       names.add(b.name);
       lets.push(b);
     }
@@ -481,8 +573,8 @@ function stripLetsAndDirective(
     }
     for (let i = start; i < statements.length; i++) {
       const stmt = statements[i]!;
-      if (statementLiftsNames(stmt, names)) continue;
-      out.push(rewriteStatement(stmt));
+      const processed = processLiftedVariableStmt(context, stmt, names, rewriteStatement);
+      if (processed !== 'skip') out.push(processed);
     }
     return out;
   };
@@ -499,18 +591,26 @@ function stripLetsAndDirective(
           filterStatements(stmt.thenStatement.statements, false),
         );
       } else {
-        thenStmt = statementLiftsNames(stmt.thenStatement, names)
-          ? factory.createBlock([], true)
-          : rewriteStatement(stmt.thenStatement);
+        const processed = processLiftedVariableStmt(
+          context,
+          stmt.thenStatement,
+          names,
+          rewriteStatement,
+        );
+        thenStmt = processed === 'skip' ? factory.createBlock([], true) : processed;
       }
       let elseStmt = stmt.elseStatement;
       if (elseStmt) {
         if (ts.isBlock(elseStmt)) {
           elseStmt = factory.updateBlock(elseStmt, filterStatements(elseStmt.statements, false));
         } else {
-          elseStmt = statementLiftsNames(elseStmt, names)
-            ? factory.createBlock([], true)
-            : rewriteStatement(elseStmt);
+          const processed = processLiftedVariableStmt(
+            context,
+            elseStmt,
+            names,
+            rewriteStatement,
+          );
+          elseStmt = processed === 'skip' ? factory.createBlock([], true) : processed;
         }
       }
       return factory.updateIfStatement(stmt, stmt.expression, thenStmt, elseStmt);
@@ -539,9 +639,10 @@ function stripLetsAndDirective(
     }
     if (ts.isSwitchStatement(stmt)) {
       const clauses = stmt.caseBlock.clauses.map((clause) => {
-        const stmts = clause.statements
-          .filter((s) => !statementLiftsNames(s, names))
-          .map(rewriteStatement);
+        const stmts = clause.statements.flatMap((s) => {
+          const processed = processLiftedVariableStmt(context, s, names, rewriteStatement);
+          return processed === 'skip' ? [] : [processed];
+        });
         if (ts.isCaseClause(clause)) {
           return factory.updateCaseClause(clause, clause.expression, stmts);
         }
@@ -1083,12 +1184,11 @@ function collectShadowingWarnings(body: ts.Block, liftedNames: Set<string>): str
   const walk = (node: ts.Node) => {
     if (isFunctionLike(node)) return;
     if (ts.isVariableStatement(node)) {
-      const bindings = collectLiftableBindings(node);
+      const lifted = collectLiftableBindings(node);
       const liftsHere =
-        !!bindings &&
-        bindings.length > 0 &&
-        bindings.every((b) => liftedNames.has(b.name)) &&
-        bindings.every((b) => namesFromBindingStmt(node).includes(b.name));
+        !!lifted &&
+        lifted.bindings.length > 0 &&
+        lifted.bindings.every((b) => liftedNames.has(b.name));
       if (!liftsHere) {
         for (const name of namesFromBindingStmt(node)) {
           if (!liftedNames.has(name) || seen.has(name)) continue;
@@ -1265,9 +1365,9 @@ export function transformReactiveLet(
       const initByName = new Map<string, ts.Expression>();
       const collectInits = (block: ts.Block) => {
         for (const stmt of block.statements) {
-          const bindings = collectLiftableBindings(stmt);
-          if (!bindings) continue;
-          for (const b of bindings) {
+          const lifted = collectLiftableBindings(stmt);
+          if (!lifted) continue;
+          for (const b of lifted.bindings) {
             if (names.has(b.name)) initByName.set(b.name, b.initializer);
           }
         }

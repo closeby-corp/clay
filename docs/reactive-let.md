@@ -105,7 +105,7 @@ ui.page('/', () => {
 | Shell / layout / handler-only writes | Stay outside any `auto` |
 | Nested `ui.column(() => …)` reading outer state | Inner region / bindText inside the callback |
 
-**Simple initializers:** literals; `undefined`; unary `±!~`; binary / conditional / template expressions of simples; property / element access of simples; identifiers (outer bindings); shallow array/object literals; **call / `new`** with simple callees and args (`Date.now()`, `defaultRangeFrom()`, `new Map()`); nullish coalescing (`??`) for destructuring defaults. **Not** transformed: `await`, rest/spread/nested destructuring, sibling-let refs (`let a = 1; let b = a + 1` aborts the site), loop-scoped `let`, spread args.
+**Simple initializers:** literals; `undefined`; unary `±!~`; binary / conditional / template expressions of simples; property / element access of simples; identifiers (outer bindings); shallow array/object literals; **call / `new`** with simple callees and args (`Date.now()`, `defaultRangeFrom()`, `new Map()`); nullish coalescing (`??`) for destructuring defaults. **Rest destructuring:** named bindings lift to state; the rest pattern stays as `const { ...rest } = init` / `const [, ...rest] = init`. **Not** transformed: `await`, nested destructuring (`let { a: { b } }`), sibling-let refs (`let a = 1; let b = a + 1` aborts the site), loop-scoped `let`, spread args.
 
 Type positions are never rewritten — a lifted `let loading` may share a name with `type DetailState { loading: boolean }` without breaking emit.
 
@@ -139,7 +139,7 @@ Mitigation today: leave the plugin off; use Phase 1 APIs. If you enable `--react
 
 ### Limits (still open)
 
-- No rest / nested destructuring (`let { x, ...r }`, `let { a: { b } }`) or `var`. Simple defaults in object/array patterns are supported (`let { x = 1 }`, `let [y = 10] = []`).
+- No nested destructuring (`let { a: { b } }`) or `var`. Simple defaults and **rest** patterns are supported (`let { x = 1, ...rest }`, `let [a, ...rest] = arr`).
 - Sibling initializers abort the site (`let b = a + 1` when both would lift).
 - No loop-scoped bindings (would re-init incorrectly if hoisted).
 - Duplicate binding names in nested blocks abort the transform for that function (shadowing). A **warning** is emitted when a non-lifted local reuses a lifted name in the same site.
@@ -151,7 +151,7 @@ Tests: `packages/compiler/src/transform.test.ts`.
 
 ## Still Later
 
-1. Loop-scoped reactive bindings where safe; rest/nested destructuring.
+1. Loop-scoped reactive bindings where safe; nested destructuring.
 2. Optional: bindText-style rewrite for more widgets (`badge` text, etc.).
 3. Docs: sell `let` as the tutorial happy path once ops apps adopt the proof page in anger.
 4. P2: emit renames for shadowing (warnings exist today).

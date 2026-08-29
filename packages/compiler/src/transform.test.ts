@@ -291,7 +291,7 @@ ui.page('/', () => {
     expect(transformReactiveLet(src, 'page.ts').transformed).toBe(false);
   });
 
-  test('skips await / rest destructuring / nested patterns', () => {
+  test('skips await / nested destructuring patterns', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
@@ -301,14 +301,42 @@ ui.page('/', () => {
 `;
     expect(transformReactiveLet(src, 'page.ts').transformed).toBe(false);
 
-    const rest = `// @clay-reactive
+    const nested = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
-  let { x, ...rest } = obj;
-  ui.label(String(x));
+  let { a: { b } } = obj;
+  ui.label(String(b));
 });
 `;
-    expect(transformReactiveLet(rest, 'page.ts').transformed).toBe(false);
+    expect(transformReactiveLet(nested, 'page.ts').transformed).toBe(false);
+  });
+
+  test('lifts named bindings from rest destructuring', () => {
+    const obj = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let { x, ...rest } = { x: 1, y: 2 };
+  ui.label(String(x) + String(rest.y));
+});
+`;
+    const outObj = transformReactiveLet(obj, 'page.ts');
+    expect(outObj.transformed).toBe(true);
+    expect(outObj.lets).toEqual(['x']);
+    expect(outObj.code).toContain('x: 1');
+    expect(outObj.code).toMatch(/const\s*\{\s*\.\.\.rest\s*\}/);
+
+    const arr = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let [a, ...rest] = [1, 2, 3];
+  ui.label(String(a) + String(rest.length));
+});
+`;
+    const outArr = transformReactiveLet(arr, 'page.ts');
+    expect(outArr.transformed).toBe(true);
+    expect(outArr.lets).toEqual(['a']);
+    expect(outArr.code).toContain('a: 1');
+    expect(outArr.code).toMatch(/const\s*\[\s*,\s*\.\.\.rest\s*\]/);
   });
 
   test('lifts destructuring with defaults', () => {
