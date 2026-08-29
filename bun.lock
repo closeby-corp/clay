@@ -171,6 +171,7 @@
       "name": "@close-by/clay",
       "version": "0.2.3",
       "dependencies": {
+        "@close-by/clay-compiler": "workspace:*",
         "@close-by/clay-components": "workspace:*",
         "@close-by/clay-core": "workspace:*",
         "@close-by/clay-server": "workspace:*",

@@ -1,10 +1,12 @@
 import { fileURLToPath, pathToFileURL } from 'url';
 import { join } from 'path';
+import { readFile } from 'fs/promises';
 import {
   clearPages,
   getRegisteredPaths,
   type PageFn,
 } from '@close-by/clay-core';
+import { warnClayPageIssues } from '@close-by/clay-compiler';
 import type { AppNavItem } from '@close-by/clay-components';
 
 /**
@@ -24,6 +26,15 @@ export async function importFresh(absPath: string): Promise<unknown> {
     // ignore
   }
   return import(href);
+}
+
+async function warnPageModuleIfNeeded(absPath: string): Promise<void> {
+  try {
+    const text = await readFile(absPath, 'utf8');
+    warnClayPageIssues(text, absPath);
+  } catch {
+    // unreadable — import will surface the error
+  }
 }
 
 /**
@@ -108,6 +119,7 @@ export async function loadPages(dir: string | URL): Promise<string[]> {
   for (const relative of files) {
     const fullPath = join(absDir, relative);
     const pathsBefore = new Set(getRegisteredPaths());
+    await warnPageModuleIfNeeded(fullPath);
     const mod = (await importFresh(fullPath)) as { pageMeta?: PageMeta };
     const added = getRegisteredPaths().filter((p) => !pathsBefore.has(p));
     if (added.length === 1 && mod.pageMeta) {

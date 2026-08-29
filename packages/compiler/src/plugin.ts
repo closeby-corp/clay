@@ -1,4 +1,6 @@
 import { mightNeedReactiveLet, transformReactiveLet } from './transform.ts';
+import { looksLikeClayPage } from './page-globals.ts';
+import { warnClayPageIssues } from './warn-page.ts';
 
 export type RegisterReactiveLetPluginOptions = {
   /** Skip paths matching this predicate (default: node_modules). */
@@ -44,13 +46,20 @@ export function registerReactiveLetPlugin(
           return { contents: '', loader };
         }
 
-        // Pass through: node_modules, our compiler package, or files that need no rewrite.
+        // Pass through: node_modules or our compiler package.
         if (
           ignore(args.path) ||
           args.path.includes('/packages/compiler/') ||
-          args.path.includes('\\packages\\compiler\\') ||
-          !mightNeedReactiveLet(text)
+          args.path.includes('\\packages\\compiler\\')
         ) {
+          return { contents: text, loader };
+        }
+
+        if (looksLikeClayPage(text)) {
+          warnClayPageIssues(text, args.path);
+        }
+
+        if (!mightNeedReactiveLet(text)) {
           return { contents: text, loader };
         }
 

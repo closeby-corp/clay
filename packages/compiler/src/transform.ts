@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import { collectFragileImportWarnings } from './fragile-imports.ts';
 
 export type TransformReactiveLetOptions = {
   /** Prefer `ui.state` / `ui.auto` when `ui` is imported (default true). */
@@ -2267,7 +2268,7 @@ export function transformReactiveLet(
     }
   }
 
-  return { code, transformed: true, lets: allLets, warnings };
+  return { code, transformed: true, lets: allLets, warnings: [...warnings, ...collectFragileImportWarnings(sourceFile)] };
 }
 
 /** True if the source looks like it might need a reactive-let pass (cheap prefilter). */

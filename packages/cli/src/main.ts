@@ -1,7 +1,8 @@
 import { dirname, isAbsolute, join, resolve } from 'path';
-import { existsSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { stat } from 'fs/promises';
 import { registerReactiveLetPlugin } from '@close-by/clay-compiler/plugin';
+import { warnClayPageIssues } from '@close-by/clay-compiler';
 import { getRegisteredPaths } from '@close-by/clay-core';
 import {
   ui,
@@ -71,6 +72,11 @@ export function shouldOpenBrowser(openFlag: boolean): boolean {
 
 async function loadEntryFile(absPath: string): Promise<void> {
   resetPageDiscovery();
+  try {
+    warnClayPageIssues(readFileSync(absPath, 'utf8'), absPath);
+  } catch {
+    // import will fail if unreadable
+  }
   const mod = (await importFresh(absPath)) as {
     default?: unknown;
   };

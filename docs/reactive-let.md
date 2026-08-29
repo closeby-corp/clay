@@ -167,7 +167,7 @@ When the transform or Bun loader was on by default (pre–opt-in), dense apps hi
 | Symptom | Likely cause |
 |---------|----------------|
 | Blank UI / mount errors | Simple `let`s inside `ui.page` rewritten into a mega-`auto` that fights async load / structural patterns |
-| `@clickhouse/client` (and similar CJS) named-export breakage | Bun `onLoad` plugin in the path; prefer `--no-reactive-let` (default) or Clay’s HTTP helpers until interop is proven |
+| `@clickhouse/client` (and similar CJS) named-export breakage | Bun `onLoad` plugin in the path; prefer `--no-reactive-let` (default) or Clay’s HTTP helpers until interop is proven. Dev: `[clay-reactive-let]` warns when a rewritten file imports a known-fragile package. |
 
 Mitigation today: leave the plugin off; use Phase 1 APIs. If you enable `--reactive-let`, only mark intentional toy/demo files with the pragma.
 

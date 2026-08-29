@@ -708,4 +708,18 @@ ui.page('/', () => {
     expect(out.code.match(/ui\.auto\(/g)?.length).toBe(1);
     expect(out.code).toMatch(/ui\.auto\(\(\) => \{\s*const row =[\s\S]*if\s*\(!row\)[\s\S]*ui\.label\(row\.id\)/);
   });
+
+  test('warns when transform rewrites a file importing fragile CJS', () => {
+    const src = `// @clay-reactive
+import { createClient } from '@clickhouse/client';
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let n = 0;
+  ui.label(String(n));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.warnings.some((w) => w.includes('@clickhouse/client'))).toBe(true);
+  });
 });

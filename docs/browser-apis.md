@@ -39,6 +39,25 @@ window.open(url, '_blank');
 
 Even with `typeof window !== 'undefined'` guards, page code still runs on the server: those branches never run, so the UI looks fine while deep-links and copy do nothing.
 
+## TypeScript: keep DOM globals out of page folders
+
+Clay page modules run on Bun, not in the browser. Extend **`@close-by/clay/page-tsconfig`** for folders that hold page builders so `window`, `navigator`, and friends are compile-time errors:
+
+```json
+{
+  "extends": "@close-by/clay/page-tsconfig",
+  "include": ["pages/**/*.ts", "src/examples/**/*.ts"]
+}
+```
+
+That tsconfig omits the DOM `lib` — only `ESNext` + `bun-types`.
+
+## Dev warnings at load time
+
+When the CLI or `ui.loadPages` imports a page module, Clay logs **`[clay-page]`** warnings for forbidden DOM globals (line numbers + suggested helpers). Disable with `CLAY_NO_PAGE_CHECKS=1`.
+
+With **`clay --reactive-let`**, transformed files that import known-fragile CJS packages (e.g. `@clickhouse/client`) also emit **`[clay-reactive-let]`** warnings — the Bun loader can break CJS named-export interop.
+
 ## Related
 
 - Helpers table: [API — dialogs and feedback](./api.md#dialogs-and-feedback)

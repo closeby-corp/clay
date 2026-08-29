@@ -12,13 +12,13 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
   - [x] CLI: default `--no-reactive-let` (or flip so `--reactive-let` enables the Bun loader)
   - [x] Compiler: stop auto-qualifying every `ui.page` / `page` callback — only `// @clay-reactive` and `"use reactive";`
   - [x] Docs (`reactive-let.md`, getting-started): match reality; document blank-mount + CJS/`@clickhouse/client` failure modes
-  - [ ] Optional: runtime/dev warning when transform rewrites files that import known-fragile packages
+  - [x] Optional: runtime/dev warning when transform rewrites files that import known-fragile packages
 - [x] **Browser API boundary**
   - [x] Docs page: never use `window` / `navigator` / `location` in page code; use Clay helpers
   - [x] Document `ui.clipboard` as the copy path (and discourage `navigator.clipboard`)
   - [x] Add `ui.setUrlHash` / `ui.getUrlHash` (or session-synced query/hash helpers) — UQ Hub deep-link is a no-op today
   - [x] Add `ui.openExternal(url)` (wraps trusted `window.open` via protocol / `runJavaScript`)
-  - [ ] Consider lint/types that mark DOM globals unavailable in Clay page modules
+  - [x] Lint/types that mark DOM globals unavailable in Clay page modules (`@close-by/clay/page-tsconfig` + `[clay-page]` load-time warnings)
 
 ### P1 — Reactive mental model + daily DX
 
@@ -119,7 +119,7 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
 
 ## Done (recent)
 
-- Icon+text composition: shared `IconText` client helper, `ui.iconText`, `ui.statusDot`, icon slots on label/badge/link/alert; button refactored to same layout
+- Page safety: fragile CJS import warnings under reactive-let; DOM global lint at load time + `@close-by/clay/page-tsconfig`
 - NiceGUI let parity: nested/rest destructuring, loop-scoped keyed state, shadow renames, nested `auto` reuse; docs happy path ([`docs/reactive-let.md`](./docs/reactive-let.md))
 - Reactive follow-up: `ui.auto` in-place `updateProps` when tree shape is stable; expanded `let` transform (non-leading / nested blocks / more initializers); `ui.label(() => …)` + `bindText`
 - Reactive Phase 2 MVP: `@close-by/clay-compiler` transform + `clay --reactive-let` Bun loader (subset `let` → `ui.state` / `ui.auto`)
