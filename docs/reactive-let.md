@@ -177,7 +177,7 @@ Mitigation today: leave the plugin off; use Phase 1 APIs. If you enable `--react
 - Sibling initializers abort the site (`let b = a + 1` when both would lift).
 - Duplicate binding names in nested blocks abort the transform for that function.
 - Loop-scoped state keys prefer `String(row.id)` for `for (const row of …)` loops, with loop-index fallback when `.id` is missing.
-- Compile-time bindText covers `ui.label` / `label`, `ui.badge` / `badge` (positional + `{ text }`), and `ui.button` / `button` text.
+- Compile-time bindText covers `ui.label` / `label`, `ui.badge` / `badge` (positional + `{ text }`), `ui.button` / `button`, and `ui.iconText`.
 - Running the demo via plain `bun apps/demo/...` does **not** load the plugin unless you register it; use `clay --reactive-let` or `--preload`.
 - `const` is lifted like `let` (assignments become state writes). Prefer `let` in typed source if you reassign — `const` reassignment is a TS error before the transform runs.
 

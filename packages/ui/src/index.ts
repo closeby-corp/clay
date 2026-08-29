@@ -22,6 +22,8 @@ import {
   progress as progressFactory,
   separator as separatorFactory,
   icon as iconFactory,
+  iconText as iconTextFactory,
+  statusDot as statusDotFactory,
   stat as statFactory,
   dataTable as dataTableFactory,
   areaChart as areaChartFactory,
@@ -111,6 +113,10 @@ import {
   type ProgressProps,
   type SeparatorProps,
   type IconProps,
+  type IconTextProps,
+  type IconSlotProps,
+  type StatusDotProps,
+  type StatusDotColor,
   type StatItem,
   type DataTableProps,
   type DataTableAction,
@@ -624,7 +630,10 @@ export function label(text?: string | (() => string), props?: Omit<LabelProps, '
 }
 
 /** Clickable button. Prefer `ui.button`. See {@link ButtonProps}. */
-export function button(text?: string, props?: Omit<ButtonProps, 'text'>): Element {
+export function button(
+  text?: string | (() => string),
+  props?: Omit<ButtonProps, 'text'>,
+): Element {
   return buttonFactory(text, props);
 }
 
@@ -767,6 +776,19 @@ export function separator(props?: SeparatorProps): Element {
 /** Lucide icon by kebab-case name (full set in client). Prefer `ui.icon`. See {@link IconProps}. */
 export function icon(name: string, props?: Omit<IconProps, 'name'>): Element {
   return iconFactory(name, props);
+}
+
+/** Inline icon + text (replaces manual `ui.row` + `ui.icon` + `ui.label`). See {@link IconTextProps}. */
+export function iconText(
+  text?: string | (() => string),
+  props?: Omit<IconTextProps, 'text'>,
+): Element {
+  return iconTextFactory(text, props);
+}
+
+/** Status dot (or icon) + label for feeds and tables. See {@link StatusDotProps}. */
+export function statusDot(props?: StatusDotProps): Element {
+  return statusDotFactory(props);
 }
 
 /** Render markdown to HTML. Prefer `ui.markdown`. See {@link MarkdownProps}. */

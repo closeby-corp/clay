@@ -142,18 +142,22 @@ panel.refresh();
 | Prop | Type | Description |
 |------|------|-------------|
 | `text` | `string \| (() => string)` | Label content (also the first argument). A function uses `bindText` — re-runs when tracked `state` / `reactive` reads change |
+| `icon` | `string` | Optional Lucide kebab-case icon before/after text |
+| `iconPosition` | `'start' \| 'end'` | Default `'start'` |
+| `iconClassName` | `string` | Extra classes on the icon |
 | `className` | `string` | Extra classes |
 
 ```typescript
 const s = ui.state({ count: 0 });
 ui.label(() => `Count: ${s.count}`);
+ui.label('Orders', { icon: 'clipboard-list' });
 ```
 
 #### `ui.button(text?, props?)`
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `text` | `string` | `''` | Button label |
+| `text` | `string \| (() => string)` | Button label (function → `bindText`) |
 | `icon` | `string` | | Lucide kebab-case name (full set; same as `ui.icon` / nav) |
 | `iconPosition` | `'start' \| 'end'` | `'start'` | Icon placement relative to label |
 | `variant` | `'default' \| 'destructive' \| 'outline' \| 'secondary' \| 'ghost' \| 'link'` | `'default'` | Visual style |
@@ -191,19 +195,23 @@ Client-side navigation for paths starting with `/`. Use `external: true` (or `ui
 | Prop | Type | Description |
 |------|------|-------------|
 | `external` | `boolean` | Open in a new tab (`noopener`) instead of SPA navigate |
+| `icon` / `iconPosition` / `iconClassName` | | Same as `ui.label` |
 | `className` | `string` | Extra classes |
 
 #### `ui.badge(text?, props?)`
 
 | Prop | Type | Default |
 |------|------|---------|
+| `text` | `string \| (() => string)` | Chip text (function → `bindText`) |
+| `icon` / `iconPosition` / `iconClassName` | | Optional Lucide icon in the chip |
 | `variant` | `'default' \| 'secondary' \| 'destructive' \| 'outline'` | `'default'` |
 | `size` | `'default' \| 'xs'` | `'default'` |
 | `color` | `string` | Named (`green`, `red`, `amber`, …) or CSS (`#22c55e`). Overrides `variant` when set. |
 | `className` | `string` | |
 
 ```typescript
-ui.badge('live', { size: 'xs', color: 'emerald' });
+ui.badge('live', { size: 'xs', color: 'emerald', icon: 'radio' });
+ui.badge(() => status, { icon: 'circle-check' });
 ```
 
 #### `ui.copyButton(content, props?)`
@@ -224,7 +232,12 @@ Same as `ui.link(text, url, { external: true })` — opens in a new tab. http(s)
 | Prop | Type | Default |
 |------|------|---------|
 | `variant` | `'default' \| 'destructive'` | `'default'` |
+| `icon` / `iconPosition` / `iconClassName` | | Optional Lucide icon |
 | `className` | `string` | |
+
+```typescript
+ui.alert('Save failed', { variant: 'destructive', icon: 'triangle-alert' });
+```
 
 #### `ui.spinner(props?)`
 
@@ -288,6 +301,39 @@ Lucide icon by kebab-case name. The **full** Lucide set is bundled in the client
 | Prop | Type |
 |------|------|
 | `className` | `string` |
+
+#### `ui.iconText(text?, props?)`
+
+Inline icon + text row. Prefer over manual `ui.row(() => { ui.icon(); ui.label(); })`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `text` | `string \| (() => string)` | Row text (function → `bindText`) |
+| `icon` | `string` | Lucide name |
+| `iconPosition` | `'start' \| 'end'` | `'start'` |
+| `gap` | `1 \| 2 \| 3` | `2` (Tailwind `gap-*`) |
+| `className` | `string` | |
+
+```typescript
+ui.iconText('Refresh', { icon: 'refresh-cw' });
+ui.iconText(() => `Rows: ${n}`, { icon: 'list' });
+```
+
+#### `ui.statusDot(props?)`
+
+Colored dot (or Lucide icon) + label for feeds, tables, and status lines — structured alternative to `ui.html` spans.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `label` | `string \| (() => string)` | Text beside the dot (function → `bindText`) |
+| `color` | `'emerald' \| 'amber' \| 'red' \| 'blue' \| 'muted' \| string` | `'muted'` |
+| `icon` | `string` | When set, renders icon instead of dot |
+| `className` | `string` | |
+
+```typescript
+ui.statusDot({ label: 'Healthy', color: 'emerald' });
+ui.statusDot({ label: () => status, color: 'amber', icon: 'alert-circle' });
+```
 
 #### `ui.markdown(text?, props?)`
 

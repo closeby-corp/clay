@@ -49,10 +49,10 @@ ui.page('/', () => {
         () => {
           ui.column(() => {
             for (const item of examples) {
-              ui.row(() => {
-                ui.icon(item.icon ?? 'boxes').classes('size-4 text-muted-foreground');
-                ui.link(item.label, item.href);
-              }, { gap: 2 }).classes('items-center');
+              ui.link(item.label, item.href, {
+                icon: item.icon ?? 'boxes',
+                className: 'text-muted-foreground',
+              });
             }
           }, { gap: 2 });
         },

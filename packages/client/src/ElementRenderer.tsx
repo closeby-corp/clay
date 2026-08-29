@@ -204,6 +204,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
+import { IconText, StatusDot } from './IconText';
 import { CalendarIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { resolveNavIcon } from './shell/types';
@@ -226,6 +227,23 @@ const widthClass: Record<string, string> = {
   '7xl': 'max-w-7xl',
   full: 'max-w-full',
 };
+
+function iconTextFromProps(
+  props: Record<string, unknown>,
+  opts: { iconSize?: 'xs' | 'sm' | 'default'; gap?: 1 | 2 | 3 } = {},
+) {
+  const gapRaw = props.gap;
+  const gap =
+    gapRaw === 1 || gapRaw === 2 || gapRaw === 3 ? (gapRaw as 1 | 2 | 3) : opts.gap;
+  return {
+    text: String(props.text ?? ''),
+    icon: props.icon ? String(props.icon) : undefined,
+    iconPosition: (props.iconPosition === 'end' ? 'end' : 'start') as 'start' | 'end',
+    iconClassName: typeof props.iconClassName === 'string' ? props.iconClassName : undefined,
+    iconSize: opts.iconSize,
+    gap,
+  };
+}
 
 function hasEvent(props: Record<string, unknown>, name: string): boolean {
   const events = props.events as string[] | undefined;
@@ -2821,16 +2839,37 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'label':
       return (
-        <div className={cn('text-base', className)} style={asStyle(style)}>
-          {String(props.text ?? '')}
-        </div>
+        <IconText
+          {...iconTextFromProps(props)}
+          as="div"
+          className={cn('text-base', className)}
+          style={asStyle(style)}
+        />
+      );
+
+    case 'iconText':
+      return (
+        <IconText
+          {...iconTextFromProps(props)}
+          className={className}
+          style={asStyle(style)}
+        />
+      );
+
+    case 'statusDot':
+      return (
+        <StatusDot
+          text={String(props.text ?? '')}
+          color={typeof props.color === 'string' ? props.color : undefined}
+          icon={typeof props.icon === 'string' ? props.icon : undefined}
+          className={className}
+          style={asStyle(style)}
+        />
       );
 
     case 'button': {
-      const Icon = props.icon ? resolveNavIcon(String(props.icon)) : null;
-      const iconPos = props.iconPosition === 'end' ? 'end' : 'start';
-      const label = String(props.text ?? '');
-      const iconOnly = !!Icon && !label;
+      const slot = iconTextFromProps(props);
+      const iconOnly = !!slot.icon && !slot.text;
       return (
         <Button
           variant={(props.variant as any) ?? 'default'}
@@ -2843,13 +2882,7 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
             if (hasEvent(props, 'click')) emit(id, 'click');
           }}
         >
-          {Icon && iconPos === 'start' ? (
-            <Icon className={cn('size-4 shrink-0', label && 'mr-0')} aria-hidden />
-          ) : null}
-          {label || null}
-          {Icon && iconPos === 'end' ? (
-            <Icon className={cn('size-4 shrink-0', label && 'ml-0')} aria-hidden />
-          ) : null}
+          <IconText {...slot} gap={2} iconSize="default" />
         </Button>
       );
     }
@@ -3016,7 +3049,7 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
                 },
               })}
         >
-          {String(props.text ?? '')}
+          <IconText {...iconTextFromProps(props)} gap={2} iconSize="sm" />
         </a>
       );
     }
@@ -3030,7 +3063,10 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           className={className}
           style={asStyle(style)}
         >
-          {String(props.text ?? '')}
+          <IconText
+            {...iconTextFromProps(props, { iconSize: props.size === 'xs' ? 'xs' : 'sm' })}
+            gap={1}
+          />
         </Badge>
       );
 
@@ -3041,7 +3077,9 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           className={className}
           style={asStyle(style)}
         >
-          <AlertDescription>{String(props.text ?? '')}</AlertDescription>
+          <AlertDescription>
+            <IconText {...iconTextFromProps(props)} gap={2} iconSize="default" />
+          </AlertDescription>
         </Alert>
       );
 

@@ -87,7 +87,7 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
   - [x] Mix with `ui.*` under same parent context — yes (documented)
   - [x] Trust model vs `ui.html(string)` documented; keep string API as escape hatch
   - [ ] Productize B: `docs/jsx.md`, re-export from `@close-by/clay`, IntrinsicElements types, demo mixing JSX + `ui.auto`
-  - [ ] Phase 0 primitives to cut most strings without JSX: status-dot / tiny circle helper (`ui.iframe` done)
+  - [x] Phase 0 primitives to cut most strings without JSX: `ui.statusDot` + `ui.iconText` (`ui.iframe` done)
 - [x] Thin JS bridge (`runJavaScript` / scroll helpers)
 - [x] Browser / client / general storage scopes + Redis adapter (multi-process / horizontal scaling)
 - [x] Compile-time reactive `let` (Phase 1: `ui.state` + `ui.auto`; Phase 2: `@close-by/clay-compiler` + `--reactive-let` — see [`docs/reactive-let.md`](./docs/reactive-let.md))

@@ -6,7 +6,9 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 
 | `ui.*` | Wire `type` | Client rendering |
 |--------|-------------|------------------|
-| `label` | `label` | Text div |
+| `label` | `label` | Text div (optional `icon`) |
+| `iconText` | `iconText` | Inline icon + text row |
+| `statusDot` | `statusDot` | Status dot/icon + label |
 | `button` | `button` | ShadCN `Button` |
 | `input` | `input` | ShadCN `Input` (+ optional label / `error`) |
 | `textArea` | `textarea` | Native textarea (+ optional `error`) |

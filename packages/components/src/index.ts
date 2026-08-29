@@ -1,4 +1,5 @@
 import { Element, withParent } from '@close-by/clay-core';
+import { type IconSlotProps, withIconSlot } from './icon-text';
 
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
@@ -59,22 +60,28 @@ export function iconButton(props: IconButtonProps): Element {
   });
 }
 
-export type LabelProps = {
+export type LabelProps = IconSlotProps & {
   text?: string;
   className?: string;
 };
 
 export function label(text?: string | (() => string), props: Omit<LabelProps, 'text'> = {}): Element {
   if (typeof text === 'function') {
-    return new Element('label', {
-      text: '',
-      className: props.className,
-    }).bindText(text);
+    return new Element(
+      'label',
+      withIconSlot(props, {
+        text: '',
+        className: props.className,
+      }),
+    ).bindText(text);
   }
-  return new Element('label', {
-    text: text ?? '',
-    className: props.className,
-  });
+  return new Element(
+    'label',
+    withIconSlot(props, {
+      text: text ?? '',
+      className: props.className,
+    }),
+  );
 }
 
 export type InputProps = {
@@ -412,7 +419,7 @@ export function textArea(props: TextAreaProps = {}): Element {
   });
 }
 
-export type LinkProps = {
+export type LinkProps = IconSlotProps & {
   href: string;
   text?: string;
   /**
@@ -424,12 +431,15 @@ export type LinkProps = {
 };
 
 export function link(text: string, href: string, props: Omit<LinkProps, 'href' | 'text'> = {}): Element {
-  return new Element('link', {
-    text,
-    href,
-    external: props.external ?? false,
-    className: props.className,
-  });
+  return new Element(
+    'link',
+    withIconSlot(props, {
+      text,
+      href,
+      external: props.external ?? false,
+      className: props.className,
+    }),
+  );
 }
 
 /** Anchor that opens `url` in a new tab. Prefer over `runJavaScript('window.open…')`. */
@@ -441,7 +451,7 @@ export function externalLink(
   return link(text, url, { ...props, external: true });
 }
 
-export type BadgeProps = {
+export type BadgeProps = IconSlotProps & {
   text?: string | (() => string);
   variant?: 'default' | 'secondary' | 'destructive' | 'outline';
   /** Dense ops chip (`text-[10px]` / `h-5`). */
@@ -462,52 +472,67 @@ export function badge(
   if (isBadgeProps(textOrProps)) {
     const { text, ...rest } = textOrProps;
     if (typeof text === 'function') {
-      return new Element('badge', {
-        text: '',
+      return new Element(
+        'badge',
+        withIconSlot(rest, {
+          text: '',
+          variant: rest.variant ?? 'default',
+          size: rest.size ?? 'default',
+          color: rest.color,
+          className: rest.className,
+        }),
+      ).bindText(text);
+    }
+    return new Element(
+      'badge',
+      withIconSlot(rest, {
+        text: text ?? '',
         variant: rest.variant ?? 'default',
         size: rest.size ?? 'default',
         color: rest.color,
         className: rest.className,
-      }).bindText(text);
-    }
-    return new Element('badge', {
-      text: text ?? '',
-      variant: rest.variant ?? 'default',
-      size: rest.size ?? 'default',
-      color: rest.color,
-      className: rest.className,
-    });
+      }),
+    );
   }
   if (typeof textOrProps === 'function') {
-    return new Element('badge', {
-      text: '',
+    return new Element(
+      'badge',
+      withIconSlot(props, {
+        text: '',
+        variant: props.variant ?? 'default',
+        size: props.size ?? 'default',
+        color: props.color,
+        className: props.className,
+      }),
+    ).bindText(textOrProps);
+  }
+  return new Element(
+    'badge',
+    withIconSlot(props, {
+      text: textOrProps ?? '',
       variant: props.variant ?? 'default',
       size: props.size ?? 'default',
       color: props.color,
       className: props.className,
-    }).bindText(textOrProps);
-  }
-  return new Element('badge', {
-    text: textOrProps ?? '',
-    variant: props.variant ?? 'default',
-    size: props.size ?? 'default',
-    color: props.color,
-    className: props.className,
-  });
+    }),
+  );
 }
 
-export type AlertProps = {
+export type AlertProps = IconSlotProps & {
   message?: string;
   variant?: 'default' | 'destructive';
   className?: string;
 };
 
 export function alert(message?: string, props: Omit<AlertProps, 'message'> = {}): Element {
-  return new Element('alert', {
-    text: message ?? '',
-    variant: props.variant ?? 'default',
-    className: props.className,
-  });
+  return new Element(
+    'alert',
+    withIconSlot(props, {
+      text: message ?? '',
+      variant: props.variant ?? 'default',
+      className: props.className,
+    }),
+  );
 }
 
 export type StatItem = {
@@ -1009,3 +1034,12 @@ export {
   type AiSelectionAction,
   type AiFineTuneField,
 } from './ai';
+
+export {
+  iconText,
+  statusDot,
+  type IconSlotProps,
+  type IconTextProps,
+  type StatusDotProps,
+  type StatusDotColor,
+} from './icon-text';

@@ -1552,9 +1552,11 @@ function isAutoCallStatement(stmt: ts.Statement): boolean {
   );
 }
 
-function isBindTextCallee(expr: ts.Expression): 'label' | 'badge' | 'button' | null {
+function isBindTextCallee(expr: ts.Expression): 'label' | 'badge' | 'button' | 'iconText' | null {
   if (ts.isIdentifier(expr)) {
-    if (expr.text === 'label' || expr.text === 'badge' || expr.text === 'button') return expr.text;
+    if (expr.text === 'label' || expr.text === 'badge' || expr.text === 'button' || expr.text === 'iconText') {
+      return expr.text;
+    }
     return null;
   }
   if (
@@ -1564,7 +1566,7 @@ function isBindTextCallee(expr: ts.Expression): 'label' | 'badge' | 'button' | n
     ts.isIdentifier(expr.name)
   ) {
     const n = expr.name.text;
-    if (n === 'label' || n === 'badge' || n === 'button') return n;
+    if (n === 'label' || n === 'badge' || n === 'button' || n === 'iconText') return n;
   }
   return null;
 }

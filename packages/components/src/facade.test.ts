@@ -67,6 +67,10 @@ import {
   button,
   iconButton,
   badge,
+  link,
+  alert,
+  iconText,
+  statusDot,
   externalLink,
 } from './index';
 import { reactive } from '@close-by/clay-core';
@@ -126,6 +130,33 @@ describe('facade feedback / layout elements', () => {
     await Promise.resolve();
     expect(chip.props.text).toBe('v=5');
     expect(btn.props.text).toBe('v=5');
+  });
+
+  test('iconText and statusDot with icon + bindText', async () => {
+    const s = reactive({ n: 1 });
+    const row = iconText(() => `n=${s.n}`, { icon: 'hash' });
+    expect(row.type).toBe('iconText');
+    expect(row.props.icon).toBe('hash');
+    expect(row.props.text).toBe('n=1');
+    s.n = 2;
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(row.props.text).toBe('n=2');
+
+    const dot = statusDot({ label: 'ok', color: 'emerald' });
+    expect(dot.type).toBe('statusDot');
+    expect(dot.props.color).toBe('emerald');
+  });
+
+  test('label badge link alert accept icon slot props', () => {
+    const l = label('Tasks', { icon: 'list-todo' });
+    expect(l.props.icon).toBe('list-todo');
+    const b = badge('ok', { icon: 'circle-check', size: 'xs' });
+    expect(b.props.icon).toBe('circle-check');
+    const a = link('Docs', '/docs', { icon: 'book-open' });
+    expect(a.props.icon).toBe('book-open');
+    const al = alert('Failed', { icon: 'triangle-alert', variant: 'destructive' });
+    expect(al.props.icon).toBe('triangle-alert');
   });
 
   test('input error prop wires through', () => {
