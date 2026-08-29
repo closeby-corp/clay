@@ -81,6 +81,57 @@ describe('auto', () => {
     expect(patches.some((p: any) => p.op === 'setChildren')).toBe(false);
   });
 
+  test('nested auto reuses inner auto on outer-only refresh', async () => {
+    clearPages();
+    setPageWrapper(null);
+    const outer = state({ tab: 'a' });
+    const inner = state({ count: 0 });
+    let outerAuto!: AutoElement;
+    let innerAuto!: AutoElement;
+
+    page('/nested-auto', () => {
+      outerAuto = auto(() => {
+        void outer.tab;
+        innerAuto = auto(() => {
+          new Element('label', { text: `c=${inner.count}` });
+        });
+      });
+    });
+
+    const patches: unknown[] = [];
+    const session = new ClientSession('/nested-auto', (msg) => {
+      if (msg.op === 'patch') patches.push(...msg.patches);
+    });
+    session.mount();
+
+    const innerId = innerAuto.id;
+    const labelId = innerAuto.children[0]!.id;
+
+    outer.tab = 'b';
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const innerAfterOuter = outerAuto.children[0] as AutoElement;
+    expect(innerAfterOuter.id).toBe(innerId);
+    expect(innerAfterOuter.children[0]?.id).toBe(labelId);
+    expect(patches.some((p: any) => p.op === 'setChildren' && p.id === outerAuto.id)).toBe(
+      false,
+    );
+
+    patches.length = 0;
+    inner.count = 1;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(innerAfterOuter.children[0]?.props.text).toBe('c=1');
+    expect(patches.some((p: any) => p.op === 'updateProps' && p.props?.text === 'c=1')).toBe(
+      true,
+    );
+    expect(patches.some((p: any) => p.op === 'setChildren' && p.id === innerAfterOuter.id)).toBe(
+      false,
+    );
+  });
+
   test('falls back to setChildren when structure changes', async () => {
     clearPages();
     setPageWrapper(null);

@@ -386,13 +386,17 @@ export class RefreshableElement extends Element {
   }
 }
 
-/** Same type shape and no nested refreshable/auto roots → safe for in-place props sync. */
+/** Same type shape → safe for in-place props sync. Nested refreshable/auto roots reuse by id when their child trees match. */
 function canReuseElementTree(previous: Element[], next: Element[]): boolean {
   if (previous.length !== next.length) return false;
   for (let i = 0; i < previous.length; i++) {
     const a = previous[i]!;
     const b = next[i]!;
     if (a.type !== b.type) return false;
+    if (a instanceof RefreshableElement && b instanceof RefreshableElement) {
+      if (!canReuseElementTree(a.children, b.children)) return false;
+      continue;
+    }
     if (a instanceof RefreshableElement || b instanceof RefreshableElement) return false;
     if (!canReuseElementTree(a.children, b.children)) return false;
   }

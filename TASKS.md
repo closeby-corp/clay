@@ -71,9 +71,16 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
   - [x] Dependency-isolated regions (separate `auto` when read-sets are disjoint; overlapping deps share)
   - [x] Compile-time `bindText` for `ui.label(expr)` / `label(expr)` reading state (incl. `.classes()` chains)
   - [x] Prove on Orders-shaped multi-region page — Phase 1 demo `ReactiveLetOrders` (always interactive) + let-syntax fixture/`orders-proof.test.ts`; glue locals so `const row` + dependents stay in one `auto`
-  - [ ] Loop-scoped / destructured / `const` reactive bindings where safe (see `docs/reactive-let.md` Still Later)
-  - [ ] Nested `auto` reuse without remounting when only inner props change
+  - [x] P0 from UQ Hub dogfood: skip type-position rewrites; nested fns don’t inherit file pragma; docs + warn when bare builders need `ui.auto`
+  - [x] P1: call / `new` let initializers; auto-wrap bare local builder calls (`autoWrapBuilders`, default on)
+  - [x] NiceGUI-style: lift `const` with the same initializer rules as `let`
+  - [x] NiceGUI-style: simple object/array destructuring (`let { a, b } = {…}`, `let [x, y] = […]`)
+  - [ ] NiceGUI-style: loop-scoped bindings; rest/nested destructuring
+  - [x] NiceGUI-style: destructuring defaults (`let { x = 1 }`, `let [y = 10] = []`)
+  - [x] Nested `auto` reuse without remounting when only inner props change
   - [ ] Docs: sell `let` as the happy path once stable; keep Phase 1 as the escape hatch for complex screens
+  - [x] P2: shadowing warnings (local `const`/`let` reusing lifted names)
+  - [ ] P2: emit renames for shadowing
 - [x] **Investigate: `ui.jsx` / JSX trees instead of HTML strings** — writeup [`docs/jsx-investigation.md`](./docs/jsx-investigation.md)
   - Pain: `ui.html('<div…>')` is opaque (no IDE structure) and blocks real custom components; client path is `dangerouslySetInnerHTML`
   - Goal: author markup as markup (JSX) with IDE support for tags + user-defined components — not hyperscript `ui.jsx('div', props)`, and not a second UI stack

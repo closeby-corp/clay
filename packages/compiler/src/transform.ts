@@ -3,6 +3,11 @@ import ts from 'typescript';
 export type TransformReactiveLetOptions = {
   /** Prefer `ui.state` / `ui.auto` when `ui` is imported (default true). */
   preferUiNamespace?: boolean;
+  /**
+   * Wrap bare local builder calls that read lifted state in `ui.auto`
+   * (default `true`). When `false`, only emit warnings.
+   */
+  autoWrapBuilders?: boolean;
 };
 
 export type TransformReactiveLetResult = {
@@ -10,6 +15,11 @@ export type TransformReactiveLetResult = {
   transformed: boolean;
   /** Names of `let` bindings that were lifted into state. */
   lets: string[];
+  /**
+   * Non-fatal diagnostics (e.g. bare builder calls that read lifted state
+   * without `ui.auto`). Empty when transformed is false.
+   */
+  warnings: string[];
 };
 
 const FILE_PRAGMA_RE = /^\s*(?:\/\/\s*@clay-reactive\b|\/\*\s*@clay-reactive\b)/m;
@@ -28,6 +38,20 @@ function isUseReactiveDirective(stmt: ts.Statement): boolean {
   return ts.isStringLiteral(expr) && expr.text === 'use reactive';
 }
 
+function isSimpleCallee(expr: ts.Expression): boolean {
+  if (ts.isParenthesizedExpression(expr)) return isSimpleCallee(expr.expression);
+  if (ts.isIdentifier(expr)) return true;
+  if (ts.isPropertyAccessExpression(expr)) return isSimpleCallee(expr.expression);
+  if (ts.isElementAccessExpression(expr)) {
+    return (
+      isSimpleCallee(expr.expression) &&
+      !!expr.argumentExpression &&
+      isSimpleInitializer(expr.argumentExpression)
+    );
+  }
+  return false;
+}
+
 function isSimpleInitializer(expr: ts.Expression | undefined): boolean {
   if (!expr) return false;
 
@@ -36,6 +60,9 @@ function isSimpleInitializer(expr: ts.Expression | undefined): boolean {
   if (ts.isAsExpression(expr) || ts.isSatisfiesExpression(expr)) {
     return isSimpleInitializer(expr.expression);
   }
+
+  // Async init is not a one-shot sync state seed.
+  if (ts.isAwaitExpression(expr)) return false;
 
   if (
     ts.isNumericLiteral(expr) ||
@@ -65,8 +92,11 @@ function isSimpleInitializer(expr: ts.Expression | undefined): boolean {
   }
 
   if (ts.isBinaryExpression(expr)) {
-    // No `=` / compound assigns as initializers.
     const op = expr.operatorToken.kind;
+    if (op === ts.SyntaxKind.QuestionQuestionToken) {
+      return isSimpleInitializer(expr.left) && isSimpleInitializer(expr.right);
+    }
+    // No `=` / compound assigns as initializers.
     if (
       op === ts.SyntaxKind.EqualsToken ||
       op === ts.SyntaxKind.PlusEqualsToken ||
@@ -127,26 +157,180 @@ function isSimpleInitializer(expr: ts.Expression | undefined): boolean {
     });
   }
 
-  // No call / new / await — those stay as plain `let` (or Phase 1).
+  // One-shot call / new (Date.now(), defaultRangeFrom(), new Map()).
+  if (ts.isCallExpression(expr)) {
+    return (
+      isSimpleCallee(expr.expression) &&
+      expr.arguments.every((arg) => !ts.isSpreadElement(arg) && isSimpleInitializer(arg))
+    );
+  }
+  if (ts.isNewExpression(expr)) {
+    const args = expr.arguments;
+    if (!isSimpleCallee(expr.expression)) return false;
+    if (!args || args.length === 0) return true;
+    return args.every((arg) => !ts.isSpreadElement(arg) && isSimpleInitializer(arg));
+  }
+
   return false;
 }
 
-function isSimpleLetStatement(
+/**
+ * Expand a single `let`/`const` statement into one or more state bindings.
+ * Supports identifier bindings and simple object/array destructuring.
+ */
+function collectLiftableBindings(
   stmt: ts.Statement,
-): { name: string; initializer: ts.Expression } | null {
+): Array<{ name: string; initializer: ts.Expression }> | null {
   if (!ts.isVariableStatement(stmt)) return null;
-  if (!(stmt.declarationList.flags & ts.NodeFlags.Let)) return null;
+  const flags = stmt.declarationList.flags;
+  const isLet = (flags & ts.NodeFlags.Let) !== 0;
+  const isConst = (flags & ts.NodeFlags.Const) !== 0;
+  if (!isLet && !isConst) return null;
   if (stmt.declarationList.declarations.length !== 1) return null;
   const decl = stmt.declarationList.declarations[0]!;
-  if (!ts.isIdentifier(decl.name) || !decl.initializer || !isSimpleInitializer(decl.initializer)) {
-    return null;
+  if (!decl.initializer) return null;
+
+  if (ts.isIdentifier(decl.name)) {
+    if (!isSimpleInitializer(decl.initializer)) return null;
+    return [{ name: decl.name.text, initializer: decl.initializer }];
   }
-  return { name: decl.name.text, initializer: decl.initializer };
+
+  if (ts.isObjectBindingPattern(decl.name)) {
+    return expandObjectBinding(decl.name, decl.initializer);
+  }
+  if (ts.isArrayBindingPattern(decl.name)) {
+    return expandArrayBinding(decl.name, decl.initializer);
+  }
+  return null;
+}
+
+function expandObjectBinding(
+  pattern: ts.ObjectBindingPattern,
+  init: ts.Expression,
+): Array<{ name: string; initializer: ts.Expression }> | null {
+  if (pattern.elements.length === 0) return null;
+  const out: Array<{ name: string; initializer: ts.Expression }> = [];
+
+  for (const el of pattern.elements) {
+    if (!ts.isBindingElement(el)) return null;
+    if (el.dotDotDotToken) return null;
+    if (!ts.isIdentifier(el.name)) return null; // no nested patterns yet
+
+    const defaultInit =
+      el.initializer && isSimpleInitializer(el.initializer) ? el.initializer : null;
+
+    let propName: string;
+    if (!el.propertyName) {
+      propName = el.name.text;
+    } else if (ts.isIdentifier(el.propertyName)) {
+      propName = el.propertyName.text;
+    } else if (ts.isStringLiteral(el.propertyName) || ts.isNumericLiteral(el.propertyName)) {
+      propName = el.propertyName.text;
+    } else {
+      return null;
+    }
+
+    let value: ts.Expression | undefined;
+    if (ts.isObjectLiteralExpression(init)) {
+      for (const p of init.properties) {
+        if (!ts.isPropertyAssignment(p)) continue;
+        const key = ts.isIdentifier(p.name)
+          ? p.name.text
+          : ts.isStringLiteral(p.name) || ts.isNumericLiteral(p.name)
+            ? p.name.text
+            : null;
+        if (key === propName) {
+          value = p.initializer;
+          break;
+        }
+      }
+      if (!value) {
+        if (!defaultInit) return null;
+        value = defaultInit;
+      } else if (!isSimpleInitializer(value)) {
+        return null;
+      }
+    } else if (isSimpleInitializer(init)) {
+      const access = ts.factory.createPropertyAccessExpression(init, propName);
+      value =
+        defaultInit != null
+          ? ts.factory.createBinaryExpression(
+              access,
+              ts.SyntaxKind.QuestionQuestionToken,
+              defaultInit,
+            )
+          : access;
+    } else {
+      return null;
+    }
+    out.push({ name: el.name.text, initializer: value });
+  }
+  return out.length > 0 ? out : null;
+}
+
+function expandArrayBinding(
+  pattern: ts.ArrayBindingPattern,
+  init: ts.Expression,
+): Array<{ name: string; initializer: ts.Expression }> | null {
+  if (pattern.elements.length === 0) return null;
+  const out: Array<{ name: string; initializer: ts.Expression }> = [];
+  let index = 0;
+
+  for (const el of pattern.elements) {
+    if (ts.isOmittedExpression(el)) {
+      index++;
+      continue;
+    }
+    if (!ts.isBindingElement(el)) return null;
+    if (el.dotDotDotToken) return null;
+    if (!ts.isIdentifier(el.name)) return null;
+
+    const defaultInit =
+      el.initializer && isSimpleInitializer(el.initializer) ? el.initializer : null;
+
+    let value: ts.Expression;
+    if (ts.isArrayLiteralExpression(init)) {
+      const elem = init.elements[index];
+      if (!elem || ts.isSpreadElement(elem)) {
+        if (!defaultInit) return null;
+        value = defaultInit;
+      } else if (!isSimpleInitializer(elem as ts.Expression)) {
+        return null;
+      } else {
+        value = elem as ts.Expression;
+      }
+    } else if (isSimpleInitializer(init)) {
+      const access = ts.factory.createElementAccessExpression(
+        init,
+        ts.factory.createNumericLiteral(index),
+      );
+      value =
+        defaultInit != null
+          ? ts.factory.createBinaryExpression(
+              access,
+              ts.SyntaxKind.QuestionQuestionToken,
+              defaultInit,
+            )
+          : access;
+    } else {
+      return null;
+    }
+    out.push({ name: el.name.text, initializer: value });
+    index++;
+  }
+  return out.length > 0 ? out : null;
+}
+
+/** True when this statement lifts any of `names` (whole stmt should be stripped). */
+function statementLiftsNames(stmt: ts.Statement, names: Set<string>): boolean {
+  const bindings = collectLiftableBindings(stmt);
+  return !!bindings && bindings.some((b) => names.has(b.name));
 }
 
 /**
- * Collect transformable `let`s anywhere in a function block (including nested
- * blocks), but not inside nested functions. Duplicate names abort collection.
+ * Collect transformable `let` / `const` bindings anywhere in a function block
+ * (including nested blocks), but not inside nested functions. Duplicate names
+ * abort collection.
  */
 function collectLetsInFunctionBody(
   body: ts.Block,
@@ -156,11 +340,15 @@ function collectLetsInFunctionBody(
   const names = new Set<string>();
 
   const considerStmt = (stmt: ts.Statement): boolean => {
-    const simple = isSimpleLetStatement(stmt);
-    if (!simple) return true;
-    if (names.has(simple.name)) return false; // shadowing / duplicate → skip site
-    names.add(simple.name);
-    lets.push(simple);
+    const bindings = collectLiftableBindings(stmt);
+    if (!bindings) return true;
+    for (const b of bindings) {
+      if (names.has(b.name)) return false; // shadowing / duplicate → skip site
+    }
+    for (const b of bindings) {
+      names.add(b.name);
+      lets.push(b);
+    }
     return true;
   };
 
@@ -293,8 +481,7 @@ function stripLetsAndDirective(
     }
     for (let i = start; i < statements.length; i++) {
       const stmt = statements[i]!;
-      const simple = isSimpleLetStatement(stmt);
-      if (simple && names.has(simple.name)) continue;
+      if (statementLiftsNames(stmt, names)) continue;
       out.push(rewriteStatement(stmt));
     }
     return out;
@@ -312,22 +499,18 @@ function stripLetsAndDirective(
           filterStatements(stmt.thenStatement.statements, false),
         );
       } else {
-        const thenLet = isSimpleLetStatement(stmt.thenStatement);
-        thenStmt =
-          thenLet && names.has(thenLet.name)
-            ? factory.createBlock([], true)
-            : rewriteStatement(stmt.thenStatement);
+        thenStmt = statementLiftsNames(stmt.thenStatement, names)
+          ? factory.createBlock([], true)
+          : rewriteStatement(stmt.thenStatement);
       }
       let elseStmt = stmt.elseStatement;
       if (elseStmt) {
         if (ts.isBlock(elseStmt)) {
           elseStmt = factory.updateBlock(elseStmt, filterStatements(elseStmt.statements, false));
         } else {
-          const elseLet = isSimpleLetStatement(elseStmt);
-          elseStmt =
-            elseLet && names.has(elseLet.name)
-              ? factory.createBlock([], true)
-              : rewriteStatement(elseStmt);
+          elseStmt = statementLiftsNames(elseStmt, names)
+            ? factory.createBlock([], true)
+            : rewriteStatement(elseStmt);
         }
       }
       return factory.updateIfStatement(stmt, stmt.expression, thenStmt, elseStmt);
@@ -356,10 +539,9 @@ function stripLetsAndDirective(
     }
     if (ts.isSwitchStatement(stmt)) {
       const clauses = stmt.caseBlock.clauses.map((clause) => {
-        const stmts = clause.statements.filter((s) => {
-          const simple = isSimpleLetStatement(s);
-          return !(simple && names.has(simple.name));
-        }).map(rewriteStatement);
+        const stmts = clause.statements
+          .filter((s) => !statementLiftsNames(s, names))
+          .map(rewriteStatement);
         if (ts.isCaseClause(clause)) {
           return factory.updateCaseClause(clause, clause.expression, stmts);
         }
@@ -396,6 +578,7 @@ function fileHasUiImport(sourceFile: ts.SourceFile): boolean {
 
 function shouldRewriteIdent(n: ts.Identifier, names: Set<string>): boolean {
   if (!names.has(n.text)) return false;
+  if (isInsideTypeSubtree(n)) return false;
   const p = n.parent;
   if (!p) return true;
   if (ts.isPropertyAccessExpression(p) && p.name === n) return false;
@@ -407,7 +590,23 @@ function shouldRewriteIdent(n: ts.Identifier, names: Set<string>): boolean {
   if (ts.isClassDeclaration(p) && p.name === n) return false;
   if (ts.isMethodDeclaration(p) && p.name === n) return false;
   if (ts.isVariableDeclaration(p) && p.name === n) return false;
+  if (ts.isTypeAliasDeclaration(p) && p.name === n) return false;
+  if (ts.isInterfaceDeclaration(p) && p.name === n) return false;
+  if (ts.isEnumMember(p) && p.name === n) return false;
   return true;
+}
+
+/** True when `node` sits under a type alias / interface / type annotation AST. */
+function isInsideTypeSubtree(node: ts.Node): boolean {
+  let cur: ts.Node | undefined = node.parent;
+  while (cur) {
+    if (ts.isTypeAliasDeclaration(cur) || ts.isInterfaceDeclaration(cur)) return true;
+    if (ts.isTypeNode(cur)) return true;
+    if (ts.isTypeParameterDeclaration(cur)) return true;
+    if (isFunctionLike(cur) || ts.isSourceFile(cur) || ts.isModuleBlock(cur)) return false;
+    cur = cur.parent;
+  }
+  return false;
 }
 
 function rewriteIdents(
@@ -418,6 +617,15 @@ function rewriteIdents(
 ): ts.Node {
   const { factory } = context;
   const visit = (n: ts.Node): ts.Node => {
+    // Never rewrite identifiers inside type-only trees (property keys, refs, …).
+    if (
+      ts.isTypeAliasDeclaration(n) ||
+      ts.isInterfaceDeclaration(n) ||
+      ts.isTypeParameterDeclaration(n) ||
+      ts.isTypeNode(n)
+    ) {
+      return n;
+    }
     if (ts.isShorthandPropertyAssignment(n) && names.has(n.name.text)) {
       return factory.createPropertyAssignment(
         n.name,
@@ -807,57 +1015,188 @@ type TransformSite = {
   hadDirective: boolean;
 };
 
+/**
+ * Find eligible transform sites.
+ *
+ * File pragma `// @clay-reactive` applies only to functions that are **not**
+ * nested inside another function (module-level fns and e.g. `ui.page` callbacks).
+ * Nested `function` / arrow bodies stay plain unless they open with `"use reactive";`.
+ */
 function findSites(sourceFile: ts.SourceFile, filePragma: boolean): TransformSite[] {
   const sites: TransformSite[] = [];
-  /** Functions nested inside an already-eligible reactive site inherit eligibility. */
-  const eligibleFns = new WeakSet<ts.Node>();
 
   const consider = (
     fn: ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration,
-    nestedInEligible: boolean,
+    insideFunction: boolean,
   ) => {
     const body = fn.body;
     if (!body || !ts.isBlock(body)) return;
     const collected = collectLetsInFunctionBody(body);
-    if (!collected || collected.lets.length === 0) {
-      // No lets here — still mark eligible so nested callbacks inherit (pragma / directive / parent).
-      if (nestedInEligible || filePragma || collected?.hadDirective) {
-        eligibleFns.add(fn);
-      }
-      return;
-    }
-    const eligible = collected.hadDirective || filePragma || nestedInEligible;
+    if (!collected || collected.lets.length === 0) return;
+    // File pragma does not inherit into nested helpers / widget callbacks.
+    const eligible = collected.hadDirective || (filePragma && !insideFunction);
     if (!eligible) return;
-    eligibleFns.add(fn);
     sites.push({ fn, lets: collected.lets, hadDirective: collected.hadDirective });
   };
 
-  const walk = (node: ts.Node, nestedInEligible: boolean) => {
+  const walk = (node: ts.Node, insideFunction: boolean) => {
     if (ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node)) {
-      consider(node, nestedInEligible);
-      const childEligible = nestedInEligible || eligibleFns.has(node);
-      ts.forEachChild(node, (child) => walk(child, childEligible));
+      consider(node, insideFunction);
+      ts.forEachChild(node, (child) => walk(child, true));
       return;
     }
-    ts.forEachChild(node, (child) => walk(child, nestedInEligible));
+    ts.forEachChild(node, (child) => walk(child, insideFunction));
   };
   walk(sourceFile, false);
   return sites;
 }
 
+/** Value-position reads of `names` (skips nested functions and type trees). */
+function readsLiftedNames(node: ts.Node, names: Set<string>): boolean {
+  let found = false;
+  const walk = (n: ts.Node, parent: ts.Node | undefined) => {
+    if (found) return;
+    if (isFunctionLike(n)) return;
+    if (ts.isTypeAliasDeclaration(n) || ts.isInterfaceDeclaration(n) || ts.isTypeNode(n)) return;
+    if (ts.isIdentifier(n) && names.has(n.text)) {
+      if (parent && ts.isVariableDeclaration(parent) && parent.name === n) return;
+      if (parent && ts.isBindingElement(parent) && parent.name === n) return;
+      if (parent && ts.isPropertyAccessExpression(parent) && parent.name === n) return;
+      if (parent && ts.isPropertyAssignment(parent) && parent.name === n) return;
+      if (parent && ts.isParameter(parent) && parent.name === n) return;
+      if (parent && ts.isFunctionDeclaration(parent) && parent.name === n) return;
+      found = true;
+      return;
+    }
+    ts.forEachChild(n, (child) => walk(child, n));
+  };
+  walk(node, undefined);
+  return found;
+}
+
+/** Warn when a non-lifted local binding reuses a lifted state name. */
+function collectShadowingWarnings(body: ts.Block, liftedNames: Set<string>): string[] {
+  if (liftedNames.size === 0) return [];
+  const warnings: string[] = [];
+  const seen = new Set<string>();
+
+  const walk = (node: ts.Node) => {
+    if (isFunctionLike(node)) return;
+    if (ts.isVariableStatement(node)) {
+      const bindings = collectLiftableBindings(node);
+      const liftsHere =
+        !!bindings &&
+        bindings.length > 0 &&
+        bindings.every((b) => liftedNames.has(b.name)) &&
+        bindings.every((b) => namesFromBindingStmt(node).includes(b.name));
+      if (!liftsHere) {
+        for (const name of namesFromBindingStmt(node)) {
+          if (!liftedNames.has(name) || seen.has(name)) continue;
+          seen.add(name);
+          warnings.push(
+            `reactive-let: local '${name}' shadows lifted state — rename the local or the lifted binding`,
+          );
+        }
+      }
+    }
+    ts.forEachChild(node, walk);
+  };
+
+  for (const stmt of body.statements) walk(stmt);
+  return warnings;
+}
+
+function namesFromBindingStmt(stmt: ts.VariableStatement): string[] {
+  const out: string[] = [];
+  for (const decl of stmt.declarationList.declarations) {
+    collectBindingNames(decl.name, out);
+  }
+  return out;
+}
+
+/** Local builders (function / const fn) whose bodies read lifted state names. */
+function collectStateReadingBuilders(body: ts.Block, liftedNames: Set<string>): Set<string> {
+  const builders = new Set<string>();
+
+  const noteFn = (name: string, fnBody: ts.ConciseBody) => {
+    if (readsLiftedNames(fnBody, liftedNames)) builders.add(name);
+  };
+
+  for (const stmt of body.statements) {
+    if (ts.isFunctionDeclaration(stmt) && stmt.name && stmt.body) {
+      noteFn(stmt.name.text, stmt.body);
+    }
+    if (ts.isVariableStatement(stmt)) {
+      for (const decl of stmt.declarationList.declarations) {
+        if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
+        const init = decl.initializer;
+        if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) {
+          if (init.body) noteFn(decl.name.text, init.body);
+        }
+      }
+    }
+  }
+  return builders;
+}
+
+function isBareBuilderCall(stmt: ts.Statement, builders: Set<string>): boolean {
+  if (!ts.isExpressionStatement(stmt)) return false;
+  if (isAutoCallStatement(stmt)) return false;
+  const expr = stmt.expression;
+  if (!ts.isCallExpression(expr) || expr.arguments.length > 0) return false;
+  if (!ts.isIdentifier(expr.expression)) return false;
+  return builders.has(expr.expression.text);
+}
+
+/**
+ * Warn when a site-top-level statement calls a local builder that reads lifted
+ * lets but is not already wrapped in `ui.auto` / `auto`.
+ */
+function collectAutoRegionWarnings(body: ts.Block, builders: Set<string>): string[] {
+  if (builders.size === 0) return [];
+  const warnings: string[] = [];
+  for (const stmt of body.statements) {
+    if (!isBareBuilderCall(stmt, builders)) continue;
+    const name = ((stmt as ts.ExpressionStatement).expression as ts.CallExpression)
+      .expression as ts.Identifier;
+    warnings.push(
+      `reactive-let: ${name.text}() reads lifted state but is not wrapped in ui.auto — ` +
+        `UI inside that builder will not rebuild on updates. Use ui.auto(() => { ${name.text}(); }) ` +
+        `or inline the UI in the reactive site body.`,
+    );
+  }
+  return warnings;
+}
+
+/** Rewrite bare `renderX()` → `ui.auto(() => { renderX(); })`. */
+function autoWrapBuilderCalls(
+  context: ts.TransformationContext,
+  statements: readonly ts.Statement[],
+  builders: Set<string>,
+  useUi: boolean,
+): ts.Statement[] {
+  if (builders.size === 0) return [...statements];
+  const { factory } = context;
+  return statements.map((stmt) => {
+    if (!isBareBuilderCall(stmt, builders)) return stmt;
+    return createAutoCall(factory, [stmt], useUi);
+  });
+}
+
 /**
  * Rewrite tracked `let` bindings into `ui.state` / `ui.auto` (or `state` / `auto`).
  *
- * Opt-in via file pragma `// @clay-reactive` or block directive `"use reactive";`.
- * Nested function callbacks inside an already-eligible site inherit eligibility.
- * `ui.page` alone does **not** opt in (avoids silent rewrites of dense apps).
+ * Opt-in via file pragma `// @clay-reactive` (module-level / page callbacks only)
+ * or block directive `"use reactive";`. Nested functions do **not** inherit the
+ * file pragma — they need their own directive. `ui.page` alone does not opt in.
  *
- * Lifts simple `let`s anywhere in the function body (including nested blocks,
- * but not loops or nested function scopes). Remaining statements use implicit
- * regions: `ui.label(expr)` reading state becomes `ui.label(() => expr)`
+ * Lifts simple `let` / `const` bindings anywhere in the function body (including
+ * nested blocks, but not loops or nested function scopes). Remaining statements
+ * use implicit regions: `ui.label(expr)` reading state becomes `ui.label(() => expr)`
  * (`bindText`); other build-time reads go in dependency-isolated `auto`s;
  * inert shell / handler-only writes stay outside. Nested UI callbacks that
- * read outer state get their own inner regions.
+ * read outer state get their own inner regions. Bare local builder calls that
+ * read lifted state are wrapped in `ui.auto` by default.
  */
 export function transformReactiveLet(
   source: string,
@@ -876,12 +1215,27 @@ export function transformReactiveLet(
 
   const sites = findSites(sourceFile, filePragma);
   if (sites.length === 0) {
-    return { code: source, transformed: false, lets: [] };
+    return { code: source, transformed: false, lets: [], warnings: [] };
   }
 
   const useUi = preferUi && fileHasUiImport(sourceFile);
+  const autoWrapBuilders = options.autoWrapBuilders !== false;
   const allLets: string[] = [];
+  const warnings: string[] = [];
+  const buildersBySite = new Map<ts.Node, Set<string>>();
   let counter = 0;
+
+  for (const site of sites) {
+    const body = site.fn.body;
+    if (!body || !ts.isBlock(body)) continue;
+    const names = new Set(site.lets.map((l) => l.name));
+    const builders = collectStateReadingBuilders(body, names);
+    buildersBySite.set(site.fn, builders);
+    warnings.push(...collectShadowingWarnings(body, names));
+    if (!autoWrapBuilders) {
+      warnings.push(...collectAutoRegionWarnings(body, builders));
+    }
+  }
 
   const transformer: ts.TransformerFactory<ts.SourceFile> = (context) => {
     const { factory } = context;
@@ -911,8 +1265,11 @@ export function transformReactiveLet(
       const initByName = new Map<string, ts.Expression>();
       const collectInits = (block: ts.Block) => {
         for (const stmt of block.statements) {
-          const simple = isSimpleLetStatement(stmt);
-          if (simple && names.has(simple.name)) initByName.set(simple.name, simple.initializer);
+          const bindings = collectLiftableBindings(stmt);
+          if (!bindings) continue;
+          for (const b of bindings) {
+            if (names.has(b.name)) initByName.set(b.name, b.initializer);
+          }
         }
       };
       collectInits(body);
@@ -947,7 +1304,12 @@ export function transformReactiveLet(
         (stmt) => rewriteIdents(context, stmt, names, stateName) as ts.Statement,
       );
 
-      const regionStmts = emitWithRegions(context, rewrittenRest, stateName, names, useUi);
+      const builders = buildersBySite.get(node) ?? new Set<string>();
+      const withBuilders = autoWrapBuilders
+        ? autoWrapBuilderCalls(context, rewrittenRest, builders, useUi)
+        : rewrittenRest;
+
+      const regionStmts = emitWithRegions(context, withBuilders, stateName, names, useUi);
       const newBody = factory.createBlock([stateDecl, ...regionStmts], true);
 
       if (ts.isArrowFunction(fn)) {
@@ -1010,7 +1372,7 @@ export function transformReactiveLet(
     }
   }
 
-  return { code, transformed: true, lets: allLets };
+  return { code, transformed: true, lets: allLets, warnings };
 }
 
 /** True if the source looks like it might need a reactive-let pass (cheap prefilter). */

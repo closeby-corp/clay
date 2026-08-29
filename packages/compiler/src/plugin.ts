@@ -59,6 +59,10 @@ export function registerReactiveLetPlugin(
           return { contents: text, loader };
         }
 
+        for (const w of result.warnings) {
+          console.warn(`[clay-reactive-let] ${args.path}: ${w}`);
+        }
+
         return {
           contents: result.code,
           loader,

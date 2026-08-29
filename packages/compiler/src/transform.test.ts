@@ -127,11 +127,117 @@ ui.page('/', () => {
     expect(out.code).not.toMatch(/\blet count\b/);
   });
 
+  test('does not lift lets in nested helpers under file pragma', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let units = [{ id: 'a' }];
+  function visibleUnits() {
+    let list = units;
+    return list;
+  }
+  ui.label(String(units.length));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['units']);
+    expect(out.code).toContain('ui.state({ units:');
+    expect(out.code).toMatch(/\blet list = /);
+    expect(out.code).not.toContain('list:');
+  });
+
+  test('nested callback lets need their own "use reactive"', () => {
+    const plain = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  ui.column(() => {
+    let n = 1;
+    ui.label(String(n));
+  });
+});
+`;
+    expect(transformReactiveLet(plain, 'page.ts').transformed).toBe(false);
+
+    const opted = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  ui.column(() => {
+    "use reactive";
+    let n = 1;
+    ui.label(String(n));
+  });
+});
+`;
+    const out = transformReactiveLet(opted, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['n']);
+    expect(out.code).toContain('ui.state({ n: 1 })');
+  });
+
+  test('does not rewrite idents inside type aliases', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let loading = false;
+  type DetailState = {
+    loading: boolean;
+    error: string | null;
+  };
+  const detail: DetailState = { loading: false, error: null };
+  ui.label(String(loading));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets.sort()).toEqual(['detail', 'loading']);
+    expect(out.code).toContain('loading: boolean');
+    expect(out.code).not.toMatch(/__clay_s\d+\.loading:\s*boolean/);
+    expect(out.code).toContain('ui.label(() =>');
+  });
+
+  test('warns when bare builder call reads lifted state', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function renderFeed() {
+    ui.label(String(count));
+  }
+  renderFeed();
+  ui.button('+', { onClick: () => { count++; } });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts', { autoWrapBuilders: false });
+    expect(out.transformed).toBe(true);
+    expect(out.warnings.some((w) => w.includes('renderFeed()'))).toBe(true);
+  });
+
+  test('no warn when builder call is inside ui.auto', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function renderFeed() {
+    ui.label(String(count));
+  }
+  ui.auto(() => {
+    renderFeed();
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.warnings).toEqual([]);
+  });
+
   test('transforms nested ui callbacks inside opted-in page', () => {
+    // legacy name — nested lets require their own directive (see test above)
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
   ui.column(() => {
+    "use reactive";
     let n = 1;
     ui.label(String(n));
   });
@@ -185,25 +291,164 @@ ui.page('/', () => {
     expect(transformReactiveLet(src, 'page.ts').transformed).toBe(false);
   });
 
-  test('skips call / destructuring initializers', () => {
+  test('skips await / rest destructuring / nested patterns', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
-  let x = load();
+  let x = await load();
   ui.label(String(x));
 });
 `;
-    const out = transformReactiveLet(src, 'page.ts');
-    expect(out.transformed).toBe(false);
+    expect(transformReactiveLet(src, 'page.ts').transformed).toBe(false);
 
-    const dest = `// @clay-reactive
+    const rest = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
-  let { x } = obj;
-  ui.label('a');
+  let { x, ...rest } = obj;
+  ui.label(String(x));
 });
 `;
-    expect(transformReactiveLet(dest, 'page.ts').transformed).toBe(false);
+    expect(transformReactiveLet(rest, 'page.ts').transformed).toBe(false);
+  });
+
+  test('lifts destructuring with defaults', () => {
+    const obj = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let { a = 1, b = 2 } = {};
+  ui.label(String(a) + String(b));
+});
+`;
+    const outObj = transformReactiveLet(obj, 'page.ts');
+    expect(outObj.transformed).toBe(true);
+    expect(outObj.lets.sort()).toEqual(['a', 'b']);
+    expect(outObj.code).toContain('a: 1');
+    expect(outObj.code).toContain('b: 2');
+
+    const arr = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let [x = 10] = [];
+  ui.label(String(x));
+});
+`;
+    const outArr = transformReactiveLet(arr, 'page.ts');
+    expect(outArr.transformed).toBe(true);
+    expect(outArr.lets).toEqual(['x']);
+    expect(outArr.code).toContain('x: 10');
+  });
+
+  test('warns when local binding shadows lifted state', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let detail = false;
+  const detail = rows.find((r) => r.id === id);
+  ui.label(String(detail));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts', { autoWrapBuilders: false });
+    expect(out.transformed).toBe(true);
+    expect(out.warnings.some((w) => w.includes("shadows lifted state"))).toBe(true);
+  });
+
+  test('lifts simple object / array destructuring', () => {
+    const obj = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let { a, b } = { a: 1, b: 2 };
+  ui.label(String(a) + String(b));
+});
+`;
+    const outObj = transformReactiveLet(obj, 'page.ts');
+    expect(outObj.transformed).toBe(true);
+    expect(outObj.lets.sort()).toEqual(['a', 'b']);
+    expect(outObj.code).toContain('a: 1');
+    expect(outObj.code).toContain('b: 2');
+
+    const arr = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let [x, y] = [10, 20];
+  ui.label(String(x) + String(y));
+});
+`;
+    const outArr = transformReactiveLet(arr, 'page.ts');
+    expect(outArr.transformed).toBe(true);
+    expect(outArr.lets.sort()).toEqual(['x', 'y']);
+    expect(outArr.code).toContain('x: 10');
+    expect(outArr.code).toContain('y: 20');
+  });
+
+  test('lifts const bindings like let', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  const count = 0;
+  ui.label(String(count));
+  ui.button('+', { onClick: () => { count++; } });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['count']);
+    expect(out.code).toContain('ui.state({ count: 0 })');
+    expect(out.code).toContain('ui.label(() =>');
+    expect(out.code).toMatch(/\.count\+\+/);
+    expect(out.code).not.toMatch(/\bconst count\b/);
+  });
+
+  test('lifts call / new initializers as one-shot state seeds', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let clock = Date.now();
+  let rangeFrom = defaultRangeFrom();
+  let ids = new Map();
+  ui.label(String(clock) + rangeFrom + String(ids.size));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets.sort()).toEqual(['clock', 'ids', 'rangeFrom']);
+    expect(out.code).toContain('Date.now()');
+    expect(out.code).toContain('defaultRangeFrom()');
+    expect(out.code).toContain('new Map()');
+  });
+
+  test('auto-wraps bare builder calls that read lifted state', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function renderFeed() {
+    ui.label(String(count));
+  }
+  renderFeed();
+  ui.button('+', { onClick: () => { count++; } });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.warnings).toEqual([]);
+    expect(out.code).toMatch(/ui\.auto\(\(\) => \{\s*renderFeed\(\);/);
+  });
+
+  test('warns instead of auto-wrap when autoWrapBuilders is false', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function renderFeed() {
+    ui.label(String(count));
+  }
+  renderFeed();
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts', { autoWrapBuilders: false });
+    expect(out.transformed).toBe(true);
+    expect(out.warnings.some((w) => w.includes('renderFeed()'))).toBe(true);
+    expect(out.code).not.toMatch(/ui\.auto\(\(\) => \{\s*renderFeed\(\);/);
   });
 
   test('skips duplicate let names across blocks', () => {

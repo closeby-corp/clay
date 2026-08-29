@@ -50,15 +50,26 @@ Both of:
 
 1. **CLI / loader:** pass `--reactive-let` to `clay` (or call `registerReactiveLetPlugin()` yourself). Off by default.
 2. **Source:** one of:
-   - File pragma: `// @clay-reactive` (near the top of the file)
-   - Block directive as the first statement: `"use reactive";`
-   - Nested function callbacks **inside** an already-eligible site (e.g. `ui.column(() => { let n = 0; … })` under a pragma/`"use reactive"` parent)
+   - File pragma: `// @clay-reactive` (near the top of the file) — applies to **module-level** functions and callbacks that are **not** nested inside another function (e.g. `ui.page('/', () => { … })`)
+   - Block directive as the first statement: `"use reactive";` — required for nested helpers / `ui.column(() => …)` lets
 
-`ui.page(...)` alone does **not** opt in.
+`ui.page(...)` alone does **not** opt in. Nested `function` / arrow bodies do **not** inherit the file pragma (avoids lifting scratch `let`s in helpers into separate state islands).
+
+### Who wraps `ui.auto`?
+
+Compile-time region analysis **does not** see into nested function bodies. Authors must still wrap rebuild regions when UI is built from helpers or widget callbacks:
+
+| Pattern | Who wraps `ui.auto`? |
+|---------|----------------------|
+| Inline UI in the reactive site body that reads lets | Transform (or `bindText` on labels) |
+| Named `renderX()` builders | **Author** — `ui.auto(() => { renderFeed(); })` |
+| UI inside widget callbacks (`row` / `column` / `dialog` / …) that need rebuild | **Author**, **or** read lets at the site top level so the transform can see them |
+
+Bare top-level `renderFeed()` calls that read lifted lets are **auto-wrapped** in `ui.auto(() => { renderFeed(); })` by default (`autoWrapBuilders: true`). Pass `{ autoWrapBuilders: false }` to the transform to only **warn** instead.
 
 ### What transforms
 
-Simple `let name = <simple>` declarations **anywhere** in an eligible function body, including nested blocks (`if` / bare blocks / `try` / `switch`), but **not** inside loops or nested function scopes (nested functions are their own sites when eligible):
+Simple `let` / `const` declarations (identifier or **simple** object/array destructuring) with a simple initializer **anywhere** in an eligible function body, including nested blocks (`if` / bare blocks / `try` / `switch`), but **not** inside loops or nested function scopes (nested functions are separate sites only with their own `"use reactive";`):
 
 ```ts
 // @clay-reactive
@@ -94,7 +105,9 @@ ui.page('/', () => {
 | Shell / layout / handler-only writes | Stay outside any `auto` |
 | Nested `ui.column(() => …)` reading outer state | Inner region / bindText inside the callback |
 
-**Simple initializers:** literals; `undefined`; unary `±!~`; binary / conditional / template expressions of simples; property / element access of simples; identifiers (outer bindings); shallow array/object literals. **Not** transformed: `call()` / `new` / `await`, destructuring, sibling-let refs (`let a = 1; let b = a + 1` aborts the site), loop-scoped `let`.
+**Simple initializers:** literals; `undefined`; unary `±!~`; binary / conditional / template expressions of simples; property / element access of simples; identifiers (outer bindings); shallow array/object literals; **call / `new`** with simple callees and args (`Date.now()`, `defaultRangeFrom()`, `new Map()`); nullish coalescing (`??`) for destructuring defaults. **Not** transformed: `await`, rest/spread/nested destructuring, sibling-let refs (`let a = 1; let b = a + 1` aborts the site), loop-scoped `let`, spread args.
+
+Type positions are never rewritten — a lifted `let loading` may share a name with `type DetailState { loading: boolean }` without breaking emit.
 
 ### CLI
 
@@ -126,22 +139,24 @@ Mitigation today: leave the plugin off; use Phase 1 APIs. If you enable `--react
 
 ### Limits (still open)
 
-- No destructuring (`let { x } = …`), `const`, or `var`.
-- No call / `new` / await initializers (leave as plain `let` or use Phase 1).
-- Sibling-let initializers abort the site (`let b = a + 1` when both would lift).
-- No loop-scoped `let` (would re-init incorrectly if hoisted).
-- Duplicate `let` names in nested blocks abort the transform for that function (shadowing).
+- No rest / nested destructuring (`let { x, ...r }`, `let { a: { b } }`) or `var`. Simple defaults in object/array patterns are supported (`let { x = 1 }`, `let [y = 10] = []`).
+- Sibling initializers abort the site (`let b = a + 1` when both would lift).
+- No loop-scoped bindings (would re-init incorrectly if hoisted).
+- Duplicate binding names in nested blocks abort the transform for that function (shadowing). A **warning** is emitted when a non-lifted local reuses a lifted name in the same site.
 - Compile-time `bindText` covers `ui.label` / `label` only (not badge/button text props).
 - Running the demo via plain `bun apps/demo/...` does **not** load the plugin unless you register it; use `clay --reactive-let` or `--preload`.
+- `const` is lifted like `let` (assignments become state writes). Prefer `let` in typed source if you reassign — `const` reassignment is a TS error before the transform runs.
 
 Tests: `packages/compiler/src/transform.test.ts`.
 
 ## Still Later
 
-1. `const` / destructured / loop-scoped reactive bindings where safe.
-2. Nested `auto` reuse without remounting when only inner props change.
-3. Optional: bindText-style rewrite for more widgets (`badge` text, etc.).
-4. Docs: sell `let` as the tutorial happy path once ops apps adopt the proof page in anger.
+1. Loop-scoped reactive bindings where safe; rest/nested destructuring.
+2. Optional: bindText-style rewrite for more widgets (`badge` text, etc.).
+3. Docs: sell `let` as the tutorial happy path once ops apps adopt the proof page in anger.
+4. P2: emit renames for shadowing (warnings exist today).
+
+**Runtime:** nested `auto` / `refreshable` trees reuse in place when structure matches (`canReuseElementTree` in `@close-by/clay-core`) — inner regions keep their ids when an outer `auto` refreshes without touching inner deps.
 
 ## Proof (Orders-shaped)
 
