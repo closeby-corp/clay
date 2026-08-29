@@ -11,6 +11,7 @@ import { BoundRadarChart } from './BoundRadarChart';
 import { BoundRadialChart } from './BoundRadialChart';
 import { BoundScatterChart } from './BoundScatterChart';
 import { BoundComposedChart } from './BoundComposedChart';
+import { BoundSparkline } from './BoundSparkline';
 import { BoundDataTable } from './BoundDataTable';
 import { BoundCodeBlock } from './BoundCodeBlock';
 import { BoundTree } from './BoundTree';
@@ -205,8 +206,9 @@ import {
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { IconText, StatusDot } from './IconText';
+import { Timeline, StepperView, type TimelineItemView } from './ComposedWidgets';
 import { CalendarIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
 
@@ -2196,6 +2198,198 @@ function BoundDate({
   );
 }
 
+type DateRangePresetView = { label: string; from: string; to: string };
+
+function defaultDateRangePresets(): DateRangePresetView[] {
+  const today = new Date();
+  const fmt = (d: Date) => format(d, 'yyyy-MM-dd');
+  return [
+    { label: 'Last 7 days', from: fmt(subDays(today, 6)), to: fmt(today) },
+    { label: 'Last 30 days', from: fmt(subDays(today, 29)), to: fmt(today) },
+    { label: 'This month', from: fmt(startOfMonth(today)), to: fmt(endOfMonth(today)) },
+  ];
+}
+
+function parseRangeDate(raw: string): Date | undefined {
+  if (!raw) return undefined;
+  try {
+    const d = parseISO(raw.length === 10 ? `${raw}T00:00:00` : raw);
+    return isValid(d) ? d : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function BoundDateRange({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverFrom = String(props.from ?? '');
+  const serverTo = String(props.to ?? '');
+  const serverKey = `${serverFrom}|${serverTo}`;
+  const [localKey, setLocalKey] = useOptimisticValue(serverKey);
+  const [fromStr, toStr] = localKey.split('|');
+  const fromDate = parseRangeDate(fromStr ?? '');
+  const toDate = parseRangeDate(toStr ?? '');
+  const selected =
+    fromDate || toDate
+      ? { from: fromDate, to: toDate }
+      : undefined;
+  const [open, setOpen] = useState(false);
+  const error = fieldError(props);
+  const presets = (props.presets as DateRangePresetView[] | undefined) ?? defaultDateRangePresets();
+
+  const applyRange = (from: string, to: string) => {
+    const key = `${from}|${to}`;
+    setLocalKey(key);
+    setOpen(false);
+    const payload = { from, to };
+    if (hasEvent(props, 'change')) emit(id, 'change', payload);
+    if (hasEvent(props, 'input')) emit(id, 'input', payload);
+  };
+
+  const label =
+    fromDate && toDate
+      ? `${format(fromDate, 'LLL d, y')} – ${format(toDate, 'LLL d, y')}`
+      : fromDate
+        ? format(fromDate, 'LLL d, y')
+        : String(props.placeholder ?? 'Pick a date range');
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            id={`date-range-${id}`}
+            variant="outline"
+            disabled={!!props.disabled}
+            aria-invalid={!!error}
+            className={cn(
+              'w-full justify-start text-left font-normal',
+              !selected && 'text-muted-foreground',
+            )}
+          >
+            <CalendarIcon className="mr-2 size-4" />
+            {label}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <div className="flex flex-col gap-2 border-b p-3">
+            <div className="text-xs font-medium text-muted-foreground">Presets</div>
+            <div className="flex flex-wrap gap-1.5">
+              {presets.map((p) => (
+                <Button
+                  key={p.label}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => applyRange(p.from, p.to)}
+                >
+                  {p.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <Calendar
+            mode="range"
+            selected={selected}
+            numberOfMonths={2}
+            onSelect={(range) => {
+              const from = range?.from ? format(range.from, 'yyyy-MM-dd') : '';
+              const to = range?.to ? format(range.to, 'yyyy-MM-dd') : '';
+              if (range?.from && range?.to) {
+                applyRange(from, to);
+              } else {
+                setLocalKey(`${from}|${to}`);
+              }
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+function clampStepperIndex(index: number, count: number): number {
+  if (count <= 0) return 0;
+  if (!Number.isFinite(index)) return 0;
+  return Math.min(Math.max(0, Math.trunc(index)), count - 1);
+}
+
+function BoundStepper({
+  id,
+  props,
+  className,
+  style,
+  emit,
+  children,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+  children: ElementNode[];
+}) {
+  const steps = children.filter((c) => c.type === 'stepperStep');
+  const serverIndex = clampStepperIndex(Number(props.index ?? 0), steps.length);
+  const [index, setIndex] = useOptimisticValue(serverIndex);
+  const active = clampStepperIndex(index, steps.length);
+  const orientation = props.orientation === 'vertical' ? 'vertical' : 'horizontal';
+  const showNav = props.showNav !== false && steps.length > 1;
+
+  const goTo = (next: number) => {
+    const clamped = clampStepperIndex(next, steps.length);
+    if (clamped === active) return;
+    setIndex(clamped);
+    if (hasEvent(props, 'indexChange')) emit(id, 'indexChange', clamped);
+  };
+
+  const stepViews = steps.map((s) => ({
+    id: s.id,
+    title: s.props.title != null ? String(s.props.title) : undefined,
+    description: s.props.description != null ? String(s.props.description) : undefined,
+    icon: s.props.icon != null ? String(s.props.icon) : undefined,
+    status: s.props.status != null ? String(s.props.status) : undefined,
+    className: s.props.className as string | undefined,
+  }));
+
+  return (
+    <StepperView
+      steps={stepViews}
+      index={active}
+      orientation={orientation}
+      showNav={showNav}
+      onIndexChange={goTo}
+      className={className}
+      style={asStyle(style)}
+      renderStepBody={(stepIndex) => {
+        const step = steps[stepIndex];
+        if (!step) return null;
+        return step.children.map((child) => (
+          <ElementRenderer key={child.id} node={child} emit={emit} />
+        ));
+      }}
+    />
+  );
+}
+
 function BoundAccordion({
   id,
   props,
@@ -2911,6 +3105,38 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
     case 'date':
       return <BoundDate id={id} props={props} className={className} style={style} emit={emit} />;
 
+    case 'dateRange':
+      return (
+        <BoundDateRange id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'timeline': {
+      const items = (props.items as TimelineItemView[]) ?? [];
+      return (
+        <Timeline
+          items={items}
+          orientation={props.orientation === 'horizontal' ? 'horizontal' : 'vertical'}
+          className={className}
+          style={asStyle(style)}
+        />
+      );
+    }
+
+    case 'stepper':
+      return (
+        <BoundStepper
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+          children={children}
+        />
+      );
+
+    case 'stepperStep':
+      return null;
+
     case 'slider':
       return <BoundSlider id={id} props={props} className={className} style={style} emit={emit} />;
 
@@ -3420,6 +3646,9 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'composedchart':
       return <BoundComposedChart props={props} className={className} style={style} />;
+
+    case 'sparkline':
+      return <BoundSparkline props={props} className={className} style={style} />;
 
     case 'kitchensink':
       return (

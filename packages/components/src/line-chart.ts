@@ -13,6 +13,9 @@ export function lineChart(props: LineChartProps): Element {
     className: props.className,
     title: props.title,
     description: props.description,
+    headline: props.headline,
+    periods: props.periods,
+    loading: props.loading === true,
     interactive: props.interactive === true,
     height: props.height,
   });

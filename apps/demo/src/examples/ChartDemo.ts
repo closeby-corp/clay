@@ -68,7 +68,7 @@ ui.page('/examples/charts', () => {
 
       exampleSection(
         'Interactive visitors',
-        'ui.chart.timeSeries — ISO dates enable client-side 7d / 30d / 90d filtering.',
+        'ui.chart.timeSeries — ISO dates enable client-side period tabs; optional headline metric.',
       );
       ui.chart
         .timeSeries(visitorsSeed as Record<string, unknown>[])
@@ -80,7 +80,39 @@ ui.page('/examples/charts', () => {
         .area({
           title: 'Total Visitors',
           description: 'Total for the last 3 months',
+          headline: { value: '12,450', trend: '+8.2%', trendDirection: 'up' },
         });
+
+      exampleSection(
+        'Sparkline KPIs',
+        'ui.sparkline — compact metric card with inline area/line mini chart.',
+      );
+      const sparkRows = (visitorsSeed as Record<string, unknown>[]).slice(-14).map((row) => ({
+        date: row.date,
+        total: Number(row.mobile ?? 0) + Number(row.desktop ?? 0),
+      }));
+      ui.row(() => {
+        ui.sparkline({
+          title: 'Daily visitors',
+          value: '1,284',
+          trend: '+12.5%',
+          trendDirection: 'up',
+          data: sparkRows,
+          xKey: 'date',
+          yKey: 'total',
+        });
+        ui.sparkline({
+          title: 'Bounce rate',
+          value: '42%',
+          trend: '-4.1%',
+          trendDirection: 'down',
+          type: 'line',
+          data: sparkRows.map((r) => ({ ...r, rate: 50 - Number(r.total) / 40 })),
+          xKey: 'date',
+          yKey: 'rate',
+          color: 'var(--chart-2)',
+        });
+      }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
 
       exampleSection('Monthly overview', 'ui.chart.categories → .area(); stacked by default.');
       ui.chart
@@ -201,8 +233,26 @@ ui.page('/examples/charts', () => {
 
       exampleSection(
         'Composed chart',
-        'ui.chart.composed(data).x().bars().lines().areas().build().',
+        'ui.chart.composed — mixed geometries, dual Y-axis, reference line/area.',
       );
+      const revenueMix = monthly.map((row, index) => ({
+        month: row.month,
+        revenue: row.desktop * 12,
+        margin: 8 + index * 2,
+      }));
+      ui.chart
+        .composed(revenueMix)
+        .x('month')
+        .bars([{ key: 'revenue', label: 'Revenue', color: 'var(--chart-1)', yAxisId: 'left' }])
+        .lines([{ key: 'margin', label: 'Margin %', color: 'var(--chart-2)', yAxisId: 'right' }])
+        .title('Revenue vs margin')
+        .description('Bars on left axis; line on right with goal reference.')
+        .height(280)
+        .build({
+          referenceLine: { value: 18, label: 'Goal', yAxisId: 'right' },
+          referenceArea: { y1: 200, y2: 280, label: 'Forecast band' },
+        });
+
       ui.chart
         .composed(monthly)
         .x('month')

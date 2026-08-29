@@ -26,13 +26,24 @@ export function BoundAreaChart({
   className?: string;
   style: unknown;
 }) {
-  const { data, xKey, series, title, description, interactive, height } =
-    parseCartesianProps(props);
+  const {
+    data,
+    xKey,
+    series,
+    title,
+    description,
+    headline,
+    periods,
+    loading,
+    interactive,
+    height,
+  } = parseCartesianProps(props);
   const stacked = props.stacked !== false;
-  const { filteredData, timeRange, setTimeRange } = useInteractiveChartData(
+  const { filteredData, period, setPeriod, periods: periodDefs } = useInteractiveChartData(
     data,
     xKey,
     interactive,
+    periods,
   );
   const config = buildSeriesConfig(series);
 
@@ -91,9 +102,12 @@ export function BoundAreaChart({
     <ChartChrome
       title={title}
       description={description}
+      headline={headline}
       interactive={interactive}
-      timeRange={timeRange}
-      setTimeRange={setTimeRange}
+      period={period}
+      setPeriod={setPeriod}
+      periods={periodDefs}
+      loading={loading}
       className={className}
       propsClassName={props.className as string | undefined}
       style={style}

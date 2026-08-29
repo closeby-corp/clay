@@ -119,7 +119,8 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
 
 ## Done (recent)
 
-- Page safety: fragile CJS import warnings under reactive-let; DOM global lint at load time + `@close-by/clay/page-tsconfig`
+- Chart analytics (ReUI batch 2): `ui.sparkline`, extended `ChartChrome` (`headline`, custom `periods`, `loading`), composed `referenceLine` / `referenceArea` + dual `yAxisId`; fixed composed chart period selector prop
+- Composed widgets: `ui.timeline`, `ui.stepper`, `ui.dateRange` (ReUI-style batch 1)
 - NiceGUI let parity: nested/rest destructuring, loop-scoped keyed state, shadow renames, nested `auto` reuse; docs happy path ([`docs/reactive-let.md`](./docs/reactive-let.md))
 - Reactive follow-up: `ui.auto` in-place `updateProps` when tree shape is stable; expanded `let` transform (non-leading / nested blocks / more initializers); `ui.label(() => …)` + `bindText`
 - Reactive Phase 2 MVP: `@close-by/clay-compiler` transform + `clay --reactive-let` Bun loader (subset `let` → `ui.state` / `ui.auto`)

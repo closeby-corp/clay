@@ -421,7 +421,7 @@ ui.page('/', () => {
 `;
     const out = transformReactiveLet(src, 'page.ts');
     expect(out.transformed).toBe(true);
-    expect(out.warnings.some((w) => w.includes("shadows lifted state"))).toBe(false);
+    expect(out.warnings.some((w) => w.includes("shadows lifted state") && w.includes('renamed to'))).toBe(true);
     expect(out.code).toMatch(/__clay_local_detail_/);
     expect(out.code).toContain('ui.label(String(__clay_local_detail_');
     expect(out.code).not.toContain('ui.state({ detail: false }).detail');
@@ -489,6 +489,73 @@ ui.page('/', () => {
     expect(out.code).toContain('Date.now()');
     expect(out.code).toContain('defaultRangeFrom()');
     expect(out.code).toContain('new Map()');
+    expect(out.code).toMatch(/ui\.state\(\{[\s\S]*clock:\s*Date\.now\(\)/);
+  });
+
+  test('does not inject ui.auto inside filter callbacks that read lifted state', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let feedFilter = 'all';
+  let units = [{ id: 'a', ok: true }, { id: 'b', ok: false }];
+  function visibleUnits() {
+    return units.filter((u) => {
+      if (feedFilter === 'issues' && !u.ok) return false;
+      return true;
+    });
+  }
+  ui.auto(() => {
+    for (const u of visibleUnits()) {
+      ui.label(u.id);
+    }
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    const filterBody = out.code.match(/\.filter\(\(u\) => \{([\s\S]*?)\}\)/)?.[1] ?? '';
+    expect(filterBody).not.toContain('ui.auto');
+    expect(out.code).toMatch(/__clay_s\d+\.feedFilter === 'issues'/);
+  });
+
+  test('does not inject ui.auto inside timer or event handler callbacks', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  const poll = ui.timer(5, () => {
+    count++;
+  });
+  ui.button('+', {
+    onClick: () => {
+      if (count > 0) count++;
+    },
+  });
+  ui.label(() => String(count));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.code).not.toMatch(/ui\.timer\([\s\S]*ui\.auto\(/);
+    expect(out.code).not.toMatch(/onClick:[\s\S]*ui\.auto\(/);
+  });
+
+  test('warns when builder is called inside widget callback without ui.auto', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function renderHeader() {
+    ui.label(String(count));
+  }
+  ui.row(() => {
+    renderHeader();
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.warnings.some((w) => w.includes('widget callback without ui.auto'))).toBe(true);
   });
 
   test('auto-wraps bare builder calls that read lifted state', () => {

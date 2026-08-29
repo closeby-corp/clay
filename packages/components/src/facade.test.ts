@@ -57,6 +57,8 @@ import {
   pieChart,
   radarChart,
   radialChart,
+  composedChart,
+  sparkline,
   combobox,
   input,
   textArea,
@@ -71,6 +73,10 @@ import {
   alert,
   iconText,
   statusDot,
+  timeline,
+  stepper,
+  dateRange,
+  StepperElement,
   externalLink,
 } from './index';
 import { reactive } from '@close-by/clay-core';
@@ -157,6 +163,27 @@ describe('facade feedback / layout elements', () => {
     expect(a.props.icon).toBe('book-open');
     const al = alert('Failed', { icon: 'triangle-alert', variant: 'destructive' });
     expect(al.props.icon).toBe('triangle-alert');
+  });
+
+  test('timeline, stepper, and dateRange factories', () => {
+    const tl = timeline({
+      items: [{ title: 'Shipped', status: 'completed' }],
+    });
+    expect(tl.type).toBe('timeline');
+    expect((tl.props.items as unknown[]).length).toBe(1);
+
+    const dr = dateRange({ from: '2026-01-01', to: '2026-01-31', label: 'Window' });
+    expect(dr.type).toBe('dateRange');
+    expect(dr.props.from).toBe('2026-01-01');
+    expect(dr.props.to).toBe('2026-01-31');
+
+    const st = stepper({ index: 1 }, (s: StepperElement) => {
+      s.step({ title: 'One' }, () => {});
+      s.step({ title: 'Two' }, () => {});
+    });
+    expect(st.type).toBe('stepper');
+    expect(st.props.index).toBe(1);
+    expect(st.children.filter((c) => c.type === 'stepperStep')).toHaveLength(2);
   });
 
   test('input error prop wires through', () => {
@@ -816,6 +843,64 @@ describe('charts', () => {
       endAngle: 180,
       centerValue: 800,
       centerLabel: 'Visitors',
+    });
+  });
+
+  test('sparkline wires type and headline shorthand', () => {
+    const el = sparkline({
+      title: 'Revenue',
+      value: '$12k',
+      trend: '+5%',
+      trendDirection: 'up',
+      data: [{ x: 1, y: 2 }],
+      xKey: 'x',
+      yKey: 'y',
+      type: 'line',
+    });
+    expect(el.type).toBe('sparkline');
+    expect(el.props).toMatchObject({
+      type: 'line',
+      xKey: 'x',
+      yKey: 'y',
+      headline: { value: '$12k', trend: '+5%', trendDirection: 'up' },
+    });
+  });
+
+  test('composedChart wires reference line and dual-axis series', () => {
+    const el = composedChart({
+      data,
+      xKey: 'month',
+      series: [
+        { key: 'mobile', label: 'Mobile', type: 'bar', yAxisId: 'left' },
+        { key: 'desktop', label: 'Desktop', type: 'line', yAxisId: 'right' },
+      ],
+      referenceLine: { value: 20, label: 'Goal', yAxisId: 'right' },
+      headline: { value: 100 },
+      loading: true,
+    });
+    expect(el.type).toBe('composedchart');
+    expect(el.props).toMatchObject({
+      referenceLine: { value: 20, label: 'Goal', yAxisId: 'right' },
+      headline: { value: 100 },
+      loading: true,
+    });
+    expect(el.props.series).toEqual([
+      { key: 'mobile', label: 'Mobile', type: 'bar', yAxisId: 'left' },
+      { key: 'desktop', label: 'Desktop', type: 'line', yAxisId: 'right' },
+    ]);
+  });
+
+  test('areaChart wires headline and custom periods', () => {
+    const el = areaChart({
+      data,
+      xKey: 'month',
+      series,
+      headline: { value: '42', trend: '+1%', trendDirection: 'up' },
+      periods: [{ value: '14d', label: 'Last 14 days', days: 14 }],
+    });
+    expect(el.props).toMatchObject({
+      headline: { value: '42', trend: '+1%', trendDirection: 'up' },
+      periods: [{ value: '14d', label: 'Last 14 days', days: 14 }],
     });
   });
 });

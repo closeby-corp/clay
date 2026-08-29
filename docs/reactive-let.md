@@ -98,6 +98,18 @@ Compile-time region analysis **does not** see into nested function bodies. Autho
 
 Bare top-level `renderFeed()` calls that read lifted lets are **auto-wrapped** in `ui.auto(() => { renderFeed(); })` by default (`autoWrapBuilders: true`). Pass `{ autoWrapBuilders: false }` to the transform to only **warn** instead.
 
+### Decision table (complex pages)
+
+| You wrote… | Clay does… | You must… |
+|------------|------------|-----------|
+| `let x = Date.now()` / `defaultRangeFrom()` / `new Map()` | Lifts into `ui.state({ x: … })` one-shot | Nothing |
+| `renderList()` at page top level (bare call) | Wraps in `ui.auto(() => { renderList(); })` | Nothing |
+| `renderList()` inside `ui.row(() => …)` / other widget child | **No** auto-wrap; compile **warning** | Add `ui.auto` yourself |
+| State read inside `units.filter(u => { … })` block body | **No** `ui.auto` injection (plain JS) | Nothing — or hoist with a scratch local if clearer |
+| `onClick` / `ui.timer` / handler closures | Handler-only — no nested `auto` | Nothing |
+| `const live = ui.state({…})` (no pragma) | Unchanged | Explicit `ui.auto` as in Phase 1 |
+| Local `const detail = …` shadows lifted `let detail` | Renames in emit + compile warning | Prefer distinct names |
+
 ### What transforms
 
 Simple `let` / `const` declarations (identifier or object/array destructuring, including **nested** and **rest** patterns) with a simple initializer **anywhere** in an eligible function body, including nested blocks (`if` / bare blocks / `try` / `switch`) and **inside loops** (loop-scoped bindings use keyed `ui.state` maps), but **not** inside nested function scopes (nested functions are separate sites only with their own `"use reactive";`):
@@ -139,7 +151,7 @@ ui.page('/', () => {
 
 **Simple initializers:** literals; `undefined`; unary `±!~`; binary / conditional / template expressions of simples; property / element access of simples; identifiers (outer bindings); shallow array/object literals; **call / `new`** with simple callees and args; nullish coalescing (`??`) for destructuring defaults. **Destructuring:** simple and **nested** patterns (`let { a: { b } }`); **rest** (`let { x, ...rest }`) lifts named fields and keeps `const { ...rest }`. **Loop-scoped** `let` inside `for` / `for-of` bodies becomes keyed state (`__clay_l0_open[key]`) so each iteration keeps its own mutable slot. **Not** transformed: `await`, sibling-let refs (`let a = 1; let b = a + 1` aborts the site), spread args in initializers.
 
-**Shadowing:** a later local `const detail = …` that reuses a lifted name is **renamed** in emit by default (`renameShadowedLocals: true`). Pass `{ renameShadowedLocals: false }` to only warn.
+**Shadowing:** a later local `const detail = …` that reuses a lifted name is **renamed** in emit by default (`renameShadowedLocals: true`) and emits a compile warning with the generated name. Pass `{ renameShadowedLocals: false }` to warn without renaming.
 
 Type positions are never rewritten — a lifted `let loading` may share a name with `type DetailState { loading: boolean }` without breaking emit.
 

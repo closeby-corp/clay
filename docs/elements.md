@@ -18,6 +18,9 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `radioGroup` | `radiogroup` | ShadCN `RadioGroup` (+ optional `error`) |
 | `combobox` | `combobox` | ShadCN `Combobox` (searchable select; optional `error`) |
 | `date` | `date` | Calendar + Popover date picker (ISO `YYYY-MM-DD`; optional `error`) |
+| `dateRange` | `dateRange` | Range picker with presets (ISO `from` / `to`) |
+| `timeline` | `timeline` | Vertical or horizontal event timeline |
+| `stepper` | `stepper` (+ `stepperStep`) | Inline multi-step flow with panels |
 | `slider` | `slider` | ShadCN `Slider` (+ optional `error`) |
 | `rating` | `rating` | Star rating (`value` / `max`; optional `error`) |
 | `colorPicker` | `colorPicker` | Hex color picker (swatches + native input; optional `error`) |
@@ -76,14 +79,15 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `iframe` | `iframe` | `<iframe>` embed |
 | `upload` | `upload` | File picker / dropzone → `POST /upload` (progress/abort) → WS `upload` / `progress` / `error` / `abort` |
 | `stat` | `stat` | Grid of metric cards |
-| `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive ranges, `stacked?`) |
-| `barChart` | `barchart` | Recharts bar (`stacked?`, `layout?: 'vertical' \| 'horizontal'`) |
-| `lineChart` | `linechart` | Recharts line (+ optional interactive ranges) |
+| `sparkline` | `sparkline` | KPI card with inline area/line mini chart (`headline`, `value`/`trend` shorthand) |
+| `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive periods, `headline`, `loading`, `stacked?`) |
+| `barChart` | `barchart` | Recharts bar (`stacked?`, `layout?: 'vertical' \| 'horizontal'`, shared cartesian chrome) |
+| `lineChart` | `linechart` | Recharts line (+ optional interactive periods, headline, loading) |
 | `pieChart` | `piechart` | Recharts pie/donut (`nameKey`/`valueKey` or `series`, `innerRadius?`) |
 | `radarChart` | `radarchart` | Recharts radar (`angleKey` + `series`, optional `fillOpacity`) |
 | `radialChart` | `radialchart` | Recharts radial bar (`nameKey`/`valueKey` or stacked `series`, optional center text / angles) |
 | `scatterChart` | `scatterchart` | Recharts scatter (`xKey` / `yKey`, optional `seriesKey`) |
-| `composedChart` | `composedchart` | Recharts composed (per-series `type`: bar/line/area) |
+| `composedChart` | `composedchart` | Recharts composed (per-series `type`, dual `yAxisId`, `referenceLine` / `referenceArea`) |
 | `dataTable` | `datatable` | Search, text/facet filters, views, grouping (collapse all), selection, bulk actions, reorder (coexists with virtualization via windowed drop targets), editors (Enter/Esc + focus restore), export, multi-sort (Shift+click), local or remote (`manualPagination` + `getQuery` / `setLoading` / `withLoading`), density/zebra, column resize/pin, footer aggregates, row virtualization (≥40 body items), loading/empty, actions, detail drawer |
 | `tabs` | `tabs` (+ child `tab`) | ShadCN `Tabs`; optimistic `value` |
 | `accordion` | `accordion` (+ child `accordionitem`) | ShadCN `Accordion`; optimistic `value` |

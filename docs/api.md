@@ -482,6 +482,45 @@ Calendar + popover date picker. Value is an ISO date string (`YYYY-MM-DD`). Supp
 | `disabled` | `boolean` | `false` |
 | `onChange` | `(value: string) => void` | |
 
+#### `ui.dateRange(props?)`
+
+Range picker with preset shortcuts and dual-month calendar. Values are ISO `YYYY-MM-DD`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `from` | `string` | `''` |
+| `to` | `string` | `''` |
+| `label` | `string` | |
+| `placeholder` | `string` | `'Pick a date range'` |
+| `presets` | `{ label, from, to }[]` | Last 7/30 days + this month |
+| `error` | `string` | |
+| `disabled` | `boolean` | `false` |
+| `onChange` | `({ from, to }) => void` | |
+
+#### `ui.timeline(props)`
+
+Chronological events for deploy logs, order status, and activity feeds.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `items` | `TimelineItem[]` | required |
+| `orientation` | `'vertical' \| 'horizontal'` | `'vertical'` |
+
+Each item: `at?`, `title`, `description?`, `status?` (`pending` \| `active` \| `completed` \| `error`), `icon?`, `avatar?`, `badge?`, `badgeColor?`, `body?` (collapsible detail), `defaultOpen?`.
+
+#### `ui.stepper(props?, fn)`
+
+Inline multi-step flow (not modal). Server owns `index`; client emits `indexChange`.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `index` | `number` | `0` |
+| `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` |
+| `showNav` | `boolean` | `true` when >1 step |
+| `onIndexChange` | `(index: number) => void` | |
+
+Use `s.step({ title, description?, icon?, status? }, () => { … })` inside the callback.
+
 #### `ui.slider(props?)`
 
 | Prop | Type | Default |
@@ -968,13 +1007,14 @@ ui.stat([
 
 #### `ui.areaChart(props)`
 
-Stacked area chart (Recharts). Optional card chrome via `title` / `description`. Set `interactive: true` with ISO date `xKey` values for 7d / 30d / 90d filtering. Legend is always shown. Pass `stacked: false` to overlay series instead of stacking (default `true`).
+Stacked area chart (Recharts). Optional card chrome via `title` / `description`. Set `interactive: true` with ISO date `xKey` values for client-side period tabs (default 7d / 30d / 90d; override with `periods`). Optional `headline: { value, trend?, trendDirection? }` for a KPI row above the chart; `loading: true` shows a skeleton. Legend is always shown. Pass `stacked: false` to overlay series instead of stacking (default `true`).
 
 ```typescript
 ui.areaChart({
   title: 'Total Visitors',
   description: 'Last 3 months',
   interactive: true,
+  headline: { value: '12,450', trend: '+8.2%', trendDirection: 'up' },
   data: visitors,
   xKey: 'date',
   series: [
@@ -986,7 +1026,7 @@ ui.areaChart({
 
 #### `ui.barChart(props)`
 
-Bar chart with the same cartesian props as area (`data`, `xKey`, `series`, title/description/height/interactive). Optional `stacked` (default `false`) and `layout: 'vertical' | 'horizontal'` (default `'vertical'` — category on X).
+Bar chart with the same cartesian props as area (`data`, `xKey`, `series`, title/description/height/interactive, `headline`, `periods`, `loading`). Optional `stacked` (default `false`) and `layout: 'vertical' | 'horizontal'` (default `'vertical'` — category on X).
 
 ```typescript
 ui.barChart({
@@ -1004,7 +1044,7 @@ ui.barChart({
 
 #### `ui.lineChart(props)`
 
-Line chart with the same cartesian props as area (including interactive date ranges).
+Line chart with the same cartesian props as area (including interactive date ranges, headline, periods, loading).
 
 ```typescript
 ui.lineChart({
@@ -1015,6 +1055,41 @@ ui.lineChart({
     { key: 'mobile', label: 'Mobile' },
     { key: 'desktop', label: 'Desktop' },
   ],
+});
+```
+
+#### `ui.sparkline(props)`
+
+Compact KPI card with an inline area or line mini chart — useful in dashboards and table footers. Pass `headline` or shorthand `value` / `trend` / `trendDirection`. `type` is `'area'` (default) or `'line'`.
+
+```typescript
+ui.sparkline({
+  title: 'Daily visitors',
+  value: '1,284',
+  trend: '+12.5%',
+  trendDirection: 'up',
+  data: dailyRows,
+  xKey: 'date',
+  yKey: 'total',
+  height: 48,
+});
+```
+
+#### `ui.composedChart(props)`
+
+Mixed-geometry cartesian chart (bars, lines, areas in one plot). Series may set `type` and `yAxisId: 'left' | 'right'` for dual-axis layouts. Optional `referenceLine` and `referenceArea` for goals and forecast bands. Supports the same chrome props as area/line (`headline`, `periods`, `loading`, `interactive`).
+
+```typescript
+ui.composedChart({
+  title: 'Revenue vs margin',
+  data: rows,
+  xKey: 'month',
+  series: [
+    { key: 'revenue', label: 'Revenue', type: 'bar', yAxisId: 'left' },
+    { key: 'margin', label: 'Margin %', type: 'line', yAxisId: 'right' },
+  ],
+  referenceLine: { value: 18, label: 'Goal', yAxisId: 'right' },
+  referenceArea: { y1: 200, y2: 280, label: 'Forecast band' },
 });
 ```
 

@@ -588,6 +588,10 @@ export {
 export {
   type CartesianChartProps,
   type ChartSeries,
+  type ChartHeadline,
+  type ChartPeriod,
+  type ChartReferenceLine,
+  type ChartReferenceArea,
 } from './chart-shared';
 
 export {
@@ -638,6 +642,8 @@ export {
   type ComposedChartSeries,
   type ComposedSeriesType,
 } from './composed-chart';
+
+export { sparkline, type SparklineProps } from './sparkline';
 
 export { dialog, DialogElement, type DialogProps } from './dialog';
 
@@ -1043,3 +1049,24 @@ export {
   type StatusDotProps,
   type StatusDotColor,
 } from './icon-text';
+
+export {
+  timeline,
+  type TimelineProps,
+  type TimelineItem,
+  type TimelineItemStatus,
+} from './timeline';
+
+export {
+  stepper,
+  StepperElement,
+  type StepperProps,
+  type StepperStepOptions,
+  type StepperStepStatus,
+} from './stepper';
+
+export {
+  dateRange,
+  type DateRangeProps,
+  type DateRangePreset,
+} from './date-range';

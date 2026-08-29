@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardAction,
@@ -15,12 +16,55 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-export type ChartSeries = { key: string; label: string; color?: string };
-export type TimeRange = '90d' | '30d' | '7d';
+export type ChartSeries = {
+  key: string;
+  label: string;
+  color?: string;
+  yAxisId?: 'left' | 'right';
+};
+
+export type ChartHeadline = {
+  value: string | number;
+  trend?: string;
+  trendDirection?: 'up' | 'down';
+};
+
+export type ChartPeriodDef = {
+  value: string;
+  label: string;
+  days?: number;
+};
+
+export type ChartReferenceLine = {
+  value: number | string;
+  label?: string;
+  axis?: 'x' | 'y';
+  yAxisId?: 'left' | 'right';
+  stroke?: string;
+  strokeDasharray?: string;
+};
+
+export type ChartReferenceArea = {
+  y1?: number;
+  y2?: number;
+  x1?: number | string;
+  x2?: number | string;
+  label?: string;
+  yAxisId?: 'left' | 'right';
+  fill?: string;
+  fillOpacity?: number;
+};
+
+const DEFAULT_PERIODS: ChartPeriodDef[] = [
+  { value: '90d', label: 'Last 3 months', days: 90 },
+  { value: '30d', label: 'Last 30 days', days: 30 },
+  { value: '7d', label: 'Last 7 days', days: 7 },
+];
 
 /** CSS custom-property–safe key for ChartStyle `--color-${key}`. */
 export function cssSafeKey(name: string): string {
@@ -71,34 +115,72 @@ export function useInteractiveChartData(
   data: Record<string, unknown>[],
   xKey: string,
   interactive: boolean,
-): { filteredData: Record<string, unknown>[]; timeRange: TimeRange; setTimeRange: (v: TimeRange) => void } {
+  periods?: ChartPeriodDef[],
+): {
+  filteredData: Record<string, unknown>[];
+  period: string;
+  setPeriod: (v: string) => void;
+  periods: ChartPeriodDef[];
+} {
+  const periodDefs = periods?.length ? periods : DEFAULT_PERIODS;
+  const defaultPeriod = periodDefs[0]?.value ?? '90d';
   const isMobile = useIsMobile();
-  const [timeRange, setTimeRange] = useState<TimeRange>('90d');
+  const [period, setPeriod] = useState(defaultPeriod);
 
   useEffect(() => {
-    if (interactive && isMobile) setTimeRange('7d');
-  }, [interactive, isMobile]);
+    if (interactive && isMobile) {
+      const mobileDefault = periodDefs.find((p) => p.value === '7d') ?? periodDefs[periodDefs.length - 1];
+      if (mobileDefault) setPeriod(mobileDefault.value);
+    }
+  }, [interactive, isMobile, periodDefs]);
 
   const filteredData = useMemo(() => {
     if (!interactive) return data;
     const dated = data.filter((row) => isIsoDate(row[xKey]));
     if (dated.length === 0) return data;
     const reference = new Date(String(dated[dated.length - 1]![xKey]));
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const days =
+      periodDefs.find((p) => p.value === period)?.days ??
+      (period === '7d' ? 7 : period === '30d' ? 30 : 90);
     const start = new Date(reference);
     start.setDate(start.getDate() - days);
     return dated.filter((row) => new Date(String(row[xKey])) >= start);
-  }, [data, interactive, timeRange, xKey]);
+  }, [data, interactive, period, periodDefs, xKey]);
 
-  return { filteredData, timeRange, setTimeRange };
+  return { filteredData, period, setPeriod, periods: periodDefs };
+}
+
+function ChartHeadlineRow({ headline }: { headline: ChartHeadline }) {
+  const trendVariant =
+    headline.trendDirection === 'up'
+      ? 'green'
+      : headline.trendDirection === 'down'
+        ? 'red'
+        : undefined;
+
+  return (
+    <div className="flex flex-wrap items-baseline gap-2 pt-1">
+      <span className="text-3xl font-semibold tabular-nums tracking-tight">
+        {headline.value}
+      </span>
+      {headline.trend ? (
+        <Badge variant="outline" color={trendVariant} className="font-normal">
+          {headline.trend}
+        </Badge>
+      ) : null}
+    </div>
+  );
 }
 
 export function ChartChrome({
   title,
   description,
+  headline,
   interactive,
-  timeRange,
-  setTimeRange,
+  period,
+  setPeriod,
+  periods,
+  loading,
   className,
   propsClassName,
   style,
@@ -106,9 +188,12 @@ export function ChartChrome({
 }: {
   title: string;
   description: string;
+  headline?: ChartHeadline;
   interactive: boolean;
-  timeRange?: TimeRange;
-  setTimeRange?: (v: TimeRange) => void;
+  period?: string;
+  setPeriod?: (v: string) => void;
+  periods?: ChartPeriodDef[];
+  loading?: boolean;
   className?: string;
   propsClassName?: string;
   style: unknown;
@@ -116,11 +201,13 @@ export function ChartChrome({
 }) {
   const styleProp =
     typeof style === 'object' && style ? (style as CSSProperties) : undefined;
+  const periodDefs = periods?.length ? periods : DEFAULT_PERIODS;
+  const showChrome = Boolean(title || description || headline || interactive);
 
-  if (!title && !interactive) {
+  if (!showChrome) {
     return (
       <div className={cn('w-full min-w-0', className, propsClassName)} style={styleProp}>
-        {children}
+        {loading ? <Skeleton className="h-[220px] w-full rounded-xl" /> : children}
       </div>
     );
   }
@@ -133,52 +220,74 @@ export function ChartChrome({
       <CardHeader>
         {title ? <CardTitle>{title}</CardTitle> : null}
         {description ? <CardDescription>{description}</CardDescription> : null}
-        {interactive && timeRange && setTimeRange ? (
+        {headline ? <ChartHeadlineRow headline={headline} /> : null}
+        {interactive && period && setPeriod ? (
           <CardAction>
             <ToggleGroup
               type="single"
-              value={timeRange}
+              value={period}
               onValueChange={(value) => {
-                if (value === '7d' || value === '30d' || value === '90d') setTimeRange(value);
+                if (value) setPeriod(value);
               }}
               variant="outline"
               className="hidden @[767px]/card:flex"
             >
-              <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
-              <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
-              <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
+              {periodDefs.map((p) => (
+                <ToggleGroupItem key={p.value} value={p.value}>
+                  {p.label}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
-            <Select
-              value={timeRange}
-              onValueChange={(value) => {
-                if (value === '7d' || value === '30d' || value === '90d') setTimeRange(value);
-              }}
-            >
+            <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger
                 className="flex w-40 @[767px]/card:hidden"
-                aria-label="Select a value"
+                aria-label="Select a period"
                 size="sm"
               >
-                <SelectValue placeholder="Last 3 months" />
+                <SelectValue placeholder={periodDefs[0]?.label ?? 'Period'} />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                <SelectItem value="90d" className="rounded-lg">
-                  Last 3 months
-                </SelectItem>
-                <SelectItem value="30d" className="rounded-lg">
-                  Last 30 days
-                </SelectItem>
-                <SelectItem value="7d" className="rounded-lg">
-                  Last 7 days
-                </SelectItem>
+                {periodDefs.map((p) => (
+                  <SelectItem key={p.value} value={p.value} className="rounded-lg">
+                    {p.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </CardAction>
         ) : null}
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">{children}</CardContent>
+      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        {loading ? <Skeleton className="h-[220px] w-full rounded-xl" /> : children}
+      </CardContent>
     </Card>
   );
+}
+
+function parseHeadline(raw: unknown): ChartHeadline | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const h = raw as Record<string, unknown>;
+  if (h.value == null) return undefined;
+  return {
+    value: h.value as string | number,
+    trend: h.trend != null ? String(h.trend) : undefined,
+    trendDirection:
+      h.trendDirection === 'up' || h.trendDirection === 'down'
+        ? h.trendDirection
+        : undefined,
+  };
+}
+
+function parsePeriods(raw: unknown): ChartPeriodDef[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  return raw.map((item) => {
+    const p = item as Record<string, unknown>;
+    return {
+      value: String(p.value ?? ''),
+      label: String(p.label ?? p.value ?? ''),
+      days: p.days != null ? Number(p.days) : undefined,
+    };
+  });
 }
 
 export function parseCartesianProps(props: Record<string, unknown>) {
@@ -187,9 +296,52 @@ export function parseCartesianProps(props: Record<string, unknown>) {
   const series = (props.series as ChartSeries[]) ?? [];
   const title = props.title ? String(props.title) : '';
   const description = props.description ? String(props.description) : '';
+  const headline = parseHeadline(props.headline);
+  const periods = parsePeriods(props.periods);
+  const loading = props.loading === true;
   const interactive = props.interactive === true;
   const height = Number(props.height ?? (interactive ? 250 : 220));
-  return { data, xKey, series, title, description, interactive, height };
+  return {
+    data,
+    xKey,
+    series,
+    title,
+    description,
+    headline,
+    periods,
+    loading,
+    interactive,
+    height,
+  };
+}
+
+export function parseReferenceLine(raw: unknown): ChartReferenceLine | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  if (r.value == null) return undefined;
+  return {
+    value: r.value as number | string,
+    label: r.label != null ? String(r.label) : undefined,
+    axis: r.axis === 'x' ? 'x' : 'y',
+    yAxisId: r.yAxisId === 'right' ? 'right' : 'left',
+    stroke: r.stroke != null ? String(r.stroke) : undefined,
+    strokeDasharray: r.strokeDasharray != null ? String(r.strokeDasharray) : undefined,
+  };
+}
+
+export function parseReferenceArea(raw: unknown): ChartReferenceArea | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  return {
+    y1: r.y1 != null ? Number(r.y1) : undefined,
+    y2: r.y2 != null ? Number(r.y2) : undefined,
+    x1: r.x1 as number | string | undefined,
+    x2: r.x2 as number | string | undefined,
+    label: r.label != null ? String(r.label) : undefined,
+    yAxisId: r.yAxisId === 'right' ? 'right' : 'left',
+    fill: r.fill != null ? String(r.fill) : undefined,
+    fillOpacity: r.fillOpacity != null ? Number(r.fillOpacity) : undefined,
+  };
 }
 
 export function formatAxisTick(value: unknown): string {

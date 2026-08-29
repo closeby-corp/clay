@@ -9,6 +9,9 @@ import {
   radioGroup as radioGroupFactory,
   combobox as comboboxFactory,
   date as dateFactory,
+  dateRange as dateRangeFactory,
+  timeline as timelineFactory,
+  stepper as stepperFactory,
   tooltip as tooltipFactory,
   avatar as avatarFactory,
   skeleton as skeletonFactory,
@@ -34,6 +37,7 @@ import {
   radialChart as radialChartFactory,
   scatterChart as scatterChartFactory,
   composedChart as composedChartFactory,
+  sparkline as sparklineFactory,
   row as rowFactory,
   column as columnFactory,
   container as containerFactory,
@@ -101,6 +105,14 @@ import {
   type RadioGroupProps,
   type ComboboxProps,
   type DateProps,
+  type DateRangeProps,
+  type DateRangePreset,
+  type TimelineProps,
+  type TimelineItem,
+  type TimelineItemStatus,
+  type StepperProps,
+  type StepperStepOptions,
+  type StepperStepStatus,
   type TooltipProps,
   type AvatarProps,
   type SkeletonProps,
@@ -152,6 +164,11 @@ import {
   type ComposedSeriesType,
   type CartesianChartProps,
   type ChartSeries,
+  type ChartHeadline,
+  type ChartPeriod,
+  type ChartReferenceLine,
+  type ChartReferenceArea,
+  type SparklineProps,
   type CardProps,
   type DialogProps,
   type DialogStackProps,
@@ -318,6 +335,7 @@ import {
   TableBuilder,
   DialogElement,
   DialogStackElement,
+  StepperElement,
   AlertDialogElement,
   DropdownMenuElement,
   ContextMenuElement,
@@ -446,6 +464,14 @@ export type {
   DialogProps,
   DialogStackProps,
   DialogStackStepOptions,
+  StepperProps,
+  StepperStepOptions,
+  StepperStepStatus,
+  TimelineProps,
+  TimelineItem,
+  TimelineItemStatus,
+  DateRangeProps,
+  DateRangePreset,
   AlertDialogProps,
   DropdownMenuProps,
   DropdownItemOptions,
@@ -600,6 +626,7 @@ export {
   TableBuilder,
   DialogElement,
   DialogStackElement,
+  StepperElement,
   AlertDialogElement,
   DropdownMenuElement,
   SheetElement,
@@ -678,6 +705,29 @@ export function combobox(props: ComboboxProps): Element {
 /** Date picker. Prefer `ui.date`. See {@link DateProps}. */
 export function date(props?: DateProps): Element {
   return dateFactory(props);
+}
+
+/** Date range picker with presets. Prefer `ui.dateRange`. See {@link DateRangeProps}. */
+export function dateRange(props?: DateRangeProps): Element {
+  return dateRangeFactory(props);
+}
+
+/** Chronological events for feeds and deploy logs. See {@link TimelineProps}. */
+export function timeline(props: TimelineProps): Element {
+  return timelineFactory(props);
+}
+
+/** Inline multi-step flow with step panels. See {@link StepperProps}. */
+export function stepper(
+  fn: (s: StepperElement) => void,
+  props?: StepperProps,
+): StepperElement;
+export function stepper(
+  props: StepperProps,
+  fn: (s: StepperElement) => void,
+): StepperElement;
+export function stepper(a: any, b?: any): StepperElement {
+  return stepperFactory(a, b);
 }
 
 /** Tooltip around content (`fn` or props-first). Prefer `ui.tooltip`. See {@link TooltipProps}. */
@@ -968,6 +1018,11 @@ export function scatterChart(props: ScatterChartProps): Element {
 /** Composed multi-geometry chart. Prefer `ui.composedChart`. See {@link ComposedChartProps}. */
 export function composedChart(props: ComposedChartProps): Element {
   return composedChartFactory(props);
+}
+
+/** KPI card with inline sparkline. Prefer `ui.sparkline`. See {@link SparklineProps}. */
+export function sparkline(props: SparklineProps): Element {
+  return sparklineFactory(props);
 }
 
 /** Horizontal flex row (`fn` or props-first). Prefer `ui.row`. */
@@ -1522,6 +1577,9 @@ export const ui = {
   radioGroup,
   combobox,
   date,
+  dateRange,
+  timeline,
+  stepper,
   tooltip,
   avatar,
   skeleton,
@@ -1568,6 +1626,7 @@ export const ui = {
   radialChart,
   scatterChart,
   composedChart,
+  sparkline,
   row,
   column,
   container,

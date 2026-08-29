@@ -1,5 +1,10 @@
 import { Element } from '@close-by/clay-core';
-import type { CartesianChartProps, ChartSeries } from './chart-shared';
+import type {
+  CartesianChartProps,
+  ChartReferenceArea,
+  ChartReferenceLine,
+  ChartSeries,
+} from './chart-shared';
 
 export type ComposedSeriesType = 'bar' | 'line' | 'area';
 
@@ -11,6 +16,8 @@ export type ComposedChartSeries = ChartSeries & {
 export type ComposedChartProps = CartesianChartProps & {
   series: ComposedChartSeries[];
   stacked?: boolean;
+  referenceLine?: ChartReferenceLine;
+  referenceArea?: ChartReferenceArea;
 };
 
 export function composedChart(props: ComposedChartProps): Element {
@@ -21,8 +28,13 @@ export function composedChart(props: ComposedChartProps): Element {
     className: props.className,
     title: props.title,
     description: props.description,
+    headline: props.headline,
+    periods: props.periods,
+    loading: props.loading === true,
     interactive: props.interactive === true,
     height: props.height,
     stacked: props.stacked === true,
+    referenceLine: props.referenceLine,
+    referenceArea: props.referenceArea,
   });
 }

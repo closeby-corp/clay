@@ -1099,6 +1099,7 @@ function rewriteBlockStatementsWithScopes(
   renameShadowedLocals: boolean,
   shadowCounter: { n: number },
   shadowEnv: Map<string, string>,
+  shadowWarnings: string[],
 ): ts.Statement[] {
   const { factory } = context;
   const out: ts.Statement[] = [];
@@ -1115,6 +1116,7 @@ function rewriteBlockStatementsWithScopes(
           newName,
         );
         shadowEnv.set(shadowed, newName);
+        noteShadowRename(shadowWarnings, shadowed, newName);
       }
     }
     out.push(
@@ -1144,6 +1146,7 @@ function transformLoopsInStatements(
   renameShadowedLocals: boolean,
   shadowCounter: { n: number },
   shadowEnv: Map<string, string>,
+  shadowWarnings: string[],
   activeLoopId?: number,
   activeKeyExpr?: ts.Expression,
 ): ts.Statement[] {
@@ -1216,6 +1219,7 @@ function transformLoopsInStatements(
         renameShadowedLocals,
         shadowCounter,
         new Map(shadowEnv),
+        shadowWarnings,
         plan.loopId,
         keyExpr,
       );
@@ -1291,6 +1295,7 @@ function transformLoopsInStatements(
           renameShadowedLocals,
           shadowCounter,
           new Map(shadowEnv),
+          shadowWarnings,
           plan.loopId,
           plan.keyIdent,
         );
@@ -1319,6 +1324,7 @@ function transformLoopsInStatements(
         renameShadowedLocals,
         shadowCounter,
         new Map(shadowEnv),
+        shadowWarnings,
         plan?.loopId ?? activeLoopId,
         keyExpr ?? activeKeyExpr,
       );
@@ -1350,6 +1356,7 @@ function transformLoopsInStatements(
         renameShadowedLocals,
         shadowCounter,
         new Map(shadowEnv),
+        shadowWarnings,
         plan?.loopId ?? activeLoopId,
         plan?.keyIdent ?? activeKeyExpr,
       );
@@ -1378,6 +1385,7 @@ function transformLoopsInStatements(
             renameShadowedLocals,
             shadowCounter,
             shadowEnv,
+            shadowWarnings,
             activeLoopId,
             activeKeyExpr,
           ),
@@ -1400,6 +1408,7 @@ function transformLoopsInStatements(
           newName,
         );
         shadowEnv.set(shadowed, newName);
+        noteShadowRename(shadowWarnings, shadowed, newName);
       }
     }
     out.push(
@@ -1419,6 +1428,146 @@ function transformLoopsInStatements(
 
 function functionLevelLets(lets: CollectedLet[]): CollectedLet[] {
   return lets.filter((l) => l.loopId === undefined);
+}
+
+/** Event / lifecycle props — never reactive build sites (`onClick`, `onChange`, …). */
+function isHandlerPropName(name: string): boolean {
+  return /^on[A-Z]/.test(name);
+}
+
+/** Array / promise / utility callbacks — not Clay UI build sites. */
+const NON_UI_CALLBACK_METHODS = new Set([
+  'filter',
+  'map',
+  'flatMap',
+  'find',
+  'findIndex',
+  'findLast',
+  'findLastIndex',
+  'some',
+  'every',
+  'reduce',
+  'reduceRight',
+  'forEach',
+  'sort',
+  'flat',
+  'then',
+  'catch',
+  'finally',
+  'watch',
+  'subscribe',
+  'debounce',
+  'throttle',
+  'timer',
+]);
+
+/** `ui.*` / panel-handle methods whose callback args build the element tree. */
+const CLAY_UI_BUILDER_METHODS = new Set([
+  'row',
+  'column',
+  'container',
+  'hero',
+  'card',
+  'dialog',
+  'sheet',
+  'drawer',
+  'tabs',
+  'accordion',
+  'collapsible',
+  'scrollArea',
+  'resizable',
+  'tooltip',
+  'hoverCard',
+  'refreshable',
+  'auto',
+  'app',
+  'viewportEnter',
+  'flow',
+  'panel',
+  'stepper',
+  'dialogStack',
+  'dropdownMenu',
+  'contextMenu',
+  'popover',
+  'alertDialog',
+  'menubar',
+  'navigationMenu',
+  'breadcrumb',
+  'carousel',
+  'command',
+  'toggleGroup',
+  'radioGroup',
+  'select',
+  'combobox',
+  'dateRange',
+  'timeline',
+  'kanban',
+  'list',
+  'gantt',
+]);
+
+function propertyAssignmentName(node: ts.PropertyName): string | null {
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isStringLiteral(node) || ts.isNumericLiteral(node)) return node.text;
+  return null;
+}
+
+function callExpressionMethodName(call: ts.CallExpression): string | null {
+  const callee = call.expression;
+  if (ts.isPropertyAccessExpression(callee)) return callee.name.text;
+  if (ts.isIdentifier(callee)) return callee.text;
+  return null;
+}
+
+/**
+ * True when `fn` is a Clay widget/resizable/flow builder callback whose body
+ * may emit UI — not an event handler, array method, timer, or utility closure.
+ */
+function isClayUiBuilderCallback(
+  fn: ts.ArrowFunction | ts.FunctionExpression,
+  parent: ts.Node | undefined,
+): boolean {
+  if (!parent) return false;
+
+  if (ts.isPropertyAssignment(parent)) {
+    const key = propertyAssignmentName(parent.name);
+    if (key && isHandlerPropName(key)) return false;
+    return false;
+  }
+
+  if (!ts.isCallExpression(parent)) return false;
+  if (!parent.arguments.includes(fn)) return false;
+
+  const method = callExpressionMethodName(parent);
+  if (!method) return false;
+  if (NON_UI_CALLBACK_METHODS.has(method)) return false;
+
+  const callee = parent.expression;
+  if (ts.isPropertyAccessExpression(callee)) {
+    const receiver = callee.expression;
+    if (ts.isIdentifier(receiver) && receiver.text === 'ui') {
+      return CLAY_UI_BUILDER_METHODS.has(method);
+    }
+    if (ts.isIdentifier(receiver) && method === 'panel') {
+      return true;
+    }
+  }
+
+  if (ts.isIdentifier(callee)) {
+    return method === 'auto' || method === 'refreshable';
+  }
+
+  return false;
+}
+
+function noteShadowRename(
+  shadowWarnings: string[],
+  shadowed: string,
+  newName: string,
+): void {
+  shadowWarnings.push(
+    `reactive-let: local '${shadowed}' shadows lifted state — renamed to '${newName}' in emit`,
+  );
 }
 
 function isFunctionLike(node: ts.Node): boolean {
@@ -1714,16 +1863,21 @@ function emitWithRegions(
   const { factory } = context;
 
   const injectNested = (stmt: ts.Statement): ts.Statement => {
-    const visit = (n: ts.Node): ts.Node => {
+    const visit = (n: ts.Node, parent: ts.Node | undefined): ts.Node => {
       if (
         (ts.isArrowFunction(n) || ts.isFunctionExpression(n)) &&
         n.body &&
         ts.isBlock(n.body)
       ) {
-        const innerVisited = ts.visitEachChild(n, visit, context) as
+        const innerVisited = ts.visitEachChild(n, (child) => visit(child, n), context) as
           | ts.ArrowFunction
           | ts.FunctionExpression;
         const body = innerVisited.body as ts.Block;
+
+        if (!isClayUiBuilderCallback(n, parent)) {
+          return innerVisited;
+        }
+
         if (!body.statements.some((s) => readsStateDuringBuild(s, stateIdent, names))) {
           return innerVisited;
         }
@@ -1758,9 +1912,9 @@ function emitWithRegions(
           factory.updateBlock(body, withChildRegions),
         );
       }
-      return ts.visitEachChild(n, visit, context);
+      return ts.visitEachChild(n, (child) => visit(child, n), context);
     };
-    return visit(stmt) as ts.Statement;
+    return visit(stmt, undefined) as ts.Statement;
   };
 
   const prepared = statements.map(injectNested);
@@ -2021,6 +2175,69 @@ function collectAutoRegionWarnings(body: ts.Block, builders: Set<string>): strin
   return warnings;
 }
 
+function isAutoOrRefreshableCallback(
+  fn: ts.ArrowFunction | ts.FunctionExpression,
+  parent: ts.Node | undefined,
+): boolean {
+  if (!parent || !ts.isCallExpression(parent)) return false;
+  if (!parent.arguments.includes(fn)) return false;
+  const method = callExpressionMethodName(parent);
+  return method === 'auto' || method === 'refreshable';
+}
+
+function isBareBuilderCallExpr(
+  expr: ts.Expression,
+  builders: Set<string>,
+): ts.Identifier | null {
+  if (!ts.isCallExpression(expr) || expr.arguments.length > 0) return null;
+  if (!ts.isIdentifier(expr.expression)) return null;
+  return builders.has(expr.expression.text) ? expr.expression : null;
+}
+
+/**
+ * Warn when a state-reading local builder is invoked inside a Clay widget
+ * callback (`ui.row`, `ui.column`, …) without an enclosing `ui.auto`.
+ */
+function collectWidgetBuilderCallWarnings(body: ts.Block, builders: Set<string>): string[] {
+  if (builders.size === 0) return [];
+  const warnings: string[] = [];
+  type Ctx = { inAuto: boolean; inWidget: boolean };
+
+  const visit = (node: ts.Node, parent: ts.Node | undefined, ctx: Ctx) => {
+    if (
+      (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+      node.body &&
+      ts.isBlock(node.body)
+    ) {
+      const childCtx: Ctx = {
+        inAuto: ctx.inAuto || isAutoOrRefreshableCallback(node, parent),
+        inWidget: ctx.inWidget || isClayUiBuilderCallback(node, parent),
+      };
+      for (const stmt of node.body.statements) {
+        visit(stmt, node, childCtx);
+      }
+      return;
+    }
+
+    if (ts.isExpressionStatement(node) && ctx.inWidget && !ctx.inAuto) {
+      const builder = isBareBuilderCallExpr(node.expression, builders);
+      if (builder) {
+        warnings.push(
+          `reactive-let: ${builder.text}() reads lifted state but is called inside a widget callback without ui.auto — ` +
+            `use ui.auto(() => { ${builder.text}(); }) or inline the UI.`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, (child) => visit(child, node, ctx));
+  };
+
+  for (const stmt of body.statements) {
+    visit(stmt, body, { inAuto: false, inWidget: false });
+  }
+  return warnings;
+}
+
 /** Rewrite bare `renderX()` → `ui.auto(() => { renderX(); })`. */
 function autoWrapBuilderCalls(
   context: ts.TransformationContext,
@@ -2091,6 +2308,7 @@ export function transformReactiveLet(
     if (!autoWrapBuilders) {
       warnings.push(...collectAutoRegionWarnings(body, builders));
     }
+    warnings.push(...collectWidgetBuilderCallWarnings(body, builders));
   }
 
   const transformer: ts.TransformerFactory<ts.SourceFile> = (context) => {
@@ -2189,6 +2407,7 @@ export function transformReactiveLet(
       }
 
       const shadowCounter = { n: 0 };
+      const shadowWarnings: string[] = [];
       const rewrittenRest = transformLoopsInStatements(
         context,
         stripped,
@@ -2198,7 +2417,9 @@ export function transformReactiveLet(
         renameShadowedLocals,
         shadowCounter,
         new Map(),
+        shadowWarnings,
       );
+      warnings.push(...shadowWarnings);
 
       const builders = buildersBySite.get(node) ?? new Set<string>();
       const withBuilders = autoWrapBuilders

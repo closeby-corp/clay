@@ -1,4 +1,5 @@
 import { composedChart, type ComposedChartSeries, type ComposedSeriesType } from '../../composed-chart';
+import type { ChartReferenceArea, ChartReferenceLine } from '../../chart-shared';
 import {
   normalizeSeries,
   type ChartChromeOpts,
@@ -8,6 +9,8 @@ import {
 
 export type ComposedTerminalOpts = ChartChromeOpts & {
   stacked?: boolean;
+  referenceLine?: ChartReferenceLine;
+  referenceArea?: ChartReferenceArea;
 };
 
 type SeriesWithType = ComposedChartSeries;
@@ -79,7 +82,12 @@ export class ComposedBuilder {
       stacked: opts.stacked === true,
       title: opts.title ?? this.chrome.title,
       description: opts.description ?? this.chrome.description,
+      headline: opts.headline ?? this.chrome.headline,
+      periods: opts.periods ?? this.chrome.periods,
+      loading: opts.loading ?? this.chrome.loading,
       height: opts.height ?? this.chrome.height,
+      referenceLine: opts.referenceLine,
+      referenceArea: opts.referenceArea,
     });
   }
 }
