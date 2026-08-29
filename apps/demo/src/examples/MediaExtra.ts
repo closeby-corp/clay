@@ -17,7 +17,7 @@ ui.page('/examples/media-extra', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.relativeTime, ui.qrCode, ui.imageZoom, and ui.imageCrop — media helpers.',
+          'ui.relativeTime, ui.qrCode, ui.imageZoom, ui.imageCrop, and ui.iframe — media helpers.',
         );
 
         exampleSection(
@@ -94,6 +94,19 @@ ui.page('/examples/media-extra', () => {
             },
             { gap: 2 },
           );
+        });
+
+        ui.separator();
+
+        exampleSection(
+          'Iframe',
+          'ui.iframe — first-class embed (prefer over ui.html with an iframe tag).',
+        );
+        ui.iframe('https://example.com', {
+          title: 'Example embed',
+          height: 220,
+          className: 'max-w-xl border rounded-md',
+          loading: 'lazy',
         });
       },
       { gap: 6 },

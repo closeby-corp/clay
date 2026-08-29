@@ -52,6 +52,7 @@ import {
   command as commandFactory,
   resizable as resizableFactory,
   scrollArea as scrollAreaFactory,
+  viewportEnter as viewportEnterFactory,
   keybind as keybindFactory,
   kbd as kbdFactory,
   sheet as sheetFactory,
@@ -66,6 +67,7 @@ import {
   markdown as markdownFactory,
   html as htmlFactory,
   image as imageFactory,
+  iframe as iframeFactory,
   upload as uploadFactory,
   rating as ratingFactory,
   colorPicker as colorPickerFactory,
@@ -175,6 +177,7 @@ import {
   type ResizablePanelProps,
   type ResizableHandleProps,
   type ScrollAreaProps,
+  type ViewportEnterProps,
   type KeybindProps,
   type KbdProps,
   type BreadcrumbItem,
@@ -200,6 +203,8 @@ import {
   type MarkdownProps,
   type HtmlProps,
   type ImageProps,
+  type IframeProps,
+  type ViewportEnterProps,
   type UploadProps,
   type UploadVariant,
   type UploadedFile,
@@ -474,6 +479,8 @@ export type {
   MarkdownProps,
   HtmlProps,
   ImageProps,
+  IframeProps,
+  ViewportEnterProps,
   UploadProps,
   UploadVariant,
   UploadedFile,
@@ -772,6 +779,11 @@ export function html(content?: string, props?: HtmlProps): Element {
 /** Image element. Prefer `ui.image`. See {@link ImageProps}. */
 export function image(src: string, props?: ImageProps): Element {
   return imageFactory(src, props);
+}
+
+/** Iframe embed. Prefer `ui.iframe`. See {@link IframeProps}. */
+export function iframe(src: string, props?: IframeProps): Element {
+  return iframeFactory(src, props);
 }
 
 /** File upload control (`POST /upload`). Prefer `ui.upload`. See {@link UploadProps}. */
@@ -1113,6 +1125,23 @@ export function scrollArea(fn: () => void, props?: ScrollAreaProps): Element;
 export function scrollArea(props: ScrollAreaProps, fn: () => void): Element;
 export function scrollArea(a: any, b?: any): Element {
   return scrollAreaFactory(a, b);
+}
+
+/**
+ * Observe when children enter the viewport (IntersectionObserver).
+ * Prefer `ui.viewportEnter`. See {@link ViewportEnterProps}.
+ *
+ * @example
+ * ```ts
+ * ui.viewportEnter({ onEnter: () => void loadMore(), once: true }, () => {
+ *   ui.label('Lazy section');
+ * });
+ * ```
+ */
+export function viewportEnter(fn: () => void, props?: ViewportEnterProps): Element;
+export function viewportEnter(props: ViewportEnterProps, fn: () => void): Element;
+export function viewportEnter(a: any, b?: any): Element {
+  return viewportEnterFactory(a, b);
 }
 
 /**
@@ -1485,6 +1514,7 @@ export const ui = {
   markdown,
   html,
   image,
+  iframe,
   upload,
   rating,
   colorPicker,
@@ -1533,6 +1563,7 @@ export const ui = {
   command,
   resizable,
   scrollArea,
+  viewportEnter,
   keybind,
   kbd,
   breadcrumb,

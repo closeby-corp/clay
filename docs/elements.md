@@ -64,12 +64,14 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `carousel` | `carousel` (+ `carouselslide`) | Embla carousel |
 | `command` | `command` (+ `commandgroup` / `commanditem` / `commandseparator`) | Command palette (`mode: 'dialog' \| 'inline'`; dialog owns `open`) |
 | `resizable` | `resizable` (+ `resizablepanel` / `resizablehandle`) | `react-resizable-panels` |
-| `scrollArea` | `scrollarea` | ShadCN `ScrollArea` |
+| `scrollArea` | `scrollarea` | ShadCN `ScrollArea` (`onNearEnd` for infinite scroll) |
+| `viewportEnter` | `viewportEnter` | IntersectionObserver wrapper (`onEnter`, `once?`) |
 | `keybind` | `keybind` | Headless `window` `keydown` chord listener (`return null`) |
 | `kbd` | `kbd` | Display-only chord glyphs (`Kbd` / `KbdGroup`; same tokens as `keybind`) |
 | `markdown` | `markdown` | Client `marked` + DOMPurify |
 | `html` | `html` | Trusted server HTML (`dangerouslySetInnerHTML`) |
 | `image` | `image` | `<img>` |
+| `iframe` | `iframe` | `<iframe>` embed |
 | `upload` | `upload` | File picker / dropzone → `POST /upload` (progress/abort) → WS `upload` / `progress` / `error` / `abort` |
 | `stat` | `stat` | Grid of metric cards |
 | `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive ranges, `stacked?`) |
@@ -116,6 +118,8 @@ Handlers stay on the server. Serialized props include `events: string[]` so the 
 | `kanban` | `cardMove`, `cardSelect`, `cardClick` (`cardMove`/`cardSelect` settle always registered; user `on*` run after owned-model update) |
 | `list` | `itemMove`, `itemClick` (`itemMove` settle always registered; user `onItemMove` runs after owned-model update) |
 | `imageCrop` | `crop` |
+| `scrollArea` | `nearEnd` |
+| `viewportEnter` | `enter` |
 | `gantt` | `itemMove`, `itemClick`, `markerAdd` (`itemMove` / `markerAdd` settle always registered; user `on*` run after owned-model update) |
 | `flow` | `connect`, `nodeMove` (drag-stop), `nodesDelete`, `edgesDelete`, `selectionChange` (settle handlers always registered; user `on*` run after owned-model update) |
 | `aiChat` / `aiPromptBar` | `submit`, `tabChange`, `followUp`, `action`, `sourceRemove`, `modelChange`, `command`, `dictate`, `change` |

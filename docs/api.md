@@ -313,6 +313,20 @@ Trusted server HTML into a container (same XSS trust model as NiceGUI — only p
 | `width` / `height` | `number \| string` | |
 | `className` | `string` | |
 
+#### `ui.iframe(src, props?)`
+
+First-class iframe embed (prefer over `ui.html(\`<iframe…>\`)`). Only embed origins you trust.
+
+| Prop | Type | Default |
+|------|------|---------|
+| `title` | `string` | `''` |
+| `width` / `height` | `number \| string` | |
+| `allow` | `string` | |
+| `sandbox` | `string \| string[]` | |
+| `loading` | `'eager' \| 'lazy'` | |
+| `referrerPolicy` | `string` | |
+| `className` | `string` | |
+
 ---
 
 ### Form controls
@@ -1474,6 +1488,56 @@ ui.collapsible({ title: 'Advanced', open: false }, () => {
 | `title` | `string` | `'Toggle'` |
 | `open` | `boolean` | `false` |
 | `onChange` | `(open: boolean) => void` | |
+
+#### `ui.scrollArea(fn, props?)` / `ui.scrollArea(props, fn)`
+
+Scrollable viewport (ShadCN ScrollArea). Optional `onNearEnd` for infinite scroll / load-more: fires when the user scrolls within `nearEndThreshold` px of the bottom, then re-arms after they scroll away.
+
+```typescript
+ui.scrollArea(
+  {
+    className: 'h-48',
+    nearEndThreshold: 64,
+    onNearEnd: () => {
+      rows.n += 20;
+    },
+  },
+  () => {
+    for (let i = 0; i < rows.n; i++) ui.label(`Row ${i}`);
+  },
+);
+```
+
+| Prop | Type | Default |
+|------|------|---------|
+| `className` | `string` | |
+| `onNearEnd` | `() => void \| Promise<void>` | — client emits `nearEnd` |
+| `nearEndThreshold` | `number` | `80` (px from bottom) |
+
+#### `ui.viewportEnter(fn, props?)` / `ui.viewportEnter(props, fn)`
+
+IntersectionObserver wrapper. Fires `onEnter` when the element intersects the viewport — default **once**.
+
+```typescript
+ui.viewportEnter(
+  {
+    once: true,
+    rootMargin: '80px',
+    onEnter: () => void loadSection(),
+  },
+  () => {
+    ui.label('Lazy block');
+  },
+);
+```
+
+| Prop | Type | Default |
+|------|------|---------|
+| `className` | `string` | |
+| `onEnter` | `() => void \| Promise<void>` | — client emits `enter` |
+| `once` | `boolean` | `true` |
+| `rootMargin` | `string` | `'0px'` |
+| `threshold` | `number \| number[]` | `0` |
 
 #### `ui.keybind(props)`
 

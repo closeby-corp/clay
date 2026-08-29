@@ -1822,18 +1822,127 @@ function BoundResizable({
 }
 
 function BoundScrollArea({
+  id,
+  props,
   className,
   style,
   children,
+  emit,
 }: {
+  id: string;
+  props: Record<string, unknown>;
   className?: string;
   style: unknown;
   children: ReactNode;
+  emit: Emit;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const armedRef = useRef(true);
+  const canNearEnd = hasEvent(props, 'nearEnd');
+  const threshold =
+    typeof props.nearEndThreshold === 'number' && Number.isFinite(props.nearEndThreshold)
+      ? Math.max(0, props.nearEndThreshold)
+      : 80;
+
+  useEffect(() => {
+    if (!canNearEnd) return;
+    const root = rootRef.current;
+    if (!root) return;
+    const viewport = root.querySelector(
+      '[data-slot="scroll-area-viewport"]',
+    ) as HTMLElement | null;
+    if (!viewport) return;
+
+    const onScroll = () => {
+      const remaining = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      const near = remaining <= threshold;
+      if (near) {
+        if (armedRef.current) {
+          armedRef.current = false;
+          emit(id, 'nearEnd');
+        }
+      } else {
+        armedRef.current = true;
+      }
+    };
+
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, [id, emit, canNearEnd, threshold, children]);
+
   return (
-    <ScrollArea className={cn('h-32 w-full rounded-md border', className)} style={asStyle(style)}>
-      <div className="p-3">{children}</div>
-    </ScrollArea>
+    <div ref={rootRef} className="contents">
+      <ScrollArea className={cn('h-32 w-full rounded-md border', className)} style={asStyle(style)}>
+        <div className="p-3">{children}</div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function BoundViewportEnter({
+  id,
+  props,
+  className,
+  style,
+  children,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  children: ReactNode;
+  emit: Emit;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const firedRef = useRef(false);
+  const canEnter = hasEvent(props, 'enter');
+  const once = props.once !== false;
+  const rootMargin = typeof props.rootMargin === 'string' ? props.rootMargin : '0px';
+  const thresholdProp = props.threshold;
+  const thresholdKey = Array.isArray(thresholdProp)
+    ? thresholdProp.join(',')
+    : String(thresholdProp ?? 0);
+
+  useEffect(() => {
+    if (!canEnter) return;
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+
+    firedRef.current = false;
+    const threshold = Array.isArray(thresholdProp)
+      ? thresholdProp.map(Number)
+      : typeof thresholdProp === 'number'
+        ? thresholdProp
+        : 0;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            if (once && firedRef.current) continue;
+            firedRef.current = true;
+            emit(id, 'enter');
+            if (once) {
+              observer.disconnect();
+              return;
+            }
+          } else if (!once) {
+            firedRef.current = false;
+          }
+        }
+      },
+      { root: null, rootMargin, threshold },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [id, emit, canEnter, once, rootMargin, thresholdKey, thresholdProp]);
+
+  return (
+    <div ref={ref} className={cn(className)} style={asStyle(style)}>
+      {children}
+    </div>
   );
 }
 
@@ -3009,6 +3118,24 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         />
       );
 
+    case 'iframe':
+      return (
+        <iframe
+          src={String(props.src ?? '')}
+          title={String(props.title ?? '')}
+          width={props.width as number | string | undefined}
+          height={props.height as number | string | undefined}
+          allow={typeof props.allow === 'string' ? props.allow : undefined}
+          sandbox={typeof props.sandbox === 'string' ? props.sandbox : undefined}
+          loading={props.loading === 'eager' || props.loading === 'lazy' ? props.loading : undefined}
+          referrerPolicy={
+            typeof props.referrerPolicy === 'string' ? props.referrerPolicy : undefined
+          }
+          className={cn('w-full border-0 rounded-md bg-muted/30', className)}
+          style={asStyle(style)}
+        />
+      );
+
     case 'tabs':
       return (
         <BoundTabs id={id} props={props} className={className} style={style} emit={emit} children={children} />
@@ -3125,9 +3252,16 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'scrollarea':
       return (
-        <BoundScrollArea className={className} style={style}>
+        <BoundScrollArea id={id} props={props} className={className} style={style} emit={emit}>
           {renderChildren()}
         </BoundScrollArea>
+      );
+
+    case 'viewportEnter':
+      return (
+        <BoundViewportEnter id={id} props={props} className={className} style={style} emit={emit}>
+          {renderChildren()}
+        </BoundViewportEnter>
       );
 
     case 'keybind':

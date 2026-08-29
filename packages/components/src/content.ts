@@ -44,3 +44,36 @@ export function image(src: string, props: ImageProps = {}): Element {
     height: props.height,
   });
 }
+
+export type IframeProps = {
+  /** Accessible name for the frame. */
+  title?: string;
+  className?: string;
+  width?: number | string;
+  height?: number | string;
+  /** `iframe` `allow` attribute (feature policy). */
+  allow?: string;
+  /** `iframe` `sandbox` tokens (space-separated string or list). */
+  sandbox?: string | string[];
+  loading?: 'eager' | 'lazy';
+  referrerPolicy?: string;
+};
+
+/**
+ * First-class iframe embed (prefer over `ui.html(\`<iframe…>\`)`).
+ * `src` is a URL; only embed origins you trust.
+ */
+export function iframe(src: string, props: IframeProps = {}): Element {
+  const sandbox = Array.isArray(props.sandbox) ? props.sandbox.join(' ') : props.sandbox;
+  return new Element('iframe', {
+    src,
+    title: props.title ?? '',
+    className: props.className,
+    width: props.width,
+    height: props.height,
+    allow: props.allow,
+    sandbox,
+    loading: props.loading,
+    referrerPolicy: props.referrerPolicy,
+  });
+}

@@ -657,6 +657,8 @@ export {
 
 export { scrollArea, type ScrollAreaProps } from './scroll-area';
 
+export { viewportEnter, type ViewportEnterProps } from './viewport-enter';
+
 export { keybind, type KeybindProps } from './keybind';
 
 export { kbd, type KbdProps } from './kbd';
@@ -808,9 +810,11 @@ export {
   markdown,
   html,
   image,
+  iframe,
   type MarkdownProps,
   type HtmlProps,
   type ImageProps,
+  type IframeProps,
 } from './content';
 
 export {

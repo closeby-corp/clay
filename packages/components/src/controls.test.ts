@@ -172,4 +172,11 @@ describe('scrollArea', () => {
     expect(el.type).toBe('scrollarea');
     expect(el.props.className).toBe('h-32');
   });
+
+  test('registers onNearEnd as nearEnd event', () => {
+    const el = scrollArea({ onNearEnd: () => {}, nearEndThreshold: 40 }, () => {});
+    expect(el.props.events).toEqual(expect.arrayContaining(['nearEnd']));
+    expect(el.props.nearEndThreshold).toBe(40);
+    expect(el.props.onNearEnd).toBeUndefined();
+  });
 });

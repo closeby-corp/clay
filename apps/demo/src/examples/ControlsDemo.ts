@@ -120,11 +120,51 @@ ui.page('/examples/controls', () => {
           });
         });
 
-        exampleSection('Scroll area', 'ui.scrollArea — clipped viewport with scrollbar.');
-        ui.scrollArea({ className: 'h-32 w-72' }, () => {
-          for (let i = 1; i <= 20; i++) {
-            ui.label(`Row ${i}`).classes('text-sm');
-          }
+        exampleSection(
+          'Scroll area',
+          'ui.scrollArea — clipped viewport; onNearEnd fires when scrolled near the bottom.',
+        );
+        const scrollRows = ui.state({ n: 20 });
+        ui.auto(() => {
+          ui.scrollArea(
+            {
+              className: 'h-32 w-72',
+              nearEndThreshold: 48,
+              onNearEnd: () => {
+                scrollRows.n += 10;
+                ui.notify(`Loaded more — ${scrollRows.n} rows`, 'info');
+              },
+            },
+            () => {
+              for (let i = 1; i <= scrollRows.n; i++) {
+                ui.label(`Row ${i}`).classes('text-sm');
+              }
+            },
+          );
+        });
+
+        exampleSection(
+          'Viewport enter',
+          'ui.viewportEnter — IntersectionObserver; onEnter once when scrolled into view.',
+        );
+        ui.column({ className: 'gap-2 min-h-[28rem]' }, () => {
+          ui.label('Scroll the page so the box below enters the viewport.').classes(
+            'text-sm text-muted-foreground',
+          );
+          ui.viewportEnter(
+            {
+              once: true,
+              rootMargin: '0px',
+              onEnter: () => ui.notify('Section entered viewport', 'success'),
+            },
+            () => {
+              ui.card({ title: 'Lazy section', className: 'max-w-md' }, () => {
+                ui.label('This fired onEnter the first time it became visible.').classes(
+                  'text-xs text-muted-foreground',
+                );
+              });
+            },
+          );
         });
 
         exampleSection(
