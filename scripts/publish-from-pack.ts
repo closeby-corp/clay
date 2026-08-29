@@ -85,6 +85,24 @@ function assertNoWorkspaceDeps(meta: PackedMeta, pkg: PublishableName) {
   }
 }
 
+/**
+ * `bun pm pack` rewrites `workspace:*` from **bun.lock** workspace versions, not
+ * live package.json. Fail if an internal @close-by/clay* dep is still an older
+ * release (nested install would pull stale core).
+ */
+function assertInternalDepsMatchRelease(meta: PackedMeta, pkg: PublishableName, version: string) {
+  const deps = meta.dependencies ?? {};
+  for (const [dep, range] of Object.entries(deps)) {
+    if (!dep.startsWith('@close-by/clay')) continue;
+    if (range !== version) {
+      throw new Error(
+        `${npmName(pkg)}: dependency ${dep} is ${range}, expected ${version} ` +
+          `(refresh bun.lock workspace versions after bumping package.json)`,
+      );
+    }
+  }
+}
+
 console.log(`\n→ validating ${PACKAGES.length} tarballs (v${version})`);
 const errors: string[] = [];
 
@@ -111,6 +129,7 @@ for (const name of PACKAGES) {
       errors.push(`${name}: publishConfig.access should be "public" (scoped package)`);
     }
     assertNoWorkspaceDeps(meta, name);
+    assertInternalDepsMatchRelease(meta, name, version);
 
     const entries = await listTarball(tgz);
     if (!entries.some((e) => e === 'package/LICENSE' || e.endsWith('/LICENSE'))) {
