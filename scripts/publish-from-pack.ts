@@ -151,6 +151,14 @@ for (const name of PACKAGES) {
       }
     }
 
+    if (name === 'ui') {
+      for (const doc of ['getting-started.md', 'api.md', 'elements.md']) {
+        if (!entries.some((e) => e === `package/docs/${doc}` || e.endsWith(`/docs/${doc}`))) {
+          errors.push(`ui: package/docs/${doc} missing from tarball`);
+        }
+      }
+    }
+
     console.log(`  ✓ ${npmName(name)}@${meta.version} (${tgz})`);
   } catch (e) {
     errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`);

@@ -7,16 +7,23 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./page-tsconfig": "./page-tsconfig.json"
+    "./page-tsconfig": "./page-tsconfig.json",
+    "./docs-dir": "./src/docs-dir.ts",
+    "./docs/*": "./docs/*"
   },
   "files": [
     "src",
+    "docs",
     "page-tsconfig.json",
     "README.md",
     "LICENSE",
     "!src/**/*.test.ts",
     "!src/**/__fixtures__"
   ],
+  "scripts": {
+    "sync-docs": "bun ../../scripts/sync-docs.ts",
+    "prepack": "bun run sync-docs"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/closeby-corp/clay.git",

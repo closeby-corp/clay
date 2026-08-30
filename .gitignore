@@ -6,6 +6,7 @@ out
 dist
 dist-pack
 packages/cli/client-dist
+packages/ui/docs
 *.tgz
 
 # code coverage

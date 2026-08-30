@@ -2050,11 +2050,25 @@ type TransformSite = {
   hadDirective: boolean;
 };
 
+/** True when `fn` is passed directly to `ui.page` / `page` (file pragma applies here only). */
+function isPageRegistrationCallback(
+  fn: ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration,
+): boolean {
+  const parent = fn.parent;
+  if (!parent || !ts.isCallExpression(parent)) return false;
+  if (!parent.arguments.includes(fn as ts.Expression)) return false;
+  const callee = parent.expression;
+  if (ts.isPropertyAccessExpression(callee) && callee.name.text === 'page') {
+    return ts.isIdentifier(callee.expression) && callee.expression.text === 'ui';
+  }
+  return ts.isIdentifier(callee) && callee.text === 'page';
+}
+
 /**
  * Find eligible transform sites.
  *
- * File pragma `// @clay-reactive` applies only to functions that are **not**
- * nested inside another function (module-level fns and e.g. `ui.page` callbacks).
+ * File pragma `// @clay-reactive` applies only to `ui.page` / `page` callbacks.
+ * Module-level helpers stay plain unless they open with `"use reactive";`.
  * Nested `function` / arrow bodies stay plain unless they open with `"use reactive";`.
  */
 function findSites(sourceFile: ts.SourceFile, filePragma: boolean): TransformSite[] {
@@ -2062,15 +2076,15 @@ function findSites(sourceFile: ts.SourceFile, filePragma: boolean): TransformSit
 
   const consider = (
     fn: ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration,
-    insideFunction: boolean,
+    _insideFunction: boolean,
   ) => {
     const body = fn.body;
     if (!body || !ts.isBlock(body)) return;
     const collected = collectLetsInFunctionBody(body);
     if (!collected || collected.lets.length === 0) return;
-    // File pragma does not inherit into nested helpers / widget callbacks.
-    const eligible = collected.hadDirective || (filePragma && !insideFunction);
-    if (!eligible) return;
+    const fileEligible =
+      collected.hadDirective || (filePragma && isPageRegistrationCallback(fn));
+    if (!fileEligible) return;
     sites.push({ fn, lets: collected.lets, hadDirective: collected.hadDirective });
   };
 
@@ -2148,27 +2162,86 @@ function namesFromBindingStmt(stmt: ts.VariableStatement): string[] {
   return out;
 }
 
-/** Local builders (function / const fn) whose bodies read lifted state names. */
-function collectStateReadingBuilders(body: ts.Block, liftedNames: Set<string>): Set<string> {
-  const builders = new Set<string>();
-
-  const noteFn = (name: string, fnBody: ts.ConciseBody) => {
-    if (readsLiftedNames(fnBody, liftedNames)) builders.add(name);
-  };
-
+/** Local function / const-fn bodies declared in a reactive site body. */
+function collectLocalFunctionBodies(body: ts.Block): Map<string, ts.ConciseBody> {
+  const map = new Map<string, ts.ConciseBody>();
   for (const stmt of body.statements) {
     if (ts.isFunctionDeclaration(stmt) && stmt.name && stmt.body) {
-      noteFn(stmt.name.text, stmt.body);
+      map.set(stmt.name.text, stmt.body);
     }
     if (ts.isVariableStatement(stmt)) {
       for (const decl of stmt.declarationList.declarations) {
         if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
         const init = decl.initializer;
         if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) {
-          if (init.body) noteFn(decl.name.text, init.body);
+          if (init.body) map.set(decl.name.text, init.body);
         }
       }
     }
+  }
+  return map;
+}
+
+/** Bare `localFn()` calls inside `fnBody` (no descent into nested functions). */
+function collectBareLocalFnCalls(fnBody: ts.ConciseBody, localNames: Set<string>): Set<string> {
+  const called = new Set<string>();
+  const visit = (node: ts.Node) => {
+    if (isFunctionLike(node)) return;
+    if (ts.isExpressionStatement(node)) {
+      const expr = node.expression;
+      if (
+        ts.isCallExpression(expr) &&
+        ts.isIdentifier(expr.expression) &&
+        localNames.has(expr.expression.text)
+      ) {
+        called.add(expr.expression.text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  if (ts.isBlock(fnBody)) {
+    for (const stmt of fnBody.statements) visit(stmt);
+  } else {
+    visit(fnBody);
+  }
+  return called;
+}
+
+/** Local builders whose bodies read lifted state (directly or via composer calls). */
+function collectStateReadingBuilders(body: ts.Block, liftedNames: Set<string>): Set<string> {
+  const locals = collectLocalFunctionBodies(body);
+  const localNames = new Set(locals.keys());
+  const memo = new Map<string, boolean>();
+
+  const readsState = (name: string, visiting: Set<string>): boolean => {
+    const cached = memo.get(name);
+    if (cached !== undefined) return cached;
+    if (visiting.has(name)) return false;
+
+    const fnBody = locals.get(name);
+    if (!fnBody) {
+      memo.set(name, false);
+      return false;
+    }
+
+    visiting.add(name);
+    let result = readsLiftedNames(fnBody, liftedNames);
+    if (!result) {
+      for (const callee of collectBareLocalFnCalls(fnBody, localNames)) {
+        if (readsState(callee, visiting)) {
+          result = true;
+          break;
+        }
+      }
+    }
+    visiting.delete(name);
+    memo.set(name, result);
+    return result;
+  };
+
+  const builders = new Set<string>();
+  for (const name of localNames) {
+    if (readsState(name, new Set())) builders.add(name);
   }
   return builders;
 }
@@ -2177,7 +2250,7 @@ function isBareBuilderCall(stmt: ts.Statement, builders: Set<string>): boolean {
   if (!ts.isExpressionStatement(stmt)) return false;
   if (isAutoCallStatement(stmt)) return false;
   const expr = stmt.expression;
-  if (!ts.isCallExpression(expr) || expr.arguments.length > 0) return false;
+  if (!ts.isCallExpression(expr)) return false;
   if (!ts.isIdentifier(expr.expression)) return false;
   return builders.has(expr.expression.text);
 }
@@ -2216,7 +2289,7 @@ function isBareBuilderCallExpr(
   expr: ts.Expression,
   builders: Set<string>,
 ): ts.Identifier | null {
-  if (!ts.isCallExpression(expr) || expr.arguments.length > 0) return null;
+  if (!ts.isCallExpression(expr)) return null;
   if (!ts.isIdentifier(expr.expression)) return null;
   return builders.has(expr.expression.text) ? expr.expression : null;
 }
@@ -2338,9 +2411,10 @@ function autoWrapBuilderCallsInWidgetCallbacks(
 /**
  * Rewrite tracked `let` bindings into `ui.state` / `ui.auto` (or `state` / `auto`).
  *
- * Opt-in via file pragma `// @clay-reactive` (module-level / page callbacks only)
- * or block directive `"use reactive";`. Nested functions do **not** inherit the
- * file pragma — they need their own directive. `ui.page` alone does not opt in.
+ * Opt-in via file pragma `// @clay-reactive` (applies to `ui.page` / `page` callbacks
+ * only) or block directive `"use reactive";`. Module-level helpers and nested
+ * functions do **not** inherit the file pragma — they need their own directive.
+ * `ui.page` alone does not opt in.
  *
  * Lifts simple `let` / `const` bindings anywhere in the function body (including
  * nested blocks, but not loops or nested function scopes). Remaining statements

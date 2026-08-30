@@ -81,10 +81,10 @@ Both of:
 
 1. **CLI / loader:** pass `--reactive-let` to `clay` (or call `registerReactiveLetPlugin()` yourself). Off by default.
 2. **Source:** one of:
-   - File pragma: `// @clay-reactive` (near the top of the file) — applies to **module-level** functions and callbacks that are **not** nested inside another function (e.g. `ui.page('/', () => { … })`)
+   - File pragma: `// @clay-reactive` (near the top of the file) — applies to **`ui.page` / `page` callbacks only**
    - Block directive as the first statement: `"use reactive";` — required for nested helpers / `ui.column(() => …)` lets
 
-`ui.page(...)` alone does **not** opt in. Nested `function` / arrow bodies do **not** inherit the file pragma (avoids lifting scratch `let`s in helpers into separate state islands).
+`ui.page(...)` alone does **not** opt in. Module-level helpers (`function mergeUnits() { … }`) and nested `function` / arrow bodies do **not** inherit the file pragma — use `"use reactive";` inside the page callback or a nested site when needed.
 
 ### Who wraps `ui.auto`?
 
@@ -96,7 +96,7 @@ Compile-time region analysis **does not** see into nested function bodies. Autho
 | Named `renderX()` builders | **Author** — `ui.auto(() => { renderFeed(); })` |
 | UI inside widget callbacks (`row` / `column` / `dialog` / …) that need rebuild | **Author**, **or** read lets at the site top level so the transform can see them |
 
-Bare top-level `renderFeed()` calls that read lifted lets are **auto-wrapped** in `ui.auto(() => { renderFeed(); })` by default (`autoWrapBuilders: true`). The same applies to bare builder calls **inside Clay widget callbacks** (`ui.row`, `ui.column`, `ui.dialog`, …) — but **not** inside event handlers (`onClick`, `onChange`, …). Pass `{ autoWrapBuilders: false }` to the transform to **warn** instead.
+Bare top-level `renderFeed()` calls that read lifted lets are **auto-wrapped** in `ui.auto(() => { renderFeed(); })` by default (`autoWrapBuilders: true`). The same applies to bare builder calls **inside Clay widget callbacks** (`ui.row`, `ui.column`, `ui.resizable` / `r.panel`, …) — including **composer** helpers that only call other state-reading builders, and calls **with arguments** (`renderFeed('cls')`). Event handlers (`onClick`, `onChange`, …) are excluded. Pass `{ autoWrapBuilders: false }` to the transform to **warn** instead.
 
 Inline UI in widget callbacks (`ui.label(expr)`, `ui.icon(…, { className: expr })`, …) gets **bindText** or nested **`ui.auto`** via region analysis — no manual wrap when the transform can see the reads.
 

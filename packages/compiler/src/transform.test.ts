@@ -48,14 +48,14 @@ ui.page('/', () => {
     expect(out.code).not.toMatch(/\blet count\b/);
   });
 
-  test('multiple leading lets + file pragma', () => {
+  test('multiple leading lets + file pragma on ui.page', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
-export function demo() {
+ui.page('/', () => {
   let count = 0;
   let name = "x";
   ui.label(name + String(count));
-}
+});
 `;
     const out = transformReactiveLet(src, 'demo.ts');
     expect(out.transformed).toBe(true);
@@ -63,6 +63,19 @@ export function demo() {
     expect(out.code).toContain('count: 0');
     expect(out.code).toContain('name: "x"');
     expect(out.code).toContain('ui.label(() =>');
+  });
+
+  test('file pragma does not transform arbitrary module-level exports', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+export function demo() {
+  let count = 0;
+  ui.label(String(count));
+}
+`;
+    const out = transformReactiveLet(src, 'demo.ts');
+    expect(out.transformed).toBe(false);
+    expect(out.code).toBe(src);
   });
 
   test('"use reactive" directive opts in non-page functions', () => {
@@ -843,5 +856,67 @@ ui.page('/', () => {
     const out = transformReactiveLet(src, 'page.ts');
     expect(out.transformed).toBe(true);
     expect(out.warnings.some((w) => w.includes('@clickhouse/client'))).toBe(true);
+  });
+
+  test('file pragma does not transform module-level helpers', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+
+function mergeUnits(a: number[], b: number[]) {
+  return [...a, ...b];
+}
+
+ui.page('/', () => {
+  'use reactive';
+  let units: number[] = [];
+  units = mergeUnits(units, [1]);
+  ui.label(String(units.length));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.code).toMatch(
+      /function mergeUnits\(a: number\[\], b: number\[\]\) \{\s*return \[\.\.\.a, \.\.\.b\];\s*\}/,
+    );
+    expect(out.code).toMatch(/__clay_s0\.units = mergeUnits\(__clay_s0\.units, \[1\]\)/);
+  });
+
+  test('file pragma still transforms ui.page callback without block directive', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  ui.label(String(count));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['count']);
+  });
+
+  test('auto-wraps composer builders inside resizable panel callbacks', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let count = 0;
+  function renderFeedList() {
+    ui.label(String(count));
+  }
+  function renderFeedInScrollArea(className: string) {
+    renderFeedList();
+  }
+  ui.resizable({}, (r) => {
+    r.panel({ defaultSize: 50 }, () => {
+      renderFeedInScrollArea('h-full');
+    });
+  });
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(true);
+    expect(out.warnings).toEqual([]);
+    expect(out.code).toMatch(
+      /r\.panel\([\s\S]*ui\.auto\(\(\) => \{\s*renderFeedInScrollArea\('h-full'\);/,
+    );
   });
 });

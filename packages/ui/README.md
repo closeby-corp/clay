@@ -18,4 +18,4 @@ export default function () {
 bunx clay hello.ts
 ```
 
-Docs: [Getting started](https://github.com/closeby-corp/clay/blob/main/docs/getting-started.md).
+Docs: shipped with the package at `node_modules/@close-by/clay/docs/`. See [getting-started.md](docs/getting-started.md) after install.
