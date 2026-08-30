@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-cli",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "clay CLI — run a .ts file or page directory with bundled React client assets",
   "license": "MIT",
   "type": "module",

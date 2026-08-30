@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-compiler",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Compile-time transforms for Clay (reactive let → ui.state / ui.auto)",
   "license": "MIT",
   "type": "module",

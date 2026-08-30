@@ -13,7 +13,7 @@
     },
     "apps/demo": {
       "name": "demo",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay": "workspace:*",
         "@close-by/clay-auth": "workspace:*",
@@ -25,14 +25,14 @@
     },
     "packages/auth": {
       "name": "@close-by/clay-auth",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay-core": "workspace:*",
       },
     },
     "packages/cli": {
       "name": "@close-by/clay-cli",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "bin": {
         "clay": "./bin/clay",
       },
@@ -44,14 +44,14 @@
     },
     "packages/clickhouse": {
       "name": "@close-by/clay-clickhouse",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@clickhouse/client": "^1.20.0",
       },
     },
     "packages/client": {
       "name": "@close-by/clay-client",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@base-ui/react": "^1.6.0",
         "@dnd-kit/core": "^6.3.1",
@@ -114,14 +114,14 @@
     },
     "packages/compiler": {
       "name": "@close-by/clay-compiler",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "typescript": "^5.0.0",
       },
     },
     "packages/components": {
       "name": "@close-by/clay-components",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay-core": "workspace:*",
         "@dagrejs/dagre": "^3.1.1",
@@ -129,39 +129,39 @@
     },
     "packages/core": {
       "name": "@close-by/clay-core",
-      "version": "0.2.9",
+      "version": "0.2.10",
     },
     "packages/duckdb": {
       "name": "@close-by/clay-duckdb",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@duckdb/node-api": "^1.5.4-r.1",
       },
     },
     "packages/kibana": {
       "name": "@close-by/clay-kibana",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay-duckdb": "workspace:*",
       },
     },
     "packages/persistence-file": {
       "name": "@close-by/clay-persistence-file",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay-core": "workspace:*",
       },
     },
     "packages/persistence-redis": {
       "name": "@close-by/clay-persistence-redis",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay-core": "workspace:*",
       },
     },
     "packages/server": {
       "name": "@close-by/clay-server",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay-core": "workspace:*",
         "@close-by/clay-persistence-file": "workspace:*",
@@ -169,7 +169,7 @@
     },
     "packages/ui": {
       "name": "@close-by/clay",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "dependencies": {
         "@close-by/clay-compiler": "workspace:*",
         "@close-by/clay-components": "workspace:*",
