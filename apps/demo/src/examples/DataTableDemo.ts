@@ -514,6 +514,21 @@ ui.page('/examples/datatable', () => {
       )
       .build();
 
+    exampleSection('Filter chips', 'showFilterChips — active search + column filters as removable chips.');
+    ui.dataTable(tasks.slice(0, 12), {
+      keyField: 'id',
+      searchable: true,
+      showFilterChips: true,
+      filter: 'tim',
+      columnFilters: { status: JSON.stringify(['done']) },
+      pageSize: 6,
+      columns: [
+        { key: 'title', header: 'Title' },
+        { key: 'status', header: 'Status', filter: 'facet' },
+        { key: 'owner', header: 'Owner', filter: 'text' },
+      ],
+    });
+
     exampleSection('Loading & empty', 'Toggle loading, or clear rows to see a custom empty state.');
     ui.row(() => {
       ui.button('Toggle loading', {

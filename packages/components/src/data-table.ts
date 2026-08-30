@@ -179,8 +179,14 @@ export type DataTableProps = {
   columnFilterable?: boolean;
   /** Show Columns visibility menu. Default `true`. */
   columnToggle?: boolean;
+  /** Initial global search (shows in filter chips when `showFilterChips`). */
+  filter?: string;
+  /** Initial column filters (serialized facet values). */
+  columnFilters?: Record<string, string>;
   /** Show Export menu. Default `true`. */
   exportable?: boolean;
+  /** Show active search/column filters as removable chips under the toolbar. Default `false`. */
+  showFilterChips?: boolean;
   /** Base filename without extension. Default `'data'`. */
   exportFilename?: string;
   /**
@@ -810,6 +816,7 @@ export class DataTableElement extends Element {
   private columnFilterable: boolean;
   private columnToggle: boolean;
   private exportable: boolean;
+  private showFilterChips: boolean;
   private exportFilename: string;
   private loading: boolean;
   private emptyTitle: string;
@@ -876,6 +883,7 @@ export class DataTableElement extends Element {
     const columnFilterable = props.columnFilterable !== false;
     const columnToggle = props.columnToggle !== false;
     const exportable = props.exportable !== false;
+    const showFilterChips = props.showFilterChips === true;
     const exportFilename = props.exportFilename ?? 'data';
     const loading = props.loading === true;
     const emptyTitle = props.emptyTitle ?? 'No rows';
@@ -889,6 +897,8 @@ export class DataTableElement extends Element {
     const defaultCollapsed = props.defaultCollapsed === true;
     const primaryAction = props.primaryAction;
     const initialSorts = normalizeSorts(props.defaultSorts, columns);
+    const initialFilter = props.filter ?? '';
+    const initialColumnFilters = { ...(props.columnFilters ?? {}) };
 
     super('datatable', {
       columns: toClientColumns(columns),
@@ -902,6 +912,7 @@ export class DataTableElement extends Element {
       columnFilterable,
       columnToggle,
       exportable,
+      showFilterChips,
       loading,
       emptyTitle,
       emptyDescription,
@@ -922,8 +933,8 @@ export class DataTableElement extends Element {
         icon,
         variant,
       })),
-      filter: '',
-      columnFilters: {},
+      filter: initialFilter,
+      columnFilters: initialColumnFilters,
       hiddenColumns: [],
       sorts: initialSorts,
       sortKey: initialSorts[0]?.key ?? null,
@@ -959,6 +970,7 @@ export class DataTableElement extends Element {
     this.columnFilterable = columnFilterable;
     this.columnToggle = columnToggle;
     this.exportable = exportable;
+    this.showFilterChips = showFilterChips;
     this.exportFilename = exportFilename;
     this.loading = loading;
     this.emptyTitle = emptyTitle;
@@ -986,6 +998,8 @@ export class DataTableElement extends Element {
     this.onViewChangeFn = props.onViewChange;
     this.onGroupToggleFn = props.onGroupToggle;
     this.onPrimaryActionFn = props.onPrimaryAction;
+    this.filter = initialFilter;
+    this.columnFilters = initialColumnFilters;
 
     this.on('sort', (value) => this.handleSort(value));
     this.on('filter', (value) => this.handleFilter(value));
@@ -1608,6 +1622,7 @@ export class DataTableElement extends Element {
       columnFilterable: this.columnFilterable,
       columnToggle: this.columnToggle,
       exportable: this.exportable,
+      showFilterChips: this.showFilterChips,
       loading: this.loading,
       emptyTitle: this.emptyTitle,
       emptyDescription: this.emptyDescription,

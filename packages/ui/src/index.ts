@@ -29,6 +29,19 @@ import {
   statusDot as statusDotFactory,
   feedRow as feedRowFactory,
   feedList as feedListFactory,
+  buttonGroup as buttonGroupFactory,
+  empty as emptyFactory,
+  pagination as paginationFactory,
+  filterBar as filterBarFactory,
+  filterChips as filterChipsFactory,
+  numberField as numberFieldFactory,
+  phoneInput as phoneInputFactory,
+  field as fieldFactory,
+  nativeSelect as nativeSelectFactory,
+  navigationMenu as navigationMenuFactory,
+  NavigationMenuElement,
+  notice as noticeFactory,
+  eventCalendar as eventCalendarFactory,
   stat as statFactory,
   dataTable as dataTableFactory,
   areaChart as areaChartFactory,
@@ -134,6 +147,25 @@ import {
   type FeedRowProps,
   type FeedRowStatus,
   type FeedListProps,
+  type ButtonGroupProps,
+  type ButtonGroupOrientation,
+  type EmptyProps,
+  type PaginationProps,
+  type FilterBarProps,
+  type FilterChip,
+  type NumberFieldProps,
+  type PhoneInputProps,
+  type PhoneCountry,
+  type FieldProps,
+  type FieldOrientation,
+  type NativeSelectProps,
+  type NativeSelectOption,
+  type NavigationMenuProps,
+  type NavigationMenuLinkItem,
+  type NoticeProps,
+  type NoticeVariant,
+  type EventCalendarProps,
+  type EventCalendarEvent,
   type StatItem,
   type DataTableProps,
   type DataTableAction,
@@ -341,6 +373,7 @@ import {
   DialogElement,
   DialogStackElement,
   StepperElement,
+  NavigationMenuElement,
   AlertDialogElement,
   DropdownMenuElement,
   ContextMenuElement,
@@ -632,6 +665,7 @@ export {
   DialogElement,
   DialogStackElement,
   StepperElement,
+  NavigationMenuElement,
   AlertDialogElement,
   DropdownMenuElement,
   SheetElement,
@@ -862,6 +896,80 @@ export function feedList(
 /** One live-feed row (status, link title, meta/issue, trailing time). See {@link FeedRowProps}. */
 export function feedRow(props: FeedRowProps, footer?: () => void): Element {
   return feedRowFactory(props, footer);
+}
+
+/** Visually grouped buttons / controls. See {@link ButtonGroupProps}. */
+export function buttonGroup(fn: () => void, props?: ButtonGroupProps): Element;
+export function buttonGroup(props: ButtonGroupProps, fn: () => void): Element;
+export function buttonGroup(a: any, b?: any): Element {
+  return buttonGroupFactory(a, b);
+}
+
+/** Centered empty state. See {@link EmptyProps}. */
+export function empty(props: EmptyProps, footer?: () => void): Element {
+  return emptyFactory(props, footer);
+}
+
+/** Standalone pager. See {@link PaginationProps}. */
+export function pagination(props?: PaginationProps): Element {
+  return paginationFactory(props);
+}
+
+/** Ops filter toolbar with chips + control slot. See {@link FilterBarProps}. */
+export function filterBar(fn: () => void, props?: FilterBarProps): Element;
+export function filterBar(props: FilterBarProps, fn: () => void): Element;
+export function filterBar(a: any, b?: any): Element {
+  return filterBarFactory(a, b);
+}
+
+/** Removable filter chips row. */
+export function filterChips(props: Parameters<typeof filterChipsFactory>[0]): Element {
+  return filterChipsFactory(props);
+}
+
+/** Numeric input with steppers. See {@link NumberFieldProps}. */
+export function numberField(props?: NumberFieldProps): Element {
+  return numberFieldFactory(props);
+}
+
+/** Country dial code + phone number. See {@link PhoneInputProps}. */
+export function phoneInput(props?: PhoneInputProps): Element {
+  return phoneInputFactory(props);
+}
+
+/** Label + description + error field wrapper. See {@link FieldProps}. */
+export function field(fn: () => void, props?: FieldProps): Element;
+export function field(props: FieldProps, fn: () => void): Element;
+export function field(a: any, b?: any): Element {
+  return fieldFactory(a, b);
+}
+
+/** Styled native `<select>`. See {@link NativeSelectProps}. */
+export function nativeSelect(props: NativeSelectProps): Element {
+  return nativeSelectFactory(props);
+}
+
+/** Top navigation mega-menu. See {@link NavigationMenuProps}. */
+export function navigationMenu(
+  fn: (menu: NavigationMenuElement) => void,
+  props?: NavigationMenuProps,
+): NavigationMenuElement;
+export function navigationMenu(
+  props: NavigationMenuProps,
+  fn: (menu: NavigationMenuElement) => void,
+): NavigationMenuElement;
+export function navigationMenu(a: any, b?: any): NavigationMenuElement {
+  return navigationMenuFactory(a, b);
+}
+
+/** Dismissible app banner. See {@link NoticeProps}. */
+export function notice(message?: string | (() => string), props?: Omit<NoticeProps, 'message'>): Element {
+  return noticeFactory(message, props);
+}
+
+/** Month calendar with day events. See {@link EventCalendarProps}. */
+export function eventCalendar(props?: EventCalendarProps): Element {
+  return eventCalendarFactory(props);
 }
 
 /** Render markdown to HTML. Prefer `ui.markdown`. See {@link MarkdownProps}. */
@@ -1621,6 +1729,18 @@ export const ui = {
   statusDot,
   feedRow,
   feedList,
+  buttonGroup,
+  empty,
+  pagination,
+  filterBar,
+  filterChips,
+  numberField,
+  phoneInput,
+  field,
+  nativeSelect,
+  navigationMenu,
+  notice,
+  eventCalendar,
   markdown,
   html,
   image,

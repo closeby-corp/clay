@@ -12,6 +12,8 @@ import { BoundRadialChart } from './BoundRadialChart';
 import { BoundScatterChart } from './BoundScatterChart';
 import { BoundComposedChart } from './BoundComposedChart';
 import { BoundSparkline } from './BoundSparkline';
+import { BoundEventCalendar } from './BoundEventCalendar';
+import { FilterChipsView, type FilterChipView } from './FilterChipsView';
 import { BoundDataTable } from './BoundDataTable';
 import { BoundCodeBlock } from './BoundCodeBlock';
 import { BoundTree } from './BoundTree';
@@ -204,10 +206,45 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { ButtonGroup } from '@/components/ui/button-group';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field';
+import { NativeSelect } from '@/components/ui/native-select';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu';
 import { cn } from '@/lib/utils';
 import { IconText, StatusDot } from './IconText';
 import { Timeline, StepperView, type TimelineItemView } from './ComposedWidgets';
-import { CalendarIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
+import { CalendarIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Minus, Plus, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
 import { format, parseISO, isValid, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
@@ -1538,6 +1575,401 @@ function BoundToggleGroup({
       ))}
     </ToggleGroup>
   );
+}
+
+type FilterChipWire = { id: string; label: string; value?: string };
+
+function paginationRange(page: number, pageCount: number): Array<number | 'ellipsis'> {
+  if (pageCount <= 7) {
+    return Array.from({ length: pageCount }, (_, i) => i + 1);
+  }
+  const pages: Array<number | 'ellipsis'> = [1];
+  const start = Math.max(2, page - 1);
+  const end = Math.min(pageCount - 1, page + 1);
+  if (start > 2) pages.push('ellipsis');
+  for (let p = start; p <= end; p += 1) pages.push(p);
+  if (end < pageCount - 1) pages.push('ellipsis');
+  pages.push(pageCount);
+  return pages;
+}
+
+function BoundPagination({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverPage = Number(props.page ?? 1);
+  const pageCount = Math.max(1, Number(props.pageCount ?? 1));
+  const [page, setPage] = useOptimisticValue(serverPage);
+  const disabled = !!props.disabled;
+  const current = Math.min(Math.max(1, Number(page) || 1), pageCount);
+  const pages = paginationRange(current, pageCount);
+
+  const go = (next: number) => {
+    const clamped = Math.min(Math.max(1, next), pageCount);
+    setPage(clamped);
+    if (hasEvent(props, 'change')) emit(id, 'change', clamped);
+  };
+
+  return (
+    <Pagination className={className} style={asStyle(style)}>
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            href="#"
+            aria-disabled={disabled || current <= 1}
+            className={disabled || current <= 1 ? 'pointer-events-none opacity-50' : undefined}
+            onClick={(e) => {
+              e.preventDefault();
+              if (!disabled && current > 1) go(current - 1);
+            }}
+          />
+        </PaginationItem>
+        {pages.map((item, i) =>
+          item === 'ellipsis' ? (
+            <PaginationItem key={`e-${i}`}>
+              <PaginationEllipsis />
+            </PaginationItem>
+          ) : (
+            <PaginationItem key={item}>
+              <PaginationLink
+                href="#"
+                isActive={item === current}
+                aria-disabled={disabled}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!disabled) go(item);
+                }}
+              >
+                {item}
+              </PaginationLink>
+            </PaginationItem>
+          ),
+        )}
+        <PaginationItem>
+          <PaginationNext
+            href="#"
+            aria-disabled={disabled || current >= pageCount}
+            className={disabled || current >= pageCount ? 'pointer-events-none opacity-50' : undefined}
+            onClick={(e) => {
+              e.preventDefault();
+              if (!disabled && current < pageCount) go(current + 1);
+            }}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
+  );
+}
+
+function BoundFilterChips({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const chips = (props.chips as FilterChipWire[]) ?? [];
+  return (
+    <FilterChipsView
+      chips={chips}
+      clearLabel={String(props.clearLabel ?? 'Clear all')}
+      className={cn(className)}
+      onClear={
+        hasEvent(props, 'clear')
+          ? () => {
+              emit(id, 'clear');
+            }
+          : undefined
+      }
+      onRemoveChip={
+        hasEvent(props, 'removeChip')
+          ? (chipId) => {
+              emit(id, 'removeChip', chipId);
+            }
+          : undefined
+      }
+    />
+  );
+}
+
+function BoundNumberField({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = Number(props.value ?? 0);
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const step = Number(props.step ?? 1);
+  const min = props.min != null ? Number(props.min) : undefined;
+  const max = props.max != null ? Number(props.max) : undefined;
+  const precision = props.precision != null ? Number(props.precision) : undefined;
+  const disabled = !!props.disabled;
+  const error = fieldError(props);
+
+  const clamp = (n: number) => {
+    let next = n;
+    if (min != null && !Number.isNaN(min)) next = Math.max(min, next);
+    if (max != null && !Number.isNaN(max)) next = Math.min(max, next);
+    if (precision != null && Number.isFinite(precision)) {
+      next = Number(next.toFixed(Math.max(0, precision)));
+    }
+    return next;
+  };
+
+  const commit = (next: number) => {
+    const v = clamp(next);
+    setValue(v);
+    if (hasEvent(props, 'change')) emit(id, 'change', v);
+  };
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={disabled || (min != null && Number(value) <= min)}
+          aria-label="Decrease"
+          onClick={() => commit(Number(value) - step)}
+        >
+          <Minus className="size-4" />
+        </Button>
+        <Input
+          type="number"
+          value={Number.isFinite(Number(value)) ? String(value) : '0'}
+          placeholder={props.placeholder ? String(props.placeholder) : undefined}
+          disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
+          aria-invalid={!!error}
+          className="text-center tabular-nums"
+          onChange={(e) => {
+            const parsed = e.target.value === '' ? 0 : Number(e.target.value);
+            if (!Number.isNaN(parsed)) commit(parsed);
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={disabled || (max != null && Number(value) >= max)}
+          aria-label="Increase"
+          onClick={() => commit(Number(value) + step)}
+        >
+          <Plus className="size-4" />
+        </Button>
+      </div>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+type PhoneCountryWire = { code: string; dial: string; label: string };
+
+function BoundPhoneInput({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const countries = (props.countries as PhoneCountryWire[]) ?? [];
+  const serverCountry = String(props.country ?? countries[0]?.code ?? 'US');
+  const serverValue = String(props.value ?? '');
+  const [country, setCountry] = useOptimisticValue(serverCountry);
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const disabled = !!props.disabled;
+  const error = fieldError(props);
+
+  const commit = (nextCountry: string, nextValue: string) => {
+    setCountry(nextCountry);
+    setValue(nextValue);
+    const digits = nextValue.replace(/\D/g, '');
+    const nextDial = countries.find((c) => c.code === nextCountry)?.dial ?? '+1';
+    const e164 = `${nextDial.replace(/\D/g, '')}${digits}`;
+    if (hasEvent(props, 'change')) emit(id, 'change', { country: nextCountry, value: nextValue, e164 });
+  };
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <div className="flex gap-2">
+        <NativeSelect
+          value={String(country)}
+          disabled={disabled}
+          className="w-[5.5rem] shrink-0"
+          onChange={(e) => commit(e.target.value, String(value))}
+        >
+          {countries.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.dial}
+            </option>
+          ))}
+        </NativeSelect>
+        <Input
+          type="tel"
+          value={String(value)}
+          placeholder={String(props.placeholder ?? 'Phone number')}
+          disabled={disabled}
+          aria-invalid={!!error}
+          className="flex-1"
+          onChange={(e) => commit(String(country), e.target.value.replace(/[^\d\s()-]/g, ''))}
+        />
+      </div>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+function BoundNativeSelect({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const options = (props.options as Array<{ value: string; label: string }>) ?? [];
+  const serverValue = String(props.value ?? options[0]?.value ?? '');
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const disabled = !!props.disabled;
+  const error = fieldError(props);
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <NativeSelect
+        value={String(value)}
+        disabled={disabled}
+        data-size={props.size === 'sm' ? 'sm' : 'default'}
+        aria-invalid={!!error}
+        onChange={(e) => {
+          const next = e.target.value;
+          setValue(next);
+          if (hasEvent(props, 'change')) emit(id, 'change', next);
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </NativeSelect>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+function renderNavigationMenuChildren(children: ElementNode[], emit: Emit): ReactNode[] {
+  return children.map((child) => {
+    if (child.type === 'navigationmenusub') {
+      return (
+        <NavigationMenuItem key={child.id}>
+          <NavigationMenuTrigger>{String(child.props.label ?? '')}</NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <ul className="grid min-w-[16rem] gap-1 p-2">
+              {child.children
+                .filter((c) => c.type === 'navigationmenulink')
+                .map((link) => (
+                  <li key={link.id}>
+                    <NavigationMenuLink
+                      href={link.props.href ? String(link.props.href) : undefined}
+                      data-active={link.props.active ? true : undefined}
+                      className="block rounded-sm p-2 hover:bg-accent"
+                      onClick={(e) => {
+                        if (hasEvent(link.props, 'select')) {
+                          e.preventDefault();
+                          emit(link.id, 'select');
+                        }
+                      }}
+                    >
+                      <div className="font-medium">{String(link.props.label ?? '')}</div>
+                      {link.props.description ? (
+                        <div className="text-xs text-muted-foreground">
+                          {String(link.props.description)}
+                        </div>
+                      ) : null}
+                    </NavigationMenuLink>
+                  </li>
+                ))}
+            </ul>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      );
+    }
+    if (child.type === 'navigationmenulink') {
+      return (
+        <NavigationMenuItem key={child.id}>
+          <NavigationMenuLink
+            href={child.props.href ? String(child.props.href) : undefined}
+            data-active={child.props.active ? true : undefined}
+            className={cn(
+              navigationMenuTriggerStyle(),
+              'inline-flex flex-row gap-0 p-0 cursor-pointer',
+            )}
+            onClick={(e) => {
+              if (hasEvent(child.props, 'select')) {
+                e.preventDefault();
+                emit(child.id, 'select');
+              }
+            }}
+          >
+            {String(child.props.label ?? '')}
+          </NavigationMenuLink>
+        </NavigationMenuItem>
+      );
+    }
+    return null;
+  });
 }
 
 function renderMenubarChildren(
@@ -3117,6 +3549,190 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         <BoundDateRange id={id} props={props} className={className} style={style} emit={emit} />
       );
 
+    case 'buttonGroup':
+      return (
+        <ButtonGroup
+          orientation={props.orientation === 'vertical' ? 'vertical' : 'horizontal'}
+          className={className}
+          style={asStyle(style)}
+        >
+          {children.map((child) => (
+            <ElementRenderer key={child.id} node={child} emit={emit} />
+          ))}
+        </ButtonGroup>
+      );
+
+    case 'empty': {
+      const Icon = props.icon ? resolveNavIcon(String(props.icon)) : null;
+      return (
+        <Empty className={cn('border border-dashed bg-muted/20', className)} style={asStyle(style)}>
+          <EmptyHeader>
+            {Icon ? (
+              <EmptyMedia variant="icon">
+                <Icon aria-hidden />
+              </EmptyMedia>
+            ) : null}
+            {props.title ? <EmptyTitle>{String(props.title)}</EmptyTitle> : null}
+            {props.description ? (
+              <EmptyDescription>{String(props.description)}</EmptyDescription>
+            ) : null}
+          </EmptyHeader>
+          {children.length > 0 ? (
+            <EmptyContent>
+              {children.map((child) => (
+                <ElementRenderer key={child.id} node={child} emit={emit} />
+              ))}
+            </EmptyContent>
+          ) : null}
+        </Empty>
+      );
+    }
+
+    case 'pagination':
+      return (
+        <BoundPagination id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'filterBar':
+      return (
+        <div className={cn('flex flex-col gap-3', className)} style={asStyle(style)}>
+          <BoundFilterChips id={id} props={props} emit={emit} />
+          {((props.chips as FilterChipWire[]) ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground">No active filters — change controls below.</p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {children.map((child) => (
+              <ElementRenderer key={child.id} node={child} emit={emit} />
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'filterChips':
+      return (
+        <BoundFilterChips
+          id={id}
+          props={props}
+          className={className}
+          style={style}
+          emit={emit}
+        />
+      );
+
+    case 'numberField':
+      return (
+        <BoundNumberField id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'phoneInput':
+      return (
+        <BoundPhoneInput id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'field':
+      return (
+        <Field
+          orientation={
+            props.orientation === 'horizontal' || props.orientation === 'responsive'
+              ? (props.orientation as 'horizontal' | 'responsive')
+              : 'vertical'
+          }
+          className={className}
+          style={asStyle(style)}
+          data-invalid={props.error ? true : undefined}
+        >
+          {props.label ? <FieldLabel>{String(props.label)}</FieldLabel> : null}
+          <FieldContent>
+            {children.map((child) => (
+              <ElementRenderer key={child.id} node={child} emit={emit} />
+            ))}
+            {props.description ? (
+              <FieldDescription>{String(props.description)}</FieldDescription>
+            ) : null}
+            {props.error ? <FieldError>{String(props.error)}</FieldError> : null}
+          </FieldContent>
+        </Field>
+      );
+
+    case 'nativeSelect':
+      return (
+        <BoundNativeSelect id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'navigationmenu':
+      return (
+        <NavigationMenu
+          viewport={props.viewport === true}
+          className={className}
+          style={asStyle(style)}
+        >
+          <NavigationMenuList>
+            {renderNavigationMenuChildren(children, emit)}
+          </NavigationMenuList>
+        </NavigationMenu>
+      );
+
+    case 'navigationmenusub':
+    case 'navigationmenulink':
+      return null;
+
+    case 'notice': {
+      const variant =
+        props.variant === 'destructive' || props.variant === 'warning'
+          ? (props.variant as 'destructive' | 'warning')
+          : 'default';
+      const noticeClass =
+        variant === 'destructive'
+          ? 'border-destructive/50 bg-destructive/10 text-destructive'
+          : variant === 'warning'
+            ? 'border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100'
+            : 'border-border bg-muted/40';
+      return (
+        <div
+          className={cn(
+            'flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm',
+            noticeClass,
+            className,
+          )}
+          style={asStyle(style)}
+          role="status"
+        >
+          <div className="flex min-w-0 flex-1 items-start gap-2">
+            {props.icon ? (
+              (() => {
+                const Icon = resolveNavIcon(String(props.icon));
+                return <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />;
+              })()
+            ) : null}
+            <span>{String(props.text ?? '')}</span>
+          </div>
+          {props.dismissible !== false ? (
+            <button
+              type="button"
+              className="rounded-sm opacity-70 hover:opacity-100"
+              aria-label="Dismiss"
+              onClick={() => {
+                if (hasEvent(props, 'dismiss')) emit(id, 'dismiss');
+              }}
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
+        </div>
+      );
+    }
+
+    case 'eventCalendar':
+      return (
+        <BoundEventCalendar
+          id={id}
+          props={props}
+          className={className}
+          style={asStyle(style)}
+          emit={emit}
+        />
+      );
+
     case 'timeline': {
       const items = (props.items as TimelineItemView[]) ?? [];
       return (
@@ -3567,6 +4183,14 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         trendDirection?: 'up' | 'down';
         footer?: string;
         description?: string;
+        sparkline?: {
+          data: Record<string, unknown>[];
+          xKey: string;
+          yKey: string;
+          type?: 'area' | 'line';
+          color?: string;
+          height?: number;
+        };
       };
       const items = (props.items as StatItemView[]) ?? [];
       return (
@@ -3598,6 +4222,21 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
                     </CardAction>
                   ) : null}
                 </CardHeader>
+                {item.sparkline ? (
+                  <CardContent className="pt-0 pb-2">
+                    <BoundSparkline
+                      props={{
+                        data: item.sparkline.data,
+                        xKey: item.sparkline.xKey,
+                        yKey: item.sparkline.yKey,
+                        type: item.sparkline.type,
+                        color: item.sparkline.color,
+                        height: item.sparkline.height ?? 56,
+                      }}
+                      className="border-0 shadow-none [&_[data-slot=card]]:shadow-none"
+                    />
+                  </CardContent>
+                ) : null}
                 {item.footer || item.description ? (
                   <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     {item.footer ? (

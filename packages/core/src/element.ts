@@ -296,8 +296,9 @@ export class Element {
     }
     for (const [key, value] of Object.entries(nextProps)) {
       if (this.props[key] !== value) {
-        this.props[key] = value;
-        if (typeof value !== 'function') patch[key] = value;
+        if (value === undefined) delete this.props[key];
+        else this.props[key] = value;
+        if (typeof value !== 'function') patch[key] = value === undefined ? null : value;
       }
     }
     if (Object.keys(patch).length > 0) {
@@ -333,7 +334,7 @@ export class Element {
     if (!session || !session.isMounted) return;
     const clean: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(props)) {
-      if (typeof v !== 'function') clean[k] = v;
+      if (typeof v !== 'function') clean[k] = v === undefined ? null : v;
     }
     session.enqueuePatch({ op: 'updateProps', id: this.id, props: clean });
   }

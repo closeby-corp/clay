@@ -9,11 +9,14 @@
     ".": "./src/index.ts",
     "./page-tsconfig": "./page-tsconfig.json",
     "./docs-dir": "./src/docs-dir.ts",
-    "./docs/*": "./docs/*"
+    "./docs/*": "./docs/*",
+    "./skill": "./SKILL.md",
+    "./SKILL.md": "./SKILL.md"
   },
   "files": [
     "src",
     "docs",
+    "SKILL.md",
     "page-tsconfig.json",
     "README.md",
     "LICENSE",

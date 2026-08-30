@@ -18,4 +18,4 @@ export default function () {
 bunx clay hello.ts
 ```
 
-Docs: shipped with the package at `node_modules/@close-by/clay/docs/`. See [getting-started.md](docs/getting-started.md) after install.
+Docs: shipped with the package at `node_modules/@close-by/clay/docs/`. Agent skill: `node_modules/@close-by/clay/SKILL.md` (or `@close-by/clay/skill`). See [getting-started.md](docs/getting-started.md) after install.

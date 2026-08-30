@@ -111,6 +111,49 @@ ui.auto(() => {
 
 Manual `ui.row` composition still works when you need a custom layout.
 
+## Filter toolbar
+
+Use **`ui.filterBar`** for the chip row + control slot pattern (Orders-style pages):
+
+```ts
+ui.auto(() => {
+  ui.filterBar(
+    {
+      chips: [
+        { id: 'status', label: 'Status', value: live.statusFilter },
+        { id: 'q', label: 'Search', value: live.query },
+      ],
+      onRemoveChip: (id) => {
+        if (id === 'status') live.statusFilter = '';
+        if (id === 'q') live.query = '';
+      },
+      onClear: () => {
+        live.statusFilter = '';
+        live.query = '';
+      },
+    },
+    () => {
+      ui.select({
+        options: statusOptions,
+        value: live.statusFilter,
+        onChange: (v) => {
+          live.statusFilter = v;
+        },
+      });
+      ui.input({
+        value: live.query,
+        placeholder: 'Search…',
+        onInput: (v) => {
+          live.query = v;
+        },
+      });
+    },
+  );
+});
+```
+
+For **`ui.dataTable`**, pass `showFilterChips: true` to surface active search + column filters as removable chips in the table chrome (`views` remain the saved-view tabs API).
+
 ## Logs / traces — sensitive bodies
 
 Structured logs often contain API keys or partner tokens. Scrubbing is the **app’s** job; Clay can still reduce shoulder-surfing:

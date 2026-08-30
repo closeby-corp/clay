@@ -152,6 +152,9 @@ for (const name of PACKAGES) {
     }
 
     if (name === 'ui') {
+      if (!entries.some((e) => e === 'package/SKILL.md' || e.endsWith('/SKILL.md'))) {
+        errors.push('ui: package/SKILL.md missing from tarball');
+      }
       for (const doc of ['getting-started.md', 'api.md', 'elements.md']) {
         if (!entries.some((e) => e === `package/docs/${doc}` || e.endsWith(`/docs/${doc}`))) {
           errors.push(`ui: package/docs/${doc} missing from tarball`);

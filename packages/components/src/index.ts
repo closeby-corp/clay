@@ -546,6 +546,15 @@ export type StatItem = {
   footer?: string;
   /** Muted second footer line. */
   description?: string;
+  /** Optional inline sparkline under the headline value. */
+  sparkline?: {
+    data: Record<string, unknown>[];
+    xKey: string;
+    yKey: string;
+    type?: 'area' | 'line';
+    color?: string;
+    height?: number;
+  };
 };
 
 export function stat(items: StatItem[], props: { className?: string } = {}): Element {
@@ -1078,3 +1087,52 @@ export {
   type DateRangeProps,
   type DateRangePreset,
 } from './date-range';
+
+export {
+  buttonGroup,
+  type ButtonGroupProps,
+  type ButtonGroupOrientation,
+} from './button-group';
+
+export { empty, type EmptyProps } from './empty-state';
+
+export { pagination, type PaginationProps } from './pagination';
+
+export {
+  filterBar,
+  filterChips,
+  type FilterBarProps,
+  type FilterChip,
+} from './filter-bar';
+
+export { numberField, type NumberFieldProps } from './number-field';
+
+export {
+  phoneInput,
+  type PhoneInputProps,
+  type PhoneCountry,
+} from './phone-input';
+
+export { field, type FieldProps, type FieldOrientation } from './field';
+
+export {
+  nativeSelect,
+  type NativeSelectProps,
+  type NativeSelectOption,
+} from './native-select';
+
+export {
+  navigationMenu,
+  NavigationMenuElement,
+  NavigationMenuSubElement,
+  type NavigationMenuProps,
+  type NavigationMenuLinkItem,
+} from './navigation-menu';
+
+export { notice, type NoticeProps, type NoticeVariant } from './notice';
+
+export {
+  eventCalendar,
+  type EventCalendarProps,
+  type EventCalendarEvent,
+} from './event-calendar';

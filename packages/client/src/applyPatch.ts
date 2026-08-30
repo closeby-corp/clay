@@ -21,7 +21,12 @@ export function applyPatch(tree: ElementNode, patch: Patch): ElementNode {
 
   if (patch.op === 'updateProps') {
     if (tree.id === patch.id) {
-      return { ...tree, props: { ...tree.props, ...patch.props } };
+      const props = { ...tree.props };
+      for (const [key, value] of Object.entries(patch.props)) {
+        if (value === null) delete props[key];
+        else props[key] = value;
+      }
+      return { ...tree, props };
     }
     return {
       ...tree,

@@ -11,6 +11,9 @@ const root = join(import.meta.dir, '..');
 const srcDir = join(root, 'docs');
 const destDir = join(root, 'packages/ui/docs');
 
+/** Agent skill shipped at package root (must exist after sync). */
+export const SHIPPED_SKILL_FILE = 'SKILL.md';
+
 /** Markdown shipped with @close-by/clay (must exist after sync). */
 export const REQUIRED_DOC_FILES = [
   'README.md',
@@ -48,6 +51,16 @@ export async function syncDocs(): Promise<string[]> {
     copied.push('llms.txt');
   } catch {
     // optional
+  }
+
+  const skillSrc = join(srcDir, SHIPPED_SKILL_FILE);
+  const skillDest = join(root, 'packages/ui', SHIPPED_SKILL_FILE);
+  try {
+    await access(skillSrc);
+    await cp(skillSrc, skillDest);
+    copied.push(SHIPPED_SKILL_FILE);
+  } catch {
+    throw new Error(`Missing required skill after sync: docs/${SHIPPED_SKILL_FILE}`);
   }
 
   return copied;

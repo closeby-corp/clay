@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { access } from 'fs/promises';
 import { join } from 'path';
-import { REQUIRED_DOC_FILES, syncDocs } from './sync-docs.ts';
+import { REQUIRED_DOC_FILES, SHIPPED_SKILL_FILE, syncDocs } from './sync-docs.ts';
 
 describe('syncDocs', () => {
   test('copies markdown docs into packages/ui/docs', async () => {
@@ -11,5 +11,7 @@ describe('syncDocs', () => {
       expect(copied).toContain(name);
       await access(join(import.meta.dir, '../packages/ui/docs', name));
     }
+    expect(copied).toContain(SHIPPED_SKILL_FILE);
+    await access(join(import.meta.dir, '../packages/ui', SHIPPED_SKILL_FILE));
   });
 });

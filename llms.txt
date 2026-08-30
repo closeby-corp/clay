@@ -12,6 +12,7 @@ Notes for agents:
 - Never use `window` / `navigator` in page code — use `ui.clipboard`, `ui.setUrlHash`, `ui.openExternal`.
 - Runtime is Bun. In this repo: `bun run build:client`, then `bun run demo` (http://localhost:4000) or `bun run clay hello.ts`.
 - `ui.ai.*` is visual primitives only — no model or streaming runtime.
+- Agent skill (Cursor / compatible tools): `@close-by/clay/SKILL.md` — copy to `.cursor/skills/clay/SKILL.md` or read from `node_modules` when installed.
 
 ## Docs
 

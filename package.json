@@ -12,7 +12,7 @@
     "publish:dry": "bun scripts/publish-from-pack.ts --dry-run",
     "publish:npm": "bun scripts/publish-from-pack.ts --publish",
     "dev": "bun run build:client && bun apps/demo/src/main.ts",
-    "demo": "bun apps/demo/src/main.ts",
+    "demo": "bun run build:client && bun apps/demo/src/main.ts",
     "demo:cli": "bun packages/cli/bin/clay apps/demo/src/examples --app -p 4000 --title \"Clay Demo\"",
     "clay": "bun packages/cli/bin/clay",
     "test": "bun test packages/core packages/ui packages/server packages/components packages/compiler packages/cli packages/persistence-file packages/persistence-redis packages/duckdb packages/kibana packages/clickhouse packages/auth packages/client/src"

@@ -33,7 +33,13 @@ function statusRing(status: TimelineItemView['status']): string {
   }
 }
 
-function TimelineNode({ item }: { item: TimelineItemView }): ReactNode {
+function TimelineNode({
+  item,
+  centered = false,
+}: {
+  item: TimelineItemView;
+  centered?: boolean;
+}): ReactNode {
   const Icon = item.icon ? resolveNavIcon(item.icon) : null;
   const avatarFallback = item.avatar?.fallback ?? item.title.slice(0, 1).toUpperCase();
 
@@ -62,7 +68,10 @@ function TimelineNode({ item }: { item: TimelineItemView }): ReactNode {
   return (
     <div
       className={cn(
-        'flex size-3 translate-x-2.5 translate-y-2.5 rounded-full ring-4 ring-background',
+        'rounded-full ring-4 ring-background',
+        centered
+          ? 'size-3'
+          : 'flex size-3 translate-x-2.5 translate-y-2.5',
         item.status === 'completed'
           ? 'bg-emerald-500'
           : item.status === 'active'
@@ -145,20 +154,37 @@ export function Timeline({
   style?: React.CSSProperties;
 }): ReactNode {
   if (orientation === 'horizontal') {
+    const trackInset = items.length > 1 ? 'left-[calc(100%/6)] right-[calc(100%/6)]' : '';
     return (
-      <ol
-        className={cn('flex flex-wrap items-start gap-4', className)}
-        style={style}
-        aria-label="Timeline"
-      >
-        {items.map((item, i) => (
-          <li key={item.id ?? i} className="flex min-w-[8rem] max-w-xs flex-col items-center gap-2 text-center">
-            <TimelineNode item={item} />
-            <div className="text-xs font-medium">{item.title}</div>
-            {item.at ? <div className="text-[10px] text-muted-foreground">{item.at}</div> : null}
-          </li>
-        ))}
-      </ol>
+      <div className={cn('relative w-full', className)} style={style}>
+        {items.length > 1 ? (
+          <div
+            className={cn(
+              'pointer-events-none absolute top-[5px] h-0.5 bg-muted-foreground/30',
+              trackInset,
+            )}
+            aria-hidden
+          />
+        ) : null}
+        <ol className="relative m-0 flex w-full list-none items-start p-0" aria-label="Timeline">
+          {items.map((item, i) => (
+            <li
+              key={item.id ?? i}
+              className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center"
+            >
+              <div className="relative z-[1] bg-background px-2">
+                <TimelineNode item={item} centered />
+              </div>
+              <div className="px-1">
+                <div className="text-xs font-medium">{item.title}</div>
+                {item.at ? (
+                  <div className="text-[10px] text-muted-foreground">{item.at}</div>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
     );
   }
 

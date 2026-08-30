@@ -185,4 +185,46 @@ describe('auto', () => {
     expect(rebuilds).toBe(2);
     expect(s.count).toBe(6);
   });
+
+  test('clears className when reactive toggle turns off', async () => {
+    clearPages();
+    setPageWrapper(null);
+    const s = state({ mode: 'list' as 'list' | 'grid' });
+    let autoEl!: AutoElement;
+
+    page('/auto-class', () => {
+      autoEl = auto(() => {
+        for (const mode of ['list', 'grid'] as const) {
+          new Element('button', {
+            text: mode,
+            variant: 'outline',
+            className: s.mode === mode ? 'bg-accent' : undefined,
+          });
+        }
+      });
+    });
+
+    const patches: unknown[] = [];
+    const session = new ClientSession('/auto-class', (msg) => {
+      if (msg.op === 'patch') patches.push(...msg.patches);
+    });
+    session.mount();
+
+    const listBtn = autoEl.children[0]!;
+    const gridBtn = autoEl.children[1]!;
+    expect(listBtn.props.className).toBe('bg-accent');
+    expect(gridBtn.props.className).toBeUndefined();
+
+    s.mode = 'grid';
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(listBtn.props.className).toBeUndefined();
+    expect(gridBtn.props.className).toBe('bg-accent');
+    expect(
+      patches.some(
+        (p: any) => p.op === 'updateProps' && p.id === listBtn.id && p.props?.className === null,
+      ),
+    ).toBe(true);
+  });
 });

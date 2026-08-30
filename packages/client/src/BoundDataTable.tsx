@@ -144,6 +144,7 @@ import {
   type DataTableColumnEditor,
   type DataTableDensity,
 } from './data-table/EditableCell';
+import { FilterChipsView } from './FilterChipsView';
 
 /** Virtualize body once row count is large enough to matter. */
 const VIRTUALIZE_THRESHOLD = 40;
@@ -571,7 +572,7 @@ function ColumnResizeHandle({
 function densityCellPad(density: DataTableDensity): string {
   if (density === 'compact') return 'py-1';
   if (density === 'comfortable') return 'py-3';
-  return '';
+  return 'py-2';
 }
 
 function densityHeadHeight(density: DataTableDensity): string {
@@ -949,6 +950,7 @@ export function BoundDataTable({
   }, [dataIds]);
 
   const showPagination = pageSize > 0;
+  const showFilterChips = props.showFilterChips === true;
   const showToolbar = searchable || columnToggle || exportable || !!primaryAction || grouped;
   const showBulkBar = selectable && bulkActions.length > 0 && selected.size > 0;
   const defaultViewId = views[0]?.id ?? '';
@@ -1418,6 +1420,55 @@ export function BoundDataTable({
       </div>
     </div>
   ) : null;
+
+  const activeFilterChips = useMemo(() => {
+    if (!showFilterChips) return [];
+    const chips: Array<{ id: string; label: string; value?: string }> = [];
+    if (filter.trim()) {
+      chips.push({ id: '__search', label: 'Search', value: filter.trim() });
+    }
+    for (const col of columns) {
+      const raw = columnFilters[col.key];
+      if (!raw) continue;
+      let value = raw;
+      if (isFacetColumn(col)) {
+        const parsed = parseFacetFilter(raw);
+        if (parsed.length === 0) continue;
+        value = parsed.join(', ');
+      }
+      chips.push({ id: col.key, label: col.header, value });
+    }
+    return chips;
+  }, [showFilterChips, filter, columnFilters, columns]);
+
+  const filterChipBar =
+    showFilterChips && activeFilterChips.length > 0 ? (
+      <div className="border-b px-4 py-2">
+        <FilterChipsView
+          chips={activeFilterChips}
+          onRemoveChip={(chipId) => {
+            if (chipId === '__search') {
+              setFilter('');
+              scheduleFilterEmit('');
+              return;
+            }
+            const next = { ...columnFilters, [chipId]: '' };
+            setColumnFilters(next);
+            scheduleColumnFilterEmit(chipId, '');
+          }}
+          onClear={() => {
+            setFilter('');
+            scheduleFilterEmit('');
+            const next = { ...columnFilters };
+            for (const key of Object.keys(next)) next[key] = '';
+            setColumnFilters(next);
+            for (const key of Object.keys(columnFilters)) {
+              if (columnFilters[key]) scheduleColumnFilterEmit(key, '');
+            }
+          }}
+        />
+      </div>
+    ) : null;
 
   const bulkBar = showBulkBar ? (
     <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2">
@@ -2204,15 +2255,15 @@ export function BoundDataTable({
   );
 
   const footer = showPagination ? (
-    <div className="flex items-center justify-between border-t px-4 py-3">
-      <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
+    <div className="grid grid-cols-1 gap-4 border-t bg-muted/30 px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-6">
+      <p className="min-w-0 text-sm leading-normal text-muted-foreground whitespace-nowrap">
         {selectable
           ? `${selected.size} of ${totalRows} row(s) selected.`
           : `Showing ${totalRows === 0 ? 0 : (page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalRows)} of ${totalRows}`}
-      </div>
-      <div className="flex w-full items-center gap-8 lg:w-fit">
-        <div className="hidden items-center gap-2 lg:flex">
-          <Label htmlFor={`${tableId}-rows`} className="text-sm font-medium">
+      </p>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 md:justify-end">
+        <div className="flex items-center gap-2">
+          <Label htmlFor={`${tableId}-rows`} className="text-sm font-medium whitespace-nowrap">
             Rows per page
           </Label>
           <Select
@@ -2233,58 +2284,60 @@ export function BoundDataTable({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex w-fit items-center justify-center text-sm font-medium">
-          Page {page} of {totalPages}
-        </div>
-        <div className="ml-auto flex items-center gap-2 lg:ml-0">
-          <Button
-            variant="outline"
-            className="hidden size-8 lg:flex"
-            size="icon"
-            disabled={page <= 1}
-            onClick={() => {
-              if (hasEvent(props, 'page')) emit(id, 'page', 1);
-            }}
-          >
-            <span className="sr-only">Go to first page</span>
-            <ChevronsLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="size-8"
-            size="icon"
-            disabled={page <= 1}
-            onClick={() => {
-              if (hasEvent(props, 'page')) emit(id, 'page', page - 1);
-            }}
-          >
-            <span className="sr-only">Go to previous page</span>
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="size-8"
-            size="icon"
-            disabled={page >= totalPages}
-            onClick={() => {
-              if (hasEvent(props, 'page')) emit(id, 'page', page + 1);
-            }}
-          >
-            <span className="sr-only">Go to next page</span>
-            <ChevronRight className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="hidden size-8 lg:flex"
-            size="icon"
-            disabled={page >= totalPages}
-            onClick={() => {
-              if (hasEvent(props, 'page')) emit(id, 'page', totalPages);
-            }}
-          >
-            <span className="sr-only">Go to last page</span>
-            <ChevronsRight className="size-4" />
-          </Button>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="text-sm font-medium whitespace-nowrap tabular-nums">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              className="hidden size-8 sm:inline-flex"
+              size="icon"
+              disabled={page <= 1}
+              onClick={() => {
+                if (hasEvent(props, 'page')) emit(id, 'page', 1);
+              }}
+            >
+              <span className="sr-only">Go to first page</span>
+              <ChevronsLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              disabled={page <= 1}
+              onClick={() => {
+                if (hasEvent(props, 'page')) emit(id, 'page', page - 1);
+              }}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              disabled={page >= totalPages}
+              onClick={() => {
+                if (hasEvent(props, 'page')) emit(id, 'page', page + 1);
+              }}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="hidden size-8 sm:inline-flex"
+              size="icon"
+              disabled={page >= totalPages}
+              onClick={() => {
+                if (hasEvent(props, 'page')) emit(id, 'page', totalPages);
+              }}
+            >
+              <span className="sr-only">Go to last page</span>
+              <ChevronsRight className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -2293,6 +2346,7 @@ export function BoundDataTable({
   const panel = (
     <div className="overflow-clip rounded-lg border">
       {toolbar}
+      {filterChipBar}
       {bulkBar}
       {tableBlock}
       {footer}
@@ -2381,6 +2435,7 @@ export function BoundDataTable({
                   <div className="ml-auto flex items-center gap-2">{exportMenu}</div>
                 </div>
               )}
+              {filterChipBar}
               {bulkBar}
               {tableBlock}
               {footer}

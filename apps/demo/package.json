@@ -4,8 +4,8 @@
   "scripts": {
     "dev": "bun run --cwd ../../packages/client build && bun src/main.ts",
     "start": "bun src/main.ts",
-    "cli": "bun ../../packages/cli/bin/clay ./src/examples --app -p 5050 --title \"Clay Demo\"",
-    "cli:reactive-let": "bun ../../packages/cli/bin/clay ./src/examples --app -p 5050 --title \"Clay Demo\" --reactive-let"
+    "cli": "bun ../../packages/cli/bin/clay ./src/examples --app -p 5050 --title \"Clay Demo\" --reload",
+    "cli:reactive-let": "bun ../../packages/cli/bin/clay ./src/examples --app -p 5050 --title \"Clay Demo\" --reactive-let --reload"
   },
   "dependencies": {
     "@close-by/clay-core": "workspace:*",

@@ -21,6 +21,18 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `combobox` | `combobox` | ShadCN `Combobox` (searchable select; optional `error`) |
 | `date` | `date` | Calendar + Popover date picker (ISO `YYYY-MM-DD`; optional `error`) |
 | `dateRange` | `dateRange` | Range picker with presets (ISO `from` / `to`) |
+| `buttonGroup` | `buttonGroup` | Grouped buttons / segmented controls |
+| `empty` | `empty` | Centered empty state (title, description, icon, footer slot) |
+| `pagination` | `pagination` | Standalone pager (outside `dataTable`) |
+| `filterBar` | `filterBar` | Ops filter row: chips + control slot |
+| `filterChips` | `filterChips` | Removable filter chips only |
+| `numberField` | `numberField` | Numeric input with +/- steppers |
+| `phoneInput` | `phoneInput` | Country dial + local number |
+| `field` | `field` | Label + description + error wrapper for one control |
+| `nativeSelect` | `nativeSelect` | Styled native `<select>` |
+| `navigationMenu` | `navigationmenu` (+ sub/link children) | Top nav mega-menu |
+| `notice` | `notice` | Dismissible app banner |
+| `eventCalendar` | `eventCalendar` | Month grid + day event list (`events` API → wire `items`) |
 | `timeline` | `timeline` | Vertical or horizontal event timeline |
 | `stepper` | `stepper` (+ `stepperStep`) | Inline multi-step flow with panels |
 | `slider` | `slider` | ShadCN `Slider` (+ optional `error`) |
@@ -80,7 +92,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `image` | `image` | `<img>` |
 | `iframe` | `iframe` | `<iframe>` embed |
 | `upload` | `upload` | File picker / dropzone → `POST /upload` (progress/abort) → WS `upload` / `progress` / `error` / `abort` |
-| `stat` | `stat` | Grid of metric cards |
+| `stat` | `stat` | Grid of metric cards (optional per-item `sparkline`) |
 | `sparkline` | `sparkline` | KPI card with inline area/line mini chart (`headline`, `value`/`trend` shorthand) |
 | `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive periods, `headline`, `loading`, `stacked?`) |
 | `barChart` | `barchart` | Recharts bar (`stacked?`, `layout?: 'vertical' \| 'horizontal'`, shared cartesian chrome) |

@@ -4,6 +4,8 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops dashboard on Clay 0.1.0).
 
+ReUI-style component batches (3–6): see [TASKS-reui-batches.md](./TASKS-reui-batches.md) — all items shipped in-repo; publish separately.
+
 ## Soon — from UQ Hub feedback
 
 ### P0 — Safe defaults / correctness

@@ -41,6 +41,18 @@ describe('applyPatch', () => {
     expect(next.children[0]?.props).toEqual({ value: 'y', disabled: false });
   });
 
+  test('updateProps null removes a prop', () => {
+    const tree = node('root', {}, [
+      node('button', { variant: 'outline', className: 'bg-accent' }, [], 'btn-1'),
+    ]);
+    const next = applyPatch(tree, {
+      op: 'updateProps',
+      id: 'btn-1',
+      props: { className: null },
+    });
+    expect(next.children[0]?.props).toEqual({ variant: 'outline' });
+  });
+
   test('setChildren replaces children on the matching node', () => {
     const tree = node('root', {}, [node('column', {}, [node('label', { text: 'old' })], 'col-1')]);
     const next = applyPatch(tree, {

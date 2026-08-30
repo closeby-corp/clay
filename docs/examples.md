@@ -17,7 +17,9 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | Multi-sort (Shift+click / badges), footer aggregates + a11y hints, column pin, remote filter/sort + pagination; density/zebra, editors (Enter/Esc + focus restore), resize, virtualization (≥40, coexists with reorder via windowed drop targets); facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
-| `/examples/charts` | `ChartDemo.ts` | `ui.chart.*` including scatter / composed; props API sample |
+| `/examples/composed` | `ComposedDemo.ts` | ReUI batch 1: `ui.timeline`, `ui.stepper`, `ui.dateRange`, `ui.feedList`/`ui.feedRow`, `ui.sparkline` |
+| `/examples/reui-batches` | `ReuiBatchesDemo.ts` | ReUI batches 3–6: `buttonGroup`, `empty`, `pagination`, `filterBar`, form inputs, `navigationMenu`, `notice`, `stat`+sparkline, `eventCalendar`, datatable `showFilterChips` |
+| `/examples/charts` | `ChartDemo.ts` | `ui.chart.*`, `ui.sparkline`, composed/scatter charts |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
 | `/examples/form-demo` | `FormDemo.ts` | Form + validate + `ui.draft` + rating / colorPicker / tags |
