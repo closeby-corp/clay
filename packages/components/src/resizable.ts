@@ -2,8 +2,16 @@ import { Element, withParent } from '@close-by/clay-core';
 
 export type ResizableOrientation = 'horizontal' | 'vertical';
 
+/** How the shell fills available space (prefer over viewport calc utilities). */
+export type ResizableFill = 'none' | 'parent' | 'viewport';
+
 export type ResizableProps = {
   orientation?: ResizableOrientation;
+  /**
+   * `parent` — `flex-1 min-h-0 w-full` (inside a flex column page).
+   * `viewport` — near full viewport height with a safe min height.
+   */
+  fill?: ResizableFill;
   className?: string;
 };
 
@@ -23,6 +31,7 @@ export class ResizableElement extends Element {
   constructor(props: ResizableProps = {}) {
     super('resizable', {
       orientation: props.orientation ?? 'horizontal',
+      fill: props.fill ?? 'none',
       className: props.className,
     });
   }

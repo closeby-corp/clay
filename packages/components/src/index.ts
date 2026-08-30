@@ -60,8 +60,15 @@ export function iconButton(props: IconButtonProps): Element {
   });
 }
 
+export type LabelTone = 'default' | 'muted';
+export type LabelSize = 'xs' | 'sm' | 'md' | 'lg';
+
 export type LabelProps = IconSlotProps & {
   text?: string;
+  /** Semantic color. Prefer over `text-muted-foreground` classes. */
+  tone?: LabelTone;
+  /** Type scale. Prefer over `text-xs` / `text-sm` classes. */
+  size?: LabelSize;
   className?: string;
 };
 
@@ -71,6 +78,8 @@ export function label(text?: string | (() => string), props: Omit<LabelProps, 't
       'label',
       withIconSlot(props, {
         text: '',
+        tone: props.tone ?? 'default',
+        size: props.size ?? 'md',
         className: props.className,
       }),
     ).bindText(text);
@@ -79,10 +88,15 @@ export function label(text?: string | (() => string), props: Omit<LabelProps, 't
     'label',
     withIconSlot(props, {
       text: text ?? '',
+      tone: props.tone ?? 'default',
+      size: props.size ?? 'md',
       className: props.className,
     }),
   );
 }
+
+/** Compact field widths for filter bars (prefer over `w-[10rem]` soup). */
+export type FieldWidth = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
 export type InputProps = {
   value?: string;
@@ -92,6 +106,10 @@ export type InputProps = {
   /** Field-level validation message (empty/omitted = valid). */
   error?: string;
   disabled?: boolean;
+  /** Fixed width preset (`sm` ≈ 10rem). */
+  width?: FieldWidth;
+  /** Label beside control (filter bars). Default stacks label above. */
+  inline?: boolean;
   className?: string;
   onInput?: (value: string) => void;
   onChange?: (value: string) => void;
@@ -105,6 +123,8 @@ export function input(props: InputProps = {}): Element {
     label: props.label,
     error: props.error,
     disabled: props.disabled ?? false,
+    width: props.width,
+    inline: props.inline ?? false,
     className: props.className,
     onInput: props.onInput,
     onChange: props.onChange,
@@ -153,12 +173,17 @@ export function switchControl(props: SwitchProps = {}): Element {
   });
 }
 
+export type SpinnerSize = 'xs' | 'sm' | 'md' | 'lg';
+
 export type SpinnerProps = {
+  /** Prefer over `h-* w-*` size utilities. Default `sm` (`size-4`). */
+  size?: SpinnerSize;
   className?: string;
 };
 
 export function spinner(props: SpinnerProps = {}): Element {
   return new Element('spinner', {
+    size: props.size ?? 'sm',
     className: props.className,
   });
 }
@@ -212,6 +237,10 @@ export type SelectProps = {
   label?: string;
   error?: string;
   disabled?: boolean;
+  /** Fixed width preset (`sm` ≈ 10rem). */
+  width?: FieldWidth;
+  /** Label beside control (filter bars). Default stacks label above. */
+  inline?: boolean;
   className?: string;
   onChange?: (value: string) => void;
 };
@@ -223,6 +252,8 @@ export function select(props: SelectProps): Element {
     label: props.label,
     error: props.error,
     disabled: props.disabled ?? false,
+    width: props.width,
+    inline: props.inline ?? false,
     className: props.className,
     onChange: props.onChange,
   });
@@ -738,6 +769,7 @@ export {
   ResizableElement,
   type ResizableProps,
   type ResizableOrientation,
+  type ResizableFill,
   type ResizablePanelProps,
   type ResizableHandleProps,
 } from './resizable';
@@ -749,6 +781,8 @@ export { viewportEnter, type ViewportEnterProps, type ViewportEnterRoot } from '
 export { keybind, type KeybindProps } from './keybind';
 
 export { kbd, type KbdProps } from './kbd';
+
+export { pageHeading, type PageHeadingProps } from './page-heading';
 
 export {
   breadcrumb,
@@ -801,11 +835,22 @@ export {
   type ChooseOption,
 } from './imperative';
 
-type LayoutProps = {
+export type LayoutAlign = 'start' | 'center' | 'end' | 'baseline' | 'stretch';
+export type LayoutJustify = 'start' | 'center' | 'end' | 'between' | 'around';
+
+export type LayoutProps = {
   gap?: string | number;
   className?: string;
   centered?: boolean;
   width?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
+  /** Cross-axis alignment (`items-*`). Row default is `center`. */
+  align?: LayoutAlign;
+  /** Main-axis distribution (`justify-*`). */
+  justify?: LayoutJustify;
+  /** Flex wrap. Row default is `true`. */
+  wrap?: boolean;
+  /** Apply `min-w-0` (truncate/flex children). */
+  minWidthZero?: boolean;
 };
 
 function layout(
@@ -829,6 +874,10 @@ function layout(
     className: props.className,
     centered: props.centered,
     width: props.width,
+    align: props.align,
+    justify: props.justify,
+    wrap: props.wrap,
+    minWidthZero: props.minWidthZero ?? false,
   });
 
   if (fn) {
@@ -1094,7 +1143,7 @@ export {
   type ButtonGroupOrientation,
 } from './button-group';
 
-export { empty, type EmptyProps } from './empty-state';
+export { empty, type EmptyProps, type EmptyDensity } from './empty-state';
 
 export { pagination, type PaginationProps } from './pagination';
 

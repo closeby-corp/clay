@@ -370,6 +370,67 @@ function gapClass(gap: unknown): string {
   return gapMap[n] ?? 'gap-4';
 }
 
+/** Filter-bar field widths (distinct from container `max-w-*`). */
+const fieldWidthClass: Record<string, string> = {
+  sm: 'w-40', // 10rem
+  md: 'w-48', // 12rem
+  lg: 'w-64',
+  xl: 'w-[32rem]',
+  full: 'w-full',
+};
+
+function fieldShellClass(props: Record<string, unknown>, className?: string): string {
+  const inline = props.inline === true;
+  const width = typeof props.width === 'string' ? fieldWidthClass[props.width] : undefined;
+  return cn(
+    'flex gap-1.5',
+    inline ? 'flex-row items-end' : 'flex-col',
+    width ?? (inline ? undefined : 'w-full'),
+    className,
+  );
+}
+
+const alignClass: Record<string, string> = {
+  start: 'items-start',
+  center: 'items-center',
+  end: 'items-end',
+  baseline: 'items-baseline',
+  stretch: 'items-stretch',
+};
+
+const justifyClass: Record<string, string> = {
+  start: 'justify-start',
+  center: 'justify-center',
+  end: 'justify-end',
+  between: 'justify-between',
+  around: 'justify-around',
+};
+
+const labelToneClass: Record<string, string> = {
+  default: '',
+  muted: 'text-muted-foreground',
+};
+
+const labelSizeClass: Record<string, string> = {
+  xs: 'text-xs',
+  sm: 'text-sm',
+  md: 'text-base',
+  lg: 'text-lg font-semibold',
+};
+
+const spinnerSizeClass: Record<string, string> = {
+  xs: 'size-3',
+  sm: 'size-4',
+  md: 'size-6',
+  lg: 'size-8',
+};
+
+const resizableFillClass: Record<string, string> = {
+  none: '',
+  parent: 'h-full min-h-0 w-full flex-1',
+  viewport: 'h-[min(100dvh-7rem,100%)] min-h-96 w-full',
+};
+
 function asStyle(style: unknown): CSSProperties | undefined {
   if (!style) return undefined;
   if (typeof style === 'string') {
@@ -409,7 +470,7 @@ function BoundInput({
 
   return (
     <div
-      className={cn('flex w-full flex-col gap-1.5', className)}
+      className={fieldShellClass(props, className)}
       style={asStyle(style)}
       data-invalid={error ? true : undefined}
     >
@@ -496,7 +557,7 @@ function BoundSelect({
 
   return (
     <div
-      className={cn('flex w-full flex-col gap-1.5', className)}
+      className={fieldShellClass(props, className)}
       data-invalid={error ? true : undefined}
     >
       {props.label ? <Label>{String(props.label)}</Label> : null}
@@ -2424,7 +2485,11 @@ function BoundResizable({
   return (
     <ResizablePanelGroup
       orientation={props.orientation === 'vertical' ? 'vertical' : 'horizontal'}
-      className={cn('min-h-40 rounded-md border', className)}
+      className={cn(
+        'min-h-40 rounded-md border',
+        typeof props.fill === 'string' ? resizableFillClass[props.fill] : undefined,
+        className,
+      )}
       style={asStyle(style)}
     >
       {children.map((child) => {
@@ -3595,14 +3660,35 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'row':
       return (
-        <div className={cn('flex flex-row flex-wrap items-center', gapClass(props.gap), className)} style={asStyle(style)}>
+        <div
+          className={cn(
+            'flex flex-row',
+            props.wrap === false ? 'flex-nowrap' : 'flex-wrap',
+            alignClass[String(props.align ?? 'center')] ?? 'items-center',
+            typeof props.justify === 'string' ? justifyClass[props.justify] : undefined,
+            props.minWidthZero === true && 'min-w-0',
+            gapClass(props.gap),
+            className,
+          )}
+          style={asStyle(style)}
+        >
           {renderChildren()}
         </div>
       );
 
     case 'column':
       return (
-        <div className={cn('flex flex-col', gapClass(props.gap), className)} style={asStyle(style)}>
+        <div
+          className={cn(
+            'flex flex-col',
+            typeof props.align === 'string' ? alignClass[props.align] : undefined,
+            typeof props.justify === 'string' ? justifyClass[props.justify] : undefined,
+            props.minWidthZero === true && 'min-w-0',
+            gapClass(props.gap),
+            className,
+          )}
+          style={asStyle(style)}
+        >
           {renderChildren()}
         </div>
       );
@@ -3718,7 +3804,11 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         <IconText
           {...iconTextFromProps(props)}
           as="div"
-          className={cn('text-base', className)}
+          className={cn(
+            labelSizeClass[String(props.size ?? 'md')] ?? 'text-base',
+            labelToneClass[String(props.tone ?? 'default')],
+            className,
+          )}
           style={asStyle(style)}
         />
       );
@@ -3807,6 +3897,25 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'empty': {
       const Icon = props.icon ? resolveNavIcon(String(props.icon)) : null;
+      const density = props.density === 'inline' ? 'inline' : 'default';
+      if (density === 'inline') {
+        return (
+          <div
+            className={cn('py-6 text-sm text-muted-foreground', className)}
+            style={asStyle(style)}
+          >
+            {props.title ? <p>{String(props.title)}</p> : null}
+            {props.description ? (
+              <p className="mt-1 text-xs">{String(props.description)}</p>
+            ) : null}
+            {children.length > 0
+              ? children.map((child) => (
+                  <ElementRenderer key={child.id} node={child} emit={emit} />
+                ))
+              : null}
+          </div>
+        );
+      }
       return (
         <Empty className={cn('border border-dashed bg-muted/20', className)} style={asStyle(style)}>
           <EmptyHeader>
@@ -3830,6 +3939,25 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
         </Empty>
       );
     }
+
+    case 'pageHeading':
+      return (
+        <div className={cn('mb-3', className)} style={asStyle(style)}>
+          <div className="text-xl font-semibold leading-tight">
+            {String(props.title ?? '')}
+          </div>
+          {props.description ? (
+            <p className="mt-0.5 text-sm text-muted-foreground">{String(props.description)}</p>
+          ) : null}
+          {children.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {children.map((child) => (
+                <ElementRenderer key={child.id} node={child} emit={emit} />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      );
 
     case 'pagination':
       return (
@@ -4340,7 +4468,15 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
       );
 
     case 'spinner':
-      return <Spinner className={className} style={asStyle(style)} />;
+      return (
+        <Spinner
+          className={cn(
+            spinnerSizeClass[String(props.size ?? 'sm')] ?? 'size-4',
+            className,
+          )}
+          style={asStyle(style)}
+        />
+      );
 
     case 'skeleton':
       return <Skeleton className={className} style={asStyle(style)} />;

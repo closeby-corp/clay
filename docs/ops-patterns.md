@@ -39,9 +39,9 @@ const live = ui.state({ selectedId: null as string | null, rows: [] as Row[] });
 
 ui.auto(() => {
   ui.resizable(
-    { orientation: 'horizontal', className: 'h-[calc(100vh-8rem)] w-full min-h-[24rem]' },
+    { orientation: 'horizontal', fill: 'viewport' },
     (r) => {
-      r.panel({ defaultSize: 40, minSize: 28 }, () => {
+      r.panel({ defaultSize: 40, minSize: 28, className: 'min-h-0 overflow-hidden' }, () => {
         ui.auto(() => {
           for (const row of live.rows) {
             ui.button(row.id, {
@@ -54,11 +54,12 @@ ui.auto(() => {
           }
         });
       });
-      r.panel({ defaultSize: 60, minSize: 36 }, () => {
+      r.handle();
+      r.panel({ defaultSize: 60, minSize: 36, className: 'min-h-0 overflow-hidden' }, () => {
         ui.auto(() => {
           const row = live.rows.find((x) => x.id === live.selectedId);
           if (!row) {
-            ui.label('Select a row').classes('text-sm text-muted-foreground');
+            ui.empty({ title: 'Select a row', density: 'inline' });
             return;
           }
           // detail…
@@ -70,7 +71,7 @@ ui.auto(() => {
 });
 ```
 
-Keep **separate** `ui.auto` regions for list vs detail so selection updates do not remount the whole shell. Default panel sizes (`defaultSize` / `minSize`) are percentages.
+Keep **separate** `ui.auto` regions for list vs detail so selection updates do not remount the whole shell. Default panel sizes (`defaultSize` / `minSize`) are percentages. Prefer `fill: 'parent' | 'viewport'` over viewport `calc` height utilities.
 
 ## Live feed rows (not `ui.list`)
 
@@ -163,7 +164,7 @@ For **`ui.dataTable`**, pass `showFilterChips: true` to surface active search + 
 ```ts
 ui.auto(() => {
   if (live.loadingMore) {
-    ui.label('Loading…').classes('text-xs text-muted-foreground p-2');
+    ui.label('Loading…', { tone: 'muted', size: 'xs' });
     return;
   }
   if (!live.hasMore) return;
@@ -182,6 +183,22 @@ ui.auto(() => {
 ```
 
 Alternative when you already wrap the list in **`ui.scrollArea`**: use `onNearEnd` on the scroll area (scroll-root is built-in). Prefer one pattern per surface — `viewportEnter` + `nearest-scroll` does **not** require `scrollArea`.
+
+## Fewer classes (ops density)
+
+Prefer semantic props over Tailwind soup:
+
+| Instead of… | Prefer… |
+|-------------|---------|
+| `.classes('text-sm text-muted-foreground')` | `ui.label(…, { tone: 'muted', size: 'sm' })` |
+| Title + subtitle stacks | `ui.pageHeading('Orders', { description: '…' })` |
+| `className: 'flex-row w-[10rem]'` on filters | `ui.select({ inline: true, width: 'sm', … })` |
+| `ui.spinner({ className: 'h-3 w-3' })` | `ui.spinner({ size: 'xs' })` |
+| Feed empty muted label | `ui.empty({ title: '…', density: 'inline' })` |
+| `h-[calc(100%-7rem)]!` on resizable | `ui.resizable({ fill: 'parent' \| 'viewport' }, …)` |
+| `className: 'items-end justify-between'` on rows | `ui.row({ align: 'end', justify: 'between' }, …)` |
+
+`className` remains an escape hatch.
 
 ## Logs / traces — sensitive bodies
 

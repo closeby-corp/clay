@@ -34,6 +34,7 @@ import {
   pagination as paginationFactory,
   filterBar as filterBarFactory,
   filterChips as filterChipsFactory,
+  pageHeading as pageHeadingFactory,
   numberField as numberFieldFactory,
   phoneInput as phoneInputFactory,
   field as fieldFactory,
@@ -120,7 +121,10 @@ import {
   type ButtonVariant,
   type ButtonSize,
   type LabelProps,
+  type LabelTone,
+  type LabelSize,
   type InputProps,
+  type FieldWidth,
   type CheckboxProps,
   type SwitchProps,
   type SelectProps,
@@ -144,6 +148,7 @@ import {
   type BadgeProps,
   type AlertProps,
   type SpinnerProps,
+  type SpinnerSize,
   type ProgressProps,
   type SeparatorProps,
   type IconProps,
@@ -157,6 +162,8 @@ import {
   type ButtonGroupProps,
   type ButtonGroupOrientation,
   type EmptyProps,
+  type EmptyDensity,
+  type PageHeadingProps,
   type PaginationProps,
   type FilterBarProps,
   type FilterChip,
@@ -253,6 +260,7 @@ import {
   type CommandMode,
   type CommandItemOptions,
   type ResizableProps,
+  type ResizableFill,
   type ResizableOrientation,
   type ResizablePanelProps,
   type ResizableHandleProps,
@@ -494,7 +502,10 @@ export type {
   ButtonVariant,
   ButtonSize,
   LabelProps,
+  LabelTone,
+  LabelSize,
   InputProps,
+  FieldWidth,
   CheckboxProps,
   BadgeProps,
   LinkProps,
@@ -555,6 +566,7 @@ export type {
   AvatarProps,
   SkeletonProps,
   SpinnerProps,
+  SpinnerSize,
   ProgressProps,
   SeparatorProps,
   IconProps,
@@ -929,6 +941,11 @@ export function buttonGroup(a: any, b?: any): Element {
 /** Centered empty state. See {@link EmptyProps}. */
 export function empty(props: EmptyProps, footer?: () => void): Element {
   return emptyFactory(props, footer);
+}
+
+/** Page title + optional description. Prefer over stacked muted labels. */
+export function pageHeading(props: PageHeadingProps, trailing?: () => void): Element {
+  return pageHeadingFactory(props, trailing);
 }
 
 /** Standalone pager. See {@link PaginationProps}. */
@@ -1789,6 +1806,7 @@ export const ui = {
   feedList,
   buttonGroup,
   empty,
+  pageHeading,
   pagination,
   filterBar,
   filterChips,
