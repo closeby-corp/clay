@@ -241,6 +241,33 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+} from '@/components/ui/input-group';
+import { Toggle } from '@/components/ui/toggle';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item';
 import { cn } from '@/lib/utils';
 import { IconText, StatusDot } from './IconText';
 import { Timeline, StepperView, type TimelineItemView } from './ComposedWidgets';
@@ -1904,6 +1931,183 @@ function BoundNativeSelect({
           </option>
         ))}
       </NativeSelect>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+function BoundInputGroup({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverValue = String(props.value ?? '');
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const disabled = !!props.disabled;
+  const error = fieldError(props);
+  const prefix = props.prefix ? String(props.prefix) : '';
+  const suffix = props.suffix ? String(props.suffix) : '';
+  const buttonLabel = props.buttonLabel ? String(props.buttonLabel) : '';
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1.5', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <InputGroup>
+        {prefix ? (
+          <InputGroupAddon align="inline-start">
+            <InputGroupText>{prefix}</InputGroupText>
+          </InputGroupAddon>
+        ) : null}
+        <InputGroupInput
+          value={value}
+          placeholder={props.placeholder ? String(props.placeholder) : undefined}
+          disabled={disabled}
+          aria-invalid={!!error}
+          onChange={(e) => {
+            const next = e.target.value;
+            setValue(next);
+            if (hasEvent(props, 'input')) emit(id, 'input', next);
+          }}
+        />
+        {suffix ? (
+          <InputGroupAddon align="inline-end">
+            <InputGroupText>{suffix}</InputGroupText>
+          </InputGroupAddon>
+        ) : null}
+        {buttonLabel ? (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              disabled={disabled}
+              onClick={() => {
+                if (hasEvent(props, 'buttonClick')) emit(id, 'buttonClick');
+              }}
+            >
+              {buttonLabel}
+            </InputGroupButton>
+          </InputGroupAddon>
+        ) : null}
+      </InputGroup>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </div>
+  );
+}
+
+function BoundToggle({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  const serverPressed = !!props.pressed;
+  const [pressed, setPressed] = useOptimisticValue(serverPressed);
+  const slot = iconTextFromProps(props);
+  const Icon = slot.icon ? resolveNavIcon(slot.icon) : null;
+  const variant =
+    props.variant === 'outline' ? ('outline' as const) : ('default' as const);
+  const size =
+    props.size === 'sm' || props.size === 'lg'
+      ? (props.size as 'sm' | 'lg')
+      : ('default' as const);
+
+  return (
+    <Toggle
+      pressed={pressed}
+      disabled={!!props.disabled}
+      variant={variant}
+      size={size}
+      className={className}
+      style={asStyle(style)}
+      aria-label={slot.text || (slot.icon ? String(props.icon) : undefined)}
+      onPressedChange={(next) => {
+        setPressed(next);
+        if (hasEvent(props, 'pressedChange')) emit(id, 'pressedChange', next);
+      }}
+    >
+      {Icon ? <Icon aria-hidden /> : null}
+      {slot.text ? <span>{slot.text}</span> : null}
+    </Toggle>
+  );
+}
+
+const EMPTY_STRING_ARRAY: string[] = [];
+
+function BoundCheckboxGroup({
+  id,
+  props,
+  className,
+  style,
+  emit,
+}: {
+  id: string;
+  props: Record<string, unknown>;
+  className?: string;
+  style: unknown;
+  emit: Emit;
+}) {
+  // Pass the wire array through as-is — never clone here. Spreading would create a
+  // new reference every render and loop forever inside useOptimisticValue.
+  const serverValue = Array.isArray(props.value)
+    ? (props.value as string[])
+    : EMPTY_STRING_ARRAY;
+  const [value, setValue] = useOptimisticValue(serverValue);
+  const options = (props.options as Array<{ value: string; label: string; disabled?: boolean }>) ?? [];
+  const horizontal = props.orientation === 'horizontal';
+  const error = fieldError(props);
+  const disabled = !!props.disabled;
+
+  const toggle = (optValue: string, checked: boolean) => {
+    const next = checked
+      ? [...new Set([...value, optValue])]
+      : value.filter((v) => v !== optValue);
+    setValue(next);
+    if (hasEvent(props, 'change')) emit(id, 'change', next);
+  };
+
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-2', className)}
+      style={asStyle(style)}
+      data-invalid={error ? true : undefined}
+    >
+      {props.label ? <Label>{String(props.label)}</Label> : null}
+      <div className={cn(horizontal ? 'flex flex-wrap gap-4' : 'grid gap-3')}>
+        {options.map((opt) => {
+          const optId = `cbg-${id}-${opt.value}`;
+          const checked = value.includes(opt.value);
+          return (
+            <div key={opt.value} className="flex items-center gap-2">
+              <Checkbox
+                id={optId}
+                checked={checked}
+                disabled={disabled || !!opt.disabled}
+                onCheckedChange={(next) => toggle(opt.value, next === true)}
+              />
+              <Label htmlFor={optId} className="font-normal">
+                {opt.label}
+              </Label>
+            </div>
+          );
+        })}
+      </div>
       {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
@@ -3731,6 +3935,170 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           style={asStyle(style)}
           emit={emit}
         />
+      );
+
+    case 'inputGroup':
+      return (
+        <BoundInputGroup id={id} props={props} className={className} style={style} emit={emit} />
+      );
+
+    case 'toggle':
+      return <BoundToggle id={id} props={props} className={className} style={style} emit={emit} />;
+
+    case 'descriptionList': {
+      const items = (props.items as Array<{ term: string; detail: string }>) ?? [];
+      const horizontal = !!props.horizontal;
+      return (
+        <dl
+          className={cn(
+            horizontal
+              ? 'grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-4 gap-y-2 text-sm'
+              : 'flex flex-col gap-3 text-sm',
+            className,
+          )}
+          style={asStyle(style)}
+        >
+          {items.map((item, i) =>
+            horizontal ? (
+              <Fragment key={`${item.term}-${i}`}>
+                <dt className="font-medium text-muted-foreground">{item.term}</dt>
+                <dd>{item.detail}</dd>
+              </Fragment>
+            ) : (
+              <div key={`${item.term}-${i}`} className="grid gap-0.5">
+                <dt className="font-medium text-muted-foreground">{item.term}</dt>
+                <dd>{item.detail}</dd>
+              </div>
+            ),
+          )}
+        </dl>
+      );
+    }
+
+    case 'staticTable': {
+      const columns =
+        (props.columns as Array<{ key: string; label: string; align?: string; className?: string }>) ??
+        [];
+      const rows = (props.rows as Array<Record<string, unknown>>) ?? [];
+      const striped = !!props.striped;
+      return (
+        <Table className={className} style={asStyle(style)}>
+          {props.caption ? <TableCaption>{String(props.caption)}</TableCaption> : null}
+          <TableHeader>
+            <TableRow>
+              {columns.map((col) => (
+                <TableHead
+                  key={col.key}
+                  className={cn(
+                    col.align === 'right' && 'text-right',
+                    col.align === 'center' && 'text-center',
+                    col.className,
+                  )}
+                >
+                  {col.label}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, ri) => (
+              <TableRow key={ri} className={striped && ri % 2 === 1 ? 'bg-muted/30' : undefined}>
+                {columns.map((col) => (
+                  <TableCell
+                    key={col.key}
+                    className={cn(
+                      col.align === 'right' && 'text-right tabular-nums',
+                      col.align === 'center' && 'text-center',
+                      col.className,
+                    )}
+                  >
+                    {row[col.key] != null ? String(row[col.key]) : ''}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      );
+    }
+
+    case 'aspectRatio':
+      return (
+        <AspectRatio
+          ratio={Number(props.ratio ?? 16 / 9)}
+          className={cn('overflow-hidden rounded-md border bg-muted', className)}
+          style={asStyle(style)}
+        >
+          {renderChildren()}
+        </AspectRatio>
+      );
+
+    case 'itemList': {
+      const items =
+        (props.items as Array<{
+          id?: string;
+          title: string;
+          description?: string;
+          icon?: string;
+          href?: string;
+          badge?: string;
+        }>) ?? [];
+      const variant =
+        props.variant === 'muted' || props.variant === 'default'
+          ? (props.variant as 'default' | 'muted')
+          : ('outline' as const);
+      const size = props.size === 'default' ? ('default' as const) : ('sm' as const);
+      return (
+        <ItemGroup className={className} style={asStyle(style)}>
+          {items.map((item, i) => {
+            const itemId = item.id ?? String(i);
+            const Icon = item.icon ? resolveNavIcon(item.icon) : null;
+            const body = (
+              <>
+                {Icon ? (
+                  <ItemMedia variant="icon">
+                    <Icon aria-hidden />
+                  </ItemMedia>
+                ) : null}
+                <ItemContent>
+                  <ItemTitle>{item.title}</ItemTitle>
+                  {item.description ? <ItemDescription>{item.description}</ItemDescription> : null}
+                </ItemContent>
+                {item.badge ? (
+                  <ItemActions>
+                    <Badge variant="secondary">{item.badge}</Badge>
+                  </ItemActions>
+                ) : null}
+              </>
+            );
+            if (item.href) {
+              return (
+                <Item key={itemId} variant={variant} size={size} asChild>
+                  <a href={item.href}>{body}</a>
+                </Item>
+              );
+            }
+            return (
+              <Item
+                key={itemId}
+                variant={variant}
+                size={size}
+                className={hasEvent(props, 'select') ? 'cursor-pointer' : undefined}
+                onClick={() => {
+                  if (hasEvent(props, 'select')) emit(id, 'select', itemId);
+                }}
+              >
+                {body}
+              </Item>
+            );
+          })}
+        </ItemGroup>
+      );
+    }
+
+    case 'checkboxGroup':
+      return (
+        <BoundCheckboxGroup id={id} props={props} className={className} style={style} emit={emit} />
       );
 
     case 'timeline': {

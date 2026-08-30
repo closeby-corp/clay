@@ -1136,3 +1136,38 @@ export {
   type EventCalendarProps,
   type EventCalendarEvent,
 } from './event-calendar';
+
+export { inputGroup, type InputGroupProps } from './input-group';
+
+export {
+  toggleControl,
+  type ToggleControlProps,
+  type ToggleControlVariant,
+  type ToggleControlSize,
+} from './toggle-control';
+
+export {
+  descriptionList,
+  type DescriptionListProps,
+  type DescriptionListItem,
+} from './description-list';
+
+export {
+  staticTable,
+  type StaticTableProps,
+  type StaticTableColumn,
+} from './static-table';
+
+export { aspectRatio, type AspectRatioProps } from './aspect-ratio';
+
+export {
+  itemList,
+  type ItemListProps,
+  type ItemListEntry,
+} from './item-list';
+
+export {
+  checkboxGroup,
+  type CheckboxGroupProps,
+  type CheckboxGroupOption,
+} from './checkbox-group';

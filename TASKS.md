@@ -6,6 +6,8 @@ Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops 
 
 ReUI-style component batches (3–6): see [TASKS-reui-batches.md](./TASKS-reui-batches.md) — all items shipped in-repo; publish separately.
 
+Batch 7 (inputGroup, toggle, descriptionList, staticTable, aspectRatio, itemList, checkboxGroup): see [TASKS-reui-batch7.md](./TASKS-reui-batch7.md).
+
 ## Soon — from UQ Hub feedback
 
 ### P0 — Safe defaults / correctness

@@ -13,6 +13,13 @@ import {
   notice,
   eventCalendar,
   stat,
+  inputGroup,
+  toggleControl,
+  descriptionList,
+  staticTable,
+  aspectRatio,
+  itemList,
+  checkboxGroup,
 } from './index';
 
 describe('ReUI batch components', () => {
@@ -112,5 +119,22 @@ describe('ReUI batch components', () => {
     expect(el.type).toBe('stat');
     const items = el.props.items as Array<{ sparkline?: unknown }>;
     expect(items[0]?.sparkline).toBeDefined();
+  });
+
+  test('batch 7 factories', () => {
+    expect(inputGroup({ prefix: '$' }).type).toBe('inputGroup');
+    expect(toggleControl({ pressed: true, icon: 'pin' }).type).toBe('toggle');
+    expect(
+      descriptionList({ items: [{ term: 'A', detail: 'B' }] }).type,
+    ).toBe('descriptionList');
+    expect(
+      staticTable({ columns: [{ key: 'a', label: 'A' }], rows: [{ a: '1' }] }).type,
+    ).toBe('staticTable');
+    const ar = aspectRatio(() => {}, { ratio: 1 });
+    expect(ar.type).toBe('aspectRatio');
+    expect(itemList({ items: [{ title: 'Hi' }] }).type).toBe('itemList');
+    expect(
+      checkboxGroup({ options: [{ value: 'a', label: 'A' }], value: ['a'] }).type,
+    ).toBe('checkboxGroup');
   });
 });

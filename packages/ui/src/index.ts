@@ -43,6 +43,13 @@ import {
   notice as noticeFactory,
   eventCalendar as eventCalendarFactory,
   stat as statFactory,
+  inputGroup as inputGroupFactory,
+  toggleControl as toggleControlFactory,
+  descriptionList as descriptionListFactory,
+  staticTable as staticTableFactory,
+  aspectRatio as aspectRatioFactory,
+  itemList as itemListFactory,
+  checkboxGroup as checkboxGroupFactory,
   dataTable as dataTableFactory,
   areaChart as areaChartFactory,
   barChart as barChartFactory,
@@ -166,6 +173,19 @@ import {
   type NoticeVariant,
   type EventCalendarProps,
   type EventCalendarEvent,
+  type InputGroupProps,
+  type ToggleControlProps,
+  type ToggleControlVariant,
+  type ToggleControlSize,
+  type DescriptionListProps,
+  type DescriptionListItem,
+  type StaticTableProps,
+  type StaticTableColumn,
+  type AspectRatioProps,
+  type ItemListProps,
+  type ItemListEntry,
+  type CheckboxGroupProps,
+  type CheckboxGroupOption,
   type StatItem,
   type DataTableProps,
   type DataTableAction,
@@ -972,6 +992,43 @@ export function eventCalendar(props?: EventCalendarProps): Element {
   return eventCalendarFactory(props);
 }
 
+/** Input with prefix/suffix addons. See {@link InputGroupProps}. */
+export function inputGroup(props?: InputGroupProps): Element {
+  return inputGroupFactory(props);
+}
+
+/** Toolbar pressed toggle. See {@link ToggleControlProps}. */
+export function toggle(props?: ToggleControlProps): Element {
+  return toggleControlFactory(props);
+}
+
+/** Key-value detail rows. See {@link DescriptionListProps}. */
+export function descriptionList(props: DescriptionListProps): Element {
+  return descriptionListFactory(props);
+}
+
+/** Read-only HTML table. See {@link StaticTableProps}. */
+export function staticTable(props: StaticTableProps): Element {
+  return staticTableFactory(props);
+}
+
+/** Fixed aspect ratio wrapper. See {@link AspectRatioProps}. */
+export function aspectRatio(fn: () => void, props?: AspectRatioProps): Element;
+export function aspectRatio(props: AspectRatioProps, fn: () => void): Element;
+export function aspectRatio(a: any, b?: any): Element {
+  return aspectRatioFactory(a, b);
+}
+
+/** Settings / notification list rows. See {@link ItemListProps}. */
+export function itemList(props: ItemListProps): Element {
+  return itemListFactory(props);
+}
+
+/** Multi-select checkbox group. See {@link CheckboxGroupProps}. */
+export function checkboxGroup(props: CheckboxGroupProps): Element {
+  return checkboxGroupFactory(props);
+}
+
 /** Render markdown to HTML. Prefer `ui.markdown`. See {@link MarkdownProps}. */
 export function markdown(text?: string, props?: MarkdownProps): Element {
   return markdownFactory(text, props);
@@ -1741,6 +1798,13 @@ export const ui = {
   navigationMenu,
   notice,
   eventCalendar,
+  inputGroup,
+  toggle,
+  descriptionList,
+  staticTable,
+  aspectRatio,
+  itemList,
+  checkboxGroup,
   markdown,
   html,
   image,

@@ -98,4 +98,45 @@ describe('ReUI client render smoke', () => {
     );
     expect(html).toContain('Overview');
   });
+
+  test('staticTable renders rows', () => {
+    const html = renderToStaticMarkup(
+      <ElementRenderer
+        emit={emit}
+        node={{
+          id: 'tbl-1',
+          type: 'staticTable',
+          props: {
+            columns: [
+              { key: 'name', label: 'Name' },
+              { key: 'ms', label: 'ms', align: 'right' },
+            ],
+            rows: [{ name: 'SELECT 1', ms: 12 }],
+          },
+          children: [],
+        }}
+      />,
+    );
+    expect(html).toContain('SELECT 1');
+    expect(html).toContain('12');
+  });
+
+  test('descriptionList renders terms', () => {
+    const html = renderToStaticMarkup(
+      <ElementRenderer
+        emit={emit}
+        node={{
+          id: 'dl-1',
+          type: 'descriptionList',
+          props: {
+            horizontal: true,
+            items: [{ term: 'Order', detail: 'ORD-1' }],
+          },
+          children: [],
+        }}
+      />,
+    );
+    expect(html).toContain('Order');
+    expect(html).toContain('ORD-1');
+  });
 });

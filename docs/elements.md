@@ -31,6 +31,13 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `field` | `field` | Label + description + error wrapper for one control |
 | `nativeSelect` | `nativeSelect` | Styled native `<select>` |
 | `navigationMenu` | `navigationmenu` (+ sub/link children) | Top nav mega-menu |
+| `inputGroup` | `inputGroup` | Input with prefix/suffix addons |
+| `toggle` | `toggle` | Pressed toolbar toggle |
+| `descriptionList` | `descriptionList` | Key-value detail rows |
+| `staticTable` | `staticTable` | Read-only HTML table |
+| `aspectRatio` | `aspectRatio` | Fixed-ratio child wrapper |
+| `itemList` | `itemList` | Settings / notification rows |
+| `checkboxGroup` | `checkboxGroup` | Multi-select checkboxes |
 | `notice` | `notice` | Dismissible app banner |
 | `eventCalendar` | `eventCalendar` | Month grid + day event list (`events` API → wire `items`) |
 | `timeline` | `timeline` | Vertical or horizontal event timeline |
