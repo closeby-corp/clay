@@ -34,4 +34,9 @@ describe('viewportEnter', () => {
     expect(a.props.once).toBe(false);
     expect(b.props.once).toBe(false);
   });
+
+  test('root nearest-scroll is serialized', () => {
+    const el = viewportEnter({ root: 'nearest-scroll', onEnter: () => {} }, () => {});
+    expect(el.props.root).toBe('nearest-scroll');
+  });
 });

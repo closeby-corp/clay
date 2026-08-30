@@ -1,7 +1,7 @@
 import { dirname, isAbsolute, join, resolve } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { stat } from 'fs/promises';
-import { registerReactiveLetPlugin } from '@close-by/clay-compiler/plugin';
+import { registerReactiveLetPlugin, ensureReactiveLetPluginForPaths } from '@close-by/clay-compiler/plugin';
 import { warnClayPageIssues } from '@close-by/clay-compiler';
 import { getRegisteredPaths } from '@close-by/clay-core';
 import {
@@ -90,8 +90,11 @@ async function loadEntryFile(absPath: string): Promise<void> {
   }
 }
 
-async function loadEntryDir(absDir: string): Promise<void> {
-  const loaded = await ui.loadPages(absDir);
+async function loadEntryDir(
+  absDir: string,
+  reactiveLet: boolean | 'auto' = 'auto',
+): Promise<void> {
+  const loaded = await ui.loadPages(absDir, { reactiveLet });
   if (loaded.length === 0 && getRegisteredPaths().length === 0) {
     throw new Error(`No page modules found under ${absDir}`);
   }
@@ -116,6 +119,31 @@ export async function applyDirRunConfig(
     }
   }
   return base;
+}
+
+/**
+ * Merge CLI Tailwind defaults with `configureRun` options so `appendCss` / custom
+ * `content` / `outFile` are not dropped.
+ */
+export function mergeCliTailwind(
+  config: RunConfig,
+  opts: { contentRoot: string; watch: boolean; enabled: boolean },
+): RunConfig {
+  if (!opts.enabled) {
+    return { ...config, tailwind: false };
+  }
+  const prev = typeof config.tailwind === 'object' && config.tailwind ? config.tailwind : {};
+  return {
+    ...config,
+    tailwind: {
+      ...prev,
+      content:
+        Array.isArray(prev.content) && prev.content.length > 0
+          ? prev.content
+          : [opts.contentRoot],
+      watch: opts.watch || !!prev.watch,
+    },
+  };
 }
 
 function isAddrInUse(err: unknown): boolean {
@@ -180,7 +208,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   resetRunState();
   resetPageDiscovery();
 
-  if (args.reactiveLet) {
+  if (args.reactiveLet === true) {
     registerReactiveLetPlugin();
   }
 
@@ -209,8 +237,11 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
 
   try {
     if (isDir) {
-      await loadEntryDir(absEntry);
+      await loadEntryDir(absEntry, args.reactiveLet);
     } else {
+      if (args.reactiveLet === 'auto') {
+        await ensureReactiveLetPluginForPaths([absEntry]);
+      }
       await loadEntryFile(absEntry);
     }
   } catch (err) {
@@ -232,19 +263,11 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     config = await applyDirRunConfig(absEntry, config);
   }
 
-  if (args.tailwind) {
-    const contentRoot = isDir ? absEntry : dirname(absEntry);
-    config = {
-      ...config,
-      // Prefer explicit entry scan; still allow configureRun css to merge.
-      tailwind: {
-        content: [contentRoot],
-        watch: args.reload,
-      },
-    };
-  } else {
-    config = { ...config, tailwind: false };
-  }
+  config = mergeCliTailwind(config, {
+    contentRoot: isDir ? absEntry : dirname(absEntry),
+    watch: args.reload,
+    enabled: args.tailwind,
+  });
 
   // Entry modules that call ui.run() themselves — nothing left for the CLI to do.
   if (wasRunCalled()) {

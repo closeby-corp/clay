@@ -744,7 +744,7 @@ export {
 
 export { scrollArea, type ScrollAreaProps } from './scroll-area';
 
-export { viewportEnter, type ViewportEnterProps } from './viewport-enter';
+export { viewportEnter, type ViewportEnterProps, type ViewportEnterRoot } from './viewport-enter';
 
 export { keybind, type KeybindProps } from './keybind';
 

@@ -1,9 +1,11 @@
 import { Element, withParent } from '@close-by/clay-core';
 
+export type ViewportEnterRoot = 'viewport' | 'nearest-scroll' | (string & {});
+
 export type ViewportEnterProps = {
   className?: string;
   /**
-   * Fired when this element intersects the viewport.
+   * Fired when this element intersects the viewport (or scroll root).
    * Client emits event type `enter`.
    */
   onEnter?: () => void | Promise<void>;
@@ -16,6 +18,13 @@ export type ViewportEnterProps = {
   rootMargin?: string;
   /** IntersectionObserver `threshold` (0–1 or array). Default `0`. */
   threshold?: number | number[];
+  /**
+   * Scroll root for IntersectionObserver:
+   * - `'viewport'` (default) — browser viewport (`root: null`)
+   * - `'nearest-scroll'` — closest overflow scroll ancestor (or scroll-area viewport)
+   * - CSS selector — `document.querySelector` / `element.closest`
+   */
+  root?: ViewportEnterRoot;
 };
 
 /**
@@ -44,6 +53,7 @@ export function viewportEnter(
     once: props.once ?? true,
     rootMargin: props.rootMargin,
     threshold: props.threshold,
+    root: props.root ?? 'viewport',
     onEnter: props.onEnter,
   });
   withParent(el, fn);

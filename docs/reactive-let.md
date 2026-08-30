@@ -75,16 +75,16 @@ Phase 1 remains the **escape hatch** — copy patterns from [`ReactiveLetOrders.
 
 Package `@close-by/clay-compiler` rewrites a **documented subset** of `let` into Phase 1 APIs.
 
-### Opt-in (required)
+### Opt-in
 
-Both of:
-
-1. **CLI / loader:** pass `--reactive-let` to `clay` (or call `registerReactiveLetPlugin()` yourself). Off by default.
-2. **Source:** one of:
+1. **Source:** one of:
    - File pragma: `// @clay-reactive` (near the top of the file) — applies to **`ui.page` / `page` callbacks only**
    - Block directive as the first statement: `"use reactive";` — required for nested helpers / `ui.column(() => …)` lets
+2. **Loader:** by default, `clay` and `ui.loadPages` **auto-register** the Bun plugin when any scanned page has the pragma / directive. Force with `--reactive-let` / `loadPages(dir, { reactiveLet: true })`; disable with `--no-reactive-let` / `{ reactiveLet: false }`. Manual `registerReactiveLetPlugin()` is still fine (and idempotent).
 
 `ui.page(...)` alone does **not** opt in. Module-level helpers (`function mergeUnits() { … }`) and nested `function` / arrow bodies do **not** inherit the file pragma — use `"use reactive";` inside the page callback or a nested site when needed.
+
+**Hard fail:** a local that shadows lifted state and whose initializer reads that name (`const detail = detail` or `const detail = rows.find(… detail …)`) **refuses to emit** — rename the local. Silent `undefined` after fetch was a hub dogfood failure mode.
 
 ### Who wraps `ui.auto`?
 
@@ -111,7 +111,8 @@ Inline UI in widget callbacks (`ui.label(expr)`, `ui.icon(…, { className: expr
 | `units.filter(u => { … })` reading lifted state | Plain JS (no `ui.auto` inside filter) | Nothing |
 | `onClick` / `onChange` / `ui.timer` handler | Not a build region | Normal JS |
 | `const live = ui.state({…})` (no pragma) | Unchanged | Explicit `ui.auto` (Phase 1) |
-| Local `const detail = …` shadows lifted `let detail` | Renames in emit + compile warning | Prefer distinct names |
+| Local `const detail = …` shadows lifted `let detail` (no self-read) | Renames in emit + compile warning | Prefer distinct names |
+| Local `const detail = detail` / initializer reads `detail` | **Hard error** — transform refuses to emit | Rename the local |
 
 ### What transforms
 

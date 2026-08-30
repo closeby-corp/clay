@@ -12,7 +12,12 @@ export {
   type TransformReactiveLetResult,
 };
 
-export { registerReactiveLetPlugin } from './plugin.ts';
+export {
+  registerReactiveLetPlugin,
+  ensureReactiveLetPluginForPaths,
+  isReactiveLetPluginRegistered,
+  resetReactiveLetPluginForTests,
+} from './plugin.ts';
 export { FRAGILE_CJS_PACKAGES, collectFragileImportWarnings } from './fragile-imports.ts';
 export {
   FORBIDDEN_PAGE_GLOBALS,

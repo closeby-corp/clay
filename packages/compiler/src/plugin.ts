@@ -19,6 +19,8 @@ function loaderForPath(path: string): 'ts' | 'tsx' {
  *
  * Important: Bun's runtime `onLoad` must return an object (contents + loader).
  * Returning `undefined` throws `Expected module mock to return an object`.
+ *
+ * Must run **before** target modules are imported.
  */
 export function registerReactiveLetPlugin(
   opts: RegisterReactiveLetPluginOptions = {},
@@ -64,6 +66,14 @@ export function registerReactiveLetPlugin(
         }
 
         const result = transformReactiveLet(text, args.path);
+        if (result.errors && result.errors.length > 0) {
+          for (const e of result.errors) {
+            console.error(`[clay-reactive-let] ${args.path}: ${e}`);
+          }
+          throw new Error(
+            `[clay-reactive-let] ${result.errors[0]} (${args.path})`,
+          );
+        }
         if (!result.transformed) {
           return { contents: text, loader };
         }
@@ -81,6 +91,34 @@ export function registerReactiveLetPlugin(
   });
 
   registered = true;
+}
+
+/** True after a successful `registerReactiveLetPlugin` in this process. */
+export function isReactiveLetPluginRegistered(): boolean {
+  return registered;
+}
+
+/**
+ * Scan file paths; if any need reactive-let, register the Bun plugin.
+ * Call **before** importing those modules (e.g. from `loadPages`).
+ * @returns whether the plugin was (already) registered after this call
+ */
+export async function ensureReactiveLetPluginForPaths(
+  paths: string[],
+): Promise<boolean> {
+  if (registered) return true;
+  for (const path of paths) {
+    try {
+      const text = await Bun.file(path).text();
+      if (mightNeedReactiveLet(text)) {
+        registerReactiveLetPlugin();
+        return true;
+      }
+    } catch {
+      // skip unreadable — import will surface
+    }
+  }
+  return registered;
 }
 
 /** Test helper: clear the once-guard (does not unregister Bun plugins). */

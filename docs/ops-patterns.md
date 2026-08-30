@@ -156,6 +156,33 @@ ui.auto(() => {
 
 For **`ui.dataTable`**, pass `showFilterChips: true` to surface active search + column filters as removable chips in the table chrome (`views` remain the saved-view tabs API).
 
+## Infinite scroll / load-more
+
+**Blessed pattern for overflow feeds** (master–detail panels): `ui.viewportEnter` with `root: 'nearest-scroll'`. Remount the sentinel while a page is in flight if you need to re-arm after `once: true`:
+
+```ts
+ui.auto(() => {
+  if (live.loadingMore) {
+    ui.label('Loading…').classes('text-xs text-muted-foreground p-2');
+    return;
+  }
+  if (!live.hasMore) return;
+  ui.viewportEnter(
+    {
+      once: true,
+      root: 'nearest-scroll',
+      rootMargin: '120px',
+      onEnter: () => void loadNextPage(),
+    },
+    () => {
+      ui.label(' ').classes('h-1');
+    },
+  );
+});
+```
+
+Alternative when you already wrap the list in **`ui.scrollArea`**: use `onNearEnd` on the scroll area (scroll-root is built-in). Prefer one pattern per surface — `viewportEnter` + `nearest-scroll` does **not** require `scrollArea`.
+
 ## Logs / traces — sensitive bodies
 
 Structured logs often contain API keys or partner tokens. Scrubbing is the **app’s** job; Clay can still reduce shoulder-surfing:

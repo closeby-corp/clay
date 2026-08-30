@@ -440,6 +440,34 @@ ui.page('/', () => {
     expect(out.code).not.toContain('ui.state({ detail: false }).detail');
   });
 
+  test('hard-fails when shadowing initializer reads the lifted name', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let detail = null as { id: string } | null;
+  const detail = rows.find((r) => r.id === detail?.id);
+  ui.label(String(detail));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(false);
+    expect(out.errors?.some((e) => e.includes("initializer reads 'detail'"))).toBe(true);
+  });
+
+  test('hard-fails on const detail = detail', () => {
+    const src = `// @clay-reactive
+import { ui } from '@close-by/clay';
+ui.page('/', () => {
+  let detail = 1;
+  const detail = detail;
+  ui.label(String(detail));
+});
+`;
+    const out = transformReactiveLet(src, 'page.ts');
+    expect(out.transformed).toBe(false);
+    expect(out.errors?.length).toBeGreaterThan(0);
+  });
+
   test('lifts simple object / array destructuring', () => {
     const obj = `// @clay-reactive
 import { ui } from '@close-by/clay';
@@ -661,7 +689,7 @@ ui.page('/', () => {
     expect(out.code).not.toMatch(/ui\.auto\(\(\) => \{\s*renderFeed\(\);/);
   });
 
-  test('skips duplicate let names across blocks', () => {
+  test('duplicate let names across blocks: lift outer, rename inner shadow', () => {
     const src = `// @clay-reactive
 import { ui } from '@close-by/clay';
 ui.page('/', () => {
@@ -673,7 +701,13 @@ ui.page('/', () => {
 });
 `;
     const out = transformReactiveLet(src, 'page.ts');
-    expect(out.transformed).toBe(false);
+    expect(out.transformed).toBe(true);
+    expect(out.lets).toEqual(['count']);
+    expect(out.code).toContain('ui.state({ count: 0 })');
+    expect(out.code).toMatch(/__clay_local_count_/);
+    expect(out.warnings.some((w) => w.includes('shadows lifted state') && w.includes('renamed'))).toBe(
+      true,
+    );
   });
 
   test('injects state import when ui is not imported', () => {

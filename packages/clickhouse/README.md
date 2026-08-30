@@ -22,4 +22,4 @@ const rows = await ch.db('analytics').query('SELECT 1 AS n');
 
 Full API: [docs/clickhouse.md](../../docs/clickhouse.md) in the Clay repo.
 
-**Note:** Prefer running Clay with the reactive-let Bun loader **off** (the CLI default) when depending on `@clickhouse/client`, so CJS named-export interop stays reliable.
+**Note:** Prefer running Clay with the reactive-let Bun loader **off** (`--no-reactive-let`, or avoid `// @clay-reactive` / `"use reactive"` on ClickHouse pages) when depending on `@clickhouse/client`, so CJS named-export interop stays reliable. Auto-register only kicks in when pages opt into the pragma.

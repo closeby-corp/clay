@@ -15,10 +15,11 @@ Dogfood: `/examples/ops-console` — master–detail ops console exercising batc
 ### P0 — Safe defaults / correctness
 
 - [x] **Reactive-let truly opt-in** (prerequisite for the north-star below)
-  - [x] CLI: default `--no-reactive-let` (or flip so `--reactive-let` enables the Bun loader)
+  - [x] CLI: default auto-register when pages use `// @clay-reactive` / `"use reactive"`; `--reactive-let` / `--no-reactive-let` to force
   - [x] Compiler: stop auto-qualifying every `ui.page` / `page` callback — only `// @clay-reactive` and `"use reactive";`
   - [x] Docs (`reactive-let.md`, getting-started): match reality; document blank-mount + CJS/`@clickhouse/client` failure modes
   - [x] Optional: runtime/dev warning when transform rewrites files that import known-fragile packages
+  - [x] Library `loadPages` auto-registers (same as CLI); hard error on self-shadowing footguns; CLI merges `configureRun` Tailwind so `appendCss` is kept; `viewportEnter.root: 'nearest-scroll'` for overflow panels
 - [x] **Browser API boundary**
   - [x] Docs page: never use `window` / `navigator` / `location` in page code; use Clay helpers
   - [x] Document `ui.clipboard` as the copy path (and discourage `navigator.clipboard`)

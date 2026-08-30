@@ -116,7 +116,7 @@ Resolve docs programmatically: `resolveClayDocsDir()` from `@close-by/clay/docs-
 
 ## Optional compile-time reactive `let`
 
-Opt-in via `// @clay-reactive` + `clay app.ts --reactive-let`. Prefer explicit `ui.state` + `ui.auto` for production/async-heavy apps.
+Auto-registers when pages use `// @clay-reactive` / `"use reactive"` (`clay` / `loadPages` default). Prefer explicit `ui.state` + `ui.auto` for production/async-heavy apps; force with `--reactive-let` if needed.
 
 ## Package map (monorepo)
 

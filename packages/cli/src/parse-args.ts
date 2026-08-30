@@ -5,8 +5,13 @@ export type CliArgs = {
   app: boolean;
   open: boolean;
   reload: boolean;
-  /** Register Bun loader for compile-time reactive `let` (default false — opt in with --reactive-let). */
-  reactiveLet: boolean;
+  /**
+   * Reactive-let Bun loader:
+   * - `'auto'` (default) — register when entry pages contain `// @clay-reactive` / `"use reactive"`
+   * - `true` — always register
+   * - `false` — never register (`--no-reactive-let`)
+   */
+  reactiveLet: boolean | 'auto';
   /**
    * Auto-build + inject Tailwind for the entry (default true).
    * Scans the entry directory (or the file’s folder) for className strings.
@@ -31,12 +36,16 @@ Options:
                      prints ↻ on each reload and re-imports pages with a cache bust
   --tailwind         Auto-build Tailwind from the entry (default)
   --no-tailwind      Disable auto Tailwind injection
-  --reactive-let     Enable compile-time reactive let Bun loader (off by default)
-  --no-reactive-let  Disable reactive-let (default; explicit no-op)
+  --reactive-let     Always enable compile-time reactive let Bun loader
+  --no-reactive-let  Disable reactive-let (skip auto-detect of // @clay-reactive)
   -h, --help         Show help
 
+By default Clay auto-registers the reactive-let loader when any loaded page
+has // @clay-reactive or "use reactive". Use --no-reactive-let to opt out.
+
 Directory entries may include optional _run.ts exporting configureRun(base)
-to merge into ui.run (skipped by loadPages).
+to merge into ui.run (skipped by loadPages). Tailwind options from configureRun
+(appendCss, content, …) are preserved when the CLI adds content/watch.
 
 Tailwind: by default Clay scans your entry for className / .classes(...) and
 injects generated utilities (no app Tailwind config required). Use --no-tailwind
@@ -53,7 +62,7 @@ export function parseArgs(argv: string[]): CliArgs {
     app: false,
     open: true,
     reload: false,
-    reactiveLet: false,
+    reactiveLet: 'auto',
     tailwind: true,
     help: false,
   };

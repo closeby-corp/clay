@@ -9,7 +9,7 @@ describe('parseArgs', () => {
       app: false,
       open: true,
       reload: false,
-      reactiveLet: false,
+      reactiveLet: 'auto',
       tailwind: true,
     });
   });
@@ -24,7 +24,7 @@ describe('parseArgs', () => {
       app: true,
       open: false,
       reload: true,
-      reactiveLet: false,
+      reactiveLet: 'auto',
       tailwind: true,
       help: false,
     });

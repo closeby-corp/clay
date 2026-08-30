@@ -2556,6 +2556,7 @@ function BoundViewportEnter({
   const canEnter = hasEvent(props, 'enter');
   const once = props.once !== false;
   const rootMargin = typeof props.rootMargin === 'string' ? props.rootMargin : '0px';
+  const rootMode = typeof props.root === 'string' ? props.root : 'viewport';
   const thresholdProp = props.threshold;
   const thresholdKey = Array.isArray(thresholdProp)
     ? thresholdProp.join(',')
@@ -2573,6 +2574,8 @@ function BoundViewportEnter({
         ? thresholdProp
         : 0;
 
+    const rootEl = resolveViewportEnterRoot(node, rootMode);
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -2589,17 +2592,53 @@ function BoundViewportEnter({
           }
         }
       },
-      { root: null, rootMargin, threshold },
+      { root: rootEl, rootMargin, threshold },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [id, emit, canEnter, once, rootMargin, thresholdKey, thresholdProp]);
+  }, [id, emit, canEnter, once, rootMargin, rootMode, thresholdKey, thresholdProp]);
 
   return (
     <div ref={ref} className={cn(className)} style={asStyle(style)}>
       {children}
     </div>
   );
+}
+
+function resolveViewportEnterRoot(
+  node: HTMLElement,
+  mode: string,
+): HTMLElement | null {
+  if (!mode || mode === 'viewport') return null;
+  if (mode === 'nearest-scroll') {
+    let cur: HTMLElement | null = node.parentElement;
+    while (cur) {
+      if (cur.getAttribute('data-slot') === 'scroll-area-viewport') return cur;
+      const style = typeof getComputedStyle === 'function' ? getComputedStyle(cur) : null;
+      const overflowY = style?.overflowY ?? '';
+      const overflow = style?.overflow ?? '';
+      if (
+        /(auto|scroll|overlay)/.test(overflowY) ||
+        /(auto|scroll|overlay)/.test(overflow) ||
+        cur.classList.contains('overflow-auto') ||
+        cur.classList.contains('overflow-y-auto') ||
+        cur.classList.contains('overflow-scroll') ||
+        cur.classList.contains('overflow-y-scroll')
+      ) {
+        return cur;
+      }
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+  try {
+    const fromClosest = node.closest(mode);
+    if (fromClosest instanceof HTMLElement) return fromClosest;
+    const q = document.querySelector(mode);
+    return q instanceof HTMLElement ? q : null;
+  } catch {
+    return null;
+  }
 }
 
 function BoundBreadcrumb({

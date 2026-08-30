@@ -33,6 +33,11 @@ export type TransformReactiveLetResult = {
    * without `ui.auto`). Empty when transformed is false.
    */
   warnings: string[];
+  /**
+   * Fatal diagnostics — transform must not emit. Plugin should throw.
+   * Example: `const detail = detail` after `let detail` (silent undefined footgun).
+   */
+  errors?: string[];
 };
 
 const FILE_PRAGMA_RE = /^\s*(?:\/\/\s*@clay-reactive\b|\/\*\s*@clay-reactive\b)/m;
@@ -420,11 +425,22 @@ function expandArrayBinding(
   return out.length > 0 ? { bindings: out, hasRest } : null;
 }
 
-/** True when this statement lifts any of `names` (whole stmt should be stripped). */
-function statementLiftsNames(stmt: ts.Statement, names: Set<string>): boolean {
+/**
+ * True when this statement is the *first* lift of names in `names` (strip it).
+ * A later re-declaration of the same name is shadowing — leave it for rename / hard-fail.
+ */
+function statementLiftsNames(
+  stmt: ts.Statement,
+  names: Set<string>,
+  alreadyStripped: Set<string>,
+): boolean {
   const lifted = collectLiftableBindings(stmt);
   if (!lifted || lifted.hasRest) return false;
-  return lifted.bindings.some((b) => names.has(b.name));
+  const liftable = lifted.bindings.filter((b) => names.has(b.name));
+  if (liftable.length === 0) return false;
+  if (liftable.some((b) => alreadyStripped.has(b.name))) return false;
+  for (const b of liftable) alreadyStripped.add(b.name);
+  return true;
 }
 
 /** After lifting named bindings, keep `...rest` as a local const destructuring. */
@@ -492,9 +508,10 @@ function processLiftedVariableStmt(
   context: ts.TransformationContext,
   stmt: ts.Statement,
   names: Set<string>,
+  alreadyStripped: Set<string>,
   rewriteStatement: (stmt: ts.Statement) => ts.Statement,
 ): ts.Statement | 'skip' {
-  if (statementLiftsNames(stmt, names)) return 'skip';
+  if (statementLiftsNames(stmt, names, alreadyStripped)) return 'skip';
   const restRewritten = ts.isVariableStatement(stmt)
     ? rewriteRestDestructuringStmt(context, stmt, names)
     : null;
@@ -505,7 +522,8 @@ function processLiftedVariableStmt(
 /**
  * Collect transformable `let` / `const` bindings anywhere in a function block
  * (including nested blocks), but not inside nested functions. Duplicate names
- * abort collection.
+ * are skipped (left as locals for rename / self-shadow hard-fail) rather than
+ * aborting the whole site.
  */
 function collectLetsInFunctionBody(
   body: ts.Block,
@@ -518,8 +536,9 @@ function collectLetsInFunctionBody(
   const considerStmt = (stmt: ts.Statement, loopId?: number): boolean => {
     const lifted = collectLiftableBindings(stmt);
     if (!lifted) return true;
-    for (const b of lifted.bindings) {
-      if (names.has(b.name)) return false;
+    if (lifted.bindings.some((b) => names.has(b.name))) {
+      // Re-declaration of an already-lifted name — keep as local shadow.
+      return true;
     }
     for (const b of lifted.bindings) {
       names.add(b.name);
@@ -676,6 +695,7 @@ function stripLetsAndDirective(
   names: Set<string>,
 ): ts.Statement[] {
   const { factory } = context;
+  const alreadyStripped = new Set<string>();
 
   const filterStatements = (statements: readonly ts.Statement[], stripDirective: boolean): ts.Statement[] => {
     const out: ts.Statement[] = [];
@@ -685,7 +705,13 @@ function stripLetsAndDirective(
     }
     for (let i = start; i < statements.length; i++) {
       const stmt = statements[i]!;
-      const processed = processLiftedVariableStmt(context, stmt, names, rewriteStatement);
+      const processed = processLiftedVariableStmt(
+        context,
+        stmt,
+        names,
+        alreadyStripped,
+        rewriteStatement,
+      );
       if (processed !== 'skip') out.push(processed);
     }
     return out;
@@ -707,6 +733,7 @@ function stripLetsAndDirective(
           context,
           stmt.thenStatement,
           names,
+          alreadyStripped,
           rewriteStatement,
         );
         thenStmt = processed === 'skip' ? factory.createBlock([], true) : processed;
@@ -720,6 +747,7 @@ function stripLetsAndDirective(
             context,
             elseStmt,
             names,
+            alreadyStripped,
             rewriteStatement,
           );
           elseStmt = processed === 'skip' ? factory.createBlock([], true) : processed;
@@ -752,7 +780,13 @@ function stripLetsAndDirective(
     if (ts.isSwitchStatement(stmt)) {
       const clauses = stmt.caseBlock.clauses.map((clause) => {
         const stmts = clause.statements.flatMap((s) => {
-          const processed = processLiftedVariableStmt(context, s, names, rewriteStatement);
+          const processed = processLiftedVariableStmt(
+            context,
+            s,
+            names,
+            alreadyStripped,
+            rewriteStatement,
+          );
           return processed === 'skip' ? [] : [processed];
         });
         if (ts.isCaseClause(clause)) {
@@ -917,15 +951,9 @@ function renameBindingInVariableStmt(
 
 function isShadowingDecl(stmt: ts.Statement, liftedNames: Set<string>): string | null {
   if (!ts.isVariableStatement(stmt)) return null;
-  const lifted = collectLiftableBindings(stmt);
-  if (
-    lifted &&
-    !lifted.hasRest &&
-    lifted.bindings.length > 0 &&
-    lifted.bindings.every((b) => liftedNames.has(b.name))
-  ) {
-    return null;
-  }
+  // After stripLets, the first lift of each name is gone. Any remaining binding
+  // that reuses a lifted name is a local shadow (including liftable-looking
+  // `const detail = detail`).
   for (const name of namesFromBindingStmt(stmt)) {
     if (liftedNames.has(name)) return name;
   }
@@ -2154,6 +2182,66 @@ function collectShadowingWarnings(body: ts.Block, liftedNames: Set<string>): str
   return warnings;
 }
 
+/** True when `expr` value-reads `name` (including inside nested functions). */
+function expressionValueRefsName(expr: ts.Expression, name: string): boolean {
+  let found = false;
+  const walk = (n: ts.Node) => {
+    if (found) return;
+    if (ts.isIdentifier(n) && n.text === name) {
+      const p = n.parent;
+      if (p && ts.isPropertyAccessExpression(p) && p.name === n) return;
+      if (p && ts.isPropertyAssignment(p) && p.name === n) return;
+      if (p && ts.isBindingElement(p) && p.name === n) return;
+      found = true;
+      return;
+    }
+    ts.forEachChild(n, walk);
+  };
+  walk(expr);
+  return found;
+}
+
+/**
+ * Hard-fail footgun: local shadows lifted state and its initializer reads that name
+ * (`const detail = detail` / `const detail = rows.find(… detail …)`).
+ * Emitting broken or ambiguous JS caused silent `undefined` after fetch in hub dogfood.
+ */
+function collectSelfShadowingErrors(body: ts.Block, liftedNames: Set<string>): string[] {
+  if (liftedNames.size === 0) return [];
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  /** Lifted names whose first declaration (the lift) has already been seen. */
+  const declaredLifted = new Set<string>();
+
+  const walk = (node: ts.Node) => {
+    if (isFunctionLike(node)) return;
+    if (ts.isVariableStatement(node)) {
+      for (const decl of node.declarationList.declarations) {
+        const names: string[] = [];
+        collectBindingNames(decl.name, names);
+        for (const name of names) {
+          if (!liftedNames.has(name)) continue;
+          if (!declaredLifted.has(name)) {
+            declaredLifted.add(name);
+            continue;
+          }
+          if (seen.has(name)) continue;
+          if (decl.initializer && expressionValueRefsName(decl.initializer, name)) {
+            seen.add(name);
+            errors.push(
+              `reactive-let: local '${name}' shadows lifted state and its initializer reads '${name}' — rename the local (refusing to emit; this caused silent undefined in dogfood)`,
+            );
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, walk);
+  };
+
+  for (const stmt of body.statements) walk(stmt);
+  return errors;
+}
+
 function namesFromBindingStmt(stmt: ts.VariableStatement): string[] {
   const out: string[] = [];
   for (const decl of stmt.declarationList.declarations) {
@@ -2441,7 +2529,7 @@ export function transformReactiveLet(
 
   const sites = findSites(sourceFile, filePragma);
   if (sites.length === 0) {
-    return { code: source, transformed: false, lets: [], warnings: [] };
+    return { code: source, transformed: false, lets: [], warnings: [], errors: [] };
   }
 
   const useUi = preferUi && fileHasUiImport(sourceFile);
@@ -2449,6 +2537,7 @@ export function transformReactiveLet(
   const renameShadowedLocals = options.renameShadowedLocals !== false;
   const allLets: string[] = [];
   const warnings: string[] = [];
+  const errors: string[] = [];
   const buildersBySite = new Map<ts.Node, Set<string>>();
   let counter = 0;
 
@@ -2458,6 +2547,7 @@ export function transformReactiveLet(
     const allNames = new Set(site.lets.map((l) => l.name));
     const builders = collectStateReadingBuilders(body, allNames);
     buildersBySite.set(site.fn, builders);
+    errors.push(...collectSelfShadowingErrors(body, allNames));
     if (!renameShadowedLocals) {
       warnings.push(...collectShadowingWarnings(body, allNames));
     }
@@ -2465,6 +2555,10 @@ export function transformReactiveLet(
       warnings.push(...collectAutoRegionWarnings(body, builders));
       warnings.push(...collectWidgetBuilderCallWarnings(body, builders));
     }
+  }
+
+  if (errors.length > 0) {
+    return { code: source, transformed: false, lets: [], warnings, errors };
   }
 
   const transformer: ts.TransformerFactory<ts.SourceFile> = (context) => {
@@ -2502,7 +2596,9 @@ export function transformReactiveLet(
           const lifted = collectLiftableBindings(stmt);
           if (!lifted) continue;
           for (const b of lifted.bindings) {
-            if (fnNames.has(b.name)) initByName.set(b.name, b.initializer);
+            if (fnNames.has(b.name) && !initByName.has(b.name)) {
+            initByName.set(b.name, b.initializer);
+          }
           }
         }
       };
@@ -2650,7 +2746,7 @@ export function transformReactiveLet(
     }
   }
 
-  return { code, transformed: true, lets: allLets, warnings: [...warnings, ...collectFragileImportWarnings(sourceFile)] };
+  return { code, transformed: true, lets: allLets, warnings: [...warnings, ...collectFragileImportWarnings(sourceFile)], errors: [] };
 }
 
 /** True if the source looks like it might need a reactive-let pass (cheap prefilter). */

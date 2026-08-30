@@ -7,6 +7,10 @@ import {
   type PageFn,
 } from '@close-by/clay-core';
 import { warnClayPageIssues } from '@close-by/clay-compiler';
+import {
+  ensureReactiveLetPluginForPaths,
+  registerReactiveLetPlugin,
+} from '@close-by/clay-compiler/plugin';
 import type { AppNavItem } from '@close-by/clay-components';
 
 /**
@@ -109,11 +113,26 @@ function shouldSkipPageFile(relativePath: string): boolean {
  * Clears prior registrations first, then fresh-imports each module (cache-busted)
  * so `--reload` picks up edits. Each module should call `ui.page` once; optional
  * `pageMeta` is attached to the new path.
+ *
+ * When `reactiveLet` is `'auto'` (default), scans pages for `// @clay-reactive` /
+ * `"use reactive"` and registers the Bun plugin **before** imports so library
+ * boot does not need a manual `registerReactiveLetPlugin()` call.
  */
-export async function loadPages(dir: string | URL): Promise<string[]> {
+export async function loadPages(
+  dir: string | URL,
+  opts?: { reactiveLet?: boolean | 'auto' },
+): Promise<string[]> {
   const absDir = typeof dir === 'string' ? dir : fileURLToPath(dir);
   const glob = new Bun.Glob('**/*.{ts,tsx}');
   const files = [...glob.scanSync({ cwd: absDir })].filter((f) => !shouldSkipPageFile(f)).sort();
+  const fullPaths = files.map((relative) => join(absDir, relative));
+
+  const reactiveMode = opts?.reactiveLet ?? 'auto';
+  if (reactiveMode === true) {
+    registerReactiveLetPlugin();
+  } else if (reactiveMode === 'auto') {
+    await ensureReactiveLetPluginForPaths(fullPaths);
+  }
 
   clearPages();
   clearPageMeta();

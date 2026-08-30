@@ -3,7 +3,7 @@ import { join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { clearPages, getRegisteredPaths, setPageWrapper } from '@close-by/clay-core';
 import { ui, resetRunState, wasRunCalled } from '@close-by/clay';
-import { applyDirRunConfig } from './main.ts';
+import { applyDirRunConfig, mergeCliTailwind } from './main.ts';
 
 const fixtures = join(fileURLToPath(new URL('.', import.meta.url)), '../fixtures');
 const pagesFixture = join(fixtures, 'pages');
@@ -68,5 +68,32 @@ describe('clay CLI entry shapes', () => {
     const base = { port: 3000, title: 'X' };
     const merged = await applyDirRunConfig(pagesFixture, base);
     expect(merged).toEqual(base);
+  });
+
+  test('mergeCliTailwind keeps configureRun appendCss', () => {
+    const merged = mergeCliTailwind(
+      {
+        port: 3000,
+        tailwind: { appendCss: '/* theme */', content: ['./custom'] },
+      },
+      { contentRoot: '/pages', watch: true, enabled: true },
+    );
+    expect(merged.tailwind).toEqual({
+      appendCss: '/* theme */',
+      content: ['./custom'],
+      watch: true,
+    });
+  });
+
+  test('mergeCliTailwind fills content when configureRun omitted it', () => {
+    const merged = mergeCliTailwind(
+      { port: 3000, tailwind: { appendCss: 'x' } },
+      { contentRoot: '/pages', watch: false, enabled: true },
+    );
+    expect(merged.tailwind).toMatchObject({
+      appendCss: 'x',
+      content: ['/pages'],
+      watch: false,
+    });
   });
 });

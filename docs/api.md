@@ -1682,17 +1682,18 @@ ui.scrollArea(
 
 #### `ui.viewportEnter(fn, props?)` / `ui.viewportEnter(props, fn)`
 
-IntersectionObserver wrapper. Fires `onEnter` when the element intersects the viewport — default **once**.
+IntersectionObserver wrapper. Fires `onEnter` when the element intersects the scroll root — default **once**, root = browser viewport.
 
 ```typescript
 ui.viewportEnter(
   {
     once: true,
+    root: 'nearest-scroll', // overflow panel / scroll-area, not only the window
     rootMargin: '80px',
-    onEnter: () => void loadSection(),
+    onEnter: () => void loadMore(),
   },
   () => {
-    ui.label('Lazy block');
+    ui.label('Load more…');
   },
 );
 ```
@@ -1702,8 +1703,11 @@ ui.viewportEnter(
 | `className` | `string` | |
 | `onEnter` | `() => void \| Promise<void>` | — client emits `enter` |
 | `once` | `boolean` | `true` |
+| `root` | `'viewport' \| 'nearest-scroll' \| string` | `'viewport'` |
 | `rootMargin` | `string` | `'0px'` |
 | `threshold` | `number \| number[]` | `0` |
+
+`nearest-scroll` walks ancestors for overflow scroll or `[data-slot="scroll-area-viewport"]`. A CSS selector uses `closest` / `querySelector`.
 
 #### `ui.keybind(props)`
 

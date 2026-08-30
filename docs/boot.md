@@ -90,7 +90,11 @@ Legacy `_clay-reload-*.ts` files under `pages/` (pre-0.2.5) should be deleted; m
 
 ## Reactive-let
 
-The CLI leaves the compile-time `let` transform **off** unless you pass `--reactive-let`. Library mode never registers the Bun loader unless you call `registerReactiveLetPlugin()` yourself. Prefer Phase 1 `ui.state` / `ui.auto` for real apps — see [reactive-let](./reactive-let.md).
+The CLI **auto-registers** the compile-time `let` transform when any loaded page contains `// @clay-reactive` or `"use reactive"`. Force on with `--reactive-let`, force off with `--no-reactive-let`.
+
+`ui.loadPages` does the same scan-before-import in library mode (default `reactiveLet: 'auto'`), so apps no longer need a manual `registerReactiveLetPlugin()` before `loadPages`. Prefer Phase 1 `ui.state` / `ui.auto` for dense/async production apps until you are ready for the pragma path — see [reactive-let](./reactive-let.md).
+
+`configureRun` Tailwind options (`appendCss`, custom `content`, …) are **merged** with CLI defaults; the CLI no longer replaces the whole `tailwind` object.
 
 ## Checklist (avoid drift)
 
