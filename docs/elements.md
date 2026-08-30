@@ -34,7 +34,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `inputGroup` | `inputGroup` | Input with prefix/suffix addons |
 | `toggle` | `toggle` | Pressed toolbar toggle |
 | `descriptionList` | `descriptionList` | Key-value detail rows |
-| `staticTable` | `staticTable` | Read-only HTML table |
+| `staticTable` | `staticTable` | Read-only HTML table (`bordered`/`hoverable` default on; `density`, `emptyTitle`, column `mono`) |
 | `aspectRatio` | `aspectRatio` | Fixed-ratio child wrapper |
 | `itemList` | `itemList` | Settings / notification rows |
 | `checkboxGroup` | `checkboxGroup` | Multi-select checkboxes |
@@ -76,6 +76,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `badge` | `badge` | ShadCN `Badge` |
 | `alert` | `alert` | Bordered alert box |
 | `spinner` | `spinner` | Lucide spinner |
+| `spacer` | `spacer` | Fixed gap (`orientation` default `horizontal`; `size` xs–xl) |
 | `skeleton` | `skeleton` | ShadCN `Skeleton` placeholder |
 | `avatar` | `avatar` | ShadCN `Avatar` (+ fallback) |
 | `progress` | `progress` | ShadCN `Progress` (0–100) |

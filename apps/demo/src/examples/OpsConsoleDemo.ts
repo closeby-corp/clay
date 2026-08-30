@@ -430,8 +430,9 @@ ui.page('/examples/ops-console', () => {
                 ui.label('Pipeline').classes('text-sm font-medium');
                 ui.staticTable({
                   striped: true,
+                  density: 'compact',
                   columns: [
-                    { key: 'at', label: 'Time' },
+                    { key: 'at', label: 'Time', mono: true },
                     { key: 'step', label: 'Step' },
                     { key: 'ms', label: 'ms', align: 'right' },
                   ],
@@ -440,6 +441,7 @@ ui.page('/examples/ops-console', () => {
                     step: e.step,
                     ms: e.ms,
                   })),
+                  emptyTitle: 'No events',
                 });
 
                 ui.row({ gap: 2 }, () => {

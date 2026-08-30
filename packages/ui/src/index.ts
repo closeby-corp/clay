@@ -35,6 +35,7 @@ import {
   filterBar as filterBarFactory,
   filterChips as filterChipsFactory,
   pageHeading as pageHeadingFactory,
+  spacer as spacerFactory,
   numberField as numberFieldFactory,
   phoneInput as phoneInputFactory,
   field as fieldFactory,
@@ -164,6 +165,9 @@ import {
   type EmptyProps,
   type EmptyDensity,
   type PageHeadingProps,
+  type SpacerProps,
+  type SpacerSize,
+  type SpacerOrientation,
   type PaginationProps,
   type FilterBarProps,
   type FilterChip,
@@ -188,6 +192,7 @@ import {
   type DescriptionListItem,
   type StaticTableProps,
   type StaticTableColumn,
+  type StaticTableDensity,
   type AspectRatioProps,
   type ItemListProps,
   type ItemListEntry,
@@ -946,6 +951,14 @@ export function empty(props: EmptyProps, footer?: () => void): Element {
 /** Page title + optional description. Prefer over stacked muted labels. */
 export function pageHeading(props: PageHeadingProps, trailing?: () => void): Element {
   return pageHeadingFactory(props, trailing);
+}
+
+/**
+ * Explicit space between siblings. Default orientation is horizontal (width).
+ * Prefer parent `gap` for even stacks; use spacer for uneven breaks.
+ */
+export function spacer(props?: SpacerProps): Element {
+  return spacerFactory(props);
 }
 
 /** Standalone pager. See {@link PaginationProps}. */
@@ -1807,6 +1820,7 @@ export const ui = {
   buttonGroup,
   empty,
   pageHeading,
+  spacer,
   pagination,
   filterBar,
   filterChips,

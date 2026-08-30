@@ -130,6 +130,24 @@ describe('ReUI batch components', () => {
     expect(
       staticTable({ columns: [{ key: 'a', label: 'A' }], rows: [{ a: '1' }] }).type,
     ).toBe('staticTable');
+    const table = staticTable({
+      columns: [{ key: 'a', label: 'A', mono: true }],
+      rows: [],
+      emptyTitle: 'No rows',
+      density: 'compact',
+    });
+    expect(table.props.bordered).toBe(true);
+    expect(table.props.hoverable).toBe(true);
+    expect(table.props.density).toBe('compact');
+    expect(table.props.emptyTitle).toBe('No rows');
+    expect(
+      staticTable({
+        columns: [{ key: 'a', label: 'A' }],
+        rows: [],
+        bordered: false,
+        hoverable: false,
+      }).props.bordered,
+    ).toBe(false);
     const ar = aspectRatio(() => {}, { ratio: 1 });
     expect(ar.type).toBe('aspectRatio');
     expect(itemList({ items: [{ title: 'Hi' }] }).type).toBe('itemList');

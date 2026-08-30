@@ -2,6 +2,18 @@
 
 Clay has two entry styles. Prefer **one production path** (library mode) and treat the CLI as a thin dev wrapper so port, CSS, and `clientDir` do not drift.
 
+### Dev HTML comments
+
+When `dev` is on (default unless `NODE_ENV=production`, or set `ui.run({ dev: true })`), the shell sets `window.__CLAY_DEV__` and the client inserts HTML comments around each wire node:
+
+```html
+<!-- clay:staticTable -->
+…table markup…
+<!-- /clay:staticTable -->
+```
+
+Pass `dev: false` to disable.
+
 ## Recommended production path — library mode
 
 ```typescript

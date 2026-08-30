@@ -72,12 +72,13 @@ ui.page('/examples/reui-batch-7', () => {
 
       ui.separator();
 
-      exampleSection('Static table', 'ui.staticTable — small read-only datasets.');
+      exampleSection('Static table', 'ui.staticTable — small read-only datasets (bordered + hover by default).');
       ui.staticTable({
         caption: 'Recent queries',
         striped: true,
+        density: 'compact',
         columns: [
-          { key: 'query', label: 'Query' },
+          { key: 'query', label: 'Query', mono: true },
           { key: 'ms', label: 'ms', align: 'right' },
           { key: 'rows', label: 'Rows', align: 'right' },
         ],
@@ -86,6 +87,12 @@ ui.page('/examples/reui-batch-7', () => {
           { query: 'SELECT * FROM units WHERE ok = false', ms: 48, rows: 3 },
           { query: 'SHOW TABLES', ms: 4, rows: 18 },
         ],
+      });
+      ui.spacer({ orientation: 'vertical', size: 'sm' });
+      ui.staticTable({
+        columns: [{ key: 'id', label: 'Id' }],
+        rows: [],
+        emptyTitle: 'No queries yet',
       });
 
       ui.separator();

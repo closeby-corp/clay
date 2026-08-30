@@ -107,6 +107,8 @@ describe('ReUI client render smoke', () => {
           id: 'tbl-1',
           type: 'staticTable',
           props: {
+            bordered: true,
+            hoverable: true,
             columns: [
               { key: 'name', label: 'Name' },
               { key: 'ms', label: 'ms', align: 'right' },
@@ -119,6 +121,26 @@ describe('ReUI client render smoke', () => {
     );
     expect(html).toContain('SELECT 1');
     expect(html).toContain('12');
+    expect(html).toContain('rounded-md border');
+  });
+
+  test('staticTable emptyTitle', () => {
+    const html = renderToStaticMarkup(
+      <ElementRenderer
+        emit={emit}
+        node={{
+          id: 'tbl-empty',
+          type: 'staticTable',
+          props: {
+            columns: [{ key: 'a', label: 'A' }],
+            rows: [],
+            emptyTitle: 'Nothing here',
+          },
+          children: [],
+        }}
+      />,
+    );
+    expect(html).toContain('Nothing here');
   });
 
   test('descriptionList renders terms', () => {

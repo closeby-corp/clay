@@ -197,8 +197,9 @@ Prefer semantic props over Tailwind soup:
 | Feed empty muted label | `ui.empty({ title: '…', density: 'inline' })` |
 | `h-[calc(100%-7rem)]!` on resizable | `ui.resizable({ fill: 'parent' \| 'viewport' }, …)` |
 | `className: 'items-end justify-between'` on rows | `ui.row({ align: 'end', justify: 'between' }, …)` |
+| `className: 'mb-2'` between uneven blocks | Parent `column({ gap })`, or `ui.spacer({ orientation: 'vertical', size: 'md' })` |
 
-`className` remains an escape hatch.
+Prefer even stacks via parent `gap`. Use `ui.spacer` for uneven breaks (`orientation` default **`horizontal`**; `vertical` for column stacks). `className` remains an escape hatch.
 
 ## Logs / traces — sensitive bodies
 

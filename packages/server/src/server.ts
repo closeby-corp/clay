@@ -107,6 +107,12 @@ export type ClayServerConfig = {
    * Default `/`.
    */
   sessionExpiredPath?: string;
+  /**
+   * Inject `window.__CLAY_DEV__` so the client can emit HTML comments naming
+   * each wire type (`<!-- clay:label -->`). Default: on when `NODE_ENV` is not
+   * `production`. Pass `false` to disable; `true` to force on in production builds.
+   */
+  dev?: boolean;
 };
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
@@ -129,10 +135,11 @@ function resolveDir(dir: string | undefined, fallback: string): string {
   return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
 }
 
-function spaHtml(title: string, customCssHrefs: string[]): string {
+function spaHtml(title: string, customCssHrefs: string[], dev: boolean): string {
   const customLinks = customCssHrefs
     .map((href) => `  <link rel="stylesheet" href="${href}" />`)
     .join('\n');
+  const devBoot = dev ? `  <script>window.__CLAY_DEV__=true</script>\n` : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -143,7 +150,7 @@ function spaHtml(title: string, customCssHrefs: string[]): string {
 ${customLinks ? `${customLinks}\n` : ''}</head>
 <body class="min-h-screen bg-background text-foreground antialiased">
   <div id="root"></div>
-  <script type="module" src="/assets/index.js"></script>
+${devBoot}  <script type="module" src="/assets/index.js"></script>
 </body>
 </html>`;
 }
@@ -164,6 +171,7 @@ type ResolvedConfig = {
   sessionIdleMs?: number;
   sessionAbsoluteMs?: number;
   sessionExpiredPath: string;
+  dev: boolean;
 };
 
 type WsData = {
@@ -240,6 +248,7 @@ export class ClayServer {
       sessionIdleMs: config.sessionIdleMs,
       sessionAbsoluteMs: config.sessionAbsoluteMs,
       sessionExpiredPath,
+      dev: config.dev ?? process.env.NODE_ENV !== 'production',
     };
 
     if (authSecret) {
@@ -287,7 +296,7 @@ export class ClayServer {
       sessionExpiredPath,
     } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
-    const html = spaHtml(title, customCssHrefs);
+    const html = spaHtml(title, customCssHrefs, this.config.dev);
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
     this.server = Bun.serve({

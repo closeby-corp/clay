@@ -785,6 +785,13 @@ export { kbd, type KbdProps } from './kbd';
 export { pageHeading, type PageHeadingProps } from './page-heading';
 
 export {
+  spacer,
+  type SpacerProps,
+  type SpacerSize,
+  type SpacerOrientation,
+} from './spacer';
+
+export {
   breadcrumb,
   type BreadcrumbItem,
   type BreadcrumbProps,
@@ -1205,6 +1212,7 @@ export {
   staticTable,
   type StaticTableProps,
   type StaticTableColumn,
+  type StaticTableDensity,
 } from './static-table';
 
 export { aspectRatio, type AspectRatioProps } from './aspect-ratio';

@@ -6,6 +6,7 @@ import {
   pageHeading,
   resizable,
   select,
+  spacer,
   spinner,
   row,
   column,
@@ -64,5 +65,20 @@ describe('fewer-classes semantic props', () => {
   test('column minWidthZero', () => {
     const el = column({ minWidthZero: true, gap: 0 }, () => {});
     expect(el.props.minWidthZero).toBe(true);
+  });
+});
+
+describe('spacer', () => {
+  test('defaults to horizontal md', () => {
+    const el = spacer();
+    expect(el.type).toBe('spacer');
+    expect(el.props.orientation).toBe('horizontal');
+    expect(el.props.size).toBe('md');
+  });
+
+  test('vertical size', () => {
+    const el = spacer({ orientation: 'vertical', size: 'lg' });
+    expect(el.props.orientation).toBe('vertical');
+    expect(el.props.size).toBe('lg');
   });
 });

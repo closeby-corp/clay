@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, Fragment, type CSSProperti
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
 import { elementReactKey } from './stickyShell';
+import { withClayDevComments } from './clayDev';
 import { chordList, formatChordDisplay, isEditableTarget, matchesChord } from './keybind';
 import { BoundAreaChart } from './BoundAreaChart';
 import { BoundBarChart } from './BoundBarChart';
@@ -423,6 +424,23 @@ const spinnerSizeClass: Record<string, string> = {
   sm: 'size-4',
   md: 'size-6',
   lg: 'size-8',
+};
+
+/** Spacer length along its axis (`horizontal` → width, `vertical` → height). */
+const spacerSizeHorizontal: Record<string, string> = {
+  xs: 'w-1',
+  sm: 'w-2',
+  md: 'w-3',
+  lg: 'w-4',
+  xl: 'w-6',
+};
+
+const spacerSizeVertical: Record<string, string> = {
+  xs: 'h-1',
+  sm: 'h-2',
+  md: 'h-3',
+  lg: 'h-4',
+  xl: 'h-6',
 };
 
 const resizableFillClass: Record<string, string> = {
@@ -3593,6 +3611,10 @@ function BoundUpload({
 }
 
 export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit }) {
+  return withClayDevComments(node.type, <ElementRendererInner node={node} emit={emit} />);
+}
+
+function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit }) {
   const { id, type, props, children } = node;
   const className = props.className as string | undefined;
   const style = props.style;
@@ -4144,21 +4166,55 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 
     case 'staticTable': {
       const columns =
-        (props.columns as Array<{ key: string; label: string; align?: string; className?: string }>) ??
-        [];
+        (props.columns as Array<{
+          key: string;
+          label: string;
+          align?: string;
+          mono?: boolean;
+          className?: string;
+        }>) ?? [];
       const rows = (props.rows as Array<Record<string, unknown>>) ?? [];
       const striped = !!props.striped;
+      const bordered = props.bordered !== false;
+      const hoverable = props.hoverable !== false;
+      const compact = props.density === 'compact';
+      const emptyTitle =
+        typeof props.emptyTitle === 'string' && props.emptyTitle.length > 0
+          ? props.emptyTitle
+          : null;
+
+      if (rows.length === 0 && emptyTitle) {
+        return (
+          <div
+            className={cn(
+              'text-sm text-muted-foreground',
+              bordered && 'rounded-md border px-3 py-6 text-center',
+              !bordered && 'py-4',
+              className,
+            )}
+            style={asStyle(style)}
+          >
+            {emptyTitle}
+          </div>
+        );
+      }
+
       return (
-        <Table className={className} style={asStyle(style)}>
+        <Table
+          containerClassName={cn(bordered && 'rounded-md border', className)}
+          style={asStyle(style)}
+        >
           {props.caption ? <TableCaption>{String(props.caption)}</TableCaption> : null}
           <TableHeader>
-            <TableRow>
+            <TableRow className={cn(!hoverable && 'hover:bg-transparent')}>
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
                   className={cn(
+                    compact && 'h-8 px-2 text-xs',
                     col.align === 'right' && 'text-right',
                     col.align === 'center' && 'text-center',
+                    col.mono && 'font-mono',
                     col.className,
                   )}
                 >
@@ -4169,13 +4225,21 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           </TableHeader>
           <TableBody>
             {rows.map((row, ri) => (
-              <TableRow key={ri} className={striped && ri % 2 === 1 ? 'bg-muted/30' : undefined}>
+              <TableRow
+                key={ri}
+                className={cn(
+                  !hoverable && 'hover:bg-transparent',
+                  striped && ri % 2 === 1 && 'bg-muted/30',
+                )}
+              >
                 {columns.map((col) => (
                   <TableCell
                     key={col.key}
                     className={cn(
+                      compact && 'py-1 text-xs',
                       col.align === 'right' && 'text-right tabular-nums',
                       col.align === 'center' && 'text-center',
+                      col.mono && 'font-mono text-[11px]',
                       col.className,
                     )}
                   >
@@ -4477,6 +4541,24 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
           style={asStyle(style)}
         />
       );
+
+    case 'spacer': {
+      const orientation = props.orientation === 'vertical' ? 'vertical' : 'horizontal';
+      const sizeKey = String(props.size ?? 'md');
+      return (
+        <div
+          aria-hidden
+          className={cn(
+            'shrink-0',
+            orientation === 'horizontal'
+              ? cn('h-px', spacerSizeHorizontal[sizeKey] ?? 'w-3')
+              : cn('w-px', spacerSizeVertical[sizeKey] ?? 'h-3'),
+            className,
+          )}
+          style={asStyle(style)}
+        />
+      );
+    }
 
     case 'skeleton':
       return <Skeleton className={className} style={asStyle(style)} />;
