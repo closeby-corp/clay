@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "NiceGUI-like ui.* facade for Clay apps",
   "license": "MIT",
   "type": "module",
