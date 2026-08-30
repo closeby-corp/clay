@@ -14,6 +14,8 @@ Wire-first components building on existing ShadCN client primitives.
 
 Demo: `/examples/reui-batch-7` (`ReuiBatch7Demo.ts`).
 
+Dogfood (preferred next step over batch 8): `/examples/ops-console` — filter → feed → detail using these APIs together.
+
 ## Batch 8 (candidates)
 
 - [ ] **`ui.dateTime`** — date + time picker

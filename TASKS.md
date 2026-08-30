@@ -8,6 +8,8 @@ ReUI-style component batches (3–6): see [TASKS-reui-batches.md](./TASKS-reui-b
 
 Batch 7 (inputGroup, toggle, descriptionList, staticTable, aspectRatio, itemList, checkboxGroup): see [TASKS-reui-batch7.md](./TASKS-reui-batch7.md).
 
+Dogfood: `/examples/ops-console` — master–detail ops console exercising batches 1–7 (see [ops-patterns.md](./docs/ops-patterns.md)).
+
 ## Soon — from UQ Hub feedback
 
 ### P0 — Safe defaults / correctness

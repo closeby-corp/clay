@@ -18,6 +18,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | Multi-sort (Shift+click / badges), footer aggregates + a11y hints, column pin, remote filter/sort + pagination; density/zebra, editors (Enter/Esc + focus restore), resize, virtualization (≥40, coexists with reorder via windowed drop targets); facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
 | `/examples/composed` | `ComposedDemo.ts` | ReUI batch 1: `ui.timeline`, `ui.stepper`, `ui.dateRange`, `ui.feedList`/`ui.feedRow`, `ui.sparkline` |
+| `/examples/ops-console` | `OpsConsoleDemo.ts` | Dogfood ops console: `filterBar` → `feedList` → `descriptionList` / `staticTable` (batches 1–7 in one surface) |
 | `/examples/reui-batches` | `ReuiBatchesDemo.ts` | ReUI batches 3–6: `buttonGroup`, `empty`, `pagination`, `filterBar`, form inputs, `navigationMenu`, `notice`, `stat`+sparkline, `eventCalendar`, datatable `showFilterChips` |
 | `/examples/reui-batch-7` | `ReuiBatch7Demo.ts` | ReUI batch 7: `inputGroup`, `toggle`, `descriptionList`, `staticTable`, `aspectRatio`, `itemList`, `checkboxGroup` |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*`, `ui.sparkline`, composed/scatter charts |

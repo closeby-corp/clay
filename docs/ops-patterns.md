@@ -2,6 +2,8 @@
 
 Dense internal tools (live feeds, master–detail, logs/traces) push Clay past card dashboards. Prefer Phase 1 reactivity ([Concepts](./concepts.md#canonical-recipe-state--auto--timer)) and the helpers below.
 
+**Runnable dogfood:** `/examples/ops-console` (`OpsConsoleDemo.ts`) — one Orders-shaped surface using `filterBar`, `inputGroup`, `feedList`/`feedRow`, `descriptionList`, `staticTable`, `pagination`, `empty`, `notice`, and `toggle`. Use that page to find API friction before adding more wire types.
+
 ## Status chips
 
 ```ts
