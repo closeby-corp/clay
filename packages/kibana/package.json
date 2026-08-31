@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-kibana",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"

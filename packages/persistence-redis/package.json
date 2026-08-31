@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-persistence-redis",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "description": "Redis PersistenceAdapter for Clay storage.app / storage.user",
   "license": "MIT",
   "type": "module",

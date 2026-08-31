@@ -1,6 +1,6 @@
 {
   "name": "demo",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "scripts": {
     "dev": "bun run --cwd ../../packages/client build && bun src/main.ts",
     "start": "bun src/main.ts",
