@@ -1,5 +1,5 @@
 import { composedChart, type ComposedChartSeries, type ComposedSeriesType } from '../../composed-chart';
-import type { ChartReferenceArea, ChartReferenceLine } from '../../chart-shared';
+import type { ChartReferenceArea, ChartReferenceLine, LineChartStyleProps } from '../../chart-shared';
 import {
   normalizeSeries,
   type ChartChromeOpts,
@@ -7,11 +7,12 @@ import {
   type SeriesInput,
 } from './shared';
 
-export type ComposedTerminalOpts = ChartChromeOpts & {
-  stacked?: boolean;
-  referenceLine?: ChartReferenceLine;
-  referenceArea?: ChartReferenceArea;
-};
+export type ComposedTerminalOpts = ChartChromeOpts &
+  LineChartStyleProps & {
+    stacked?: boolean;
+    referenceLine?: ChartReferenceLine;
+    referenceArea?: ChartReferenceArea;
+  };
 
 type SeriesWithType = ComposedChartSeries;
 
@@ -75,19 +76,40 @@ export class ComposedBuilder {
     if (this.seriesList.length === 0) {
       throw new Error('chart.composed requires .bars() / .lines() / .areas() before .build()');
     }
+    const {
+      stacked,
+      referenceLine,
+      referenceArea,
+      curve,
+      strokeWidth,
+      dots,
+      strokeDasharray,
+      dashed,
+      variant,
+      showLegend,
+      ...chrome
+    } = opts;
     return composedChart({
       data: this.data,
       xKey: this.xKey,
       series: this.seriesList,
-      stacked: opts.stacked === true,
-      title: opts.title ?? this.chrome.title,
-      description: opts.description ?? this.chrome.description,
-      headline: opts.headline ?? this.chrome.headline,
-      periods: opts.periods ?? this.chrome.periods,
-      loading: opts.loading ?? this.chrome.loading,
-      height: opts.height ?? this.chrome.height,
-      referenceLine: opts.referenceLine,
-      referenceArea: opts.referenceArea,
+      stacked: stacked === true,
+      title: chrome.title ?? this.chrome.title,
+      description: chrome.description ?? this.chrome.description,
+      headline: chrome.headline ?? this.chrome.headline,
+      periods: chrome.periods ?? this.chrome.periods,
+      loading: chrome.loading ?? this.chrome.loading,
+      height: chrome.height ?? this.chrome.height,
+      className: chrome.className ?? this.chrome.className,
+      showLegend,
+      referenceLine,
+      referenceArea,
+      curve,
+      strokeWidth,
+      dots,
+      strokeDasharray,
+      dashed,
+      variant,
     });
   }
 }

@@ -102,9 +102,9 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `upload` | `upload` | File picker / dropzone → `POST /upload` (progress/abort) → WS `upload` / `progress` / `error` / `abort` |
 | `stat` | `stat` | Grid of metric cards (optional per-item `sparkline`) |
 | `sparkline` | `sparkline` | KPI card with inline area/line mini chart (`headline`, `value`/`trend` shorthand) |
-| `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive periods, `headline`, `loading`, `stacked?`) |
-| `barChart` | `barchart` | Recharts bar (`stacked?`, `layout?: 'vertical' \| 'horizontal'`, shared cartesian chrome) |
-| `lineChart` | `linechart` | Recharts line (+ optional interactive periods, headline, loading) |
+| `areaChart` | `areachart` | Recharts stacked area (+ legend, optional interactive periods, `headline`, `loading`, `stacked?`, `showLegend?`) |
+| `barChart` | `barchart` | Recharts bar (`stacked?`, `layout?: 'vertical' \| 'horizontal'`, shared cartesian chrome, `showLegend?`) |
+| `lineChart` | `linechart` | Recharts line (+ interactive periods, headline, loading, `curve`/`strokeWidth`/`dots`/`dashed`/`variant`, `showLegend?`) |
 | `pieChart` | `piechart` | Recharts pie/donut (`nameKey`/`valueKey` or `series`, `innerRadius?`) |
 | `radarChart` | `radarchart` | Recharts radar (`angleKey` + `series`, optional `fillOpacity`) |
 | `radialChart` | `radialchart` | Recharts radial bar (`nameKey`/`valueKey` or stacked `series`, optional center text / angles) |

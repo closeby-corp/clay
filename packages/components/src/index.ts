@@ -632,6 +632,9 @@ export {
   type ChartPeriod,
   type ChartReferenceLine,
   type ChartReferenceArea,
+  type LineCurve,
+  type LineChartVariant,
+  type LineChartStyleProps,
 } from './chart-shared';
 
 export {

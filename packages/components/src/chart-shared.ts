@@ -43,6 +43,34 @@ export type ChartReferenceArea = {
   fillOpacity?: number;
 };
 
+/** Recharts line interpolation modes exposed on `ui.lineChart`. */
+export type LineCurve =
+  | 'monotone'
+  | 'linear'
+  | 'natural'
+  | 'step'
+  | 'stepBefore'
+  | 'stepAfter'
+  | 'basis';
+
+/** Line chart visual preset. `minimal` drops the grid for a cleaner sparkline-like plot. */
+export type LineChartVariant = 'default' | 'minimal';
+
+/** Line geometry and stroke styling (also applies to line series in `ui.composedChart`). */
+export type LineChartStyleProps = {
+  /** Curve interpolation (default `monotone`). */
+  curve?: LineCurve;
+  /** Stroke width in px (default 2). */
+  strokeWidth?: number;
+  /** Show point markers on the line (default false). */
+  dots?: boolean;
+  /** Dashed stroke pattern, e.g. `'4 4'`. Shorthand: `dashed: true` → `'4 4'`. */
+  strokeDasharray?: string;
+  dashed?: boolean | string;
+  /** `minimal` hides the grid; default keeps full cartesian chrome. */
+  variant?: LineChartVariant;
+};
+
 /** Common props for area / bar / line charts. */
 export type CartesianChartProps = {
   data: Record<string, unknown>[];
@@ -61,4 +89,6 @@ export type CartesianChartProps = {
   interactive?: boolean;
   /** Chart height in px. Default 220 (250 when interactive). */
   height?: number;
+  /** Show series legend (default true). Set `false` to hide. */
+  showLegend?: boolean;
 };

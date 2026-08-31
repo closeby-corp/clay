@@ -66,6 +66,63 @@ const DEFAULT_PERIODS: ChartPeriodDef[] = [
   { value: '7d', label: 'Last 7 days', days: 7 },
 ];
 
+export type LineCurve =
+  | 'monotone'
+  | 'linear'
+  | 'natural'
+  | 'step'
+  | 'stepBefore'
+  | 'stepAfter'
+  | 'basis';
+
+const LINE_CURVES = new Set<LineCurve>([
+  'monotone',
+  'linear',
+  'natural',
+  'step',
+  'stepBefore',
+  'stepAfter',
+  'basis',
+]);
+
+export type ParsedLineStyle = {
+  curve: LineCurve;
+  strokeWidth: number;
+  dots: boolean;
+  strokeDasharray?: string;
+  variant: 'default' | 'minimal';
+};
+
+/** Resolve legend visibility; preserves smart defaults when `showLegend` is omitted. */
+export function resolveShowLegend(
+  props: Record<string, unknown>,
+  autoShow = true,
+): boolean {
+  if (props.showLegend === false) return false;
+  if (props.showLegend === true) return true;
+  return autoShow;
+}
+
+export function parseLineStyle(props: Record<string, unknown>): ParsedLineStyle {
+  const curveRaw = props.curve;
+  const curve =
+    typeof curveRaw === 'string' && LINE_CURVES.has(curveRaw as LineCurve)
+      ? (curveRaw as LineCurve)
+      : 'monotone';
+  const strokeWidth = typeof props.strokeWidth === 'number' ? props.strokeWidth : 2;
+  const dots = props.dots === true;
+  const strokeDasharray =
+    props.strokeDasharray != null
+      ? String(props.strokeDasharray)
+      : props.dashed === true
+        ? '4 4'
+        : typeof props.dashed === 'string'
+          ? props.dashed
+          : undefined;
+  const variant = props.variant === 'minimal' ? 'minimal' : 'default';
+  return { curve, strokeWidth, dots, strokeDasharray, variant };
+}
+
 /** CSS custom-property–safe key for ChartStyle `--color-${key}`. */
 export function cssSafeKey(name: string): string {
   const slug = name
@@ -301,6 +358,7 @@ export function parseCartesianProps(props: Record<string, unknown>) {
   const loading = props.loading === true;
   const interactive = props.interactive === true;
   const height = Number(props.height ?? (interactive ? 250 : 220));
+  const showLegend = resolveShowLegend(props);
   return {
     data,
     xKey,
@@ -312,6 +370,7 @@ export function parseCartesianProps(props: Record<string, unknown>) {
     loading,
     interactive,
     height,
+    showLegend,
   };
 }
 

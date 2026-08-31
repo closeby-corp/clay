@@ -37,6 +37,7 @@ export function BoundBarChart({
     loading,
     interactive,
     height,
+    showLegend,
   } = parseCartesianProps(props);
   const stacked = props.stacked === true;
   const layout = props.layout === 'horizontal' ? 'horizontal' : 'vertical';
@@ -87,7 +88,7 @@ export function BoundBarChart({
           cursor={false}
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        {showLegend ? <ChartLegend content={<ChartLegendContent />} /> : null}
         {series.map((s) => {
           const key = cssSafeKey(s.key);
           return (

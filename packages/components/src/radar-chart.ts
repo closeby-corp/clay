@@ -15,6 +15,8 @@ export type RadarChartProps = {
   height?: number;
   /** Fill opacity for radar polygons (0–1). Default 0.6. */
   fillOpacity?: number;
+  /** Show series legend (default true when multiple series). Set `false` to hide. */
+  showLegend?: boolean;
 };
 
 export function radarChart(props: RadarChartProps): Element {
@@ -27,5 +29,6 @@ export function radarChart(props: RadarChartProps): Element {
     description: props.description,
     height: props.height,
     fillOpacity: props.fillOpacity,
+    showLegend: props.showLegend,
   });
 }

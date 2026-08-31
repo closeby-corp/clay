@@ -19,6 +19,8 @@ export type ScatterChartProps = {
   title?: string;
   description?: string;
   height?: number;
+  /** Show series legend (default true when multiple groups). Set `false` to hide. */
+  showLegend?: boolean;
 };
 
 export function scatterChart(props: ScatterChartProps): Element {
@@ -32,5 +34,6 @@ export function scatterChart(props: ScatterChartProps): Element {
     title: props.title,
     description: props.description,
     height: props.height,
+    showLegend: props.showLegend,
   });
 }

@@ -14,6 +14,7 @@ import {
   formatTooltipLabel,
   isIsoDate,
   parseCartesianProps,
+  parseLineStyle,
   useInteractiveChartData,
 } from './chart-shared';
 
@@ -37,7 +38,9 @@ export function BoundLineChart({
     loading,
     interactive,
     height,
+    showLegend,
   } = parseCartesianProps(props);
+  const lineStyle = parseLineStyle(props);
   const { filteredData, period, setPeriod, periods: periodDefs } = useInteractiveChartData(
     data,
     xKey,
@@ -49,7 +52,7 @@ export function BoundLineChart({
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
       <LineChart accessibilityLayer data={filteredData} margin={{ left: 12, right: 12 }}>
-        <CartesianGrid vertical={false} />
+        {lineStyle.variant === 'default' ? <CartesianGrid vertical={false} /> : null}
         <XAxis
           dataKey={xKey}
           tickLine={false}
@@ -63,17 +66,19 @@ export function BoundLineChart({
           cursor={false}
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        {showLegend ? <ChartLegend content={<ChartLegendContent />} /> : null}
         {series.map((s) => {
           const key = cssSafeKey(s.key);
           return (
             <Line
               key={key}
               dataKey={s.key}
-              type="monotone"
+              type={lineStyle.curve}
               stroke={`var(--color-${key})`}
-              strokeWidth={2}
-              dot={false}
+              strokeWidth={lineStyle.strokeWidth}
+              strokeDasharray={lineStyle.strokeDasharray}
+              dot={lineStyle.dots ? { r: 3, strokeWidth: 0 } : false}
+              activeDot={lineStyle.dots ? { r: 4 } : undefined}
             />
           );
         })}

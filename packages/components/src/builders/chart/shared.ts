@@ -1,4 +1,4 @@
-import type { ChartHeadline, ChartPeriod, ChartSeries } from '../../chart-shared';
+import type { ChartHeadline, ChartPeriod, ChartSeries, LineChartStyleProps } from '../../chart-shared';
 
 /** Series keys (shorthand) or full `ChartSeries` descriptors. */
 export type SeriesInput = string[] | ChartSeries[];
@@ -12,6 +12,7 @@ export type ChartChromeOpts = {
   headline?: ChartHeadline;
   periods?: ChartPeriod[];
   loading?: boolean;
+  showLegend?: boolean;
 };
 
 /** Map string keys to `{ key, label }` series, or pass through full descriptors. */
@@ -30,6 +31,7 @@ export type ChromeState = {
   headline?: ChartHeadline;
   periods?: ChartPeriod[];
   loading?: boolean;
+  showLegend?: boolean;
 };
 
 export function applyChrome(state: ChromeState, opts?: ChartChromeOpts): ChromeState {
@@ -42,5 +44,6 @@ export function applyChrome(state: ChromeState, opts?: ChartChromeOpts): ChromeS
     headline: opts.headline ?? state.headline,
     periods: opts.periods ?? state.periods,
     loading: opts.loading ?? state.loading,
+    showLegend: opts.showLegend ?? state.showLegend,
   };
 }

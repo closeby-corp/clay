@@ -1052,7 +1052,7 @@ ui.stat([
 
 #### `ui.areaChart(props)`
 
-Stacked area chart (Recharts). Optional card chrome via `title` / `description`. Set `interactive: true` with ISO date `xKey` values for client-side period tabs (default 7d / 30d / 90d; override with `periods`). Optional `headline: { value, trend?, trendDirection? }` for a KPI row above the chart; `loading: true` shows a skeleton. Legend is always shown. Pass `stacked: false` to overlay series instead of stacking (default `true`).
+Stacked area chart (Recharts). Optional card chrome via `title` / `description`. Set `interactive: true` with ISO date `xKey` values for client-side period tabs (default 7d / 30d / 90d; override with `periods`). Optional `headline: { value, trend?, trendDirection? }` for a KPI row above the chart; `loading: true` shows a skeleton. Legend is shown by default; pass `showLegend: false` to hide. Pass `stacked: false` to overlay series instead of stacking (default `true`).
 
 ```typescript
 ui.areaChart({
@@ -1071,7 +1071,7 @@ ui.areaChart({
 
 #### `ui.barChart(props)`
 
-Bar chart with the same cartesian props as area (`data`, `xKey`, `series`, title/description/height/interactive, `headline`, `periods`, `loading`). Optional `stacked` (default `false`) and `layout: 'vertical' | 'horizontal'` (default `'vertical'` — category on X).
+Bar chart with the same cartesian props as area (`data`, `xKey`, `series`, title/description/height/interactive, `headline`, `periods`, `loading`, `showLegend?`). Optional `stacked` (default `false`) and `layout: 'vertical' | 'horizontal'` (default `'vertical'` — category on X).
 
 ```typescript
 ui.barChart({
@@ -1089,11 +1089,22 @@ ui.barChart({
 
 #### `ui.lineChart(props)`
 
-Line chart with the same cartesian props as area (including interactive date ranges, headline, periods, loading).
+Line chart with the same cartesian props as area (including interactive date ranges, headline, periods, loading, `showLegend?`). Line styling:
+
+| Prop | Default | Description |
+|------|---------|-------------|
+| `curve` | `'monotone'` | Recharts interpolation: `'linear'`, `'natural'`, `'step'`, `'stepBefore'`, `'stepAfter'`, `'basis'` |
+| `strokeWidth` | `2` | Line thickness in px |
+| `dots` | `false` | Show point markers |
+| `strokeDasharray` / `dashed` | — | Dashed stroke; `dashed: true` → `'4 4'` |
+| `variant` | `'default'` | `'minimal'` hides the grid for a cleaner plot |
 
 ```typescript
 ui.lineChart({
   title: 'Traffic trend',
+  showLegend: false,
+  curve: 'step',
+  dots: true,
   data: monthly,
   xKey: 'month',
   series: [

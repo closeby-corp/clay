@@ -21,6 +21,8 @@ export type PieChartProps = {
   height?: number;
   /** Inner radius for donut (e.g. 60). Omit / 0 for a full pie. */
   innerRadius?: number;
+  /** Show slice legend (default true). Set `false` to hide. */
+  showLegend?: boolean;
 };
 
 export function pieChart(props: PieChartProps): Element {
@@ -34,5 +36,6 @@ export function pieChart(props: PieChartProps): Element {
     description: props.description,
     height: props.height,
     innerRadius: props.innerRadius,
+    showLegend: props.showLegend !== false,
   });
 }

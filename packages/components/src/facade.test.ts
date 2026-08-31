@@ -783,6 +783,46 @@ describe('charts', () => {
     const el = lineChart({ data, xKey: 'month', series, interactive: true });
     expect(el.type).toBe('linechart');
     expect(el.props.interactive).toBe(true);
+    expect(el.props.showLegend).toBe(true);
+  });
+
+  test('lineChart wires curve style and hidden legend', () => {
+    const el = lineChart({
+      data,
+      xKey: 'month',
+      series,
+      curve: 'step',
+      strokeWidth: 3,
+      dots: true,
+      dashed: true,
+      variant: 'minimal',
+      showLegend: false,
+    });
+    expect(el.props).toMatchObject({
+      curve: 'step',
+      strokeWidth: 3,
+      dots: true,
+      strokeDasharray: '4 4',
+      variant: 'minimal',
+      showLegend: false,
+    });
+  });
+
+  test('areaChart and barChart wire showLegend', () => {
+    expect(areaChart({ data, xKey: 'month', series, showLegend: false }).props.showLegend).toBe(
+      false,
+    );
+    expect(barChart({ data, xKey: 'month', series }).props.showLegend).toBe(true);
+  });
+
+  test('pieChart wires showLegend', () => {
+    const el = pieChart({
+      data: [{ name: 'A', value: 1 }],
+      nameKey: 'name',
+      valueKey: 'value',
+      showLegend: false,
+    });
+    expect(el.props.showLegend).toBe(false);
   });
 
   test('pieChart wires nameKey/valueKey and series/donut', () => {

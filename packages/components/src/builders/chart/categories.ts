@@ -16,7 +16,7 @@ export type BarTerminalOpts = ChartChromeOpts & {
   stacked?: boolean;
   layout?: 'vertical' | 'horizontal';
 };
-export type LineTerminalOpts = ChartChromeOpts;
+export type LineTerminalOpts = ChartChromeOpts & LineChartStyleProps;
 
 /**
  * Cartesian charts over row data with a category (or date) x-axis.
@@ -91,6 +91,7 @@ export class CategoriesChartBuilder {
       height: chrome.height,
       className: chrome.className,
       interactive: this.interactive,
+      showLegend: chrome.showLegend,
     };
   }
 
@@ -112,7 +113,24 @@ export class CategoriesChartBuilder {
   }
 
   line(opts?: LineTerminalOpts): Element {
-    return lineChart(this.baseProps(opts));
+    const {
+      curve,
+      strokeWidth,
+      dots,
+      strokeDasharray,
+      dashed,
+      variant,
+      ...chromeOpts
+    } = opts ?? {};
+    return lineChart({
+      ...this.baseProps(chromeOpts),
+      curve,
+      strokeWidth,
+      dots,
+      strokeDasharray,
+      dashed,
+      variant,
+    });
   }
 }
 

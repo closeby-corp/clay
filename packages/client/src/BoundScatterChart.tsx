@@ -11,6 +11,7 @@ import {
   buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
+  resolveShowLegend,
   type ChartSeries,
 } from './chart-shared';
 
@@ -58,7 +59,7 @@ export function BoundScatterChart({
     config = { points: { label: 'Points', color: 'var(--chart-1)' } };
   }
 
-  const showLegend = groups.length > 1;
+  const showLegend = resolveShowLegend(props, groups.length > 1);
 
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>

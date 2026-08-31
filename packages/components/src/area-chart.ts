@@ -22,5 +22,6 @@ export function areaChart(props: AreaChartProps): Element {
     interactive: props.interactive === true,
     height: props.height,
     stacked: props.stacked !== false,
+    showLegend: props.showLegend !== false,
   });
 }

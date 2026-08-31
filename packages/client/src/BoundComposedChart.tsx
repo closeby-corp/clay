@@ -24,6 +24,7 @@ import {
   formatTooltipLabel,
   isIsoDate,
   parseCartesianProps,
+  parseLineStyle,
   parseReferenceArea,
   parseReferenceLine,
   useInteractiveChartData,
@@ -52,7 +53,9 @@ export function BoundComposedChart({
     loading,
     interactive,
     height,
+    showLegend,
   } = parseCartesianProps(props);
+  const lineStyle = parseLineStyle(props);
   const series = rawSeries as ComposedSeries[];
   const stacked = props.stacked === true;
   const referenceLine = parseReferenceLine(props.referenceLine);
@@ -103,7 +106,7 @@ export function BoundComposedChart({
           cursor={false}
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        {showLegend ? <ChartLegend content={<ChartLegendContent />} /> : null}
         {referenceArea ? (
           <ReferenceArea
             yAxisId={referenceArea.yAxisId ?? 'left'}
@@ -134,12 +137,14 @@ export function BoundComposedChart({
             return (
               <Line
                 key={key}
-                type="monotone"
+                type={lineStyle.curve}
                 dataKey={s.key}
                 yAxisId={yAxisId}
                 stroke={`var(--color-${key})`}
-                strokeWidth={2}
-                dot={false}
+                strokeWidth={lineStyle.strokeWidth}
+                strokeDasharray={lineStyle.strokeDasharray}
+                dot={lineStyle.dots ? { r: 3, strokeWidth: 0 } : false}
+                activeDot={lineStyle.dots ? { r: 4 } : undefined}
               />
             );
           }

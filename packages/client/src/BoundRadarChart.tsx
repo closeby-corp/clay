@@ -10,6 +10,7 @@ import {
   buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
+  resolveShowLegend,
   type ChartSeries,
 } from './chart-shared';
 
@@ -31,7 +32,7 @@ export function BoundRadarChart({
   const fillOpacity =
     typeof props.fillOpacity === 'number' ? props.fillOpacity : 0.6;
   const config = buildSeriesConfig(series);
-  const showLegend = series.length > 1;
+  const showLegend = resolveShowLegend(props, series.length > 1);
 
   const chart = (
     <ChartContainer

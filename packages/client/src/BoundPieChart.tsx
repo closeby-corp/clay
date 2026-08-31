@@ -11,6 +11,7 @@ import {
   buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
+  resolveShowLegend,
   type ChartSeries,
 } from './chart-shared';
 
@@ -50,6 +51,7 @@ export function BoundPieChart({
   const description = props.description ? String(props.description) : '';
   const height = Number(props.height ?? 250);
   const innerRadius = Number(props.innerRadius ?? 0);
+  const showLegend = resolveShowLegend(props);
 
   let rows: Record<string, unknown>[];
   let nameKey: string;
@@ -101,10 +103,12 @@ export function BoundPieChart({
             return <Cell key={name} fill={String(row.fill ?? `var(--color-${name})`)} />;
           })}
         </Pie>
-        <ChartLegend
-          content={<ChartLegendContent nameKey={nameKey} />}
-          className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"
-        />
+        {showLegend ? (
+          <ChartLegend
+            content={<ChartLegendContent nameKey={nameKey} />}
+            className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"
+          />
+        ) : null}
       </PieChart>
     </ChartContainer>
   );

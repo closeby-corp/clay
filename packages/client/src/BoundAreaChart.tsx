@@ -37,6 +37,7 @@ export function BoundAreaChart({
     loading,
     interactive,
     height,
+    showLegend,
   } = parseCartesianProps(props);
   const stacked = props.stacked !== false;
   const { filteredData, period, setPeriod, periods: periodDefs } = useInteractiveChartData(
@@ -80,7 +81,7 @@ export function BoundAreaChart({
             />
           }
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        {showLegend ? <ChartLegend content={<ChartLegendContent />} /> : null}
         {series.map((s) => {
           const key = cssSafeKey(s.key);
           return (

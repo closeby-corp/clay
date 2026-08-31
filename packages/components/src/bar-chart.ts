@@ -25,5 +25,6 @@ export function barChart(props: BarChartProps): Element {
     height: props.height,
     stacked: props.stacked === true,
     layout: props.layout === 'horizontal' ? 'horizontal' : 'vertical',
+    showLegend: props.showLegend !== false,
   });
 }
