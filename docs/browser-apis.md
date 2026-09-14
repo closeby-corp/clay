@@ -8,6 +8,7 @@ Page builders and event handlers run on the **server** (Bun), not in the browser
 |------|-----|
 | Copy text | `ui.clipboard(text)` |
 | Read / set URL hash | `ui.getUrlHash()` / `ui.setUrlHash(hash)` |
+| Read / set URL search (query) | `ui.urlState(defaults)` (prefer) or `ui.getUrlSearch` / `ui.updateUrlSearch` |
 | Open a URL in a new tab | `ui.openExternal(url)` |
 | In-app route change | `ui.navigate(path)` |
 | Scroll | `ui.scroll.to` / `ui.scroll.intoView` |
@@ -23,10 +24,15 @@ ui.button('Copy id', {
 
 const focus = ui.getUrlHash(); // from last hello / setUrlHash
 ui.setUrlHash(traceId);
+
+const partner = ui.getUrlSearchParams().get('partner');
+ui.updateUrlSearch({ partner: 'UBER', page: null }); // omit empty defaults
 ui.openExternal('https://signoz.example/trace/' + traceId);
 ```
 
 `getUrlHash` returns the hash **without** a leading `#`. It is hydrated from the client on each `hello` (connect, reconnect, SPA navigate) and updated when you call `setUrlHash`.
+
+`getUrlSearch` returns the query string **without** a leading `?` (same hydration / write path). Prefer **`ui.urlState`** for filter objects; use `ui.updateUrlSearch` for one-off merges. See [URL search](./url-search.md).
 
 ## Don’t
 
@@ -34,6 +40,7 @@ ui.openExternal('https://signoz.example/trace/' + traceId);
 // Wrong — server has no clipboard / location
 await navigator.clipboard.writeText(value);
 window.location.hash = traceId;
+window.location.search = '?partner=UBER';
 window.open(url, '_blank');
 ```
 
@@ -61,5 +68,5 @@ With **`clay --reactive-let`**, transformed files that import known-fragile CJS 
 ## Related
 
 - Helpers table: [API — dialogs and feedback](./api.md#dialogs-and-feedback)
-- Protocol: `clipboard`, `setUrlHash`, `openExternal` in [WebSocket protocol](./protocol.md)
+- Protocol: `clipboard`, `setUrlHash`, `setUrlSearch`, `openExternal` in [WebSocket protocol](./protocol.md)
 - Phase 1 reactivity (preferred over DOM hacks): [reactive-let](./reactive-let.md)

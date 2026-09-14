@@ -443,6 +443,10 @@ import {
   runJavaScript as runJavaScriptCore,
   getUrlHash as getUrlHashCore,
   setUrlHash as setUrlHashCore,
+  getUrlSearch as getUrlSearchCore,
+  getUrlSearchParams as getUrlSearchParamsCore,
+  setUrlSearch as setUrlSearchCore,
+  updateUrlSearch as updateUrlSearchCore,
   openExternal as openExternalCore,
   scroll as scrollCore,
   timer as timerCore,
@@ -451,6 +455,7 @@ import {
   reactive as reactiveCore,
   state as stateCore,
   subscribe as subscribeCore,
+  urlState as urlStateCore,
   auto as autoCore,
   draft as draftCore,
   validate as validateCore,
@@ -468,6 +473,8 @@ import {
   type ThemeMode,
   type DraftStorage,
   type DraftOptions,
+  type UrlStateOptions,
+  type UrlStateValue,
 } from '@close-by/clay-core';
 import {
   ClayServer,
@@ -1593,6 +1600,35 @@ export function setUrlHash(hash: string): void {
   setUrlHashCore(hash);
 }
 
+/** URL search without `?` (from hello / last `setUrlSearch`). Prefer over `window.location`. */
+export function getUrlSearch(): string {
+  return getUrlSearchCore();
+}
+
+/** Parse {@link getUrlSearch} as `URLSearchParams` (mutable copy). */
+export function getUrlSearchParams(): URLSearchParams {
+  return getUrlSearchParamsCore();
+}
+
+/** Set the browser query string. Prefer over `window.history` / `location.search`. */
+export function setUrlSearch(
+  search: string,
+  opts?: { mode?: 'replace' | 'push' },
+): void {
+  setUrlSearchCore(search, opts);
+}
+
+/**
+ * Merge keys into the current query string.
+ * `null` / `undefined` / `''` deletes the key.
+ */
+export function updateUrlSearch(
+  patch: Record<string, string | number | boolean | null | undefined>,
+  opts?: { mode?: 'replace' | 'push' },
+): void {
+  updateUrlSearchCore(patch, opts);
+}
+
 /** Open a URL in a new tab. Prefer over `runJavaScript('window.open…')`. */
 export function openExternal(url: string): void {
   openExternalCore(url);
@@ -1629,6 +1665,18 @@ export const reactive = reactiveCore;
 
 /** Alias for `reactive` — NiceGUI-ish mutable page state. Prefer `ui.state`. */
 export const state = stateCore;
+
+/**
+ * Like `ui.state`, but hydrated from the query string and write-through synced
+ * via `ui.updateUrlSearch`. Prefer for shareable filters / tabs.
+ * See {@link UrlStateOptions}.
+ */
+export function urlState<T extends Record<string, UrlStateValue>>(
+  defaults: T,
+  opts?: UrlStateOptions<T>,
+): T {
+  return urlStateCore(defaults, opts);
+}
 
 /** Listen for a reactive property change. Prefer this over importing from `@close-by/clay-core`. */
 export const subscribe = subscribeCore;
@@ -1915,6 +1963,10 @@ export const ui = {
   clipboard,
   getUrlHash,
   setUrlHash,
+  getUrlSearch,
+  getUrlSearchParams,
+  setUrlSearch,
+  updateUrlSearch,
   openExternal,
   runJavaScript,
   scroll,
@@ -1923,6 +1975,7 @@ export const ui = {
   theme,
   reactive,
   state,
+  urlState,
   subscribe,
   draft,
   validate,

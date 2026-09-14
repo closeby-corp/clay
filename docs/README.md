@@ -15,7 +15,8 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | [Tailwind](./tailwind.md) | Zero-config utilities from page modules; optional tokens |
 | [Sample app](./tutorial.md) | Step-by-step tasks list, then two pages + shell |
 | [Concepts](./concepts.md) | Mental model: sessions, elements, patches; **canonical `state`/`auto`/`timer` recipe**; reactive `let` alternative |
-| [Browser APIs](./browser-apis.md) | Prefer `ui.clipboard` / hash / `openExternal` — never `window` in page code |
+| [Browser APIs](./browser-apis.md) | Prefer `ui.clipboard` / hash / search / `openExternal` — never `window` in page code |
+| [URL search](./url-search.md) | `ui.urlState` + query helpers for shareable filters |
 | [Production & security](./production.md) | Auth, server exposure, rate limits, boot parity |
 | [Ops patterns](./ops-patterns.md) | Dense consoles: chips, master–detail, feeds, sensitive logs, auth nav |
 | [API reference](./api.md) | `ui.*`, `Element` methods, `reactive`, helpers |

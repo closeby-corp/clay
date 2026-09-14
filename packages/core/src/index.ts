@@ -27,6 +27,11 @@ export {
 export { reactive, state, subscribe, trackReads, type ReactiveDep } from './reactive';
 export { auto, AutoElement } from './auto';
 export {
+  urlState,
+  type UrlStateValue,
+  type UrlStateOptions,
+} from './url-state';
+export {
   draft,
   type DraftStorage,
   type DraftOptions,
@@ -41,6 +46,10 @@ export {
   clipboard,
   getUrlHash,
   setUrlHash,
+  getUrlSearch,
+  getUrlSearchParams,
+  setUrlSearch,
+  updateUrlSearch,
   openExternal,
   runJavaScript,
   scroll,
@@ -48,6 +57,7 @@ export {
   scrollIntoView,
   type NotifyType,
   type ToastPosition,
+  type SetUrlSearchOptions,
   type ScrollBehavior,
   type ScrollToOptions,
   type ScrollIntoViewOptions,

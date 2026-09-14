@@ -461,6 +461,9 @@ export class ClayServer {
             if (typeof msg.hash === 'string') {
               session.urlHash = msg.hash.startsWith('#') ? msg.hash.slice(1) : msg.hash;
             }
+            if (typeof msg.search === 'string') {
+              session.urlSearch = msg.search.startsWith('?') ? msg.search.slice(1) : msg.search;
+            }
             data.session = session;
             session.mount();
 

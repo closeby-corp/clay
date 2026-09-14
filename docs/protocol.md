@@ -19,7 +19,7 @@ On unexpected socket close, the client reconnects with exponential backoff (500m
 { "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "hash": "optional-hash-without-hash-sign", "browserStorage": {}, "clientStorage": {}, "tabStorage": {} }
 ```
 
-Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `hash` (no leading `#`) hydrates `ui.getUrlHash()`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`.
+Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `hash` (no leading `#`) hydrates `ui.getUrlHash()`. Optional `search` (no leading `?`) hydrates `ui.getUrlSearch()`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`.
 
 Sent on connect and after client-side navigation. The React client keeps matching `app` shell chrome mounted across remounts; only inset content is replaced.
 
@@ -162,6 +162,14 @@ Client writes `content` with `navigator.clipboard.writeText` (shows an error toa
 ```
 
 Client sets `location.hash` via `history.replaceState` (`hash` has no leading `#`; empty string clears). Hydrated the other way on `hello.hash`. Prefer `ui.setUrlHash` / `ui.getUrlHash`.
+
+### `setUrlSearch`
+
+```json
+{ "op": "setUrlSearch", "search": "tab=orders&partner=UBER", "mode": "replace" }
+```
+
+Client sets `location.search` via `history.replaceState` or `pushState` (`mode`, default `replace`). `search` has no leading `?`; empty string clears. Pathname and hash are preserved. Hydrated the other way on `hello.search`. Prefer `ui.setUrlSearch` / `ui.updateUrlSearch` / `ui.getUrlSearch`. See [URL search](./url-search.md).
 
 ### `openExternal`
 

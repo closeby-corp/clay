@@ -239,6 +239,17 @@ export function useClaySession(path: string) {
         if (window.location.hash !== next) {
           window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${next}`);
         }
+      } else if (msg.op === 'setUrlSearch') {
+        const next = msg.search ? `?${msg.search}` : '';
+        const url = `${window.location.pathname}${next}${window.location.hash}`;
+        const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (url !== current) {
+          if (msg.mode === 'push') {
+            window.history.pushState(null, '', url);
+          } else {
+            window.history.replaceState(null, '', url);
+          }
+        }
       } else if (msg.op === 'openExternal') {
         try {
           window.open(msg.url, '_blank', 'noopener,noreferrer');
@@ -270,6 +281,7 @@ export function useClaySession(path: string) {
             path: pathRef.current,
             userId,
             hash: window.location.hash.replace(/^#/, ''),
+            search: window.location.search.replace(/^\?/, ''),
             browserStorage: loadBrowserStorageBag(),
             clientStorage: loadClientStorageBag(),
             tabStorage: loadTabStorageBag(),
@@ -336,6 +348,7 @@ export function useClaySession(path: string) {
           path,
           userId: userIdRef.current,
           hash: window.location.hash.replace(/^#/, ''),
+          search: window.location.search.replace(/^\?/, ''),
           browserStorage: loadBrowserStorageBag(),
           clientStorage: loadClientStorageBag(),
           tabStorage: loadTabStorageBag(),

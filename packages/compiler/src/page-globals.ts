@@ -73,7 +73,7 @@ function clayPageHint(name: string): string {
     case 'window':
     case 'location':
     case 'history':
-      return 'use ui.getUrlHash / ui.setUrlHash / ui.navigate / ui.openExternal';
+      return 'use ui.getUrlHash / ui.setUrlHash / ui.getUrlSearch / ui.setUrlSearch / ui.navigate / ui.openExternal';
     case 'navigator':
       return 'use ui.clipboard';
     case 'document':

@@ -33,6 +33,7 @@ export type ServerMessage =
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
   | { op: 'runJavaScript'; code: string }
   | { op: 'setUrlHash'; hash: string }
+  | { op: 'setUrlSearch'; search: string; mode?: 'replace' | 'push' }
   | { op: 'openExternal'; url: string }
   | {
       op: 'scroll';
@@ -66,6 +67,8 @@ export type ClientMessage =
       path: string;
       userId?: string;
       hash?: string;
+      /** `location.search` without leading `?`. */
+      search?: string;
       browserStorage?: Record<string, unknown>;
       clientStorage?: Record<string, unknown>;
       tabStorage?: Record<string, unknown>;

@@ -11,6 +11,10 @@ import {
   setUrlHash,
   openExternal,
   getUrlHash,
+  getUrlSearch,
+  setUrlSearch,
+  updateUrlSearch,
+  getUrlSearchParams,
   type ServerMessage,
 } from '@close-by/clay-core';
 import {
@@ -435,6 +439,29 @@ describe('download / clipboard / navigate helpers', () => {
       expect.arrayContaining([
         { op: 'setUrlHash', hash: 'trace-abc' },
         { op: 'openExternal', url: 'https://example.com/x' },
+      ]),
+    );
+  });
+
+  test('setUrlSearch / updateUrlSearch / getUrlSearch', () => {
+    const messages: ServerMessage[] = [];
+    const session = new ClientSession('/helpers-test', (m) => messages.push(m));
+    session.urlSearch = 'tab=orders&partner=GLOVO';
+    session.mount();
+
+    runWithSession(session, () => {
+      expect(getUrlSearch()).toBe('tab=orders&partner=GLOVO');
+      expect(getUrlSearchParams().get('partner')).toBe('GLOVO');
+      updateUrlSearch({ partner: 'UBER', page: 2, tab: null });
+      expect(getUrlSearch()).toBe('partner=UBER&page=2');
+      setUrlSearch('?from=2026-01-01', { mode: 'push' });
+      expect(getUrlSearch()).toBe('from=2026-01-01');
+    });
+
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        { op: 'setUrlSearch', search: 'partner=UBER&page=2', mode: 'replace' },
+        { op: 'setUrlSearch', search: 'from=2026-01-01', mode: 'push' },
       ]),
     );
   });

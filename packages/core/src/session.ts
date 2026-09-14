@@ -68,6 +68,11 @@ export class ClientSession {
    * Prefer `getUrlHash` / `setUrlHash` over reading `window` in page code.
    */
   urlHash = '';
+  /**
+   * Last known `location.search` without leading `?` (from hello / `setUrlSearch`).
+   * Prefer `getUrlSearch` / `setUrlSearch` / `updateUrlSearch` over reading `window`.
+   */
+  urlSearch = '';
   root: Element | null = null;
   isMounted = false;
 
@@ -235,6 +240,20 @@ export class ClientSession {
     const normalized = hash.startsWith('#') ? hash.slice(1) : hash;
     this.urlHash = normalized;
     this.send({ op: 'setUrlHash', hash: normalized });
+  }
+
+  /**
+   * Sync client `location.search` (pass without `?`; empty clears).
+   * Preserves pathname + hash. Default history mode is `replace`.
+   */
+  setUrlSearch(search: string, opts?: { mode?: 'replace' | 'push' }): void {
+    const normalized = search.startsWith('?') ? search.slice(1) : search;
+    this.urlSearch = normalized;
+    this.send({
+      op: 'setUrlSearch',
+      search: normalized,
+      mode: opts?.mode ?? 'replace',
+    });
   }
 
   /** Open `url` in a new tab on the client (`noopener`). */

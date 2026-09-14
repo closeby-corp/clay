@@ -45,6 +45,44 @@ export function setUrlHash(hash: string): void {
   getCurrentSession()?.setUrlHash(hash);
 }
 
+export type SetUrlSearchOptions = {
+  /** History write mode. Default `replace` (filter tweaks should not spam Back). */
+  mode?: 'replace' | 'push';
+};
+
+/** Current URL search without `?` (from last hello / `setUrlSearch`). Empty if none. */
+export function getUrlSearch(): string {
+  return getCurrentSession()?.urlSearch ?? '';
+}
+
+/** Parse {@link getUrlSearch} as `URLSearchParams` (mutable copy). */
+export function getUrlSearchParams(): URLSearchParams {
+  return new URLSearchParams(getUrlSearch());
+}
+
+/** Set the browser query string (no leading `?` required; empty clears). */
+export function setUrlSearch(search: string, opts?: SetUrlSearchOptions): void {
+  getCurrentSession()?.setUrlSearch(search, opts);
+}
+
+/**
+ * Merge keys into the current query string.
+ * `null` / `undefined` / `''` deletes the key. Other values are stringified.
+ */
+export function updateUrlSearch(
+  patch: Record<string, string | number | boolean | null | undefined>,
+  opts?: SetUrlSearchOptions,
+): void {
+  const session = getCurrentSession();
+  if (!session) return;
+  const params = new URLSearchParams(session.urlSearch);
+  for (const [key, value] of Object.entries(patch)) {
+    if (value == null || value === '') params.delete(key);
+    else params.set(key, String(value));
+  }
+  session.setUrlSearch(params.toString(), opts);
+}
+
 /** Open `url` in a new browser tab (`noopener,noreferrer`). */
 export function openExternal(url: string): void {
   getCurrentSession()?.openExternal(url);

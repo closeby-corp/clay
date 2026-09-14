@@ -24,6 +24,7 @@ Dogfood: `/examples/ops-console` — master–detail ops console exercising batc
   - [x] Docs page: never use `window` / `navigator` / `location` in page code; use Clay helpers
   - [x] Document `ui.clipboard` as the copy path (and discourage `navigator.clipboard`)
   - [x] Add `ui.setUrlHash` / `ui.getUrlHash` (or session-synced query/hash helpers) — UQ Hub deep-link is a no-op today
+  - [x] Add `ui.getUrlSearch` / `ui.setUrlSearch` / `ui.updateUrlSearch` + `ui.urlState` (query string parity; see [url-search.md](./docs/url-search.md))
   - [x] Add `ui.openExternal(url)` (wraps trusted `window.open` via protocol / `runJavaScript`)
   - [x] Lint/types that mark DOM globals unavailable in Clay page modules (`@close-by/clay/page-tsconfig` + `[clay-page]` load-time warnings)
 

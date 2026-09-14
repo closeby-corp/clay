@@ -62,6 +62,7 @@ ui.label(() => `Count: ${s.count}`);
 | API | Use when |
 |-----|----------|
 | `ui.state(initial)` | Reactive object; writes trigger tracked rebuilds |
+| `ui.urlState(defaults, opts?)` | Like `state`, hydrated from / synced to the query string |
 | `ui.auto(fn)` | Rebuild a UI block when tracked state changes |
 | `ui.label(() => …)` / `bindText` | Patch text only (stable tree) |
 | `bindValue` | Two-way inputs |
@@ -94,7 +95,7 @@ ui.page('/dashboard', () => {
 ## Do not
 
 - Import React, write JSX, or add client components for screens.
-- Use `window`, `document`, `navigator` in page code — use `ui.clipboard`, `ui.setUrlHash`, `ui.openExternal`.
+- Use `window`, `document`, `navigator` in page code — use `ui.clipboard`, `ui.setUrlHash`, `ui.getUrlSearch` / `ui.updateUrlSearch`, `ui.openExternal`.
 - Assume `let` is shared across tabs or users.
 - Use `ui.ai.*` as an LLM runtime — it is visual primitives only.
 

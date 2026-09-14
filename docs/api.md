@@ -1793,6 +1793,11 @@ onClick: async () => {
 | `ui.clipboard(content)` | `void` | Write text to clipboard (prefer over `navigator.clipboard`) |
 | `ui.getUrlHash()` | `string` | Current hash without `#` (from hello / last set) |
 | `ui.setUrlHash(hash)` | `void` | Set `location.hash` on the client |
+| `ui.getUrlSearch()` | `string` | Current search without `?` (from hello / last set) |
+| `ui.getUrlSearchParams()` | `URLSearchParams` | Mutable parse of `getUrlSearch()` |
+| `ui.setUrlSearch(search, opts?)` | `void` | Set `location.search` (`opts.mode`: `replace` \| `push`) |
+| `ui.updateUrlSearch(patch, opts?)` | `void` | Merge query keys; `null`/`''` deletes |
+| `ui.urlState(defaults, opts?)` | reactive object | `ui.state` + hydrate/sync query string (prefer this) |
 | `ui.openExternal(url)` | `void` | `window.open` in a new tab (`noopener`) |
 | `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
 | `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |

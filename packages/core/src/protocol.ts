@@ -34,6 +34,11 @@ export type ServerMessage =
   | { op: 'runJavaScript'; code: string }
   /** Set `location.hash` on the client (no leading `#` in `hash`; empty clears). */
   | { op: 'setUrlHash'; hash: string }
+  /**
+   * Set `location.search` on the client (no leading `?` in `search`; empty clears).
+   * Preserves pathname + hash. Default `mode` is `replace`.
+   */
+  | { op: 'setUrlSearch'; search: string; mode?: 'replace' | 'push' }
   /** `window.open(url, '_blank', 'noopener,noreferrer')` on the client. */
   | { op: 'openExternal'; url: string }
   | {
@@ -75,6 +80,8 @@ export type ClientMessage =
       userId?: string;
       /** Current `location.hash` without leading `#` (empty if none). */
       hash?: string;
+      /** Current `location.search` without leading `?` (empty if none). */
+      search?: string;
       /** localStorage bag mirror for `storage.browser`. */
       browserStorage?: Record<string, unknown>;
       /** sessionStorage bag mirror for `storage.client`. */
