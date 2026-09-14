@@ -68,5 +68,5 @@ With **`clay --reactive-let`**, transformed files that import known-fragile CJS 
 ## Related
 
 - Helpers table: [API — dialogs and feedback](./api.md#dialogs-and-feedback)
-- Protocol: `clipboard`, `setUrlHash`, `setUrlSearch`, `openExternal` in [WebSocket protocol](./protocol.md)
+- Protocol: `clipboard`, `setUrlHash`, `setUrlSearch`, `urlchange`, `openExternal` in [WebSocket protocol](./protocol.md)
 - Phase 1 reactivity (preferred over DOM hacks): [reactive-let](./reactive-let.md)

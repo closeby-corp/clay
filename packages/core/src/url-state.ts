@@ -1,6 +1,6 @@
 import { state, subscribe } from './reactive';
 import { getCurrentSession } from './context';
-import { getUrlSearchParams, updateUrlSearch, type SetUrlSearchOptions } from './helpers';
+import { getUrlSearch, updateUrlSearch, type SetUrlSearchOptions } from './helpers';
 
 /** Values that round-trip cleanly through the query string. */
 export type UrlStateValue = string | number | boolean;
@@ -45,8 +45,9 @@ function coerceFromUrl<V extends UrlStateValue>(raw: string, fallback: V): V {
 function hydrateFromSearch<T extends Record<string, UrlStateValue>>(
   defaults: T,
   opts?: UrlStateOptions<T>,
+  search?: string,
 ): T {
-  const params = getUrlSearchParams();
+  const params = new URLSearchParams(search ?? getUrlSearch());
   const initial = { ...defaults };
   for (const key of Object.keys(defaults) as Array<keyof T & string>) {
     const raw = params.get(urlKeyFor(key, opts));
@@ -79,6 +80,8 @@ function buildPatch<T extends Record<string, UrlStateValue>>(
  * Reactive object like {@link state}, hydrated from `location.search` and
  * write-through synced via {@link updateUrlSearch}.
  *
+ * Re-hydrates in place on browser Back/Forward (`urlchange`) without remounting.
+ *
  * @example
  * ```ts
  * const filters = ui.urlState({
@@ -95,11 +98,13 @@ export function urlState<T extends Record<string, UrlStateValue>>(
 ): T {
   // Capture session now — microtask flushes run outside `runWithSession`.
   const session = getCurrentSession();
-  const s = state(hydrateFromSearch(defaults, opts));
+  const s = state(hydrateFromSearch(defaults, opts, session?.urlSearch));
 
+  let applying = false;
   let queued = false;
   const flush = () => {
     queued = false;
+    if (applying) return;
     const patch = buildPatch(s, defaults, opts);
     const mode = opts?.mode ?? 'replace';
     if (session) {
@@ -114,7 +119,7 @@ export function urlState<T extends Record<string, UrlStateValue>>(
     updateUrlSearch(patch, { mode });
   };
   const schedule = () => {
-    if (queued) return;
+    if (applying || queued) return;
     queued = true;
     queueMicrotask(flush);
   };
@@ -123,6 +128,21 @@ export function urlState<T extends Record<string, UrlStateValue>>(
     subscribe(s, key, schedule);
   }
 
+  if (session) {
+    session.onUrlChange(() => {
+      applying = true;
+      try {
+        const next = hydrateFromSearch(defaults, opts, session.urlSearch);
+        for (const key of Object.keys(defaults) as Array<keyof T & string>) {
+          if (!Object.is(s[key], next[key])) {
+            s[key] = next[key];
+          }
+        }
+      } finally {
+        applying = false;
+      }
+    });
+  }
+
   return s;
 }
-

@@ -73,4 +73,6 @@ export type ClientMessage =
       clientStorage?: Record<string, unknown>;
       tabStorage?: Record<string, unknown>;
     }
-  | { op: 'event'; id: string; type: string; value?: unknown };
+  | { op: 'event'; id: string; type: string; value?: unknown }
+  /** Same-path popstate: search/hash only (no remount). */
+  | { op: 'urlchange'; search?: string; hash?: string };

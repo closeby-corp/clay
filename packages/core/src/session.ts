@@ -81,6 +81,7 @@ export class ClientSession {
   private patches: Patch[] = [];
   private send: SendFn;
   private flushScheduled = false;
+  private urlChangeListeners = new Set<() => void>();
 
   constructor(path: string, send: SendFn) {
     this.id = generateId('session');
@@ -188,6 +189,10 @@ export class ClientSession {
       // remount if path changes
       return;
     }
+    if (msg.op === 'urlchange') {
+      this.applyClientUrl({ search: msg.search, hash: msg.hash });
+      return;
+    }
     if (msg.op === 'event') {
       const el = this.elements.get(msg.id);
       if (!el) return;
@@ -200,6 +205,29 @@ export class ClientSession {
         this.flushPatches();
       }
     }
+  }
+
+  /**
+   * Listen for inbound client URL updates (`urlchange` / Back-Forward).
+   * Used by `urlState` to re-hydrate without remounting.
+   */
+  onUrlChange(listener: () => void): () => void {
+    this.urlChangeListeners.add(listener);
+    return () => this.urlChangeListeners.delete(listener);
+  }
+
+  /**
+   * Apply search/hash from the browser (no outbound `setUrl*` messages).
+   * Notifies {@link onUrlChange} listeners.
+   */
+  applyClientUrl(parts: { search?: string; hash?: string }): void {
+    if (typeof parts.search === 'string') {
+      this.urlSearch = parts.search.startsWith('?') ? parts.search.slice(1) : parts.search;
+    }
+    if (typeof parts.hash === 'string') {
+      this.urlHash = parts.hash.startsWith('#') ? parts.hash.slice(1) : parts.hash;
+    }
+    for (const listener of [...this.urlChangeListeners]) listener();
   }
 
   notify(
@@ -333,6 +361,7 @@ export class ClientSession {
   destroy(): void {
     for (const t of [...this.timers]) t.cancel();
     this.timers.clear();
+    this.urlChangeListeners.clear();
     this.root?.destroy();
     this.elements.clear();
     this.tab.clear();

@@ -89,4 +89,9 @@ export type ClientMessage =
       /** sessionStorage bag mirror for `storage.tab` (survives reconnect / navigate-hello). */
       tabStorage?: Record<string, unknown>;
     }
-  | { op: 'event'; id: string; type: string; value?: unknown };
+  | { op: 'event'; id: string; type: string; value?: unknown }
+  /**
+   * Browser Back/Forward (or other popstate) changed search/hash without a path
+   * change. Server updates session URL fields and notifies `urlState` — no remount.
+   */
+  | { op: 'urlchange'; search?: string; hash?: string };

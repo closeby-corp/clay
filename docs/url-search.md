@@ -61,10 +61,16 @@ tweaks so Back is not flooded.
 
 ## Protocol
 
-**Client → server** (`hello`):
+**Client → server** (`hello` on connect / path change):
 
 ```json
 { "op": "hello", "path": "/lastmile", "hash": "", "search": "tab=orders&partner=UBER" }
+```
+
+**Client → server** (Back/Forward, same path — no remount):
+
+```json
+{ "op": "urlchange", "search": "partner=GLOVO", "hash": "" }
 ```
 
 **Server → client**:
@@ -74,7 +80,8 @@ tweaks so Back is not flooded.
 ```
 
 Client writes `pathname + ?search + hash` via `history.replaceState` / `pushState`.
-Hash is preserved (same as `setUrlHash` preserves search).
+Hash is preserved (same as `setUrlHash` preserves search). Same-path `popstate`
+sends `urlchange` so `ui.urlState` re-hydrates in place.
 
 ## Path vs query
 
@@ -84,14 +91,7 @@ Hash is preserved (same as `setUrlHash` preserves search).
 | Active tab, filters, sort, page | **Query string** (`ui.urlState`) |
 | In-page focus / trace id | Hash (`ui.setUrlHash`) when you already use it |
 
-## Limits / follow-ups
-
-- Hydration runs on each `hello` (connect, reconnect, SPA path change). Pure
-  Back/Forward that only changes the query does **not** remount yet — same
-  limitation as hash today. A future `urlchange` client event (or popstate →
-  hello) would close that gap and re-hydrate `urlState` in place.
-
 ## Related
 
 - [Browser APIs](./browser-apis.md)
-- [WebSocket protocol](./protocol.md) — `hello.search`, `setUrlSearch`
+- [WebSocket protocol](./protocol.md) — `hello.search`, `urlchange`, `setUrlSearch`

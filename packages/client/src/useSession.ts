@@ -92,6 +92,8 @@ export function useClaySession(path: string) {
   /** Skip path-driven hello on the first effect run; `onopen` sends the initial hello. */
   const pathHelloReady = useRef(false);
   const everOpened = useRef(false);
+  const lastSearchRef = useRef(window.location.search.replace(/^\?/, ''));
+  const lastHashRef = useRef(window.location.hash.replace(/^#/, ''));
 
   const send = useCallback((msg: ClientMessage) => {
     const ws = wsRef.current;
@@ -106,6 +108,11 @@ export function useClaySession(path: string) {
     },
     [send],
   );
+
+  const rememberLocation = useCallback(() => {
+    lastSearchRef.current = window.location.search.replace(/^\?/, '');
+    lastHashRef.current = window.location.hash.replace(/^#/, '');
+  }, []);
 
   // Durable socket with auto-reconnect: SPA path changes send `hello` on the same
   // connection so the client can keep `app` chrome mounted (see stickyShell).
@@ -239,6 +246,7 @@ export function useClaySession(path: string) {
         if (window.location.hash !== next) {
           window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${next}`);
         }
+        rememberLocation();
       } else if (msg.op === 'setUrlSearch') {
         const next = msg.search ? `?${msg.search}` : '';
         const url = `${window.location.pathname}${next}${window.location.hash}`;
@@ -250,6 +258,7 @@ export function useClaySession(path: string) {
             window.history.replaceState(null, '', url);
           }
         }
+        rememberLocation();
       } else if (msg.op === 'openExternal') {
         try {
           window.open(msg.url, '_blank', 'noopener,noreferrer');
@@ -260,6 +269,18 @@ export function useClaySession(path: string) {
         showToast(msg.message, { type: 'error' });
       }
     };
+
+    const onPopState = () => {
+      // Path changes remount via hello; only sync search/hash in place.
+      if (window.location.pathname !== pathRef.current) return;
+      const search = window.location.search.replace(/^\?/, '');
+      const hash = window.location.hash.replace(/^#/, '');
+      if (search === lastSearchRef.current && hash === lastHashRef.current) return;
+      lastSearchRef.current = search;
+      lastHashRef.current = hash;
+      send({ op: 'urlchange', search, hash });
+    };
+    window.addEventListener('popstate', onPopState);
 
     const connect = () => {
       if (controller.isDisposed()) return;
@@ -275,13 +296,14 @@ export function useClaySession(path: string) {
         clearOutageToastTimer();
         toast.dismiss(WS_RECONNECT_TOAST_ID);
         setState((s) => ({ ...s, connected: true, error: null }));
+        rememberLocation();
         ws.send(
           JSON.stringify({
             op: 'hello',
             path: pathRef.current,
             userId,
-            hash: window.location.hash.replace(/^#/, ''),
-            search: window.location.search.replace(/^\?/, ''),
+            hash: lastHashRef.current,
+            search: lastSearchRef.current,
             browserStorage: loadBrowserStorageBag(),
             clientStorage: loadClientStorageBag(),
             tabStorage: loadTabStorageBag(),
@@ -319,6 +341,7 @@ export function useClaySession(path: string) {
     connect();
 
     return () => {
+      window.removeEventListener('popstate', onPopState);
       controller.dispose();
       clearOutageToastTimer();
       const ws = wsRef.current;
@@ -332,7 +355,7 @@ export function useClaySession(path: string) {
       }
       toast.dismiss(WS_RECONNECT_TOAST_ID);
     };
-  }, []);
+  }, [send, rememberLocation]);
 
   useEffect(() => {
     pathRef.current = path;
@@ -342,20 +365,21 @@ export function useClaySession(path: string) {
     }
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
+      rememberLocation();
       ws.send(
         JSON.stringify({
           op: 'hello',
           path,
           userId: userIdRef.current,
-          hash: window.location.hash.replace(/^#/, ''),
-          search: window.location.search.replace(/^\?/, ''),
+          hash: lastHashRef.current,
+          search: lastSearchRef.current,
           browserStorage: loadBrowserStorageBag(),
           clientStorage: loadClientStorageBag(),
           tabStorage: loadTabStorageBag(),
         } satisfies ClientMessage),
       );
     }
-  }, [path]);
+  }, [path, rememberLocation]);
 
   return { ...state, emit };
 }

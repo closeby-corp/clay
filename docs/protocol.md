@@ -35,6 +35,14 @@ Sent on connect and after client-side navigation. The React client keeps matchin
 | `type` | `string` | Event name (`click`, `input`, `change`, …) |
 | `value` | `unknown` | Optional payload (string, number, boolean, …) |
 
+### `urlchange`
+
+```json
+{ "op": "urlchange", "search": "tab=orders&partner=UBER", "hash": "" }
+```
+
+Browser Back/Forward (or other `popstate`) changed the query and/or hash **without** a path change. Server updates `session.urlSearch` / `session.urlHash` and notifies `ui.urlState` listeners — **no remount**. Path changes still use `hello`. Prefer this over reading `window` in page code. See [URL search](./url-search.md).
+
 ## Server → client
 
 ### `mount`
@@ -161,7 +169,7 @@ Client writes `content` with `navigator.clipboard.writeText` (shows an error toa
 { "op": "setUrlHash", "hash": "trace-abc" }
 ```
 
-Client sets `location.hash` via `history.replaceState` (`hash` has no leading `#`; empty string clears). Hydrated the other way on `hello.hash`. Prefer `ui.setUrlHash` / `ui.getUrlHash`.
+Client sets `location.hash` via `history.replaceState` (`hash` has no leading `#`; empty string clears). Hydrated the other way on `hello.hash` and re-synced in place on `urlchange`. Prefer `ui.setUrlHash` / `ui.getUrlHash`.
 
 ### `setUrlSearch`
 
@@ -169,7 +177,7 @@ Client sets `location.hash` via `history.replaceState` (`hash` has no leading `#
 { "op": "setUrlSearch", "search": "tab=orders&partner=UBER", "mode": "replace" }
 ```
 
-Client sets `location.search` via `history.replaceState` or `pushState` (`mode`, default `replace`). `search` has no leading `?`; empty string clears. Pathname and hash are preserved. Hydrated the other way on `hello.search`. Prefer `ui.setUrlSearch` / `ui.updateUrlSearch` / `ui.getUrlSearch`. See [URL search](./url-search.md).
+Client sets `location.search` via `history.replaceState` or `pushState` (`mode`, default `replace`). `search` has no leading `?`; empty string clears. Pathname and hash are preserved. Hydrated the other way on `hello.search` and re-synced in place on `urlchange`. Prefer `ui.setUrlSearch` / `ui.updateUrlSearch` / `ui.getUrlSearch`. See [URL search](./url-search.md).
 
 ### `openExternal`
 

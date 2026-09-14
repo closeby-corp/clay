@@ -84,4 +84,35 @@ describe('urlState', () => {
       mode: 'replace',
     });
   });
+
+  test('urlchange re-hydrates in place without setUrlSearch echo', async () => {
+    const messages: ServerMessage[] = [];
+    const session = new ClientSession('/url-state', (m) => messages.push(m));
+    session.urlSearch = 'partner=UBER&page=2';
+    session.mount();
+
+    const filters = runWithSession(session, () =>
+      urlState({
+        tab: 'dashboard',
+        partner: '',
+        page: 1,
+      }),
+    );
+    expect(filters.partner).toBe('UBER');
+    expect(filters.page).toBe(2);
+
+    messages.length = 0;
+    await session.handleMessage({
+      op: 'urlchange',
+      search: 'partner=GLOVO',
+      hash: '',
+    });
+    await Promise.resolve(); // any suppressed microtask would flush here
+
+    expect(session.urlSearch).toBe('partner=GLOVO');
+    expect(filters.partner).toBe('GLOVO');
+    expect(filters.page).toBe(1); // missing → default
+    expect(filters.tab).toBe('dashboard');
+    expect(messages.filter((m) => m.op === 'setUrlSearch')).toHaveLength(0);
+  });
 });

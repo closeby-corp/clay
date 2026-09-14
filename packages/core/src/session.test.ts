@@ -183,3 +183,31 @@ describe('ClientSession hello userId + storage.user', () => {
     });
   });
 });
+
+describe('ClientSession urlchange', () => {
+  test('applyClientUrl updates fields and notifies listeners without remount', async () => {
+    const messages: ServerMessage[] = [];
+    const session = new ClientSession('/url', (m) => messages.push(m));
+    session.urlSearch = 'a=1';
+    session.urlHash = 'old';
+    session.mount();
+    const mountCount = messages.filter((m) => m.op === 'mount').length;
+
+    let notified = 0;
+    session.onUrlChange(() => {
+      notified += 1;
+    });
+
+    await session.handleMessage({
+      op: 'urlchange',
+      search: 'b=2',
+      hash: 'trace',
+    });
+
+    expect(session.urlSearch).toBe('b=2');
+    expect(session.urlHash).toBe('trace');
+    expect(notified).toBe(1);
+    expect(messages.filter((m) => m.op === 'mount')).toHaveLength(mountCount);
+    expect(messages.some((m) => m.op === 'setUrlSearch' || m.op === 'setUrlHash')).toBe(false);
+  });
+});
