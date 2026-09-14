@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-core",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "Core element tree, sessions, and protocol types for Clay",
   "license": "MIT",
   "type": "module",
