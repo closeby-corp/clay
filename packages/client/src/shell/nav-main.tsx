@@ -1,3 +1,4 @@
+import { useEffect, useReducer } from 'react';
 import { ChevronRightIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -11,7 +12,13 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { go, resolveNavIcon, type ShellNavItem, type ShellPrimaryAction } from './types';
+import {
+  go,
+  resolveNavIcon,
+  shouldHandleNavClick,
+  type ShellNavItem,
+  type ShellPrimaryAction,
+} from './types';
 
 function NavLink({
   item,
@@ -25,7 +32,7 @@ function NavLink({
   const Icon = resolveNavIcon(item.icon);
   const content = (
     <>
-      {!sub ? <Icon /> : null}
+      <Icon />
       <span>{item.label}</span>
     </>
   );
@@ -36,6 +43,7 @@ function NavLink({
         <a
           href={item.href}
           onClick={(e) => {
+            if (!shouldHandleNavClick(e)) return;
             e.preventDefault();
             onNavigate(item.href);
           }}
@@ -51,6 +59,7 @@ function NavLink({
       <a
         href={item.href}
         onClick={(e) => {
+          if (!shouldHandleNavClick(e)) return;
           e.preventDefault();
           onNavigate(item.href);
         }}
@@ -61,45 +70,153 @@ function NavLink({
   );
 }
 
+function activeDestination(item: ShellNavItem): string | undefined {
+  const activeChildren = (item.items ?? []).filter((child) => child.active);
+  if (activeChildren.length > 0) {
+    const destinations = activeChildren
+      .map(activeDestination)
+      .filter((href): href is string => href !== undefined);
+    if (destinations.length > 0) {
+      return destinations.reduce((mostSpecific, href) =>
+        href.length > mostSpecific.length ? href : mostSpecific,
+      );
+    }
+  }
+  return item.active ? item.href : undefined;
+}
+
+export type NavGroupState = {
+  open: boolean;
+  destination: string | undefined;
+};
+
+export type NavGroupAction =
+  | { type: 'destinationChanged'; destination: string | undefined }
+  | { type: 'openChanged'; open: boolean };
+
+export function navGroupStateReducer(
+  state: NavGroupState,
+  action: NavGroupAction,
+): NavGroupState {
+  if (action.type === 'destinationChanged') {
+    if (action.destination === state.destination) return state;
+    return {
+      destination: action.destination,
+      open: action.destination === undefined ? state.open : true,
+    };
+  }
+  if (action.open === state.open) return state;
+  return { ...state, open: action.open };
+}
+
 function NavMainItem({
   item,
   onNavigate,
+  sub = false,
 }: {
   item: ShellNavItem;
   onNavigate: (href: string) => void;
+  sub?: boolean;
 }) {
   const subItems = item.items ?? [];
+  const destination = activeDestination(item);
+  const [groupState, dispatch] = useReducer(
+    navGroupStateReducer,
+    destination,
+    (initialDestination): NavGroupState => ({
+      open: initialDestination !== undefined,
+      destination: initialDestination,
+    }),
+  );
+
+  useEffect(() => {
+    dispatch({ type: 'destinationChanged', destination });
+  }, [destination]);
+
   if (subItems.length === 0) {
     return (
-      <SidebarMenuItem>
-        <NavLink item={item} onNavigate={onNavigate} />
-      </SidebarMenuItem>
+      sub ? (
+        <SidebarMenuSubItem>
+          <NavLink item={item} onNavigate={onNavigate} sub />
+        </SidebarMenuSubItem>
+      ) : (
+        <SidebarMenuItem>
+          <NavLink item={item} onNavigate={onNavigate} />
+        </SidebarMenuItem>
+      )
     );
   }
 
   const Icon = resolveNavIcon(item.icon);
+  const chevronClassName = `ml-auto transition-transform duration-200 ${
+    groupState.open ? 'rotate-90' : ''
+  }`;
+  const groupButton = sub ? (
+    <CollapsibleTrigger asChild>
+      <SidebarMenuSubButton asChild isActive={!!item.active}>
+        <button type="button">
+          <Icon />
+          <span>{item.label}</span>
+          <ChevronRightIcon className={chevronClassName} />
+        </button>
+      </SidebarMenuSubButton>
+    </CollapsibleTrigger>
+  ) : (
+    <CollapsibleTrigger asChild>
+      <SidebarMenuButton tooltip={item.label} isActive={!!item.active}>
+        <Icon />
+        <span>{item.label}</span>
+        <ChevronRightIcon className={chevronClassName} />
+      </SidebarMenuButton>
+    </CollapsibleTrigger>
+  );
 
   return (
-    <SidebarMenuItem>
-      <Collapsible defaultOpen={!!item.active} className="group/collapsible w-full">
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={item.label} isActive={!!item.active}>
-            <Icon />
-            <span>{item.label}</span>
-            <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {subItems.map((sub) => (
-              <SidebarMenuSubItem key={sub.href}>
-                <NavLink item={sub} onNavigate={onNavigate} sub />
-              </SidebarMenuSubItem>
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </Collapsible>
-    </SidebarMenuItem>
+    sub ? (
+      <SidebarMenuSubItem>
+        <Collapsible
+          open={groupState.open}
+          onOpenChange={(open) => dispatch({ type: 'openChanged', open })}
+          className="group/collapsible w-full"
+        >
+          {groupButton}
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              {subItems.map((child) => (
+                <NavMainItem
+                  key={child.items?.length ? `${child.label}:${child.href}` : child.href}
+                  item={child}
+                  onNavigate={onNavigate}
+                  sub
+                />
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </Collapsible>
+      </SidebarMenuSubItem>
+    ) : (
+      <SidebarMenuItem>
+        <Collapsible
+          open={groupState.open}
+          onOpenChange={(open) => dispatch({ type: 'openChanged', open })}
+          className="group/collapsible w-full"
+        >
+          {groupButton}
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              {subItems.map((child) => (
+                <NavMainItem
+                  key={child.items?.length ? `${child.label}:${child.href}` : child.href}
+                  item={child}
+                  onNavigate={onNavigate}
+                  sub
+                />
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </Collapsible>
+      </SidebarMenuItem>
+    )
   );
 }
 
@@ -135,6 +252,7 @@ export function NavMain({
                   <a
                     href={primaryAction.href}
                     onClick={(e) => {
+                      if (!shouldHandleNavClick(e)) return;
                       e.preventDefault();
                       onNavigate(primaryAction.href!);
                     }}

@@ -3630,7 +3630,7 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
 
     case 'app': {
       const title = String(props.title ?? '');
-      const headerTitle = String(props.headerTitle ?? '');
+      const headerTitle = props.headerTitle == null ? undefined : String(props.headerTitle);
       const collapsible = (props.collapsible as 'offcanvas' | 'icon' | 'none') ?? 'icon';
       const variant = (props.variant as 'sidebar' | 'inset' | 'floating') ?? 'inset';
       const nav = (Array.isArray(props.nav) ? props.nav : []) as Array<{

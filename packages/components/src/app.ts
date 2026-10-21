@@ -70,19 +70,40 @@ function serializeNav(items: AppNavItem[] | undefined, path: string): Serialized
   });
 }
 
-/** Prefer the deepest active leaf for the site header title. */
-export function findActiveNavLabel(items: SerializedNavItem[]): string | undefined {
-  for (const item of items) {
-    if (item.items?.length) {
-      for (const child of item.items) {
-        if (child.active) return child.label;
+/** Prefer the most specific active destination across all app nav sections. */
+export function findActiveNavLabel(
+  items: SerializedNavItem[],
+  ...additionalSections: SerializedNavItem[][]
+): string | undefined {
+  let best: { label: string; hrefLength: number; depth: number } | undefined;
+
+  const hasActiveDescendant = (item: SerializedNavItem): boolean =>
+    item.items?.some((child) => child.active || hasActiveDescendant(child)) ?? false;
+
+  const visit = (entries: SerializedNavItem[], depth: number) => {
+    for (const item of entries) {
+      if (item.items?.length) visit(item.items, depth + 1);
+      if (
+        !item.active ||
+        hasActiveDescendant(item) ||
+        !item.href ||
+        item.href.startsWith('#')
+      ) {
+        continue;
       }
-      const nested = findActiveNavLabel(item.items);
-      if (nested) return nested;
+
+      if (
+        !best ||
+        item.href.length > best.hrefLength ||
+        (item.href.length === best.hrefLength && depth > best.depth)
+      ) {
+        best = { label: item.label, hrefLength: item.href.length, depth };
+      }
     }
-    if (item.active && item.href !== '#') return item.label;
-  }
-  return undefined;
+  };
+
+  for (const section of [items, ...additionalSections]) visit(section, 0);
+  return best?.label;
 }
 
 /**
@@ -93,17 +114,19 @@ export function findActiveNavLabel(items: SerializedNavItem[]): string | undefin
 export function app(props: AppProps, fn: () => void): Element {
   const path = getCurrentSession()?.path ?? '/';
   const nav = serializeNav(props.nav, path);
-  const activeLabel = findActiveNavLabel(nav);
+  const navSecondary = serializeNav(props.navSecondary, path);
+  const documents = serializeNav(props.documents, path);
+  const activeLabel = findActiveNavLabel(nav, navSecondary, documents);
 
   const el = new Element('app', {
     title: props.title ?? '',
-    headerTitle: props.headerTitle ?? activeLabel ?? props.title ?? '',
+    headerTitle: props.headerTitle ?? activeLabel ?? (props.title || 'Clay'),
     collapsible: props.collapsible ?? 'icon',
     variant: props.variant ?? 'inset',
     user: props.user ?? null,
     nav,
-    navSecondary: serializeNav(props.navSecondary, path),
-    documents: serializeNav(props.documents, path),
+    navSecondary,
+    documents,
     primaryAction: props.primaryAction ?? null,
     className: props.className,
   });

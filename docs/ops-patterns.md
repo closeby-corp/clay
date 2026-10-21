@@ -220,6 +220,28 @@ Still redact before display when possible. Prefer VPN + auth for hubs that surfa
 Nav filtering is UX only — always enforce roles in the page builder.
 
 ```ts
+import { ui } from '@close-by/clay';
+import { getCurrentSession } from '@close-by/clay-core';
+import { resolveUserIdFromAuthCookie } from '@close-by/clay-server';
+import { createAuthGuards } from '@close-by/clay-auth';
+
+type User = { role: 'admin' | 'member' };
+const userById = new Map<string, User>(); // Your app's user store, keyed by user ID.
+const authSecret = process.env.CLAY_AUTH_SECRET!;
+const anonymousUserId = '__clay_anonymous__';
+const resolveSignedUserId = resolveUserIdFromAuthCookie(authSecret);
+
+function getSessionUser(): User | null {
+  const userId = getCurrentSession()?.userId;
+  if (!userId || userId === anonymousUserId) return null;
+  return userById.get(userId) ?? null;
+}
+
+const { requireRole } = createAuthGuards({
+  getUser: getSessionUser,
+  onUnauthenticated: () => ui.navigate('/login'),
+});
+
 // pageMeta
 export const pageMeta = {
   label: 'Admin',
@@ -230,19 +252,25 @@ export const pageMeta = {
 
 // shell
 ui.run({
-  authSecret: process.env.CLAY_AUTH_SECRET!,
+  authSecret,
+  resolveUserId: (context) => resolveSignedUserId(context) ?? anonymousUserId,
   app: {
     title: 'Hub',
-    nav: () => ui.navFromPages({ role: currentUser.role }),
+    get nav() {
+      const user = getSessionUser();
+      return ui.navFromPages(user ? { role: user.role } : {});
+    },
   },
 });
 
 // page
 ui.page('/admin', () => {
-  requireRole('admin'); // @close-by/clay-auth
+  if (!requireRole('admin')) return;
   // …
 });
 ```
+
+`get nav()` is evaluated while each page shell is built, so it filters routes for the current session. Reserve `__clay_anonymous__` outside `userById`: the resolver substitutes it for missing or invalid cookies, and `getSessionUser` treats it as signed out. Replace `userById` with your app's user store.
 
 See `/examples/auth` and [API — auth](./api.md).
 

@@ -14,7 +14,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { go, resolveNavIcon, type ShellNavItem } from './types';
+import {
+  go,
+  resolveNavIcon,
+  shouldHandleNavClick,
+  type ShellNavItem,
+} from './types';
 
 export function NavDocuments({ items }: { items: ShellNavItem[] }) {
   const { isMobile, setOpenMobile } = useSidebar();
@@ -33,6 +38,7 @@ export function NavDocuments({ items }: { items: ShellNavItem[] }) {
                 <a
                   href={item.href}
                   onClick={(e) => {
+                    if (!shouldHandleNavClick(e)) return;
                     e.preventDefault();
                     go(item.href);
                     if (isMobile) setOpenMobile(false);

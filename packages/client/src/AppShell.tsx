@@ -17,19 +17,14 @@ import { NavMain } from './shell/nav-main';
 import { NavSecondary } from './shell/nav-secondary';
 import { NavUser } from './shell/nav-user';
 import { SiteHeader } from './shell/site-header';
-import { go, type ShellNavItem, type ShellPrimaryAction, type ShellUser } from './shell/types';
-
-function findActiveNavItem(items: ShellNavItem[]): ShellNavItem | undefined {
-  for (const item of items) {
-    if (item.items?.length) {
-      for (const child of item.items) {
-        if (child.active) return child;
-      }
-    }
-    if (item.active && item.href !== '#') return item;
-  }
-  return items.find((item) => item.active);
-}
+import { resolveAppShellTitle } from './shell/active-nav';
+import {
+  go,
+  shouldHandleNavClick,
+  type ShellNavItem,
+  type ShellPrimaryAction,
+  type ShellUser,
+} from './shell/types';
 
 export type { ShellNavItem, ShellPrimaryAction, ShellUser };
 
@@ -60,8 +55,13 @@ export function BoundAppShell({
   style?: CSSProperties;
   children: ReactNode;
 }) {
-  const active = findActiveNavItem(nav);
-  const pageTitle = headerTitle || active?.label || title || 'Clay';
+  const pageTitle = resolveAppShellTitle({
+    title,
+    headerTitle,
+    nav,
+    navSecondary,
+    documents,
+  });
 
   return (
     <SidebarProvider
@@ -85,6 +85,7 @@ export function BoundAppShell({
                 <a
                   href="/"
                   onClick={(e) => {
+                    if (!shouldHandleNavClick(e)) return;
                     e.preventDefault();
                     go('/');
                   }}

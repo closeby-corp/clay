@@ -18,21 +18,46 @@ Clay ships hooks for real identity beyond anonymous `userId`:
 
 ```ts
 import { ui } from '@close-by/clay';
-import { requireRole } from '@close-by/clay-auth';
+import { getCurrentSession } from '@close-by/clay-core';
+import { resolveUserIdFromAuthCookie } from '@close-by/clay-server';
+import { createAuthGuards } from '@close-by/clay-auth';
+
+type User = { role: 'admin' | 'member' };
+const userById = new Map<string, User>(); // Your app's user store, keyed by user ID.
+const authSecret = process.env.CLAY_AUTH_SECRET!;
+const anonymousUserId = '__clay_anonymous__';
+const resolveSignedUserId = resolveUserIdFromAuthCookie(authSecret);
+
+function getSessionUser(): User | null {
+  const userId = getCurrentSession()?.userId;
+  if (!userId || userId === anonymousUserId) return null;
+  return userById.get(userId) ?? null;
+}
+
+const { requireRole } = createAuthGuards({
+  getUser: getSessionUser,
+  onUnauthenticated: () => ui.navigate('/login'),
+});
 
 ui.run({
-  authSecret: process.env.CLAY_AUTH_SECRET!,
+  authSecret,
+  resolveUserId: (context) => resolveSignedUserId(context) ?? anonymousUserId,
   app: {
     title: 'Hub',
-    nav: () => ui.navFromPages({ role: currentUser.role }),
+    get nav() {
+      const user = getSessionUser();
+      return ui.navFromPages(user ? { role: user.role } : {});
+    },
   },
 });
 
 ui.page('/admin', () => {
-  requireRole('admin');
+  if (!requireRole('admin')) return;
   // …
 });
 ```
+
+`get nav()` is evaluated while each page shell is built, so it filters routes for the current session. Reserve `__clay_anonymous__` outside `userById`: the resolver substitutes it for missing or invalid cookies, and `getSessionUser` treats it as signed out. Replace `userById` with your app's user store.
 
 - `pageMeta.roles` — hide nav items via `ui.navFromPages({ role })` (UX only)
 - `requireRole` / guards in the page builder — **enforce** access before building sensitive UI

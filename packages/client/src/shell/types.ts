@@ -1,3 +1,4 @@
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { resolveIcon } from '../icons';
 
@@ -26,6 +27,23 @@ export type ShellUser = {
 /** Resolve Lucide kebab-case icon name (full set; see `src/icons.ts`). */
 export function resolveNavIcon(icon?: string): LucideIcon {
   return resolveIcon(icon);
+}
+
+/** Whether a nav anchor click should be handled by the SPA. */
+export function shouldHandleNavClick(
+  event: Pick<
+    ReactMouseEvent<HTMLAnchorElement>,
+    'button' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'defaultPrevented'
+  >,
+): boolean {
+  return (
+    !event.defaultPrevented &&
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey
+  );
 }
 
 export function go(href: string) {
