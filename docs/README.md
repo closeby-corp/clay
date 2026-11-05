@@ -22,6 +22,7 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | [Ops patterns](./ops-patterns.md) | Dense consoles: chips, master–detail, feeds, sensitive logs, auth nav |
 | [API reference](./api.md) | `ui.*`, `Element` methods, `reactive`, helpers |
 | [Elements](./elements.md) | All element types and props |
+| [Maps](./maps.md) | `ui.map`: MapLibre markers, routes, arcs, GeoJSON, clusters; palette theming and in-place updates |
 | [WebSocket protocol](./protocol.md) | Client ↔ server message formats |
 | [Architecture](./architecture.md) | Packages, data flow, and ownership |
 | [Examples](./examples.md) | Demo apps and patterns |

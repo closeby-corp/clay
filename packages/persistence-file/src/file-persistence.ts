@@ -1,5 +1,6 @@
 import type { PersistenceAdapter } from '@close-by/clay-core';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { open, mkdir, readFile, rename, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 export type FilePersistenceOptions = {
@@ -9,6 +10,26 @@ export type FilePersistenceOptions = {
 
 function keyToFilename(key: string): string {
   return `${encodeURIComponent(key)}.json`;
+}
+
+export async function writeFileAtomically(
+  path: string,
+  contents: string,
+  commit: (from: string, to: string) => Promise<void> = rename,
+): Promise<void> {
+  const temporaryPath = `${path}.tmp-${randomUUID()}`;
+  let file: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    file = await open(temporaryPath, 'wx');
+    await file.writeFile(contents, 'utf8');
+    await file.close();
+    file = undefined;
+    await commit(temporaryPath, path);
+  } catch (error) {
+    await file?.close().catch(() => {});
+    await rm(temporaryPath, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 /**
@@ -55,7 +76,7 @@ export function createFilePersistence(
 
     async save(key: string, json: string): Promise<void> {
       await ensureDir();
-      await writeFile(pathFor(key), json, 'utf8');
+      await writeFileAtomically(pathFor(key), json);
     },
   };
 }

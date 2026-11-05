@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createFilePersistence } from './file-persistence';
+import { createFilePersistence, writeFileAtomically } from './file-persistence';
 
 describe('createFilePersistence', () => {
   const dirs: string[] = [];
@@ -45,6 +45,25 @@ describe('createFilePersistence', () => {
     await persistence.save('k', '"second"');
 
     expect(await persistence.load('k')).toBe('"second"');
+  });
+
+  test('keeps existing content when the atomic commit fails', async () => {
+    const dir = await tempDir();
+    const persistence = createFilePersistence({ dir });
+    const path = join(dir, 'counter.json');
+    await persistence.save('counter', '"previous"');
+
+    const failedCommit = async (temporaryPath: string, targetPath: string) => {
+      expect(targetPath).toBe(path);
+      expect(await readFile(temporaryPath, 'utf8')).toBe('"replacement"');
+      throw new Error('simulated rename failure');
+    };
+
+    await expect(writeFileAtomically(path, '"replacement"', failedCommit))
+      .rejects.toThrow('simulated rename failure');
+
+    expect(await persistence.load('counter')).toBe('"previous"');
+    expect(await readdir(dir)).toEqual(['counter.json']);
   });
 
   test('isolates keys and encodes unsafe filenames', async () => {

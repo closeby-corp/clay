@@ -1,0 +1,10 @@
+/web/dist/
+/bin/
+/build/
+*.wasm
+*.test
+*.log
+*.tmp
+.DS_Store
+/.data/
+/web/uploads-dist/

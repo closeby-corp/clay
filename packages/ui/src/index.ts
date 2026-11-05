@@ -113,6 +113,9 @@ import {
   list as listFactory,
   imageCrop as imageCropFactory,
   gantt as ganttFactory,
+  map as mapFactory,
+  type MapElement,
+  type MapProps,
   chart as chartNamespace,
   table as tableFactory,
   flow as flowFactory,
@@ -346,6 +349,14 @@ import {
   type GanttDependency,
   type GanttRange,
   type GanttItemMovePayload,
+  type MapMarkerDatum,
+  type MapRouteDatum,
+  type MapArcGroup,
+  type MapGeoJSONLayer,
+  type MapClusterGroup,
+  type MapHeatmapLayer,
+  type LngLat,
+  type MapTone,
   type FlowProps,
   type FlowNodeProps,
   type FlowNodeKind,
@@ -642,6 +653,15 @@ export type {
   GanttDependency,
   GanttRange,
   GanttItemMovePayload,
+  MapProps,
+  MapMarkerDatum,
+  MapRouteDatum,
+  MapArcGroup,
+  MapGeoJSONLayer,
+  MapClusterGroup,
+  MapHeatmapLayer,
+  LngLat,
+  MapTone,
   FlowProps,
   FlowNodeProps,
   FlowNodeKind,
@@ -1178,6 +1198,15 @@ export function imageCrop(props: ImageCropProps): Element {
  */
 export function gantt(props?: GanttProps): GanttElement {
   return ganttFactory(props);
+}
+
+/**
+ * Live map (MapLibre, styled to the Clay theme) with markers, routes, arcs,
+ * GeoJSON layers, clusters and a popup. Owns its marker / route / popup /
+ * camera state; setters update in place. See {@link MapProps}.
+ */
+export function map(props?: MapProps): MapElement {
+  return mapFactory(props);
 }
 
 /**
@@ -1924,6 +1953,7 @@ export const ui = {
   list,
   imageCrop,
   gantt,
+  map,
   flow,
   stat,
   dataTable,

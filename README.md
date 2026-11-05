@@ -204,6 +204,7 @@ You mutate elements (`setText`, `refreshable`, bindings). Clay sends patches. Th
 | [API reference](./docs/api.md) | `ui.*` and Element |
 | [Elements](./docs/elements.md) | Wire types and client mapping |
 | [Examples](./docs/examples.md) | Demo routes and patterns |
+| [Demo deployment](./docs/demo-deployment.md) | Deploy and operate the demo on Pi |
 | [Architecture](./docs/architecture.md) | Packages and data flow |
 | [WebSocket protocol](./docs/protocol.md) | Message formats |
 | [AI UI](./docs/ai.md) | `ui.ai.*` primitives |

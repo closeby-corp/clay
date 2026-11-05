@@ -7,7 +7,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 
 ## Sidebar groups
 
-Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the home page's catalog share one structure: **Start here** (themes, fill layout, counter, todo, kitchen sink) → **Reactivity** → **Data** → **Forms & controls** → **Overlays & layout** → **Apps** → **Account** → **ReUI batches**. Order within a group is `pageMeta.order`.
+Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the home page's catalog share one structure: **Start here** (themes, fill layout, counter, todo, kitchen sink) → **Reactivity** → **Data** → **Maps** (gallery, delivery tracker, store locator, globe, uptime monitor) → **Forms & controls** → **Overlays & layout** → **Apps** → **Account** → **ReUI batches**. Order within a group is `pageMeta.order`.
 
 ## Catalog
 
@@ -44,6 +44,11 @@ Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the h
 | `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` owned rows/dates/markers/deps, cross-row drag, header double-click markers, `itemMove` / `markerAdd` settle |
 | `/examples/flow` | `FlowDemo.ts` | Four `ui.flow` demos: ETL with in-node controls + labeled edges + dagre auto-layout, multi-handle approval branches, fan-in/out + `addNode` dynamic stages, group/`parentId` nesting (flow-owned edges/positions; no outer diagram `ui.auto`) |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
+| `/examples/maps` | `MapsGallery.ts` | `ui.map` gallery: markers and popups, routes, arcs, choropleth, clusters, compact analytics map |
+| `/examples/delivery-tracker` | `DeliveryTracker.ts` | `ui.map` route progress and courier marker: `updateRoute` / `upsertMarker` on a timer, `fill` layout |
+| `/examples/store-locator` | `StoreLocator.ts` | `ui.map` filtered markers, `flyTo` / `fitBounds('markers')`, popups; list and map select each other by key |
+| `/examples/globe` | `CommunityGlobe.ts` | `ui.map` globe projection, arcs, `setMarkers` / `setArcs` on a 30 s timer |
+| `/examples/uptime` | `UptimeMonitor.ts` | `ui.map` status markers on a globe, refreshed every 2 s with `setMarkers` |
 | `/examples/kitchen-sink` | `KitchenSink.ts` | ShadCN catalog preview (client `KitchenSink`) |
 
 Each page file exports optional `pageMeta` (`label`, `icon`, `order`, optional `nav: false`, optional `roles`) for `ui.navFromPages()`.

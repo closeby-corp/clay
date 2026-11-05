@@ -1918,6 +1918,7 @@ All layout helpers accept either `(fn, props?)` or `(props, fn)`.
 | `ui.hero` | Centered hero region |
 | `ui.card` | Card; callback receives the card element |
 | `ui.app` | SPA shell: sidebar nav + centered main content |
+| `ui.map` | Live map (MapLibre): markers, routes, arcs, GeoJSON, clusters, popup. See [Maps](./maps.md) |
 
 #### `ui.app(props, fn)`
 
@@ -2014,6 +2015,15 @@ ui.container(() => {
     ui.input({ label: 'Name' });
   });
 }, { centered: true, width: 'md' });
+```
+
+#### `ui.map(props?)`
+
+A live map: MapLibre with markers, routes, arcs, GeoJSON layers, clusters and a popup. Setters (`setMarkers`, `upsertMarker`, `updateRoute`, `flyTo`, `fitBounds`, ...) update it in place. Props, tones, events and layout are in the [Maps guide](./maps.md).
+
+```typescript
+const fleet = ui.map({ fill: true, markers: vehicles(), onMarkerClick: (m) => select(m.id) });
+fleet.fitBounds('markers', { padding: 48 });
 ```
 
 ---

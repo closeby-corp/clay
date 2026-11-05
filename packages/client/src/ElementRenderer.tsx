@@ -278,6 +278,7 @@ import { resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
 
 const KitchenSink = lazy(() => import('./KitchenSink'));
+const BoundMap = lazy(() => import('./map/BoundMap'));
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -5000,6 +5001,20 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
 
     case 'sparkline':
       return <BoundSparkline props={props} className={className} style={style} />;
+
+    case 'map':
+      return (
+        <Suspense
+          fallback={
+            <div
+              className={cn('animate-pulse rounded-xl bg-muted', props.fill === true && 'h-full min-h-0 flex-1')}
+              style={{ height: props.fill === true ? undefined : ((props.height as string | undefined) ?? '24rem') }}
+            />
+          }
+        >
+          <BoundMap id={id} props={props} className={className} style={asStyle(style)} emit={emit} />
+        </Suspense>
+      );
 
     case 'kitchensink':
       return (
