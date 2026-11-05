@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { App } from './App';
+import { installSoundListener } from './sound/listener';
 import { ThemeSync } from './ThemeSync';
 import { CLAY_THEME_KEY } from './themeBridge';
 import '@domternal/theme';
 import '@xyflow/react/dist/style.css';
 import './index.css';
+
+installSoundListener();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -466,6 +466,7 @@ import {
   timer as timerCore,
   storage as storageCore,
   theme as themeCore,
+  sound as soundCore,
   reactive as reactiveCore,
   state as stateCore,
   subscribe as subscribeCore,
@@ -1706,6 +1707,9 @@ export const storage = storageCore;
 /** Server-driven appearance (`light` | `dark` | `system`). */
 export const theme = themeCore;
 
+/** Interface sound cues: `ui.sound.set(on)`, `ui.sound.volume(0..1)`, `ui.sound.play(name)`. */
+export const sound = soundCore;
+
 /** Proxy that notifies subscribers on property change. Prefer this over importing from `@close-by/clay-core`. */
 export const reactive = reactiveCore;
 
@@ -2021,6 +2025,7 @@ export const ui = {
   timer,
   storage,
   theme,
+  sound,
   reactive,
   state,
   urlState,

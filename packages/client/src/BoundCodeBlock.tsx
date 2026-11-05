@@ -99,7 +99,7 @@ export function BoundCodeBlock({
         <>
           {showCopy ? (
             <div className="absolute top-2 right-2 z-10 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-              <Button type="button" variant="secondary" size="sm" className="h-7 gap-1 px-2" onClick={copy}>
+              <Button type="button" variant="secondary" size="sm" className="h-7 gap-1 px-2" onClick={copy} data-sound="copy">
                 {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                 {copied ? 'Copied' : 'Copy'}
               </Button>

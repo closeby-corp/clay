@@ -59,7 +59,7 @@ export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) 
       aria-live="polite"
       aria-label={label ? `Clay ${label}` : 'Clay connected'}
       className={cn(
-        'pointer-events-none fixed bottom-3 left-3 z-50 flex items-center gap-1.5 rounded-full border text-[11px] font-medium shadow-sm backdrop-blur-sm transition-all',
+        'pointer-events-none flex items-center gap-1.5 rounded-full border text-[11px] font-medium shadow-sm backdrop-blur-sm transition-all',
         // Idle: a quiet dot so the chip doesn't sit on top of sidebar items.
         phase === 'idle' ? 'border-border bg-background/80 p-1.5' : 'px-2.5 py-1',
         busy &&

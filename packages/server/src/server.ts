@@ -57,6 +57,11 @@ export type ClayServerConfig = {
    */
   palette?: string;
   /**
+   * Play short synthesized interface sounds (presses, toggles, dialogs, toasts) by default.
+   * Sessions can switch with `ui.sound.set(on)`; the client remembers the choice. Default: `false`.
+   */
+  sound?: boolean;
+  /**
    * Directory for `POST /upload` files.
    * Absolute or relative to `process.cwd()`. Default: `.clay-uploads`.
    */
@@ -146,16 +151,22 @@ function sanitizePaletteName(value: string): string {
   return value.replace(/[^a-z0-9-]/gi, '');
 }
 
-function spaHtml(title: string, customCssHrefs: string[], dev: boolean, palette?: string): string {
+function spaHtml(
+  title: string,
+  customCssHrefs: string[],
+  dev: boolean,
+  palette?: string,
+  sound?: boolean,
+): string {
   const customLinks = customCssHrefs
     .map((href) => `  <link rel="stylesheet" href="${href}" />`)
     .join('\n');
   const devBoot = dev ? `  <script>window.__CLAY_DEV__=true</script>\n` : '';
   return `<!DOCTYPE html>
-<html lang="en"${palette ? ` data-palette="${sanitizePaletteName(palette)}"` : ''}>
+<html lang="en"${palette ? ` data-palette="${sanitizePaletteName(palette)}"` : ''} data-sound="${sound ? 'on' : 'off'}">
 <head>
   <meta charset="UTF-8" />
-  <script>try{var p=localStorage.getItem('clay-palette');if(p)document.documentElement.dataset.palette=p}catch(e){}</script>
+  <script>try{var p=localStorage.getItem('clay-palette');if(p)document.documentElement.dataset.palette=p;var s=localStorage.getItem('clay-sound');if(s)document.documentElement.dataset.sound=s}catch(e){}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <link rel="stylesheet" href="/assets/index.css" />
@@ -185,6 +196,7 @@ type ResolvedConfig = {
   sessionExpiredPath: string;
   dev: boolean;
   palette?: string;
+  sound?: boolean;
 };
 
 type WsData = {
@@ -263,6 +275,7 @@ export class ClayServer {
       sessionExpiredPath,
       dev: config.dev ?? process.env.NODE_ENV !== 'production',
       palette: config.palette,
+      sound: config.sound,
     };
 
     if (authSecret) {
@@ -310,7 +323,7 @@ export class ClayServer {
       sessionExpiredPath,
     } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
-    const html = spaHtml(title, customCssHrefs, this.config.dev, this.config.palette);
+    const html = spaHtml(title, customCssHrefs, this.config.dev, this.config.palette, this.config.sound);
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
     this.server = Bun.serve({

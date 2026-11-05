@@ -7,7 +7,7 @@ const DEFAULT_AUTH_SECRET = 'clay-demo-auth-secret-change-me';
 /** Auth + session timeout defaults shared by `main.ts` and the CLI `_run` hook. */
 export function demoAuthOptions(): Pick<
   RunConfig,
-  'authSecret' | 'sessionIdleMs' | 'sessionAbsoluteMs' | 'sessionExpiredPath' | 'css'
+  'authSecret' | 'sessionIdleMs' | 'sessionAbsoluteMs' | 'sessionExpiredPath' | 'css' | 'sound'
 > {
   return {
     authSecret: Bun.env.CLAY_AUTH_SECRET ?? DEFAULT_AUTH_SECRET,
@@ -19,6 +19,7 @@ export function demoAuthOptions(): Pick<
       : 12 * 60 * 60 * 1000,
     sessionExpiredPath: '/examples/auth/login',
     css: fileURLToPath(new URL('./globals.css', import.meta.url)),
+    sound: true,
   };
 }
 

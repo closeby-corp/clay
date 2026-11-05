@@ -33,6 +33,8 @@ export type ServerMessage =
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
   /** Colour palette name → `<html data-palette>` (`kiln` / empty = default). */
   | { op: 'palette'; palette: string }
+  /** Interface sounds: toggle automatic cues, set volume, or play one cue now. */
+  | { op: 'sound'; enabled?: boolean; volume?: number; play?: string }
   | { op: 'runJavaScript'; code: string }
   /** Set `location.hash` on the client (no leading `#` in `hash`; empty clears). */
   | { op: 'setUrlHash'; hash: string }

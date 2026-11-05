@@ -269,6 +269,10 @@ export class ClientSession {
     this.send({ op: 'palette', palette });
   }
 
+  setSound(opts: { enabled?: boolean; volume?: number; play?: string }): void {
+    this.send({ op: 'sound', ...opts });
+  }
+
   /** Sync client `location.hash` (pass without `#`; empty clears). */
   setUrlHash(hash: string): void {
     const normalized = hash.startsWith('#') ? hash.slice(1) : hash;

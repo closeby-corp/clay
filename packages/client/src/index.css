@@ -216,6 +216,32 @@ html {
    and morph (height, colour). Everything is off under prefers-reduced-motion. */
 
 @layer base {
+  /* Tailwind v4 dropped cursor:pointer on buttons; restore it for interactive elements. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab'],
+  [role='menuitem'],
+  [role='menuitemcheckbox'],
+  [role='menuitemradio'],
+  [role='option'],
+  [role='switch'],
+  [role='checkbox'],
+  [role='radio'],
+  summary,
+  select,
+  label[for],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='file'],
+  input[type='range'],
+  input[type='color'] {
+    cursor: pointer;
+  }
+  :disabled,
+  [aria-disabled='true'],
+  [data-disabled] {
+    cursor: not-allowed;
+  }
   /* Overlay / disclosure enter-exit animations (tw-animate-css) use Clay's curve. */
   .animate-in,
   .animate-out,

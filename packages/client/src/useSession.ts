@@ -14,6 +14,7 @@ import {
   WS_OUTAGE_TOAST_AFTER_MS,
   WS_RECONNECT_TOAST_ID,
 } from './reconnect';
+import { applySound, isSoundName, playSound } from './sound/engine';
 import { applyPalette, applyServerTheme, currentPalette, isThemeMode } from './themeBridge';
 import type {
   ClientMessage,
@@ -201,6 +202,8 @@ export function useClaySession(path: string) {
       } else if (msg.op === 'authSession') {
         void handleAuthSession(msg);
       } else if (msg.op === 'notify') {
+        const t = msg.type ?? 'info';
+        playSound(t === 'success' || t === 'error' || t === 'warning' ? t : 'notification');
         showToast(msg.message, {
           id: msg.id,
           type: msg.type ?? 'info',
@@ -214,6 +217,9 @@ export function useClaySession(path: string) {
         if (isThemeMode(msg.theme)) applyServerTheme(msg.theme);
       } else if (msg.op === 'palette') {
         applyPalette(String(msg.palette ?? ''));
+      } else if (msg.op === 'sound') {
+        applySound({ enabled: msg.enabled, volume: msg.volume });
+        if (isSoundName(msg.play)) playSound(msg.play, { force: true });
       } else if (msg.op === 'runJavaScript') {
         try {
           runClientJavaScript(msg.code);
@@ -238,6 +244,7 @@ export function useClaySession(path: string) {
         const write = async () => {
           try {
             await navigator.clipboard.writeText(msg.content);
+            playSound('copy');
           } catch {
             showToast('Clipboard copy failed', { type: 'error' });
           }

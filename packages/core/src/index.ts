@@ -72,6 +72,14 @@ export {
   type ThemeMode,
   type ThemePalette,
 } from './theme';
+export {
+  sound,
+  setSound,
+  setSoundVolume,
+  playSound,
+  SOUND_NAMES,
+  type SoundName,
+} from './sound';
 export { timer, TimerHandle, type TimerOptions } from './timer';
 export {
   storage,

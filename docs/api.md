@@ -91,6 +91,7 @@ ui.run({
 | `title` | `string` | `'Clay'` | HTML `<title>` |
 | `clientDir` | `string` | `resolveClayClientDir()` | Built Vite assets (`@close-by/clay-cli/client-dist` when installed). Prefer `resolveClayClientDir()` over hardcoding `node_modules` paths — see [Boot](./boot.md). |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
+| `sound` | `boolean` | | Play short synthesized interface sounds by default (`false`). See [Sound](#sound). |
 | `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate |
 | `authSecret` | `string` | | Enables signed auth cookies (`POST`/`DELETE /auth/session`), `ui.establishAuthSession` / `ui.clearAuthSession`, and default `resolveUserId` from the cookie |
 | `authCookieMaxAgeSec` | `number` | `43200` (12h) | Auth cookie Max-Age |
@@ -1804,6 +1805,10 @@ onClick: async () => {
 | `ui.theme.palette(name)` | `void` | Switch colour palette for this client (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`, `graphite`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom one); remembered across reloads |
 | `ui.theme.getPalette()` | `ThemePalette \| null` | Last palette set, else the one the client reported on connect |
 | `ui.theme.palettes` | `readonly string[]` | Built-in palette names |
+| `ui.sound.set(on)` | `void` | Turn automatic interface sounds on/off for this client; remembered across reloads. See [Sound](#sound) |
+| `ui.sound.volume(v)` | `void` | Master volume `0`–`1` (default `0.5`); remembered across reloads |
+| `ui.sound.play(name)` | `void` | Play one cue now, even when automatic sounds are off |
+| `ui.sound.names` | `readonly string[]` | Built-in cue names |
 | `ui.runJavaScript(code)` | `void` | Eval trusted snippet in the browser |
 | `ui.scroll.to(opts)` | `void` | Scroll window (`top` / `bottom` / px) |
 | `ui.scroll.intoView(selector, opts?)` | `void` | `Element.scrollIntoView` via selector |
@@ -2192,6 +2197,33 @@ import { button, input /* … */ } from '@close-by/clay-components';
 ```
 
 ---
+
+## Sound
+
+Clay can answer interactions with short interface sounds, synthesized in the browser with Web Audio (no audio files). They're **off by default**. Turn them on for every visitor with `createServer({ sound: true })`, or per session with `ui.sound.set(true)`. The client remembers the last choice.
+
+Once sound is on, a mute button appears next to the Clay connection chip in the bottom-left corner, so each user can silence it. A user's mute choice is remembered for their browser. Apps that never turn sound on don't show the button.
+
+When enabled, a page-wide listener picks the cue from the element, so components need no wiring:
+
+| Interaction | Cue |
+|---|---|
+| Button, link, `role="button"` | `tap` (`soft` for `ghost` / `link` variants, `destructive` for the destructive variant) |
+| Tab, menu item, option, radio | `select` (pitch rises with position) |
+| Switch, checkbox | `toggleOn` / `toggleOff` |
+| Disabled control (when it still receives the press) | `blocked` |
+| Dialog / sheet / alert dialog opens or closes | `open` / `close` |
+| Slider value changes | `tick` |
+| OTP digit typed | `key` |
+| `ui.notify` toast | `success` / `error` / `warning` / `notification` by type |
+| `ui.clipboard` / code block copy | `copy` |
+
+Set `data-sound="<cue>"` on an element to override its cue, or `data-sound="none"` to silence it. Use `ui.sound.play(name)` to play a cue from server code, for example when a long job finishes. Cues: `tap`, `soft`, `select`, `destructive`, `blocked`, `toggleOn`, `toggleOff`, `open`, `close`, `tick`, `key`, `copy`, `success`, `error`, `warning`, `notification`.
+
+```ts
+// A settings switch that lets each user turn sounds on or off
+ui.switch({ label: 'Interface sounds', onChange: (on) => ui.sound.set(on) });
+```
 
 ## DuckDB (`@close-by/clay-duckdb`)
 

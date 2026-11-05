@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useClaySession } from './useSession';
 import { ElementRenderer } from './ElementRenderer';
 import { ConnectionStatus } from './ConnectionStatus';
+import { SoundToggle } from './sound/SoundToggle';
 
 export function App() {
   const [path, setPath] = useState(window.location.pathname || '/');
@@ -15,7 +16,10 @@ export function App() {
 
   return (
     <>
-      <ConnectionStatus connected={connected} hasTree={tree != null} />
+      <div className="pointer-events-none fixed bottom-3 left-3 z-50 flex items-center gap-1.5">
+        <ConnectionStatus connected={connected} hasTree={tree != null} />
+        <SoundToggle />
+      </div>
       {tree ? <ElementRenderer node={tree} emit={emit} /> : null}
     </>
   );
