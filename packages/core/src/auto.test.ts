@@ -219,8 +219,13 @@ describe('auto', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(listBtn.props.className).toBeUndefined();
-    expect(gridBtn.props.className).toBe('bg-accent');
+    // The rebuilt buttons take over the on-screen ids (no remount).
+    const [liveList, liveGrid] = autoEl.children;
+    expect(liveList!.id).toBe(listBtn.id);
+    expect(liveGrid!.id).toBe(gridBtn.id);
+    expect(liveList!.props.className).toBeUndefined();
+    expect(liveGrid!.props.className).toBe('bg-accent');
+    expect(patches.some((p: any) => p.op === 'setChildren')).toBe(false);
     expect(
       patches.some(
         (p: any) => p.op === 'updateProps' && p.id === listBtn.id && p.props?.className === null,

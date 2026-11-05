@@ -325,6 +325,45 @@ export class Element {
     reconcileChildren(this, oldKids, newKids);
   }
 
+  /**
+   * @internal Become `old` on the client: take its id, send only the props that
+   * changed, reconcile children against its children, then destroy `old`.
+   * The fresh instance survives, so handlers it bound to itself (DataTable search,
+   * sort, paging, map drags, ...) and references user code saved during the rebuild
+   * keep pointing at the live element.
+   */
+  takeOver(old: Element): void {
+    const session = this.boundSession ?? old.session;
+    session?.unregister(this.id);
+
+    const patch: Record<string, unknown> = {};
+    for (const key of Object.keys(old.props)) {
+      if (!(key in this.props)) patch[key] = null;
+    }
+    for (const [key, value] of Object.entries(this.props)) {
+      if (old.props[key] !== value && typeof value !== 'function') {
+        patch[key] = value === undefined ? null : value;
+      }
+    }
+
+    (this as { id: string }).id = old.id;
+    this.parent = old.parent;
+
+    const oldKids = old.children;
+    const newKids = this.children;
+    old.children = [];
+    for (const kid of oldKids) kid.parent = this;
+    // Leaves `old` registered under the shared id until we re-register below.
+    old.parent = null;
+    old.destroy();
+    if (session) {
+      this.boundSession = session;
+      session.register(this);
+    }
+    if (Object.keys(patch).length > 0) this.queuePropsPatch(patch);
+    reconcileChildren(this, oldKids, newKids);
+  }
+
   /** @internal Dispose of a freshly built twin whose state was absorbed into an older element. */
   discardTwin(): void {
     this.parent = null;
@@ -490,11 +529,16 @@ function reconcileChildren(parent: Element, old: Element[], next: Element[]): vo
   const result: Element[] = [];
   for (const n of next) {
     const o = matched.get(n);
-    if (o) {
+    if (o instanceof RefreshableElement) {
+      // Refreshables keep their instance (builder, reactive subscriptions) and adopt the new builder.
       o.absorbRebuild(n);
       n.discardTwin();
       o.parent = parent;
       result.push(o);
+    } else if (o) {
+      n.takeOver(o);
+      n.parent = parent;
+      result.push(n);
     } else {
       n.parent = parent;
       result.push(n);
