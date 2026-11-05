@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { ChartSeries } from './chart-shared';
 
 export type ScatterChartSeries = ChartSeries;
@@ -23,8 +23,8 @@ export type ScatterChartProps = {
   showLegend?: boolean;
 };
 
-export function scatterChart(props: ScatterChartProps): Element {
-  return new Element('scatterchart', {
+export function scatterChart(props: ScatterChartProps): ChartElement {
+  return new ChartElement('scatterchart', {
     data: props.data,
     xKey: props.xKey,
     yKey: props.yKey,

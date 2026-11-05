@@ -1,3 +1,5 @@
+import { Element } from '@close-by/clay-core';
+
 /** Shared series descriptor for cartesian charts (area / bar / line). */
 export type ChartSeries = {
   key: string;
@@ -92,3 +94,71 @@ export type CartesianChartProps = {
   /** Show series legend (default true). Set `false` to hide. */
   showLegend?: boolean;
 };
+
+/** Chart element with live data and presentation updates. */
+export class ChartElement extends Element {
+  /** Replace chart data with a shallow copy. */
+  setData(data: Record<string, unknown>[]): this {
+    return this.update({ data: [...data] });
+  }
+
+  /** Append rows and optionally retain only the latest max rows. */
+  appendData(rows: Record<string, unknown> | Record<string, unknown>[], options?: { max?: number }): this {
+    const incoming = Array.isArray(rows) ? rows : [rows];
+    if (incoming.length === 0) return this;
+    const max = options?.max;
+    if (max !== undefined && (!Number.isInteger(max) || max < 0)) {
+      throw new RangeError('max must be a non-negative integer');
+    }
+    const data = ((this.props.data as Record<string, unknown>[] | undefined) ?? []).concat(incoming);
+    this.props.data = max === undefined ? data : data.slice(Math.max(0, data.length - max));
+    if (this.session?.isMounted) {
+      this.session.enqueuePatch({
+        op: 'appendRows', id: this.id, prop: 'data', rows: incoming,
+        ...(max === undefined ? {} : { max }),
+      });
+    }
+    return this;
+  }
+
+  /** Replace a row with the same key, or append it when no row matches. */
+  upsertData(row: Record<string, unknown>, options?: { key?: string; max?: number }): this {
+    const max = options?.max;
+    if (max !== undefined && (!Number.isInteger(max) || max < 0)) {
+      throw new RangeError('max must be a non-negative integer');
+    }
+    const defaultKey = this.type === 'piechart' ? this.props.nameKey ?? this.props.xKey : this.props.xKey;
+    const key = options?.key ?? (defaultKey as string | undefined) ?? 'x';
+    const existing = (this.props.data as Record<string, unknown>[] | undefined) ?? [];
+    const index = existing.findIndex((item) => item[key] === row[key]);
+    if (index === -1) return this.appendData(row, { max });
+    const data = [...existing];
+    data[index] = row;
+    return this.update({ data: max === undefined ? data : data.slice(Math.max(0, data.length - max)) });
+  }
+
+  /** Replace chart series with a shallow copy. */
+  setSeries(series: ChartSeries[]): this {
+    return this.update({ series: [...series] });
+  }
+
+  /** Set or clear the headline metric. */
+  setHeadline(headline: ChartHeadline | undefined): this {
+    return this.update({ headline: headline ?? null });
+  }
+
+  /** Set the chart title. */
+  setTitle(title: string): this {
+    return this.update({ title });
+  }
+
+  /** Set the chart description. */
+  setDescription(text: string): this {
+    return this.update({ description: text });
+  }
+
+  /** Toggle the chart loading state. */
+  setLoading(loading: boolean): this {
+    return this.update({ loading });
+  }
+}

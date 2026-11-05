@@ -12,6 +12,8 @@ export type Patch =
   | { op: 'replace'; id: string; node: ElementNode }
   | { op: 'updateProps'; id: string; props: Record<string, unknown> }
   | { op: 'setChildren'; id: string; children: ElementNode[] }
+  /** Append `rows` to the array prop `prop`, then keep only the last `max` items when set. */
+  | { op: 'appendRows'; id: string; prop: string; rows: unknown[]; max?: number }
   | { op: 'remove'; id: string };
 
 export type ServerMessage =

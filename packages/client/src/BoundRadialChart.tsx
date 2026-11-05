@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/chart';
 import {
   buildSeriesConfig,
+  useLiveChartAnimation,
+  useStableValue,
   ChartChrome,
   cssSafeKey,
   type ChartSeries,
@@ -74,6 +76,19 @@ export function BoundRadialChart({
       : undefined;
   const centerLabel = props.centerLabel ? String(props.centerLabel) : undefined;
   const useSeries = Boolean(series && series.length > 0);
+  const nameKey = String(props.nameKey ?? 'name');
+  const rawConfig: ChartConfig = useSeries && series ? buildSeriesConfig(series) : {};
+  if (!useSeries) {
+    data.forEach((row, index) => {
+      const label = String(row[nameKey] ?? `slice-${index}`);
+      rawConfig[cssSafeKey(label)] = {
+        label,
+        color: `var(--chart-${(index % 5) + 1})`,
+      };
+    });
+  }
+  const config = useStableValue(rawConfig);
+  const anim = useLiveChartAnimation(data, useSeries ? undefined : nameKey, props.animate);
   const outerRadius: number | string =
     typeof props.outerRadius === 'number' || typeof props.outerRadius === 'string'
       ? props.outerRadius
@@ -96,8 +111,6 @@ export function BoundRadialChart({
     for (const s of series) {
       stacked[cssSafeKey(s.key)] = Number(row[s.key] ?? 0);
     }
-    const config = buildSeriesConfig(series);
-
     chart = (
       <ChartContainer
         config={config}
@@ -126,6 +139,8 @@ export function BoundRadialChart({
                 dataKey={key}
                 stackId="a"
                 cornerRadius={5}
+                isAnimationActive={anim}
+                animationDuration={400}
                 fill={`var(--color-${key})`}
                 className="stroke-transparent stroke-2"
               />
@@ -136,16 +151,10 @@ export function BoundRadialChart({
       </ChartContainer>
     );
   } else {
-    const nameKey = String(props.nameKey ?? 'name');
     const valueKey = String(props.valueKey ?? 'value');
-    const config: ChartConfig = {};
     const rows = data.map((row, index) => {
       const label = String(row[nameKey] ?? `slice-${index}`);
       const key = cssSafeKey(label);
-      config[key] = {
-        label,
-        color: `var(--chart-${(index % 5) + 1})`,
-      };
       return {
         ...row,
         [nameKey]: key,
@@ -170,7 +179,13 @@ export function BoundRadialChart({
             cursor={false}
             content={<ChartTooltipContent hideLabel nameKey={nameKey} />}
           />
-          <RadialBar dataKey={valueKey} background cornerRadius={5} />
+          <RadialBar
+            dataKey={valueKey}
+            background
+            cornerRadius={5}
+            isAnimationActive={anim}
+            animationDuration={400}
+          />
           <CenterLabel centerValue={centerValue} centerLabel={centerLabel} />
         </RadialBarChart>
       </ChartContainer>

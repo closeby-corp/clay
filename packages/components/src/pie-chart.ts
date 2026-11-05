@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { ChartSeries } from './chart-shared';
 
 export type PieChartSeries = ChartSeries;
@@ -25,8 +25,8 @@ export type PieChartProps = {
   showLegend?: boolean;
 };
 
-export function pieChart(props: PieChartProps): Element {
-  return new Element('piechart', {
+export function pieChart(props: PieChartProps): ChartElement {
+  return new ChartElement('piechart', {
     data: props.data,
     nameKey: props.nameKey,
     valueKey: props.valueKey,

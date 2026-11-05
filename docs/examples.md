@@ -26,6 +26,7 @@ Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the h
 | `/examples/reui-batches` | `ReuiBatchesDemo.ts` | ReUI batches 3–6: `buttonGroup`, `empty`, `pagination`, `filterBar`, form inputs, `navigationMenu`, `notice`, `stat`+sparkline, `eventCalendar`, datatable `showFilterChips` |
 | `/examples/reui-batch-7` | `ReuiBatch7Demo.ts` | ReUI batch 7: `inputGroup`, `toggle`, `descriptionList`, `staticTable`, `aspectRatio`, `itemList`, `checkboxGroup` |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*`, `ui.sparkline`, composed/scatter charts |
+| `/examples/live-charts` | `LiveCharts.ts` | Live charts: `appendData` sliding windows, `setData` tweens, `upsertData` buckets, live gauge and sparklines |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/themes` | `ThemesDemo.ts` | Palette gallery: `ui.theme.palette`, light/dark, component preview |
 | `/examples/layout` | `LayoutDemo.ts` | Fill layout: `fillViewport`, `grow`, `scroll`, `ui.grid` |

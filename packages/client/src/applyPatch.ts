@@ -34,6 +34,21 @@ export function applyPatch(tree: ElementNode, patch: Patch): ElementNode {
     };
   }
 
+  if (patch.op === 'appendRows') {
+    if (tree.id === patch.id) {
+      const prev = Array.isArray(tree.props[patch.prop]) ? (tree.props[patch.prop] as unknown[]) : [];
+      let next = prev.concat(patch.rows);
+      if (patch.max != null && patch.max >= 0 && next.length > patch.max) {
+        next = next.slice(next.length - patch.max);
+      }
+      return { ...tree, props: { ...tree.props, [patch.prop]: next } };
+    }
+    return {
+      ...tree,
+      children: tree.children.map((c) => applyPatch(c, patch)),
+    };
+  }
+
   if (patch.op === 'setChildren') {
     if (tree.id === patch.id) {
       return { ...tree, children: patch.children };

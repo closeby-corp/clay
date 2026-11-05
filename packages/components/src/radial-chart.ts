@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { ChartSeries } from './chart-shared';
 
 export type RadialChartSeries = ChartSeries;
@@ -33,8 +33,8 @@ export type RadialChartProps = {
   centerLabel?: string;
 };
 
-export function radialChart(props: RadialChartProps): Element {
-  return new Element('radialchart', {
+export function radialChart(props: RadialChartProps): ChartElement {
+  return new ChartElement('radialchart', {
     data: props.data,
     nameKey: props.nameKey,
     valueKey: props.valueKey,

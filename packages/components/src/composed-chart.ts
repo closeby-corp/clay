@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type {
   CartesianChartProps,
   ChartReferenceArea,
@@ -22,8 +22,8 @@ export type ComposedChartProps = CartesianChartProps &
     referenceArea?: ChartReferenceArea;
   };
 
-export function composedChart(props: ComposedChartProps): Element {
-  return new Element('composedchart', {
+export function composedChart(props: ComposedChartProps): ChartElement {
+  return new ChartElement('composedchart', {
     data: props.data,
     xKey: props.xKey,
     series: props.series,

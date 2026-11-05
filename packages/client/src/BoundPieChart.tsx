@@ -12,6 +12,8 @@ import {
   ChartChrome,
   cssSafeKey,
   resolveShowLegend,
+  useLiveChartAnimation,
+  useStableValue,
   type ChartSeries,
 } from './chart-shared';
 
@@ -56,22 +58,22 @@ export function BoundPieChart({
   let rows: Record<string, unknown>[];
   let nameKey: string;
   let valueKey: string;
-  let config: ChartConfig;
+  let rawConfig: ChartConfig;
 
   if (series && series.length > 0) {
     const expanded = expandSeriesData(data, series);
     rows = expanded.rows;
     nameKey = expanded.nameKey;
     valueKey = expanded.valueKey;
-    config = expanded.config;
+    rawConfig = expanded.config;
   } else {
     nameKey = String(props.nameKey ?? 'name');
     valueKey = String(props.valueKey ?? 'value');
-    config = {};
+    rawConfig = {};
     rows = data.map((row, index) => {
       const label = String(row[nameKey] ?? `slice-${index}`);
       const key = cssSafeKey(label);
-      config[key] = {
+      rawConfig[key] = {
         label,
         color: `var(--chart-${(index % 5) + 1})`,
       };
@@ -82,6 +84,9 @@ export function BoundPieChart({
       };
     });
   }
+
+  const config = useStableValue(rawConfig);
+  const anim = useLiveChartAnimation(series && series.length > 0 ? data : rows, series && series.length > 0 ? undefined : nameKey, props.animate);
 
   const chart = (
     <ChartContainer
@@ -97,6 +102,8 @@ export function BoundPieChart({
           nameKey={nameKey}
           innerRadius={innerRadius > 0 ? innerRadius : undefined}
           strokeWidth={2}
+          isAnimationActive={anim}
+          animationDuration={400}
         >
           {rows.map((row, index) => {
             const name = String(row[nameKey] ?? index);

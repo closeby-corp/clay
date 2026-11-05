@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { ChartHeadline } from './chart-shared';
 
 export type SparklineProps = {
@@ -21,7 +21,7 @@ export type SparklineProps = {
 };
 
 /** Compact KPI card with an inline area/line sparkline. */
-export function sparkline(props: SparklineProps): Element {
+export function sparkline(props: SparklineProps): ChartElement {
   const headline: ChartHeadline | undefined =
     props.headline ??
     (props.value != null
@@ -32,7 +32,7 @@ export function sparkline(props: SparklineProps): Element {
         }
       : undefined);
 
-  return new Element('sparkline', {
+  return new ChartElement('sparkline', {
     data: props.data,
     xKey: props.xKey,
     yKey: props.yKey,

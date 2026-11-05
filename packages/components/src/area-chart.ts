@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { CartesianChartProps, ChartSeries } from './chart-shared';
 
 export type AreaChartSeries = ChartSeries;
@@ -8,8 +8,8 @@ export type AreaChartProps = CartesianChartProps & {
   stacked?: boolean;
 };
 
-export function areaChart(props: AreaChartProps): Element {
-  return new Element('areachart', {
+export function areaChart(props: AreaChartProps): ChartElement {
+  return new ChartElement('areachart', {
     data: props.data,
     xKey: props.xKey,
     series: props.series,

@@ -1,8 +1,8 @@
-import { Element } from '@close-by/clay-core';
+import type { ChartElement } from '../../chart-shared';
 import { areaChart } from '../../area-chart';
 import { barChart } from '../../bar-chart';
 import { lineChart } from '../../line-chart';
-import type { ChartSeries } from '../../chart-shared';
+import type { ChartSeries, LineChartStyleProps } from '../../chart-shared';
 import {
   applyChrome,
   normalizeSeries,
@@ -95,7 +95,7 @@ export class CategoriesChartBuilder {
     };
   }
 
-  area(opts?: AreaTerminalOpts): Element {
+  area(opts?: AreaTerminalOpts): ChartElement {
     const { stacked, ...chromeOpts } = opts ?? {};
     return areaChart({
       ...this.baseProps(chromeOpts),
@@ -103,7 +103,7 @@ export class CategoriesChartBuilder {
     });
   }
 
-  bar(opts?: BarTerminalOpts): Element {
+  bar(opts?: BarTerminalOpts): ChartElement {
     const { stacked, layout, ...chromeOpts } = opts ?? {};
     return barChart({
       ...this.baseProps(chromeOpts),
@@ -112,7 +112,7 @@ export class CategoriesChartBuilder {
     });
   }
 
-  line(opts?: LineTerminalOpts): Element {
+  line(opts?: LineTerminalOpts): ChartElement {
     const {
       curve,
       strokeWidth,

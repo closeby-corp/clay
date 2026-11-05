@@ -79,6 +79,7 @@ Browser Back/Forward (or other `popstate`) changed the query and/or hash **witho
 | `replace` | `id`, `node` | Replace entire subtree at `id` |
 | `updateProps` | `id`, `props` | Shallow-merge props |
 | `setChildren` | `id`, `children` | Replace children array |
+| `appendRows` | `id`, `prop`, `rows`, `max?` | Append `rows` to the array prop `prop`, then keep the last `max` items (chart streaming) |
 | `remove` | `id` | Remove node from parent |
 
 ### `navigate`

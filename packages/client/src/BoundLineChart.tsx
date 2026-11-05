@@ -7,7 +7,6 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import {
-  buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
   formatAxisTick,
@@ -16,6 +15,8 @@ import {
   parseCartesianProps,
   parseLineStyle,
   useInteractiveChartData,
+  useLiveChartAnimation,
+  useSeriesConfig,
 } from './chart-shared';
 
 export function BoundLineChart({
@@ -47,7 +48,8 @@ export function BoundLineChart({
     interactive,
     periods,
   );
-  const config = buildSeriesConfig(series);
+  const config = useSeriesConfig(series);
+  const anim = useLiveChartAnimation(filteredData, xKey, props.animate);
 
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
@@ -74,6 +76,8 @@ export function BoundLineChart({
               key={key}
               dataKey={s.key}
               type={lineStyle.curve}
+isAnimationActive={anim}
+              animationDuration={400}
               stroke={`var(--color-${key})`}
               strokeWidth={lineStyle.strokeWidth}
               strokeDasharray={lineStyle.strokeDasharray}

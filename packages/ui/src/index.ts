@@ -203,6 +203,8 @@ import {
   type CheckboxGroupProps,
   type CheckboxGroupOption,
   type StatItem,
+  type StatItemRef,
+  type StatElement,
   type DataTableProps,
   type DataTableAction,
   type DataTableView,
@@ -235,6 +237,7 @@ import {
   type ComposedChartProps,
   type ComposedChartSeries,
   type ComposedSeriesType,
+  type ChartElement,
   type CartesianChartProps,
   type ChartSeries,
   type ChartHeadline,
@@ -423,7 +426,6 @@ import {
   DialogElement,
   DialogStackElement,
   StepperElement,
-  NavigationMenuElement,
   AlertDialogElement,
   DropdownMenuElement,
   ContextMenuElement,
@@ -526,6 +528,9 @@ export {
   type ClayTailwindResult,
 } from './tailwind';
 
+
+export { ChartElement, StatElement } from '@close-by/clay-components';
+export type { StatItemRef } from '@close-by/clay-components';
 
 export type {
   GridProps,
@@ -1223,7 +1228,7 @@ export function flow(a: any, b?: any): FlowElement {
 }
 
 /** Stat strip (label/value items). Prefer `ui.stat`. */
-export function stat(items: StatItem[], props?: { className?: string }): Element {
+export function stat(items: StatItem[], props?: { className?: string }): StatElement {
   return statFactory(items, props);
 }
 
@@ -1247,47 +1252,47 @@ export const chart = chartNamespace;
 export const ai = aiNamespace;
 
 /** Area chart. Prefer `ui.areaChart`. See {@link AreaChartProps}. */
-export function areaChart(props: AreaChartProps): Element {
+export function areaChart(props: AreaChartProps): ChartElement {
   return areaChartFactory(props);
 }
 
 /** Bar chart. Prefer `ui.barChart`. See {@link BarChartProps}. */
-export function barChart(props: BarChartProps): Element {
+export function barChart(props: BarChartProps): ChartElement {
   return barChartFactory(props);
 }
 
 /** Line chart. Prefer `ui.lineChart`. See {@link LineChartProps}. */
-export function lineChart(props: LineChartProps): Element {
+export function lineChart(props: LineChartProps): ChartElement {
   return lineChartFactory(props);
 }
 
 /** Pie / donut chart. Prefer `ui.pieChart`. See {@link PieChartProps}. */
-export function pieChart(props: PieChartProps): Element {
+export function pieChart(props: PieChartProps): ChartElement {
   return pieChartFactory(props);
 }
 
 /** Radar chart. Prefer `ui.radarChart`. See {@link RadarChartProps}. */
-export function radarChart(props: RadarChartProps): Element {
+export function radarChart(props: RadarChartProps): ChartElement {
   return radarChartFactory(props);
 }
 
 /** Radial / gauge chart. Prefer `ui.radialChart`. See {@link RadialChartProps}. */
-export function radialChart(props: RadialChartProps): Element {
+export function radialChart(props: RadialChartProps): ChartElement {
   return radialChartFactory(props);
 }
 
 /** Scatter chart. Prefer `ui.scatterChart`. See {@link ScatterChartProps}. */
-export function scatterChart(props: ScatterChartProps): Element {
+export function scatterChart(props: ScatterChartProps): ChartElement {
   return scatterChartFactory(props);
 }
 
 /** Composed multi-geometry chart. Prefer `ui.composedChart`. See {@link ComposedChartProps}. */
-export function composedChart(props: ComposedChartProps): Element {
+export function composedChart(props: ComposedChartProps): ChartElement {
   return composedChartFactory(props);
 }
 
 /** KPI card with inline sparkline. Prefer `ui.sparkline`. See {@link SparklineProps}. */
-export function sparkline(props: SparklineProps): Element {
+export function sparkline(props: SparklineProps): ChartElement {
   return sparklineFactory(props);
 }
 

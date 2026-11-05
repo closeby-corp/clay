@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
-import { cssSafeKey, type ChartHeadline } from './chart-shared';
+import { cssSafeKey, useLiveChartAnimation, useStableValue, type ChartHeadline } from './chart-shared';
 
 function parseSparklineHeadline(props: Record<string, unknown>): ChartHeadline | undefined {
   if (props.headline && typeof props.headline === 'object') {
@@ -59,9 +59,11 @@ export function BoundSparkline({
   const styleProp =
     typeof style === 'object' && style ? (style as CSSProperties) : undefined;
   const chartKey = cssSafeKey(yKey);
-  const config = {
+  const config = useStableValue({
     [chartKey]: { label: yKey, color },
-  };
+  });
+  const xKey = props.xKey ? String(props.xKey) : 'x';
+  const anim = useLiveChartAnimation(data, xKey, props.animate);
 
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
@@ -73,7 +75,8 @@ export function BoundSparkline({
             stroke={color}
             strokeWidth={2}
             dot={false}
-            isAnimationActive={false}
+            isAnimationActive={anim}
+            animationDuration={400}
           />
         </LineChart>
       ) : (
@@ -91,7 +94,8 @@ export function BoundSparkline({
             fill={`url(#spark-fill-${chartKey})`}
             strokeWidth={2}
             dot={false}
-            isAnimationActive={false}
+            isAnimationActive={anim}
+            animationDuration={400}
           />
         </AreaChart>
       )}

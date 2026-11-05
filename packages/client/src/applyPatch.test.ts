@@ -70,4 +70,11 @@ describe('applyPatch', () => {
     const next = applyPatch(tree, { op: 'noop' } as never);
     expect(next).toBe(tree);
   });
+  test('appendRows appends to an array prop and trims to max', () => {
+    const tree = node('root', {}, [node('linechart', { data: [{ x: 1 }, { x: 2 }] }, [], 'c-1')]);
+    const next = applyPatch(tree, { op: 'appendRows', id: 'c-1', prop: 'data', rows: [{ x: 3 }, { x: 4 }], max: 3 });
+    expect(next.children[0]?.props.data).toEqual([{ x: 2 }, { x: 3 }, { x: 4 }]);
+    const fresh = applyPatch(node('linechart', {}, [], 'c-1'), { op: 'appendRows', id: 'c-1', prop: 'data', rows: [{ x: 1 }] });
+    expect(fresh.props.data).toEqual([{ x: 1 }]);
+  });
 });

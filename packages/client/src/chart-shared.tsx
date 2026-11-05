@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -168,6 +168,64 @@ export function buildPieConfig(
   return config;
 }
 
+/**
+ * Returns the previous value while the JSON of `value` is unchanged, so
+ * memoised consumers (ChartContainer styles) are not rebuilt on every update.
+ */
+export function useStableValue<T>(value: T): T {
+  const ref = useRef<{ json: string; value: T } | null>(null);
+  const json = JSON.stringify(value);
+  if (ref.current === null || ref.current.json !== json) {
+    ref.current = { json, value };
+  }
+  return ref.current.value;
+}
+
+/** Memoised `buildSeriesConfig`, keyed on the JSON of `series`. */
+export function useSeriesConfig(series: ChartSeries[]): ChartConfig {
+  const json = JSON.stringify(series);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => buildSeriesConfig(series), [json]);
+}
+
+/**
+ * Value for Recharts `isAnimationActive` that keeps live-streaming charts calm.
+ * - `animate === false` -> never animate.
+ * - First data -> animate (entrance).
+ * - Row count or first x changed (append / sliding window) -> no animation.
+ * - Same length and first x (values changed in place) -> animate (tween).
+ * Previous state is committed in an effect, so double renders are stable.
+ */
+export function useLiveChartAnimation(
+  data: Record<string, unknown>[],
+  xKey: string | undefined,
+  animate?: unknown,
+): boolean {
+  const committed = useRef<{
+    data: Record<string, unknown>[];
+    len: number;
+    first: unknown;
+    value: boolean;
+  } | null>(null);
+  const first = data.length > 0 && xKey ? data[0]![xKey] : undefined;
+
+  let value: boolean;
+  const prev = committed.current;
+  if (prev && prev.data === data) {
+    value = prev.value;
+  } else if (!prev || prev.len === 0) {
+    value = true;
+  } else {
+    value = prev.len === data.length && Object.is(prev.first, first);
+  }
+
+  useEffect(() => {
+    committed.current = { data, len: data.length, first, value };
+  });
+
+  return animate === false ? false : value;
+}
+
 export function useInteractiveChartData(
   data: Record<string, unknown>[],
   xKey: string,
@@ -179,7 +237,7 @@ export function useInteractiveChartData(
   setPeriod: (v: string) => void;
   periods: ChartPeriodDef[];
 } {
-  const periodDefs = periods?.length ? periods : DEFAULT_PERIODS;
+  const periodDefs = useStableValue(periods?.length ? periods : DEFAULT_PERIODS);
   const defaultPeriod = periodDefs[0]?.value ?? '90d';
   const isMobile = useIsMobile();
   const [period, setPeriod] = useState(defaultPeriod);

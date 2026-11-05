@@ -17,7 +17,6 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import {
-  buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
   formatAxisTick,
@@ -29,6 +28,8 @@ import {
   parseReferenceLine,
   useInteractiveChartData,
   type ChartSeries,
+  useLiveChartAnimation,
+  useSeriesConfig,
 } from './chart-shared';
 
 type ComposedSeries = ChartSeries & { type?: 'bar' | 'line' | 'area' };
@@ -67,7 +68,8 @@ export function BoundComposedChart({
     interactive,
     periods,
   );
-  const config = buildSeriesConfig(series);
+  const config = useSeriesConfig(series);
+  const anim = useLiveChartAnimation(filteredData, xKey, props.animate);
   const hideCategoryTicks =
     !interactive && filteredData.every((row) => !isIsoDate(row[xKey]));
 
@@ -140,6 +142,8 @@ export function BoundComposedChart({
                 type={lineStyle.curve}
                 dataKey={s.key}
                 yAxisId={yAxisId}
+                isAnimationActive={anim}
+                animationDuration={400}
                 stroke={`var(--color-${key})`}
                 strokeWidth={lineStyle.strokeWidth}
                 strokeDasharray={lineStyle.strokeDasharray}
@@ -155,6 +159,8 @@ export function BoundComposedChart({
                 type="monotone"
                 dataKey={s.key}
                 yAxisId={yAxisId}
+                isAnimationActive={anim}
+                animationDuration={400}
                 fill={`var(--color-${key})`}
                 stroke={`var(--color-${key})`}
                 fillOpacity={0.3}
@@ -167,6 +173,8 @@ export function BoundComposedChart({
               key={key}
               dataKey={s.key}
               yAxisId={yAxisId}
+              isAnimationActive={anim}
+              animationDuration={400}
               fill={`var(--color-${key})`}
               radius={4}
               stackId={stacked ? 'a' : undefined}

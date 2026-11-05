@@ -7,7 +7,6 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import {
-  buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
   formatAxisTick,
@@ -15,6 +14,8 @@ import {
   isIsoDate,
   parseCartesianProps,
   useInteractiveChartData,
+  useLiveChartAnimation,
+  useSeriesConfig,
 } from './chart-shared';
 
 export function BoundAreaChart({
@@ -46,7 +47,8 @@ export function BoundAreaChart({
     interactive,
     periods,
   );
-  const config = buildSeriesConfig(series);
+  const config = useSeriesConfig(series);
+  const anim = useLiveChartAnimation(filteredData, xKey, props.animate);
 
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
@@ -89,6 +91,8 @@ export function BoundAreaChart({
               key={key}
               dataKey={s.key}
               type="natural"
+isAnimationActive={anim}
+              animationDuration={400}
               fill={`url(#fill-${key})`}
               stroke={`var(--color-${key})`}
               stackId={stacked ? 'a' : undefined}

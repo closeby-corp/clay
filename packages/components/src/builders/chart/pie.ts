@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import type { ChartElement } from '../../chart-shared';
 import { pieChart } from '../../pie-chart';
 import type { ChartSeries } from '../../chart-shared';
 import {
@@ -37,12 +37,12 @@ abstract class PieBuilderBase {
   }
 
   /** Set donut hole radius and build (terminal). */
-  donut(innerRadius: number): Element {
+  donut(innerRadius: number): ChartElement {
     this.innerRadius = innerRadius;
     return this.build();
   }
 
-  abstract build(): Element;
+  abstract build(): ChartElement;
 }
 
 /** Many rows with label/value fields → `pieChart` with `nameKey` / `valueKey`. */
@@ -58,7 +58,7 @@ export class PieRowsBuilder extends PieBuilderBase {
     this.valueKey = keys.value;
   }
 
-  build(): Element {
+  build(): ChartElement {
     return pieChart({
       data: this.data,
       nameKey: this.nameKey,
@@ -83,7 +83,7 @@ export class PieMetricsBuilder extends PieBuilderBase {
     this.seriesList = normalizeSeries(series);
   }
 
-  build(): Element {
+  build(): ChartElement {
     return pieChart({
       data: this.data,
       series: this.seriesList,

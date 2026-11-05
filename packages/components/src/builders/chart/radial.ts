@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import type { ChartElement } from '../../chart-shared';
 import { radialChart } from '../../radial-chart';
 import type { ChartSeries } from '../../chart-shared';
 import {
@@ -62,7 +62,7 @@ export class RadialRowsBuilder {
     return this;
   }
 
-  build(): Element {
+  build(): ChartElement {
     return radialChart({
       data: this.data,
       nameKey: this.nameKey,
@@ -93,7 +93,7 @@ export function stackedGauge(
   row: Record<string, unknown>,
   series: SeriesInput,
   gauge: StackedGaugeOpts = {},
-): Element {
+): ChartElement {
   const seriesList: ChartSeries[] = normalizeSeries(series);
   return radialChart({
     data: [row],

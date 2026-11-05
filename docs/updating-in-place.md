@@ -20,6 +20,7 @@ The flicker is caused by the remount, not by the new value. If a frame carries o
 | Change one value (a label, badge, or input) | `label.setText(…)`, `el.setValue(…)`, `el.update({ … })` | `updateProps` for that element |
 | Live table data | `table.setRows(rows)` on a table created with a stable `keyField` (add `highlightChanges: true` to flash changed rows) | `updateProps` on the table; rows keyed by `keyField` keep their DOM |
 | Table refetch | `table.setLoading(true)` / `table.withLoading(fn)` | `updateProps` (`loading`); previous rows stay, dimmed, instead of blanking |
+| Live chart data (any chart) | `chart.appendData(point, { max })` for a stream, `chart.setData(rows)` for a snapshot, `chart.upsertData(row)` for a growing bucket | `appendRows` with only the new points, or `updateProps` (`data`); the chart stays mounted |
 | A section whose structure depends on data | `ui.refreshable(() => …)` + `.refresh()`, or `ui.auto(() => …)` | Reconciled: matched children get `updateProps` only; added, removed, or reordered children cause one `setChildren` per affected parent |
 | Items in a list inside either of the above | `.key(item.id)` on each item | Items keep their identity through reorder, filter, and prepend |
 
@@ -31,7 +32,7 @@ When a `refreshable` or `auto` block re-runs, Clay builds a fresh tree and match
 
 1. **Keyed first.** A new child with `.key(k)` matches the old child with the same key and the same element type. Keyed children are matched only by key.
 2. **Unkeyed by position.** Unkeyed children are matched in order, by element type. If the next old child matches the current new one, the current old child was removed and is skipped. If the current old child matches the next new one, the new child was inserted. Otherwise the pair is treated as a replacement at that position. This lookahead covers a single insert or remove; larger reshuffles should be keyed.
-3. **Matched pairs keep the old element and its id.** The fresh element's handlers and props are copied onto the old one. Only props that actually changed are sent, as one `updateProps`.
+3. **Matched pairs keep the id on screen.** The freshly built element takes over the old element's id and the old one is destroyed. Only props that actually changed are sent, as one `updateProps`. Because the fresh instance is the one that stays live, its built-in handlers (table search, sort and paging, map drags) and any reference you saved while building (`table = ui.dataTable(...)`) keep working after the refresh.
 4. **Leftovers.** Old children with no match are destroyed. New children with no match are mounted. The parent sends one `setChildren` only if its list of ids changed. A child whose type changed at a position is replaced; its siblings keep their ids.
 5. **Nested blocks keep their instance.** A nested `refreshable` or `auto` keeps its id and its subscriptions and adopts the new builder, so its own refreshes keep working.
 
@@ -103,11 +104,35 @@ async function refresh() {
 
 If you want columns to stay fixed across refreshes, pass `columns` explicitly. Otherwise columns are inferred again on each `setRows`.
 
+### Live charts (`appendData` / `setData` / `upsertData`)
+
+Every chart (`ui.lineChart`, `areaChart`, `barChart`, `composedChart`, `scatterChart`, `pieChart`, `radarChart`, `radialChart`, `sparkline`, and the `ui.chart.*` builders) returns a `ChartElement`. Create it once and push data into it.
+
+```typescript
+const latency = ui.lineChart({ data: seed, xKey: 't', series: [{ key: 'p50', label: 'p50' }] });
+const byRegion = ui.barChart({ data: regions, xKey: 'region', series: [{ key: 'orders', label: 'Orders' }] });
+
+ui.timer(1, () => {
+  latency.appendData({ t: clock(), p50: sample() }, { max: 60 }); // only the new point is sent
+  latency.setHeadline({ value: `${p50} ms` });
+});
+ui.timer(5, async () => byRegion.setData(await fetchRegions())); // bars tween to the new values
+```
+
+- **`appendData(rows, { max })`** sends only the new rows. The client appends them and drops the oldest past `max`, so a sliding window costs one point per tick.
+- **`setData(rows)`** replaces the data. When the row count and first x value are unchanged, the marks tween to their new values.
+- **`upsertData(row, { key, max })`** replaces the row with the same x value (or `nameKey` for pies), or appends it. Use it for a bucket that keeps growing, such as the current minute.
+- **`setSeries`, `setHeadline`, `setTitle`, `setDescription`, `setLoading`** patch one prop each. Anything else goes through `update({ … })`.
+
+KPI stat grids work the same way: `ui.stat(items)` returns a `StatElement`. `updateItem(titleOrIndex, patch)` changes one card, `appendSparkline(titleOrIndex, points, { max })` extends that card's sparkline, and `setItems(items)` replaces them all.
+
+Appends and sliding windows draw without animation, so lines don't slide sideways or replay their entrance. Pass `animate: false` to turn chart animation off entirely. The interactive period tabs keep the selected period while data streams in.
+
 ## Anti-patterns
 
 - **Rebuilding a whole section when one value changes.** Wrapping a whole page in `ui.refreshable` and calling `.refresh()` every second to update a clock. Keep a reference to the clock label and call `setText`.
 - **Unkeyed lists that get sorted or filtered.** Without `.key()`, position is the identity. After a sort, the element in slot 3 is reused for whatever item is now third, so focus and typed text stay in the slot instead of following the row.
-- **Creating a new table instead of `setRows`.** A `ui.dataTable(...)` created inside a refreshable on every tick remounts the table and loses sort, scroll, selection, and search. Create the table once and call `setRows`.
+- **Creating a new table instead of `setRows`.** A `ui.dataTable(...)` rebuilt inside a refreshable keeps its id and stays interactive, but each rebuild starts the table's server-side state over, so sort, search, page and selection reset. Create the table once and call `setRows`.
 - **Tables without `keyField`.** Rows are stamped `__rowId` by their index, so inserting or re-sorting the source shifts every row's identity. Set `keyField` to your primary key.
 - **Toggling a constructor option by rebuilding.** Recreating a table with `zebra: on` inside an `auto` block. Use the setters instead: `setZebra`, `setDensity`, `setHighlightChanges`.
 

@@ -7,11 +7,12 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import {
-  buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
   resolveShowLegend,
   type ChartSeries,
+  useLiveChartAnimation,
+  useSeriesConfig,
 } from './chart-shared';
 
 export function BoundRadarChart({
@@ -31,7 +32,8 @@ export function BoundRadarChart({
   const height = Number(props.height ?? 250);
   const fillOpacity =
     typeof props.fillOpacity === 'number' ? props.fillOpacity : 0.6;
-  const config = buildSeriesConfig(series);
+  const config = useSeriesConfig(series);
+  const anim = useLiveChartAnimation(data, angleKey, props.animate);
   const showLegend = resolveShowLegend(props, series.length > 1);
 
   const chart = (
@@ -57,6 +59,8 @@ export function BoundRadarChart({
             <Radar
               key={key}
               dataKey={s.key}
+              isAnimationActive={anim}
+              animationDuration={400}
               fill={`var(--color-${key})`}
               fillOpacity={fillOpacity}
             />

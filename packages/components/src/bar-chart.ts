@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { CartesianChartProps, ChartSeries } from './chart-shared';
 
 export type BarChartSeries = ChartSeries;
@@ -10,8 +10,8 @@ export type BarChartProps = CartesianChartProps & {
   layout?: 'vertical' | 'horizontal';
 };
 
-export function barChart(props: BarChartProps): Element {
-  return new Element('barchart', {
+export function barChart(props: BarChartProps): ChartElement {
+  return new ChartElement('barchart', {
     data: props.data,
     xKey: props.xKey,
     series: props.series,

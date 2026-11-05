@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/chart';
 import {
   buildSeriesConfig,
+  useLiveChartAnimation,
+  useStableValue,
   ChartChrome,
   cssSafeKey,
   resolveShowLegend,
@@ -33,7 +35,7 @@ export function BoundScatterChart({
   const description = props.description ? String(props.description) : '';
   const height = Number(props.height ?? 250);
 
-  let config: ChartConfig;
+  let rawConfig: ChartConfig;
   let groups: Array<{ key: string; label: string; rows: Record<string, unknown>[] }>;
 
   if (seriesKey) {
@@ -44,7 +46,7 @@ export function BoundScatterChart({
       label: seriesByKey.get(key)?.label ?? key,
       rows: data.filter((row) => String(row[seriesKey] ?? 'default') === key),
     }));
-    config = buildSeriesConfig(
+    rawConfig = buildSeriesConfig(
       groups.map((g) => seriesByKey.get(g.key) ?? { key: g.key, label: g.label }),
     );
   } else if (series.length > 0) {
@@ -53,12 +55,14 @@ export function BoundScatterChart({
       label: s.label,
       rows: data,
     }));
-    config = buildSeriesConfig(series);
+    rawConfig = buildSeriesConfig(series);
   } else {
     groups = [{ key: 'points', label: 'Points', rows: data }];
-    config = { points: { label: 'Points', color: 'var(--chart-1)' } };
+    rawConfig = { points: { label: 'Points', color: 'var(--chart-1)' } };
   }
 
+  const config = useStableValue(rawConfig);
+  const anim = useLiveChartAnimation(data, xKey, props.animate);
   const showLegend = resolveShowLegend(props, groups.length > 1);
 
   const chart = (
@@ -77,6 +81,8 @@ export function BoundScatterChart({
               key={key}
               name={g.label}
               data={g.rows}
+              isAnimationActive={anim}
+              animationDuration={400}
               fill={`var(--color-${key})`}
             />
           );

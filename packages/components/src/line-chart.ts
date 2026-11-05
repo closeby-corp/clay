@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { CartesianChartProps, ChartSeries, LineChartStyleProps } from './chart-shared';
 
 export type LineChartSeries = ChartSeries;
@@ -17,8 +17,8 @@ function wireLineStyle(props: LineChartStyleProps) {
   };
 }
 
-export function lineChart(props: LineChartProps): Element {
-  return new Element('linechart', {
+export function lineChart(props: LineChartProps): ChartElement {
+  return new ChartElement('linechart', {
     data: props.data,
     xKey: props.xKey,
     series: props.series,

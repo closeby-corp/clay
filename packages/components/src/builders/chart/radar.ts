@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import type { ChartElement } from '../../chart-shared';
 import { radarChart } from '../../radar-chart';
 import type { ChartSeries } from '../../chart-shared';
 import {
@@ -51,7 +51,7 @@ export class RadarBuilder {
     return this;
   }
 
-  build(): Element {
+  build(): ChartElement {
     if (!this.seriesList?.length) {
       throw new Error('chart.radar requires .series() before .build()');
     }

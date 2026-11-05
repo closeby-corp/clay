@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { ChartElement } from './chart-shared';
 import type { ChartSeries } from './chart-shared';
 
 export type RadarChartSeries = ChartSeries;
@@ -19,8 +19,8 @@ export type RadarChartProps = {
   showLegend?: boolean;
 };
 
-export function radarChart(props: RadarChartProps): Element {
-  return new Element('radarchart', {
+export function radarChart(props: RadarChartProps): ChartElement {
+  return new ChartElement('radarchart', {
     data: props.data,
     angleKey: props.angleKey,
     series: props.series,

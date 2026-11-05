@@ -7,7 +7,6 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import {
-  buildSeriesConfig,
   ChartChrome,
   cssSafeKey,
   formatAxisTick,
@@ -15,6 +14,8 @@ import {
   isIsoDate,
   parseCartesianProps,
   useInteractiveChartData,
+  useLiveChartAnimation,
+  useSeriesConfig,
 } from './chart-shared';
 
 export function BoundBarChart({
@@ -47,7 +48,8 @@ export function BoundBarChart({
     interactive,
     periods,
   );
-  const config = buildSeriesConfig(series);
+  const config = useSeriesConfig(series);
+  const anim = useLiveChartAnimation(filteredData, xKey, props.animate);
   const hideCategoryTicks =
     !interactive && filteredData.every((row) => !isIsoDate(row[xKey]));
 
@@ -97,6 +99,8 @@ export function BoundBarChart({
               dataKey={s.key}
               fill={`var(--color-${key})`}
               radius={4}
+isAnimationActive={anim}
+              animationDuration={400}
               stackId={stacked ? 'a' : undefined}
             />
           );

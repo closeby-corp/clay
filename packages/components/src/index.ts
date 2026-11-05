@@ -588,8 +588,69 @@ export type StatItem = {
   };
 };
 
-export function stat(items: StatItem[], props: { className?: string } = {}): Element {
-  return new Element('stat', {
+/** Which card to change: its index in `items`, or its `title`. */
+export type StatItemRef = number | string;
+
+/** KPI stat grid. Update cards in place with `setItems`, `updateItem` or `appendSparkline`. */
+export class StatElement extends Element {
+  private get items(): StatItem[] {
+    return (this.props.items as StatItem[] | undefined) ?? [];
+  }
+
+  private indexOf(ref: StatItemRef): number {
+    const i = typeof ref === 'number' ? ref : this.items.findIndex((it) => it.title === ref);
+    if (i < 0 || i >= this.items.length || !Number.isInteger(i)) {
+      throw new RangeError(`stat: no card ${JSON.stringify(ref)}`);
+    }
+    return i;
+  }
+
+  private commit(items: StatItem[]): this {
+    return this.update({ items });
+  }
+
+  /** Replace every card. */
+  setItems(items: StatItem[]): this {
+    return this.commit(items.map((it) => ({ ...it })));
+  }
+
+  /**
+   * Shallow-merge `patch` into one card, e.g. `updateItem('Revenue', { value: '$12.4k', trend: '+3%' })`.
+   * Other cards are left untouched.
+   */
+  updateItem(ref: StatItemRef, patch: Partial<StatItem>): this {
+    const i = this.indexOf(ref);
+    const next = this.items.slice();
+    next[i] = { ...next[i]!, ...patch };
+    return this.commit(next);
+  }
+
+  /**
+   * Append points to one card's sparkline, keeping the last `max` when set.
+   * The card must already have a `sparkline` (its keys and styling).
+   */
+  appendSparkline(
+    ref: StatItemRef,
+    points: Record<string, unknown> | Record<string, unknown>[],
+    options: { max?: number } = {},
+  ): this {
+    const rows = Array.isArray(points) ? points : [points];
+    if (rows.length === 0) return this;
+    const { max } = options;
+    if (max !== undefined && (!Number.isInteger(max) || max < 0)) {
+      throw new RangeError(`stat.appendSparkline: max must be a non-negative integer, got ${max}`);
+    }
+    const i = this.indexOf(ref);
+    const card = this.items[i]!;
+    if (!card.sparkline) throw new Error(`stat.appendSparkline: card ${JSON.stringify(ref)} has no sparkline`);
+    let data = card.sparkline.data.concat(rows);
+    if (max !== undefined && data.length > max) data = data.slice(data.length - max);
+    return this.updateItem(i, { sparkline: { ...card.sparkline, data } });
+  }
+}
+
+export function stat(items: StatItem[], props: { className?: string } = {}): StatElement {
+  return new StatElement('stat', {
     items,
     className: props.className,
   });
@@ -626,6 +687,7 @@ export {
 } from './data-table';
 
 export {
+  ChartElement,
   type CartesianChartProps,
   type ChartSeries,
   type ChartHeadline,

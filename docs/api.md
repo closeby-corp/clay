@@ -1220,6 +1220,21 @@ ui.radialChart({
 });
 ```
 
+#### Live chart updates
+
+Every chart factory and `ui.chart.*` builder returns a `ChartElement`:
+
+| Method | What it sends |
+|--------|---------------|
+| `appendData(rows, { max? })` | `appendRows` with only the new rows; client trims to the last `max` |
+| `setData(rows)` | `updateProps` (`data`) |
+| `upsertData(row, { key?, max? })` | Replaces the row with the same `key` (default `xKey`, or `nameKey` for pies) or appends it |
+| `setSeries(series)` / `setHeadline(h)` / `setTitle(t)` / `setDescription(d)` / `setLoading(b)` | `updateProps` for that prop |
+
+`ui.stat(items)` returns a `StatElement` with `setItems(items)`, `updateItem(titleOrIndex, patch)` and `appendSparkline(titleOrIndex, points, { max? })`. Each sends one `updateProps` (`items`).
+
+All charts accept `animate?: boolean` (default `true`). See [Updating in place](./updating-in-place.md#live-charts-appenddata--setdata--upsertdata).
+
 #### Structured charts (`ui.chart`)
 
 Optional sugar over the props APIs above. Mode-first builders compile to the same `Element` types — legacy `ui.areaChart` / `ui.pieChart` / etc. remain fully supported.
