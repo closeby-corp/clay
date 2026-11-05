@@ -4,7 +4,9 @@ import { ui } from '@close-by/clay';
 export const pageMeta = {
   label: 'Kitchen Sink',
   icon: 'boxes',
-  order: 100,
+  order: 14,
+  group: 'Start here',
+  groupIcon: 'sparkles',
 };
 
 ui.page('/examples/kitchen-sink', () => {

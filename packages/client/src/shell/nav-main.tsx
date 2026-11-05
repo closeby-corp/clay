@@ -153,7 +153,7 @@ function NavMainItem({
   }`;
   const groupButton = sub ? (
     <CollapsibleTrigger asChild>
-      <SidebarMenuSubButton asChild isActive={!!item.active}>
+      <SidebarMenuSubButton asChild isActive={!!item.active} className="data-[active=true]:bg-transparent data-[active=true]:hover:bg-sidebar-foreground/6 group-data-[collapsible=icon]:data-[active=true]:bg-sidebar-accent">
         <button type="button">
           <Icon />
           <span>{item.label}</span>
@@ -163,7 +163,7 @@ function NavMainItem({
     </CollapsibleTrigger>
   ) : (
     <CollapsibleTrigger asChild>
-      <SidebarMenuButton tooltip={item.label} isActive={!!item.active}>
+      <SidebarMenuButton tooltip={item.label} isActive={!!item.active} className="data-[active=true]:bg-transparent data-[active=true]:hover:bg-sidebar-foreground/6 group-data-[collapsible=icon]:data-[active=true]:bg-sidebar-accent">
         <Icon />
         <span>{item.label}</span>
         <ChevronRightIcon className={chevronClassName} />

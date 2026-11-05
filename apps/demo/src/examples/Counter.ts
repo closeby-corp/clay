@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Counter',
   icon: 'gauge',
-  order: 10,
+  order: 12,
+  group: 'Start here',
+  groupIcon: 'sparkles',
 };
 
 ui.page('/examples/counter', () => {

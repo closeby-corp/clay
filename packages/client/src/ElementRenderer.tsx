@@ -449,6 +449,31 @@ const resizableFillClass: Record<string, string> = {
   viewport: 'h-[min(100dvh-7rem,100%)] min-h-96 w-full',
 };
 
+/**
+ * Shared `grow` / `scroll` / `fillViewport` layout props → classes + style.
+ * `fillViewport` sizes to `100svh` minus `--clay-viewport-offset` (set by the app shell).
+ */
+function fillLayout(props: Record<string, unknown>): { className: string; style?: CSSProperties } {
+  const grow = props.grow;
+  const scroll = props.scroll;
+  const growing = grow === true || (typeof grow === 'number' && grow > 0);
+  return {
+    className: cn(
+      growing && 'min-h-0 min-w-0 grow',
+      scroll === true && 'min-h-0 min-w-0 overflow-auto',
+      scroll === 'y' && 'min-h-0 overflow-y-auto',
+      scroll === 'x' && 'min-w-0 overflow-x-auto',
+      props.fillViewport === true && 'h-[calc(100svh-var(--clay-viewport-offset,0px))] min-h-0',
+    ),
+    style: typeof grow === 'number' && grow > 0 ? { flexGrow: grow } : undefined,
+  };
+}
+
+function mergeStyle(...styles: (CSSProperties | undefined)[]): CSSProperties | undefined {
+  const defined = styles.filter(Boolean) as CSSProperties[];
+  return defined.length ? Object.assign({}, ...defined) : undefined;
+}
+
 function asStyle(style: unknown): CSSProperties | undefined {
   if (!style) return undefined;
   if (typeof style === 'string') {
@@ -3626,7 +3651,8 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
 
   switch (type) {
     case 'root':
-      return <div className="min-h-screen">{renderChildren()}</div>;
+      // Flex column so top-level `grow` / `fillViewport` layouts can fill the page.
+      return <div className="flex min-h-screen flex-col">{renderChildren()}</div>;
 
     case 'app': {
       const title = String(props.title ?? '');
@@ -3669,6 +3695,7 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
           navSecondary={navSecondary}
           documents={documents}
           primaryAction={primaryAction}
+          pageKey={children.map((c) => c.id).join('|')}
           className={className}
           style={asStyle(style)}
         >
@@ -3680,25 +3707,32 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
     case 'refreshable':
       return <div className={cn('contents', className)}>{renderChildren()}</div>;
 
-    case 'row':
+    case 'row': {
+      const fill = fillLayout(props);
+      // A row that fills height stretches its children by default (otherwise centered).
+      const fillsHeight = props.grow === true || typeof props.grow === 'number' || props.fillViewport === true;
+      const align = String(props.align ?? (fillsHeight ? 'stretch' : 'center'));
       return (
         <div
           className={cn(
             'flex flex-row',
             props.wrap === false ? 'flex-nowrap' : 'flex-wrap',
-            alignClass[String(props.align ?? 'center')] ?? 'items-center',
+            alignClass[align] ?? 'items-center',
             typeof props.justify === 'string' ? justifyClass[props.justify] : undefined,
             props.minWidthZero === true && 'min-w-0',
             gapClass(props.gap),
+            fill.className,
             className,
           )}
-          style={asStyle(style)}
+          style={mergeStyle(fill.style, asStyle(style))}
         >
           {renderChildren()}
         </div>
       );
+    }
 
-    case 'column':
+    case 'column': {
+      const fill = fillLayout(props);
       return (
         <div
           className={cn(
@@ -3707,28 +3741,67 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
             typeof props.justify === 'string' ? justifyClass[props.justify] : undefined,
             props.minWidthZero === true && 'min-w-0',
             gapClass(props.gap),
+            fill.className,
             className,
           )}
-          style={asStyle(style)}
+          style={mergeStyle(fill.style, asStyle(style))}
         >
           {renderChildren()}
         </div>
       );
+    }
 
-    case 'container':
+    case 'grid': {
+      const fill = fillLayout(props);
+      const cols = Number(props.cols);
+      const min = typeof props.minColWidth === 'string' ? props.minColWidth : undefined;
+      const fillsHeight = props.grow === true || typeof props.grow === 'number' || props.fillViewport === true;
+      return (
+        <div
+          className={cn(
+            'grid',
+            // Fixed `cols` collapse to one column on phones; auto-fit handles itself.
+            !min && cols > 0 && 'grid-cols-1 sm:grid-cols-[repeat(var(--clay-grid-cols),minmax(0,1fr))]',
+            typeof props.align === 'string' ? alignClass[props.align] : undefined,
+            fillsHeight && 'auto-rows-fr',
+            gapClass(props.gap),
+            fill.className,
+            className,
+          )}
+          style={mergeStyle(
+            min
+              ? { gridTemplateColumns: `repeat(auto-fit, minmax(min(${min}, 100%), 1fr))` }
+              : cols > 0
+                ? ({ '--clay-grid-cols': String(Math.floor(cols)) } as CSSProperties)
+                : undefined,
+            fill.style,
+            asStyle(style),
+          )}
+        >
+          {renderChildren()}
+        </div>
+      );
+    }
+
+    case 'container': {
+      const fill = fillLayout(props);
+      const fillsHeight = props.grow === true || typeof props.grow === 'number' || props.fillViewport === true;
       return (
         <div
           className={cn(
             'w-full px-4',
+            fillsHeight && 'flex flex-col',
             props.centered ? 'mx-auto' : '',
             widthClass[String(props.width ?? 'lg')] ?? 'max-w-lg',
+            fill.className,
             className,
           )}
-          style={asStyle(style)}
+          style={mergeStyle(fill.style, asStyle(style))}
         >
           {renderChildren()}
         </div>
       );
+    }
 
     case 'hero':
       return (
@@ -3737,9 +3810,13 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
         </div>
       );
 
-    case 'card':
+    case 'card': {
+      const fillsHeight = props.grow === true || typeof props.grow === 'number' || props.fillViewport === true;
+      const scrolls = Boolean(props.scroll);
+      const cardFill = fillLayout({ grow: props.grow, fillViewport: props.fillViewport });
+      const contentScroll = fillLayout({ scroll: props.scroll });
       return (
-        <Card className={cn('w-full', className)} style={asStyle(style)}>
+        <Card className={cn('w-full', (fillsHeight || scrolls) && 'min-h-0', cardFill.className, className)} style={mergeStyle(cardFill.style, asStyle(style))}>
           {props.title || props.description ? (
             <CardHeader>
               {props.title ? <CardTitle>{String(props.title)}</CardTitle> : null}
@@ -3748,11 +3825,14 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
               ) : null}
             </CardHeader>
           ) : null}
-          <CardContent className={cn('flex flex-col', gapClass(props.gap))}>
+          <CardContent
+            className={cn('flex flex-col', gapClass(props.gap), (fillsHeight || scrolls) && 'min-h-0 grow', contentScroll.className)}
+          >
             {renderChildren()}
           </CardContent>
         </Card>
       );
+    }
 
     case 'dialog':
       return (

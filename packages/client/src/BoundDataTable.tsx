@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -108,11 +109,7 @@ import {
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -120,7 +117,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -131,12 +128,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import {
@@ -144,7 +136,14 @@ import {
   type DataTableColumnEditor,
   type DataTableDensity,
 } from './data-table/EditableCell';
+import {
+  formatCell,
+  type CellFormat,
+  type CellFormatOptions,
+} from './data-table/formatCell';
 import { FilterChipsView } from './FilterChipsView';
+import { useRowChangeFlash } from './data-table/rowChanges';
+import { StackedRows } from './data-table/StackedRows';
 
 /** Virtualize body once row count is large enough to matter. */
 const VIRTUALIZE_THRESHOLD = 40;
@@ -179,6 +178,8 @@ type DataTableColumn = {
   detailTrigger?: boolean;
   pin?: DataTableColumnPin;
   aggregate?: 'sum' | 'avg' | 'count' | 'min' | 'max';
+  format?: CellFormat;
+  formatOptions?: CellFormatOptions;
 };
 
 type DataTableActionProp = {
@@ -215,6 +216,20 @@ function useOptimisticValue<T>(serverValue: T): [T, (next: T) => void] {
     setLocal(serverValue);
   }
   return [local, setLocal];
+}
+
+/** True when `enabled` and the observed element is narrower than `threshold` px. */
+function useNarrow(el: HTMLElement | null, enabled: boolean, threshold = 640): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useLayoutEffect(() => {
+    if (!enabled || !el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      setNarrow((entries[0]?.contentRect.width ?? el.clientWidth) < threshold);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el, enabled, threshold]);
+  return enabled && narrow;
 }
 
 function isUiCell(content: unknown): content is { __ui: ElementNode } {
@@ -328,19 +343,13 @@ function FacetColumnFilter({
         <Button
           variant="outline"
           size="sm"
-          className={cn(
-            'h-7 gap-1 border-dashed px-2 font-normal',
-            active && 'border-solid',
-          )}
+          className={cn('h-7 gap-1 border-dashed px-2 font-normal', active && 'border-solid')}
           onClick={(e) => e.stopPropagation()}
           aria-label={`Filter ${column.header}`}
         >
           <ListFilter className="size-3.5 text-muted-foreground" />
           {active ? (
-            <Badge
-              variant="secondary"
-              className="h-5 rounded-sm px-1 font-normal"
-            >
+            <Badge variant="secondary" className="h-5 rounded-sm px-1 font-normal">
               {selected.length}
             </Badge>
           ) : null}
@@ -365,7 +374,12 @@ function FacetColumnFilter({
                     onChange(next);
                   }}
                 >
-                  <Checkbox checked={checked} tabIndex={-1} aria-hidden className="pointer-events-none" />
+                  <Checkbox
+                    checked={checked}
+                    tabIndex={-1}
+                    aria-hidden
+                    className="pointer-events-none"
+                  />
                   <span className="min-w-0 flex-1 truncate">{opt.label}</span>
                   {opt.count != null ? (
                     <span className="text-xs text-muted-foreground tabular-nums">{opt.count}</span>
@@ -413,10 +427,7 @@ function TextColumnFilter({
         <Button
           variant="outline"
           size="sm"
-          className={cn(
-            'h-7 gap-1 border-dashed px-2 font-normal',
-            active && 'border-solid',
-          )}
+          className={cn('h-7 gap-1 border-dashed px-2 font-normal', active && 'border-solid')}
           onClick={(e) => e.stopPropagation()}
           aria-label={`Filter ${column.header}`}
         >
@@ -589,8 +600,7 @@ function resolveSorts(props: Record<string, unknown>): DataTableSort[] {
         if (!entry || typeof entry !== 'object') return null;
         const key = String((entry as DataTableSort).key ?? '');
         if (!key) return null;
-        const dir: DataTableSortDir =
-          (entry as DataTableSort).dir === 'desc' ? 'desc' : 'asc';
+        const dir: DataTableSortDir = (entry as DataTableSort).dir === 'desc' ? 'desc' : 'asc';
         return { key, dir };
       })
       .filter((s): s is DataTableSort => s != null);
@@ -642,13 +652,7 @@ function stickyCellBg(opts: {
  * Gradient edge painted *outside* the sticky cell so it isn’t clipped by cell overflow.
  * Parent cell must be `relative overflow-visible`. Uses theme foreground so it works in light/dark.
  */
-function PinEdgeShadow({
-  side,
-  visible,
-}: {
-  side: 'left' | 'right';
-  visible: boolean;
-}) {
+function PinEdgeShadow({ side, visible }: { side: 'left' | 'right'; visible: boolean }) {
   if (!visible) return null;
   return (
     <span
@@ -663,20 +667,13 @@ function PinEdgeShadow({
   );
 }
 
-function pinEdgeSide(
-  columns: DataTableColumn[],
-  col: DataTableColumn,
-): 'left' | 'right' | null {
+function pinEdgeSide(columns: DataTableColumn[], col: DataTableColumn): 'left' | 'right' | null {
   if (col.pin === 'left' && isLastLeftPin(columns, col.key)) return 'left';
   if (col.pin === 'right' && isFirstRightPin(columns, col.key)) return 'right';
   return null;
 }
 
-function leadingStickyStyle(
-  enabled: boolean,
-  left: number,
-  zIndex = 3,
-): CSSProperties | undefined {
+function leadingStickyStyle(enabled: boolean, left: number, zIndex = 3): CSSProperties | undefined {
   if (!enabled) return undefined;
   return { position: 'sticky', left, zIndex };
 }
@@ -783,6 +780,9 @@ function SortableRow({
   className,
   measureRef,
   dataIndex,
+  clickable,
+  onClick,
+  onKeyDown,
 }: {
   rowKey: UniqueIdentifier;
   children: ReactNode;
@@ -790,8 +790,13 @@ function SortableRow({
   className?: string;
   measureRef?: (node: HTMLTableRowElement | null) => void;
   dataIndex?: number;
+  clickable?: boolean;
+  onClick?: (e: { target: EventTarget; currentTarget: EventTarget }) => void;
+  onKeyDown?: (e: { key: string; target: EventTarget; currentTarget: EventTarget }) => void;
 }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({ id: rowKey });
+  const { transform, transition, setNodeRef, isDragging } = useSortable({
+    id: rowKey,
+  });
   const setRefs = (node: HTMLTableRowElement | null) => {
     setNodeRef(node);
     measureRef?.(node);
@@ -801,8 +806,12 @@ function SortableRow({
       ref={setRefs}
       data-index={dataIndex}
       data-state={selected ? 'selected' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
       className={cn(
         'relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80',
+        clickable && 'cursor-pointer',
         className,
       )}
       data-dragging={isDragging || undefined}
@@ -837,6 +846,11 @@ export function BoundDataTable({
   const actions = (props.actions as DataTableActionProp[]) ?? [];
   const bulkActions = (props.bulkActions as DataTableActionProp[]) ?? [];
   const keyField = String(props.keyField ?? 'id');
+  const rowKeyOf = useCallback(
+    (row: Record<string, unknown>, i: number) => String(row[keyField] ?? i),
+    [keyField],
+  );
+  const flashingKeys = useRowChangeFlash(rows, rowKeyOf, props.highlightChanges === true);
   const searchable = props.searchable !== false;
   const columnFilterable = props.columnFilterable !== false;
   const columnToggle = props.columnToggle !== false;
@@ -867,10 +881,11 @@ export function BoundDataTable({
   const totalRows = Number(props.totalRows ?? rows.length);
   const totalPages = Number(props.totalPages ?? 1);
   const density: DataTableDensity =
-    props.density === 'compact' || props.density === 'comfortable'
-      ? props.density
-      : 'default';
+    props.density === 'compact' || props.density === 'comfortable' ? props.density : 'default';
   const zebra = props.zebra === true;
+  const fill = props.fill === true;
+  const maxHeight =
+    typeof props.maxHeight === 'string' && props.maxHeight.trim() !== '' ? props.maxHeight : null;
   const hiddenColumns = new Set((props.hiddenColumns as string[]) ?? []);
   const serverFilter = String(props.filter ?? '');
   const serverColumnFilters = (props.columnFilters as Record<string, string>) ?? {};
@@ -894,6 +909,10 @@ export function BoundDataTable({
   const columnDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const headerCellRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // Element state (not a ref object) so the observer re-attaches when the root swaps between branches.
+  const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
+  const narrow = useNarrow(rootEl, props.stackOnMobile === true);
+  const stacked = narrow && rows.length > 0;
   const tableId = useId();
 
   const dataIds = useMemo(
@@ -993,7 +1012,10 @@ export function BoundDataTable({
   const hasRightPins = columns.some((c) => c.pin === 'right');
   const showFooterRow = footerCells != null && Object.keys(footerCells).length > 0;
   const pinOffsetsNeedMeasure = hasLeftPins || hasRightPins;
-  const [pinScrollShadow, setPinScrollShadow] = useState({ left: false, right: false });
+  const [pinScrollShadow, setPinScrollShadow] = useState({
+    left: false,
+    right: false,
+  });
 
   /** Keep sticky offsets accurate once pins are active (avoid default-width drift). */
   useLayoutEffect(() => {
@@ -1012,7 +1034,7 @@ export function BoundDataTable({
       }
       return changed ? next : prev;
     });
-  }, [columns, pinOffsetsNeedMeasure, density, headHeight]); // eslint-disable-line react-hooks/exhaustive-deps -- measure when pin layout chrome changes
+  }, [columns, pinOffsetsNeedMeasure, density, headHeight, stacked]); // eslint-disable-line react-hooks/exhaustive-deps -- measure when pin layout chrome changes
 
   const tableMinWidth = useMemo(() => {
     if (!hasLeftPins && !hasRightPins) return undefined;
@@ -1059,7 +1081,7 @@ export function BoundDataTable({
       el.removeEventListener('scroll', update);
       ro?.disconnect();
     };
-  }, [hasLeftPins, hasRightPins, columns.length, tableMinWidth, columnWidths]);
+  }, [hasLeftPins, hasRightPins, columns.length, tableMinWidth, columnWidths, stacked]);
 
   /** Seed explicit widths from rendered <th>s so the first drag doesn't jump from a default. */
   const beginColumnResize = (key: string): number => {
@@ -1189,9 +1211,45 @@ export function BoundDataTable({
     }
   };
 
-  const renderCellContent = (row: Record<string, unknown>, col: DataTableColumn, rowKey: string) => {
+  const renderCellContent = (
+    row: Record<string, unknown>,
+    col: DataTableColumn,
+    rowKey: string,
+  ) => {
     const cells = row.__cells as Record<string, unknown> | undefined;
     const content = cells?.[col.key] ?? row[col.key];
+
+    // Client-side formatting for plain cells only; custom server cells and editors keep their own rendering.
+    const renderFormatted = (): ReactNode | null => {
+      // Server-built cells are plain display strings unless a custom `cell` renderer returned UI.
+      if (!col.format || col.editor || isUiCell(cells?.[col.key])) return null;
+      const value = row[col.key];
+      const text = formatCell(value, col.format, col.formatOptions);
+      if (text === null) return null;
+      if (col.format === 'relative') {
+        try {
+          const date = new Date(value as string | number | Date);
+          if (Number.isNaN(date.getTime())) return text;
+          const absolute = formatCell(value, 'datetime', col.formatOptions);
+          return (
+            <time dateTime={date.toISOString()} title={absolute ?? undefined}>
+              {text}
+            </time>
+          );
+        } catch {
+          return text;
+        }
+      }
+      if (
+        col.format === 'number' ||
+        col.format === 'currency' ||
+        col.format === 'percent' ||
+        col.format === 'bytes'
+      ) {
+        return <span className="tabular-nums">{text}</span>;
+      }
+      return text;
+    };
 
     if (col.detailTrigger) {
       return (
@@ -1205,7 +1263,7 @@ export function BoundDataTable({
               variant="link"
               className="h-auto max-w-full min-w-0 truncate px-0 text-left text-foreground"
             >
-              {renderTableCell(content, emit, renderNode)}
+              {renderFormatted() ?? renderTableCell(content, emit, renderNode)}
             </Button>
           }
         />
@@ -1221,7 +1279,11 @@ export function BoundDataTable({
             density={density}
             onCommit={(next) => {
               if (hasEvent(props, 'cellChange')) {
-                emit(id, 'cellChange', { rowKey, columnKey: col.key, value: next });
+                emit(id, 'cellChange', {
+                  rowKey,
+                  columnKey: col.key,
+                  value: next,
+                });
               }
             }}
           />
@@ -1229,7 +1291,7 @@ export function BoundDataTable({
       );
     }
 
-    return renderTableCell(content, emit, renderNode);
+    return renderFormatted() ?? renderTableCell(content, emit, renderNode);
   };
 
   type BodyItem =
@@ -1267,7 +1329,7 @@ export function BoundDataTable({
    * scroll edge to bring more rows into the window (dnd-kit auto-scroll).
    */
   const shouldVirtualize =
-    !loading && rows.length > 0 && bodyItems.length >= VIRTUALIZE_THRESHOLD;
+    !stacked && !loading && rows.length > 0 && bodyItems.length >= VIRTUALIZE_THRESHOLD;
 
   const rowVirtualizer = useVirtualizer({
     count: shouldVirtualize ? bodyItems.length : 0,
@@ -1483,7 +1545,10 @@ export function BoundDataTable({
             variant={action.variant === 'destructive' ? 'destructive' : 'outline'}
             onClick={() => {
               if (hasEvent(props, 'bulkAction')) {
-                emit(id, 'bulkAction', { actionId: action.id, rowKeys: [...selected] });
+                emit(id, 'bulkAction', {
+                  actionId: action.id,
+                  rowKeys: [...selected],
+                });
               }
             }}
           >
@@ -1537,6 +1602,64 @@ export function BoundDataTable({
     );
   };
 
+  const renderRowActionsMenu = (rowKey: string) => (
+    <DropdownMenu
+      open={actionsMenuKey === rowKey}
+      onOpenChange={(open) => {
+        setActionsMenuKey(open ? rowKey : null);
+        if (open) {
+          setColumnsOpen(false);
+          setExportOpen(false);
+        }
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
+          size="icon"
+          aria-label="Open menu"
+        >
+          <MoreVertical className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        {actions.map((action, index) => (
+          <div key={action.id}>
+            {index > 0 && action.variant === 'destructive' ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuItem
+              className={
+                action.variant === 'destructive'
+                  ? 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                  : undefined
+              }
+              onSelect={() => {
+                if (hasEvent(props, 'action')) {
+                  emit(id, 'action', { actionId: action.id, rowKey });
+                }
+              }}
+            >
+              <ActionLabel action={action} />
+            </DropdownMenuItem>
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const renderRowCheckbox = (rowKey: string, checked: boolean) => (
+    <Checkbox
+      checked={checked}
+      onCheckedChange={(value) => {
+        const next = new Set(selected);
+        if (value) next.add(rowKey);
+        else next.delete(rowKey);
+        emitSelection(next);
+      }}
+      aria-label="Select row"
+    />
+  );
+
   const renderDataRowCells = (
     row: Record<string, unknown>,
     i: number,
@@ -1575,16 +1698,7 @@ export function BoundDataTable({
           )}
           style={leadingStickyStyle(hasLeftPins, selectLeftOffset, 4)}
         >
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={(value) => {
-              const next = new Set(selected);
-              if (value) next.add(rowKey);
-              else next.delete(rowKey);
-              emitSelection(next);
-            }}
-            aria-label="Select row"
-          />
+          {renderRowCheckbox(rowKey, isSelected)}
         </TableCell>
       ) : null}
       {columns.map((col) => {
@@ -1641,54 +1755,23 @@ export function BoundDataTable({
           )}
           style={trailingStickyStyle(hasRightPins, 0, 4)}
         >
-          <DropdownMenu
-            open={actionsMenuKey === rowKey}
-            onOpenChange={(open) => {
-              setActionsMenuKey(open ? rowKey : null);
-              if (open) {
-                setColumnsOpen(false);
-                setExportOpen(false);
-              }
-            }}
-          >
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-                size="icon"
-                aria-label="Open menu"
-              >
-                <MoreVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {actions.map((action, index) => (
-                <div key={action.id}>
-                  {index > 0 && action.variant === 'destructive' ? (
-                    <DropdownMenuSeparator />
-                  ) : null}
-                  <DropdownMenuItem
-                    className={
-                      action.variant === 'destructive'
-                        ? 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                        : undefined
-                    }
-                    onSelect={() => {
-                      if (hasEvent(props, 'action')) {
-                        emit(id, 'action', { actionId: action.id, rowKey });
-                      }
-                    }}
-                  >
-                    <ActionLabel action={action} />
-                  </DropdownMenuItem>
-                </div>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {renderRowActionsMenu(rowKey)}
         </TableCell>
       ) : null}
     </>
   );
+
+  const handleRowActivate = (rowKey: string, e: { target: EventTarget }) => {
+    if (props.rowClickable !== true) return;
+    if (
+      (e.target as HTMLElement).closest(
+        'button, a, input, select, textarea, label, [role=checkbox], [role=menuitem], [data-no-row-click]',
+      )
+    )
+      return;
+    if (window.getSelection()?.toString()) return;
+    emit(id, 'rowClick', { rowKey });
+  };
 
   const renderDataRow = (
     item: Extract<BodyItem, { kind: 'row' }>,
@@ -1703,15 +1786,27 @@ export function BoundDataTable({
     const isSelected = selected.has(rowKey);
     const zebraClass = zebra && i % 2 === 1 ? 'bg-muted/30 hover:bg-muted/50' : undefined;
     const cells = renderDataRowCells(row, i, rowKey, isSelected);
+    const rowClickable = props.rowClickable === true;
+    const onRowClick = rowClickable
+      ? (e: { target: EventTarget }) => handleRowActivate(rowKey, e)
+      : undefined;
+    const onRowKeyDown = rowClickable
+      ? (e: { key: string; target: EventTarget; currentTarget: EventTarget }) => {
+          if (e.key === 'Enter' && e.target === e.currentTarget) handleRowActivate(rowKey, e);
+        }
+      : undefined;
     if (reorderable) {
       return (
         <SortableRow
           key={rowOpts?.key ?? rowKey}
           rowKey={rowKey}
           selected={isSelected}
-          className={zebraClass}
+          className={cn(zebraClass, flashingKeys.has(rowKey) && 'clay-row-flash')}
           measureRef={rowOpts?.measureRef}
           dataIndex={rowOpts?.dataIndex}
+          clickable={rowClickable}
+          onClick={onRowClick}
+          onKeyDown={onRowKeyDown}
         >
           {cells}
         </SortableRow>
@@ -1723,7 +1818,14 @@ export function BoundDataTable({
         ref={rowOpts?.measureRef}
         data-index={rowOpts?.dataIndex}
         data-state={isSelected ? 'selected' : undefined}
-        className={zebraClass}
+        tabIndex={rowClickable ? 0 : undefined}
+        onClick={onRowClick}
+        onKeyDown={onRowKeyDown}
+        className={cn(
+          zebraClass,
+          rowClickable && 'cursor-pointer',
+          flashingKeys.has(rowKey) && 'clay-row-flash',
+        )}
       >
         {cells}
       </TableRow>
@@ -1742,10 +1844,19 @@ export function BoundDataTable({
     return renderDataRow(item, rowOpts);
   };
 
+  const bodyContainerClassName = fill
+    ? 'min-h-0 flex-1 overflow-auto'
+    : maxHeight
+      ? 'overflow-auto'
+      : 'max-h-[min(60vh,28rem)] overflow-auto';
+  const bodyContainerStyle = !fill && maxHeight ? { maxHeight } : undefined;
+
   const tableInner = (
     <Table
       containerRef={scrollContainerRef}
-      containerClassName="max-h-[min(60vh,28rem)] overflow-auto"
+      containerClassName={bodyContainerClassName}
+      containerStyle={bodyContainerStyle}
+      aria-busy={loading || undefined}
       className={cn(
         'table-fixed w-full',
         density === 'compact' && 'text-xs',
@@ -1767,7 +1878,8 @@ export function BoundDataTable({
             style={{
               width:
                 columnWidths[col.key] ??
-                (col.pin ? defaultColWidth : undefined),
+                // Native date inputs need ~130px; table-fixed would otherwise squeeze them.
+                (col.pin || col.editor === 'date' ? defaultColWidth : undefined),
             }}
           />
         ))}
@@ -1819,11 +1931,7 @@ export function BoundDataTable({
             const sortIdx = sortIndexByKey.get(col.key);
             const active = sortIdx != null;
             const sortDir = active ? sorts[sortIdx!]!.dir : 'asc';
-            const SortIcon = !active
-              ? ChevronsUpDown
-              : sortDir === 'asc'
-                ? ArrowUp
-                : ArrowDown;
+            const SortIcon = !active ? ChevronsUpDown : sortDir === 'asc' ? ArrowUp : ArrowDown;
             const facet = columnFilterable && isFacetColumn(col);
             const pinWidth = columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined);
             const pinStyle = pinStickyStyle(
@@ -1835,7 +1943,16 @@ export function BoundDataTable({
             );
             const edge = pinEdgeSide(columns, col);
             const pinStateLabel =
-              col.pin === 'left' ? 'pinned left' : col.pin === 'right' ? 'pinned right' : 'unpinned';
+              col.pin === 'left'
+                ? 'pinned left'
+                : col.pin === 'right'
+                  ? 'pinned right'
+                  : 'unpinned';
+            const filterActive = facet
+              ? parseFacetFilter(columnFilters[col.key]).length > 0
+              : (columnFilters[col.key] ?? '').trim().length > 0;
+            // Active (filtered or pinned) columns keep their controls inline and visible.
+            const controlsActive = filterActive || Boolean(col.pin);
             return (
               <TableHead
                 key={col.key}
@@ -1844,7 +1961,7 @@ export function BoundDataTable({
                 }}
                 aria-sort={sortable ? ariaSortValue(active, sortDir) : undefined}
                 className={cn(
-                  'relative max-w-0 bg-muted',
+                  'group/th relative max-w-0 bg-muted',
                   col.pin ? 'overflow-visible' : 'overflow-hidden',
                   headHeight,
                   col.align === 'right' && 'text-right',
@@ -1882,7 +1999,7 @@ export function BoundDataTable({
                           variant="ghost"
                           size="sm"
                           className={cn(
-                            '-ml-2 min-w-0 gap-1.5 px-2 font-medium',
+                            '-ml-2 min-w-0 shrink gap-1.5 px-2 font-medium',
                             density === 'compact' ? 'h-7' : 'h-8',
                           )}
                           aria-label={
@@ -1931,105 +2048,130 @@ export function BoundDataTable({
                       ) : null}
                     </span>
                   )}
-                  {facet ? (
-                    <FacetColumnFilter
-                      column={col}
-                      selected={parseFacetFilter(columnFilters[col.key])}
-                      onChange={(values) => setFacetFilter(col.key, values)}
-                    />
-                  ) : columnFilterable ? (
-                    <TextColumnFilter
-                      column={col}
-                      value={columnFilters[col.key] ?? ''}
-                      onChange={(next) => {
-                        setColumnFilters({ ...columnFilters, [col.key]: next });
-                        scheduleColumnFilterEmit(col.key, next);
-                      }}
-                      onCommit={(next) => {
-                        if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
-                        setColumnFilters({ ...columnFilters, [col.key]: next });
-                        emitColumnFilter(col.key, next);
-                      }}
-                    />
-                  ) : null}
-                  {hasEvent(props, 'columnPin') ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            'size-7 shrink-0 text-muted-foreground',
-                            col.pin && 'text-foreground',
-                          )}
-                          title="Pin column"
-                          aria-label={`${col.header} column options, ${pinStateLabel}`}
-                          aria-pressed={col.pin != null}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {col.pin ? (
-                            <Pin className="size-3.5" aria-hidden />
-                          ) : (
-                            <MoreHorizontal className="size-3.5" aria-hidden />
-                          )}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        {sortable && hasEvent(props, 'sort') ? (
-                          <>
+                  {columnFilterable || hasEvent(props, 'columnPin') ? (
+                    <div
+                      className={cn(
+                        'flex shrink-0 items-center gap-0.5 transition-opacity',
+                        !controlsActive &&
+                          'absolute inset-y-0 right-1 bg-gradient-to-l from-muted via-muted to-transparent pl-3 opacity-0 pointer-events-none group-hover/th:opacity-100 group-hover/th:pointer-events-auto group-focus-within/th:opacity-100 group-focus-within/th:pointer-events-auto has-[[data-state=open]]:opacity-100 has-[[data-state=open]]:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto',
+                      )}
+                    >
+                      {columnFilterable ? (
+                        facet ? (
+                          <FacetColumnFilter
+                            column={col}
+                            selected={parseFacetFilter(columnFilters[col.key])}
+                            onChange={(values) => setFacetFilter(col.key, values)}
+                          />
+                        ) : (
+                          <TextColumnFilter
+                            column={col}
+                            value={columnFilters[col.key] ?? ''}
+                            onChange={(next) => {
+                              setColumnFilters({
+                                ...columnFilters,
+                                [col.key]: next,
+                              });
+                              scheduleColumnFilterEmit(col.key, next);
+                            }}
+                            onCommit={(next) => {
+                              if (columnDebounceRef.current)
+                                clearTimeout(columnDebounceRef.current);
+                              setColumnFilters({
+                                ...columnFilters,
+                                [col.key]: next,
+                              });
+                              emitColumnFilter(col.key, next);
+                            }}
+                          />
+                        )
+                      ) : null}
+                      {hasEvent(props, 'columnPin') ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                'size-7 shrink-0 text-muted-foreground',
+                                col.pin && 'text-foreground',
+                              )}
+                              title="Pin column"
+                              aria-label={`${col.header} column options, ${pinStateLabel}`}
+                              aria-pressed={col.pin != null}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {col.pin ? (
+                                <Pin className="size-3.5" aria-hidden />
+                              ) : (
+                                <MoreHorizontal className="size-3.5" aria-hidden />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            {sortable && hasEvent(props, 'sort') ? (
+                              <>
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    emit(id, 'sort', {
+                                      key: col.key,
+                                      multi: true,
+                                    })
+                                  }
+                                >
+                                  <ChevronsUpDown className="size-3.5" />
+                                  Add to multi-sort
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            ) : null}
                             <DropdownMenuItem
                               onSelect={() =>
-                                emit(id, 'sort', { key: col.key, multi: true })
+                                emit(id, 'columnPin', {
+                                  key: col.key,
+                                  pin: col.pin === 'left' ? null : 'left',
+                                })
                               }
                             >
-                              <ChevronsUpDown className="size-3.5" />
-                              Add to multi-sort
+                              <Pin className="size-3.5" />
+                              {col.pin === 'left' ? 'Unpin left' : 'Pin left'}
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                          </>
-                        ) : null}
-                        <DropdownMenuItem
-                          onSelect={() =>
-                            emit(id, 'columnPin', {
-                              key: col.key,
-                              pin: col.pin === 'left' ? null : 'left',
-                            })
-                          }
-                        >
-                          <Pin className="size-3.5" />
-                          {col.pin === 'left' ? 'Unpin left' : 'Pin left'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() =>
-                            emit(id, 'columnPin', {
-                              key: col.key,
-                              pin: col.pin === 'right' ? null : 'right',
-                            })
-                          }
-                        >
-                          <Pin className="size-3.5 rotate-45" />
-                          {col.pin === 'right' ? 'Unpin right' : 'Pin right'}
-                        </DropdownMenuItem>
-                        {col.pin ? (
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              emit(id, 'columnPin', { key: col.key, pin: null })
-                            }
-                          >
-                            <PinOff className="size-3.5" />
-                            Clear pin
-                          </DropdownMenuItem>
-                        ) : null}
-                        {col.aggregate ? (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem disabled>
-                              Footer: {aggregateLabel(col.aggregate)}
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                emit(id, 'columnPin', {
+                                  key: col.key,
+                                  pin: col.pin === 'right' ? null : 'right',
+                                })
+                              }
+                            >
+                              <Pin className="size-3.5 rotate-45" />
+                              {col.pin === 'right' ? 'Unpin right' : 'Pin right'}
                             </DropdownMenuItem>
-                          </>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                            {col.pin ? (
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  emit(id, 'columnPin', {
+                                    key: col.key,
+                                    pin: null,
+                                  })
+                                }
+                              >
+                                <PinOff className="size-3.5" />
+                                Clear pin
+                              </DropdownMenuItem>
+                            ) : null}
+                            {col.aggregate ? (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem disabled>
+                                  Footer: {aggregateLabel(col.aggregate)}
+                                </DropdownMenuItem>
+                              </>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
                 <ColumnResizeHandle
@@ -2041,11 +2183,7 @@ export function BoundDataTable({
           })}
           {actions.length > 0 ? (
             <TableHead
-              className={cn(
-                'overflow-hidden bg-muted',
-                headHeight,
-                hasRightPins && 'sticky z-[5]',
-              )}
+              className={cn('overflow-hidden bg-muted', headHeight, hasRightPins && 'sticky z-[5]')}
               style={{
                 ...trailingStickyStyle(hasRightPins, 0, 5),
                 width: ACTIONS_COL_WIDTH,
@@ -2056,16 +2194,32 @@ export function BoundDataTable({
           ) : null}
         </TableRow>
       </TableHeader>
-      <TableBody>
-        {loading ? (
-          <TableRow className="hover:bg-transparent">
-            <TableCell colSpan={Math.max(colSpan, 1)} className="h-48">
-              <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                <Spinner className="size-6" />
-                <span className="text-sm">Loading…</span>
-              </div>
+      <TableBody
+        className={cn(
+          '[&>tr]:transition-opacity',
+          loading &&
+            rows.length > 0 &&
+            'pointer-events-none [&>tr:not([data-loading-bar])]:opacity-60',
+        )}
+      >
+        {loading && rows.length > 0 ? (
+          <TableRow data-loading-bar className="hover:bg-transparent">
+            <TableCell colSpan={Math.max(colSpan, 1)} className="h-0.5 border-0 p-0">
+              <div className="h-0.5 w-full animate-pulse bg-primary" />
             </TableCell>
           </TableRow>
+        ) : null}
+        {loading && rows.length === 0 ? (
+          <>
+            {Array.from({ length: 5 }, (_, i) => (
+              <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
+                <TableCell colSpan={Math.max(colSpan, 1)}>
+                  {i === 0 ? <span className="sr-only">Loading…</span> : null}
+                  <Skeleton className="h-5 w-full" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </>
         ) : rows.length === 0 ? (
           <TableRow className="hover:bg-transparent">
             <TableCell colSpan={Math.max(colSpan, 1)} className="h-48 p-0">
@@ -2162,12 +2316,21 @@ export function BoundDataTable({
                 { zIndex: 3 },
               );
               const edge = pinEdgeSide(columns, col);
+              const numericFormat =
+                col.format === 'number' ||
+                col.format === 'currency' ||
+                col.format === 'percent' ||
+                col.format === 'bytes';
+              const formattedAggregate =
+                numericFormat && col.format && col.aggregate && col.aggregate !== 'count'
+                  ? formatCell(value, col.format, col.formatOptions)
+                  : null;
               const display =
                 value == null || value === ''
                   ? null
                   : col.aggregate === 'count'
                     ? `${value}`
-                    : String(value);
+                    : (formattedAggregate ?? String(value));
               const announced =
                 display != null && col.aggregate
                   ? `${col.header} ${aggregateLabel(col.aggregate)}: ${display}`
@@ -2218,18 +2381,31 @@ export function BoundDataTable({
 
   const footerAggregateAnnouncement = showFooterRow
     ? columns
-        .filter(
-          (c) =>
-            c.aggregate &&
-            footerCells?.[c.key] != null &&
-            footerCells[c.key] !== '',
-        )
-        .map(
-          (c) =>
-            `${c.header} ${aggregateLabel(c.aggregate)} ${footerCells![c.key]}`,
-        )
+        .filter((c) => c.aggregate && footerCells?.[c.key] != null && footerCells[c.key] !== '')
+        .map((c) => `${c.header} ${aggregateLabel(c.aggregate)} ${footerCells![c.key]}`)
         .join('; ')
     : '';
+
+  const stackedBody = (
+    <div
+      ref={scrollContainerRef}
+      className={cn(bodyContainerClassName, loading && 'pointer-events-none opacity-60')}
+      style={bodyContainerStyle}
+      aria-busy={loading || undefined}
+    >
+      <StackedRows
+        rows={rows}
+        columns={columns}
+        rowKey={rowKeyOf}
+        renderCell={(row, col, key) => renderCellContent(row, col as DataTableColumn, key)}
+        onRowActivate={props.rowClickable === true ? handleRowActivate : undefined}
+        rowClassName={(key) => (flashingKeys.has(key) ? 'clay-row-flash' : undefined)}
+        selectedKeys={selectable ? selected : undefined}
+        renderSelect={selectable ? (key) => renderRowCheckbox(key, selected.has(key)) : undefined}
+        renderActions={actions.length > 0 ? (_row, key) => renderRowActionsMenu(key) : undefined}
+      />
+    </div>
+  );
 
   const tableBlock = (
     <TooltipProvider delayDuration={400}>
@@ -2238,7 +2414,9 @@ export function BoundDataTable({
           Column aggregates: {footerAggregateAnnouncement}
         </div>
       ) : null}
-      {reorderable ? (
+      {stacked ? (
+        stackedBody
+      ) : reorderable ? (
         <DndContext
           id={`${tableId}-dnd`}
           sensors={sensors}
@@ -2255,14 +2433,14 @@ export function BoundDataTable({
   );
 
   const footer = showPagination ? (
-    <div className="grid grid-cols-1 gap-4 border-t bg-muted/30 px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-6">
-      <p className="min-w-0 text-sm leading-normal text-muted-foreground whitespace-nowrap">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t bg-muted/30 px-4 py-4">
+      <p className="shrink-0 whitespace-nowrap text-sm leading-normal text-muted-foreground">
         {selectable
           ? `${selected.size} of ${totalRows} row(s) selected.`
           : `Showing ${totalRows === 0 ? 0 : (page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalRows)} of ${totalRows}`}
       </p>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 md:justify-end">
-        <div className="flex items-center gap-2">
+      <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2 whitespace-nowrap">
           <Label htmlFor={`${tableId}-rows`} className="text-sm font-medium whitespace-nowrap">
             Rows per page
           </Label>
@@ -2344,7 +2522,7 @@ export function BoundDataTable({
   ) : null;
 
   const panel = (
-    <div className="overflow-clip rounded-lg border">
+    <div className={cn('overflow-clip rounded-lg border', fill && 'flex min-h-0 flex-1 flex-col')}>
       {toolbar}
       {filterChipBar}
       {bulkBar}
@@ -2355,20 +2533,32 @@ export function BoundDataTable({
 
   if (views.length === 0) {
     return (
-      <div className={cn('flex w-full flex-col', className)} style={asStyle(style)}>
+      <div
+        ref={setRootEl}
+        className={cn('flex w-full flex-col', fill && 'flex min-h-0 flex-1 flex-col', className)}
+        style={asStyle(style)}
+      >
         {panel}
       </div>
     );
   }
 
   return (
-    <div className={cn('flex w-full flex-col gap-4', className)} style={asStyle(style)}>
+    <div
+      ref={setRootEl}
+      className={cn(
+        'flex w-full flex-col gap-4',
+        fill && 'flex min-h-0 flex-1 flex-col',
+        className,
+      )}
+      style={asStyle(style)}
+    >
       <Tabs
         value={activeView || defaultViewId}
         onValueChange={(value) => {
           if (hasEvent(props, 'viewChange')) emit(id, 'viewChange', { viewId: value });
         }}
-        className="gap-4"
+        className={cn('gap-4', fill && 'flex min-h-0 flex-1 flex-col')}
       >
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor={`${tableId}-view`} className="sr-only">
@@ -2414,8 +2604,17 @@ export function BoundDataTable({
         </div>
 
         {views.map((view) => (
-          <TabsContent key={view.id} value={view.id} className="relative mt-0">
-            <div className="overflow-clip rounded-lg border">
+          <TabsContent
+            key={view.id}
+            value={view.id}
+            className={cn('relative mt-0', fill && 'flex min-h-0 flex-1 flex-col')}
+          >
+            <div
+              className={cn(
+                'overflow-clip rounded-lg border',
+                fill && 'flex min-h-0 flex-1 flex-col',
+              )}
+            >
               {(searchable || exportable) && (
                 <div className="flex items-center gap-2 border-b px-4 py-3">
                   {searchable ? (

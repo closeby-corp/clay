@@ -4,8 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'ReUI · batches 3–6',
   icon: 'layers',
-  order: 88,
-  group: 'ReUI',
+  order: 81,
+  group: 'ReUI batches',
+  groupIcon: 'package',
 };
 
 const SPARK = [

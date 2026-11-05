@@ -62,7 +62,16 @@ export {
   type ScrollToOptions,
   type ScrollIntoViewOptions,
 } from './helpers';
-export { theme, setTheme, getTheme, type ThemeMode } from './theme';
+export {
+  theme,
+  setTheme,
+  getTheme,
+  setPalette,
+  getPalette,
+  THEME_PALETTES,
+  type ThemeMode,
+  type ThemePalette,
+} from './theme';
 export { timer, TimerHandle, type TimerOptions } from './timer';
 export {
   storage,

@@ -15,42 +15,62 @@ import { subscribe, trackReads } from './reactive';
  * });
  * ```
  */
+interface AutoCtx {
+  unsubs: Array<() => void>;
+  queued: boolean;
+  /** Instance that stays mounted; dependency changes refresh it. */
+  owner: AutoElement | null;
+}
+
 export class AutoElement extends RefreshableElement {
-  private depUnsubs: Array<() => void> = [];
+  private ctx: AutoCtx;
 
   constructor(builder: () => void) {
-    // Closures used during `super()` (which runs the builder immediately).
-    const depUnsubs: Array<() => void> = [];
-    let refreshQueued = false;
-    let doRefresh: () => void = () => {};
+    // Closure used during `super()` (which runs the builder immediately).
+    const ctx: AutoCtx = { unsubs: [], queued: false, owner: null };
 
     super(() => {
-      for (const unsub of depUnsubs) unsub();
-      depUnsubs.length = 0;
+      for (const unsub of ctx.unsubs) unsub();
+      ctx.unsubs.length = 0;
       const deps = trackReads(builder);
       for (const { target, key } of deps) {
-        depUnsubs.push(
+        ctx.unsubs.push(
           subscribe(target, key, () => {
-            if (refreshQueued) return;
-            refreshQueued = true;
+            if (ctx.queued) return;
+            ctx.queued = true;
             queueMicrotask(() => {
-              refreshQueued = false;
-              doRefresh();
+              ctx.queued = false;
+              ctx.owner?.refresh();
             });
           }),
         );
       }
     });
 
-    this.depUnsubs = depUnsubs;
-    doRefresh = () => {
-      this.refresh();
-    };
+    this.ctx = ctx;
+    ctx.owner = this;
+  }
+
+  /**
+   * Adopt the twin's builder wrapper together with its dependency tracking: its
+   * subscriptions now refresh this (surviving) instance, and the twin keeps none.
+   */
+  protected override adoptBuilder(source: RefreshableElement): void {
+    const twin = source as AutoElement;
+    for (const unsub of this.ctx.unsubs) unsub();
+    this.ctx.owner = null;
+    super.adoptBuilder(source);
+    this.ctx = twin.ctx;
+    this.ctx.owner = this;
+    twin.ctx = { unsubs: [], queued: false, owner: null };
   }
 
   override destroy(): void {
-    for (const unsub of this.depUnsubs) unsub();
-    this.depUnsubs = [];
+    if (this.ctx.owner === this) {
+      for (const unsub of this.ctx.unsubs) unsub();
+      this.ctx.unsubs = [];
+      this.ctx.owner = null;
+    }
     super.destroy();
   }
 }

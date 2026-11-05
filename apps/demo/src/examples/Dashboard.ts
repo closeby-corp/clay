@@ -7,7 +7,9 @@ import visitorsSeed from './dashboard-visitors.json';
 export const pageMeta = {
   label: 'Dashboard',
   icon: 'layout-dashboard',
-  order: 50,
+  order: 33,
+  group: 'Data',
+  groupIcon: 'table',
 };
 
 type DocumentRow = {

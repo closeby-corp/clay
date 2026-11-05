@@ -2,9 +2,11 @@ import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
-  label: 'Media Extra',
+  label: 'Media',
   icon: 'layers',
-  order: 88,
+  order: 52,
+  group: 'Overlays & layout',
+  groupIcon: 'layers',
 };
 
 ui.page('/examples/media-extra', () => {

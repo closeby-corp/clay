@@ -10,6 +10,10 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  experimental: {
+    // Server maps /assets/<path> → client-dist/<path>; emitted assets (fonts) live in client-dist/assets/.
+    renderBuiltUrl: (filename) => `/assets/${filename}`,
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

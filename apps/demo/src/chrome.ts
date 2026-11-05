@@ -19,7 +19,7 @@ export function exampleHeader(title?: string, description?: string): void {
 /** Section label above a preview block. */
 export function exampleSection(title: string, description?: string): void {
   ui.column(() => {
-    ui.label(title).classes('text-sm font-medium leading-none');
+    ui.label(title).classes('text-base font-semibold tracking-tight leading-none');
     if (description) {
       ui.label(description).classes('text-sm text-muted-foreground');
     }

@@ -19,8 +19,10 @@ import {
 export const pageMeta = {
   label: 'Admin',
   icon: 'shield',
-  order: 74,
+  order: 71,
   roles: ['admin'],
+  group: 'Account',
+  groupIcon: 'lock',
 };
 
 function accessDenied(user: SessionUser | null): void {

@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Editor',
   icon: 'file-pen',
-  order: 88,
+  order: 44,
+  group: 'Forms & controls',
+  groupIcon: 'sliders-horizontal',
 };
 
 const HTML_DEFAULT = '<p>Hello from <strong>HTML</strong> mode.</p>';

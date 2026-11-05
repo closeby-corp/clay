@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Data clients',
   icon: 'database',
-  order: 95,
+  order: 34,
+  group: 'Data',
+  groupIcon: 'table',
 };
 
 /**

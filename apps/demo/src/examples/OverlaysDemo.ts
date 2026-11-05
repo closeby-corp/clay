@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Overlays & disclosure',
   icon: 'layout-dashboard',
-  order: 85,
+  order: 50,
+  group: 'Overlays & layout',
+  groupIcon: 'layers',
 };
 
 ui.page('/examples/overlays', () => {

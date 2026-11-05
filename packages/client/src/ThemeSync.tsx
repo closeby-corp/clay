@@ -16,7 +16,7 @@ export function ThemeSync() {
     const apply = (theme: ThemeMode) => setTheme(theme);
     registerThemeSetter(apply);
     const stored = readStoredTheme();
-    if (isThemeMode(stored)) applyServerTheme(stored);
+    if (isThemeMode(stored)) applyServerTheme(stored, { animate: false });
     return () => registerThemeSetter(null);
   }, [setTheme]);
 

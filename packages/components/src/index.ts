@@ -861,7 +861,31 @@ export type LayoutProps = {
   wrap?: boolean;
   /** Apply `min-w-0` (truncate/flex children). */
   minWidthZero?: boolean;
+  /**
+   * Take the remaining space along the parent row/column (`flex-grow`).
+   * `true` = 1; a number sets the share (`grow: 2` gets twice the space of `grow: 1`).
+   */
+  grow?: boolean | number;
+  /**
+   * Scroll inside this element instead of growing the page (`overflow-auto` + `min-h-0`).
+   * Pair with `grow` inside a `fillViewport` parent for panels that fill and scroll.
+   */
+  scroll?: boolean | 'x' | 'y';
+  /**
+   * Size to the visible page height (viewport minus the app shell header/padding), so
+   * `grow` children split it exactly. Use on the outermost page column.
+   */
+  fillViewport?: boolean;
 };
+
+/** Layout keys forwarded to the client for every layout-ish element. */
+function layoutWireProps(props: LayoutProps): Record<string, unknown> {
+  return {
+    grow: props.grow,
+    scroll: props.scroll,
+    fillViewport: props.fillViewport,
+  };
+}
 
 function layout(
   type: string,
@@ -888,6 +912,7 @@ function layout(
     justify: props.justify,
     wrap: props.wrap,
     minWidthZero: props.minWidthZero ?? false,
+    ...layoutWireProps(props),
   });
 
   if (fn) {
@@ -945,8 +970,46 @@ export function card(
     description: props.description,
     gap: props.gap ?? 4,
     className: props.className,
+    ...layoutWireProps(props),
   });
   withParent(el, () => fn(el));
+  return el;
+}
+
+export type GridProps = LayoutProps & {
+  /**
+   * Fixed column count (`cols: 3`). Ignored when `minColWidth` is set.
+   * Default: auto-fit with `minColWidth` 16rem.
+   */
+  cols?: number;
+  /**
+   * Auto-fit as many columns as fit, each at least this wide (CSS length, e.g. `'14rem'`
+   * or `240` for px). Columns stretch to fill the row and wrap to one column on phones.
+   */
+  minColWidth?: string | number;
+};
+
+/**
+ * Responsive grid that fills the available width: `ui.grid({ minColWidth: '16rem' }, () => …)`
+ * auto-fits columns; `ui.grid({ cols: 3 }, …)` fixes the count. Children stretch to equal heights.
+ */
+export function grid(fn: () => void, props?: GridProps): Element;
+export function grid(props: GridProps, fn: () => void): Element;
+export function grid(propsOrFn: GridProps | (() => void), fnOrProps?: (() => void) | GridProps): Element {
+  const props: GridProps =
+    typeof propsOrFn === 'function' ? ((fnOrProps as GridProps) ?? {}) : (propsOrFn ?? {});
+  const fn = (typeof propsOrFn === 'function' ? propsOrFn : fnOrProps) as (() => void) | undefined;
+  const minColWidth =
+    typeof props.minColWidth === 'number' ? `${props.minColWidth}px` : props.minColWidth;
+  const el = new Element('grid', {
+    gap: props.gap ?? 4,
+    className: props.className,
+    cols: props.cols,
+    minColWidth: minColWidth ?? (props.cols ? undefined : '16rem'),
+    align: props.align,
+    ...layoutWireProps(props),
+  });
+  if (fn) withParent(el, fn);
   return el;
 }
 

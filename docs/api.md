@@ -1801,6 +1801,9 @@ onClick: async () => {
 | `ui.openExternal(url)` | `void` | `window.open` in a new tab (`noopener`) |
 | `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
 | `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |
+| `ui.theme.palette(name)` | `void` | Switch colour palette for this client (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`, `graphite`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom one); remembered across reloads |
+| `ui.theme.getPalette()` | `ThemePalette \| null` | Last palette set, else the one the client reported on connect |
+| `ui.theme.palettes` | `readonly string[]` | Built-in palette names |
 | `ui.runJavaScript(code)` | `void` | Eval trusted snippet in the browser |
 | `ui.scroll.to(opts)` | `void` | Scroll window (`top` / `bottom` / px) |
 | `ui.scroll.intoView(selector, opts?)` | `void` | `Element.scrollIntoView` via selector |
@@ -1911,6 +1914,7 @@ All layout helpers accept either `(fn, props?)` or `(props, fn)`.
 | `ui.row` | Horizontal flex |
 | `ui.column` | Vertical flex |
 | `ui.container` | Width-constrained wrapper |
+| `ui.grid` | Responsive grid that fills the width (auto-fit columns, or fixed `cols`) |
 | `ui.hero` | Centered hero region |
 | `ui.card` | Card; callback receives the card element |
 | `ui.app` | SPA shell: sidebar nav + centered main content |
@@ -1965,8 +1969,44 @@ Shared layout props:
 | `className` | `string` | | Extra classes |
 | `centered` | `boolean` | | `mx-auto` (container) |
 | `width` | `'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| 'full'` | `'lg'` for container | Max width |
+| `align` | `'start' \| 'center' \| 'end' \| 'baseline' \| 'stretch'` | row: `center` (`stretch` when the row grows) | Cross-axis alignment |
+| `justify` | `'start' \| 'center' \| 'end' \| 'between' \| 'around'` | | Main-axis distribution |
+| `wrap` | `boolean` | row: `true` | Flex wrap |
+| `grow` | `boolean \| number` | | Take the remaining space in the parent row/column. A number sets the share (`grow: 2` gets twice `grow: 1`) |
+| `scroll` | `boolean \| 'x' \| 'y'` | | Scroll inside this element instead of growing the page. On a card, the body scrolls and the header stays |
+| `fillViewport` | `boolean` | | Height = visible page area (viewport minus the app shell header/padding). Use on the outermost page column |
 
-Card also accepts `title?: string`.
+Card also accepts `title?: string` and `description?: string`; `grow` / `scroll` / `fillViewport` work on cards too.
+
+#### `ui.grid(props, fn)`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `minColWidth` | `string \| number` | `'16rem'` | Auto-fit as many columns as fit, each at least this wide (numbers are px). Wraps to one column on phones |
+| `cols` | `number` | | Fixed column count instead of auto-fit (one column below `sm`) |
+| `gap` | `number` | `4` | Gap scale |
+
+```typescript
+ui.grid({ minColWidth: '14rem' }, () => {
+  for (const kpi of kpis) ui.card({ title: kpi.label }, () => ui.label(kpi.value));
+});
+```
+
+#### Filling the page
+
+Make a page fill the window and let panels scroll instead of the page:
+
+```typescript
+ui.column({ fillViewport: true, gap: 4 }, () => {
+  ui.grid({ minColWidth: '12rem' }, () => { /* KPI cards — natural height */ });
+  ui.row({ grow: true, wrap: false, gap: 4 }, () => {     // takes the remaining height
+    ui.card({ title: 'Inbox', scroll: true, className: 'w-80 shrink-0' }, () => { /* list */ });
+    ui.card({ title: 'Detail', grow: true, scroll: true }, () => { /* body */ });
+  });
+});
+```
+
+Without `fillViewport`, `grow` still stretches to fill free space (the app shell content area is a flex column), but the page scrolls when content is taller than the window.
 
 ```typescript
 ui.container(() => {

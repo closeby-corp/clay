@@ -3,9 +3,11 @@ import type { AiChatMessage } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
-  label: 'AI UI',
+  label: 'AI chat',
   icon: 'message-square',
-  order: 35,
+  order: 61,
+  group: 'Apps',
+  groupIcon: 'app-window',
 };
 
 const CHAT_MESSAGES: AiChatMessage[] = [

@@ -5,7 +5,9 @@ import { exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Flow',
   icon: 'workflow',
-  order: 92,
+  order: 64,
+  group: 'Apps',
+  groupIcon: 'app-window',
 };
 
 function cloneEdges(edges: FlowEdge[]): FlowEdge[] {

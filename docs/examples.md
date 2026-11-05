@@ -5,11 +5,15 @@ Pages: [`apps/demo/src/examples/`](../apps/demo/src/examples/) (auto-loaded via 
 
 After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http://localhost:4000.
 
+## Sidebar groups
+
+Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the home page's catalog share one structure: **Start here** (themes, fill layout, counter, todo, kitchen sink) → **Reactivity** → **Data** → **Forms & controls** → **Overlays & layout** → **Apps** → **Account** → **ReUI batches**. Order within a group is `pageMeta.order`.
+
 ## Catalog
 
 | Route | File | Patterns shown |
 |-------|------|----------------|
-| `/` | `Home.ts` | `ui.hero`, `ui.icon`, `ui.link`, `ui.navigate`; catalog via `ui.navFromPages()` (same as sidebar) |
+| `/` | `Home.ts` | Landing page: hero, live counter + source side by side (`ui.codeBlock`), feature grid, catalog grouped via `ui.navFromPages()` (same as sidebar) |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
@@ -23,6 +27,8 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 | `/examples/reui-batch-7` | `ReuiBatch7Demo.ts` | ReUI batch 7: `inputGroup`, `toggle`, `descriptionList`, `staticTable`, `aspectRatio`, `itemList`, `checkboxGroup` |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*`, `ui.sparkline`, composed/scatter charts |
 | `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
+| `/examples/themes` | `ThemesDemo.ts` | Palette gallery: `ui.theme.palette`, light/dark, component preview |
+| `/examples/layout` | `LayoutDemo.ts` | Fill layout: `fillViewport`, `grow`, `scroll`, `ui.grid` |
 | `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
 | `/examples/form-demo` | `FormDemo.ts` | Form + validate + `ui.draft` + rating / colorPicker / tags |
 | `/examples/auth` | `Auth.ts` (+ login/admin/change-password) | Signed cookie session, hashed passwords, login lockout, role-gated admin + audit log |

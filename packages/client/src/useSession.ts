@@ -14,7 +14,7 @@ import {
   WS_OUTAGE_TOAST_AFTER_MS,
   WS_RECONNECT_TOAST_ID,
 } from './reconnect';
-import { applyServerTheme, isThemeMode } from './themeBridge';
+import { applyPalette, applyServerTheme, currentPalette, isThemeMode } from './themeBridge';
 import type {
   ClientMessage,
   ElementNode,
@@ -212,6 +212,8 @@ export function useClaySession(path: string) {
         toast.dismiss(msg.id);
       } else if (msg.op === 'theme') {
         if (isThemeMode(msg.theme)) applyServerTheme(msg.theme);
+      } else if (msg.op === 'palette') {
+        applyPalette(String(msg.palette ?? ''));
       } else if (msg.op === 'runJavaScript') {
         try {
           runClientJavaScript(msg.code);
@@ -307,6 +309,7 @@ export function useClaySession(path: string) {
             browserStorage: loadBrowserStorageBag(),
             clientStorage: loadClientStorageBag(),
             tabStorage: loadTabStorageBag(),
+            palette: currentPalette(),
           } satisfies ClientMessage),
         );
       };
@@ -376,6 +379,7 @@ export function useClaySession(path: string) {
           browserStorage: loadBrowserStorageBag(),
           clientStorage: loadClientStorageBag(),
           tabStorage: loadTabStorageBag(),
+          palette: currentPalette(),
         } satisfies ClientMessage),
       );
     }

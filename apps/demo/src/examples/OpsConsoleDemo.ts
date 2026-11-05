@@ -8,9 +8,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Ops console',
   icon: 'radar',
-  order: 10,
-  group: 'ReUI',
-  groupIcon: 'layers',
+  order: 65,
+  group: 'Apps',
+  groupIcon: 'app-window',
 };
 
 type OrderStatus = 'ok' | 'warn' | 'error' | 'processing';

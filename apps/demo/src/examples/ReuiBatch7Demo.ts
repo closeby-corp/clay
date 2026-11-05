@@ -4,8 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'ReUI · batch 7',
   icon: 'layout-grid',
-  order: 89,
-  group: 'ReUI',
+  order: 82,
+  group: 'ReUI batches',
+  groupIcon: 'package',
 };
 
 ui.page('/examples/reui-batch-7', () => {

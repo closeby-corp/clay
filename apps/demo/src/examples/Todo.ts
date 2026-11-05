@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Todo',
   icon: 'list-todo',
-  order: 20,
+  order: 13,
+  group: 'Start here',
+  groupIcon: 'sparkles',
 };
 
 interface Todo {

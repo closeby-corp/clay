@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Controls',
   icon: 'sliders-horizontal',
-  order: 86,
+  order: 41,
+  group: 'Forms & controls',
+  groupIcon: 'sliders-horizontal',
 };
 
 ui.page('/examples/controls', () => {

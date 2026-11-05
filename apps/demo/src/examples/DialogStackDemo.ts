@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Dialog Stack',
   icon: 'layers',
-  order: 86,
+  order: 51,
+  group: 'Overlays & layout',
+  groupIcon: 'layers',
 };
 
 ui.page('/examples/dialog-stack', () => {

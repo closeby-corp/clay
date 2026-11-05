@@ -12,6 +12,8 @@ export class Element {
   props: Record<string, unknown>;
   children: Element[] = [];
   parent: Element | null = null;
+  /** Explicit identity for keyed reconciliation (never sent to the client). */
+  reconcileKey?: string;
 
   protected handlers = new Map<string, EventHandler>();
   protected boundSession: ClientSession | null = null;
@@ -100,6 +102,16 @@ export class Element {
     for (const child of this.children) child.destroy();
     this.children = [];
     this.session?.unregister(this.id);
+  }
+
+  /**
+   * Explicit identity used when a `refreshable` / `auto` re-runs. Use inside
+   * refreshable/auto lists so items keep identity when the list is reordered,
+   * filtered or prepended. Not sent to the client.
+   */
+  key(k: string | number): this {
+    this.reconcileKey = String(k);
+    return this;
   }
 
   classes(...classNames: string[]): this {
@@ -281,7 +293,8 @@ export class Element {
    * Copy handlers + serializable props from a freshly built twin, keeping this
    * element's id. Used by in-place `refresh` to prefer `updateProps` over remount.
    */
-  protected absorbRebuild(source: Element): void {
+  /** @internal */
+  absorbRebuild(source: Element): void {
     this.handlers = new Map(source.handlers);
     this.classList = [...source.classList];
     this.styleText = source.styleText;
@@ -305,11 +318,17 @@ export class Element {
       this.queuePropsPatch(patch);
     }
 
+    this.reconcileKey = source.reconcileKey;
     const oldKids = this.children;
     const newKids = source.children;
-    for (let i = 0; i < oldKids.length; i++) {
-      oldKids[i]!.absorbRebuild(newKids[i]!);
-    }
+    source.children = [];
+    reconcileChildren(this, oldKids, newKids);
+  }
+
+  /** @internal Dispose of a freshly built twin whose state was absorbed into an older element. */
+  discardTwin(): void {
+    this.parent = null;
+    this.destroy();
   }
 
   async handleEvent(type: string, value?: unknown): Promise<void> {
@@ -341,7 +360,13 @@ export class Element {
 }
 
 export class RefreshableElement extends Element {
-  private builder: () => void;
+  protected builder: () => void;
+  /**
+   * Set on a discarded twin: the surviving instance that took over its builder.
+   * Handles captured from the twin (e.g. `const inner = ui.auto(...)` inside an outer
+   * builder) forward `refresh()` and `children` to the survivor. Holds no subscriptions.
+   */
+  private adoptedBy: RefreshableElement | null = null;
 
   constructor(builder: () => void) {
     super('refreshable', {});
@@ -350,56 +375,145 @@ export class RefreshableElement extends Element {
   }
 
   refresh(): void {
-    const previous = this.children;
-    for (const child of previous) {
-      child.parent = null;
+    if (this.adoptedBy) {
+      this.adoptedBy.refresh();
+      return;
     }
+    const previous = this.children;
+    for (const child of previous) child.parent = null;
     this.children = [];
     withParent(this, () => this.builder());
     const next = this.children;
+    this.children = previous;
+    for (const child of previous) child.parent = this;
+    reconcileChildren(this, previous, next);
+  }
 
-    if (previous.length > 0 && canReuseElementTree(previous, next)) {
-      for (let i = 0; i < previous.length; i++) {
-        previous[i]!.absorbRebuild(next[i]!);
-      }
-      for (const child of next) {
-        child.parent = null;
-        child.destroy();
-      }
-      this.children = previous;
-      for (const child of previous) {
-        child.parent = this;
-      }
-      return;
-    }
+  /**
+   * Take over `source`'s builder (which closes over fresh data). Subclasses that attach
+   * extra machinery to the builder (e.g. reactive tracking) override this to move it too.
+   */
+  protected adoptBuilder(source: RefreshableElement): void {
+    this.builder = source.builder;
+  }
 
-    for (const child of previous) {
-      child.destroy();
+  /** Keep this instance (id, children) but adopt the fresh builder. */
+  override absorbRebuild(source: Element): void {
+    super.absorbRebuild(source);
+    if (source instanceof RefreshableElement) {
+      this.adoptBuilder(source);
+      source.adoptedBy = this;
     }
-    const session = this.session;
-    if (session?.isMounted) {
-      session.enqueuePatch({
-        op: 'setChildren',
-        id: this.id,
-        children: this.children.map((c) => c.toJSON()),
+  }
+
+  override discardTwin(): void {
+    const survivor = this.adoptedBy;
+    this.adoptedBy = null;
+    super.discardTwin();
+    if (survivor) {
+      this.adoptedBy = survivor;
+      Object.defineProperty(this, 'children', {
+        configurable: true,
+        get: () => survivor.children,
+        set: (v: Element[]) => {
+          survivor.children = v;
+        },
       });
     }
   }
+
+  override destroy(): void {
+    if (this.adoptedBy) return; // twin: the survivor owns everything
+    super.destroy();
+  }
 }
 
-/** Same type shape → safe for in-place props sync. Nested refreshable/auto roots reuse by id when their child trees match. */
-function canReuseElementTree(previous: Element[], next: Element[]): boolean {
-  if (previous.length !== next.length) return false;
-  for (let i = 0; i < previous.length; i++) {
-    const a = previous[i]!;
-    const b = next[i]!;
-    if (a.type !== b.type) return false;
-    if (a instanceof RefreshableElement && b instanceof RefreshableElement) {
-      if (!canReuseElementTree(a.children, b.children)) return false;
+function sameKind(a: Element, b: Element): boolean {
+  return a.type === b.type && a.constructor === b.constructor;
+}
+
+/**
+ * Match `next` children onto `old` ones (keyed by `key()`, otherwise positionally
+ * with a one-element lookahead), absorb matched pairs, destroy leftovers, and emit a
+ * single `setChildren` for `parent` only when the id list changed.
+ */
+function reconcileChildren(parent: Element, old: Element[], next: Element[]): void {
+  const oldIds = old.map((c) => c.id);
+  const matched = new Map<Element, Element>(); // new -> old
+  const used = new Set<Element>();
+
+  const keyedOld = new Map<string, Element[]>();
+  const oldU: Element[] = [];
+  for (const o of old) {
+    if (o.reconcileKey === undefined) oldU.push(o);
+    else {
+      const list = keyedOld.get(o.reconcileKey) ?? [];
+      list.push(o);
+      keyedOld.set(o.reconcileKey, list);
+    }
+  }
+  const newU: Element[] = [];
+  for (const n of next) {
+    if (n.reconcileKey === undefined) {
+      newU.push(n);
       continue;
     }
-    if (a instanceof RefreshableElement || b instanceof RefreshableElement) return false;
-    if (!canReuseElementTree(a.children, b.children)) return false;
+    const list = keyedOld.get(n.reconcileKey);
+    const idx = list ? list.findIndex((o) => !used.has(o) && sameKind(o, n)) : -1;
+    if (idx >= 0) {
+      const o = list![idx]!;
+      used.add(o);
+      matched.set(n, o);
+    }
   }
-  return true;
+
+  let i = 0;
+  let j = 0;
+  while (i < oldU.length && j < newU.length) {
+    const o = oldU[i]!;
+    const n = newU[j]!;
+    if (sameKind(o, n)) {
+      used.add(o);
+      matched.set(n, o);
+      i++;
+      j++;
+    } else if (i + 1 < oldU.length && sameKind(oldU[i + 1]!, n)) {
+      i++; // old[i] was removed
+    } else if (j + 1 < newU.length && sameKind(o, newU[j + 1]!)) {
+      j++; // new[j] was inserted
+    } else {
+      i++;
+      j++; // replaced
+    }
+  }
+
+  const result: Element[] = [];
+  for (const n of next) {
+    const o = matched.get(n);
+    if (o) {
+      o.absorbRebuild(n);
+      n.discardTwin();
+      o.parent = parent;
+      result.push(o);
+    } else {
+      n.parent = parent;
+      result.push(n);
+    }
+  }
+  for (const o of old) {
+    if (!used.has(o)) {
+      o.parent = null;
+      o.destroy();
+    }
+  }
+  parent.children = result;
+
+  const session = parent.session;
+  if (session?.isMounted && (oldIds.length !== result.length || result.some((c, k) => c.id !== oldIds[k]))) {
+    session.enqueuePatch({
+      op: 'setChildren',
+      id: parent.id,
+      children: result.map((c) => c.toJSON()),
+    });
+  }
 }

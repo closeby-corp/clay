@@ -59,9 +59,9 @@ export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) 
       aria-live="polite"
       aria-label={label ? `Clay ${label}` : 'Clay connected'}
       className={cn(
-        'pointer-events-none fixed bottom-4 left-4 z-50 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium shadow-sm backdrop-blur-sm transition-colors',
-        phase === 'idle' &&
-          'border-sky-500/40 bg-background/90 text-sky-800 dark:text-sky-300',
+        'pointer-events-none fixed bottom-3 left-3 z-50 flex items-center gap-1.5 rounded-full border text-[11px] font-medium shadow-sm backdrop-blur-sm transition-all',
+        // Idle: a quiet dot so the chip doesn't sit on top of sidebar items.
+        phase === 'idle' ? 'border-border bg-background/80 p-1.5' : 'px-2.5 py-1',
         busy &&
           'border-amber-500/40 bg-background/90 text-amber-800 dark:text-amber-300',
         phase === 'ready' &&
@@ -71,12 +71,12 @@ export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) 
       <span
         className={cn(
           'size-1.5 shrink-0 rounded-full',
-          phase === 'idle' && 'bg-sky-500',
+          phase === 'idle' && 'bg-emerald-500/80',
           busy && 'animate-pulse bg-amber-500',
           phase === 'ready' && 'bg-emerald-500',
         )}
       />
-      <span className="tracking-tight">Clay</span>
+      {phase === 'idle' ? null : <span className="tracking-tight">Clay</span>}
       {label ? (
         <span className="text-[10px] font-normal opacity-80">{label}</span>
       ) : null}

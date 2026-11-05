@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils"
 function Table({
   className,
   containerClassName,
+  containerStyle,
   containerRef,
   ...props
 }: React.ComponentProps<"table"> & {
   containerClassName?: string
+  containerStyle?: React.CSSProperties
   containerRef?: React.Ref<HTMLDivElement>
 }) {
   return (
@@ -16,6 +18,7 @@ function Table({
       ref={containerRef}
       data-slot="table-container"
       className={cn("relative w-full overflow-x-auto", containerClassName)}
+      style={containerStyle}
     >
       <table
         data-slot="table"

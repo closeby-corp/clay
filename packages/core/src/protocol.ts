@@ -31,6 +31,8 @@ export type ServerMessage =
   | { op: 'download'; filename: string; mime: string; content: string }
   | { op: 'clipboard'; content: string }
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
+  /** Colour palette name → `<html data-palette>` (`kiln` / empty = default). */
+  | { op: 'palette'; palette: string }
   | { op: 'runJavaScript'; code: string }
   /** Set `location.hash` on the client (no leading `#` in `hash`; empty clears). */
   | { op: 'setUrlHash'; hash: string }
@@ -88,6 +90,8 @@ export type ClientMessage =
       clientStorage?: Record<string, unknown>;
       /** sessionStorage bag mirror for `storage.tab` (survives reconnect / navigate-hello). */
       tabStorage?: Record<string, unknown>;
+      /** Palette the page currently shows (`<html data-palette>`, `kiln` when unset). */
+      palette?: string;
     }
   | { op: 'event'; id: string; type: string; value?: unknown }
   /**

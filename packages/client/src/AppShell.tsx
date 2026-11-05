@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowUpCircleIcon } from 'lucide-react';
 import {
   Sidebar,
@@ -28,6 +28,20 @@ import {
 
 export type { ShellNavItem, ShellPrimaryAction, ShellUser };
 
+/** Page inset: fades in and lets cards cascade for ~850ms after each navigation. */
+function PageEnter({ children }: { children: ReactNode }) {
+  const [entering, setEntering] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setEntering(false), 850);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className={cn('clay-animate-in flex flex-1 flex-col px-4 lg:px-6', entering && 'clay-entering')}>
+      {children}
+    </div>
+  );
+}
+
 export function BoundAppShell({
   title,
   headerTitle,
@@ -40,6 +54,7 @@ export function BoundAppShell({
   primaryAction,
   className,
   style,
+  pageKey,
   children,
 }: {
   title: string;
@@ -53,6 +68,8 @@ export function BoundAppShell({
   primaryAction?: ShellPrimaryAction | null;
   className?: string;
   style?: CSSProperties;
+  /** Changes on navigation (top-level page element ids) → replays the page entry. */
+  pageKey?: string;
   children: ReactNode;
 }) {
   const pageTitle = resolveAppShellTitle({
@@ -90,8 +107,10 @@ export function BoundAppShell({
                     go('/');
                   }}
                 >
-                  <ArrowUpCircleIcon className="size-5" />
-                  <span className="text-base font-semibold">{title || 'Clay'}</span>
+                  <span className="clay-brand-gradient flex size-7 shrink-0 items-center justify-center rounded-lg shadow-primary">
+                    <ArrowUpCircleIcon className="size-4" />
+                  </span>
+                  <span className="text-base font-bold tracking-tight">{title || 'Clay'}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -108,12 +127,13 @@ export function BoundAppShell({
           </SidebarFooter>
         ) : null}
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="clay-ambient">
         <SiteHeader title={pageTitle} />
         <div className="@container/main flex flex-1 flex-col">
-          <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
-            {/* Page inset remounts on navigate; sidebar chrome stays mounted (sticky app key). */}
-            <div className="clay-animate-in px-4 lg:px-6">{children}</div>
+          {/* --clay-viewport-offset = header + vertical padding (+ inset margins on md+), for `fillViewport`. */}
+          <div className="flex flex-1 flex-col gap-4 py-4 [--clay-viewport-offset:calc(var(--header-height)+2rem)] md:gap-6 md:py-6 md:[--clay-viewport-offset:calc(var(--header-height)+4rem)]">
+            {/* Sidebar chrome stays mounted (sticky app key); the page inset remounts per page. */}
+            <PageEnter key={pageKey}>{children}</PageEnter>
           </div>
         </div>
       </SidebarInset>

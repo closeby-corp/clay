@@ -13,7 +13,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Orders (state/auto)',
   icon: 'clipboard-list',
-  order: 12,
+  order: 20,
+  group: 'Reactivity',
+  groupIcon: 'zap',
 };
 
 ui.page('/examples/reactive-let-orders', () => {

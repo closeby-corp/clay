@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Feedback',
   icon: 'help-circle',
-  order: 75,
+  order: 23,
+  group: 'Reactivity',
+  groupIcon: 'zap',
 };
 
 ui.page('/examples/feedback', () => {

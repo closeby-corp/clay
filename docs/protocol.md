@@ -19,7 +19,7 @@ On unexpected socket close, the client reconnects with exponential backoff (500m
 { "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "hash": "optional-hash-without-hash-sign", "browserStorage": {}, "clientStorage": {}, "tabStorage": {} }
 ```
 
-Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `hash` (no leading `#`) hydrates `ui.getUrlHash()`. Optional `search` (no leading `?`) hydrates `ui.getUrlSearch()`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`.
+Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `hash` (no leading `#`) hydrates `ui.getUrlHash()`. Optional `search` (no leading `?`) hydrates `ui.getUrlSearch()`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`. Optional `palette` reports the palette the page shows, so `ui.theme.getPalette()` is correct after a reload.
 
 Sent on connect and after client-side navigation. The React client keeps matching `app` shell chrome mounted across remounts; only inset content is replaced.
 
@@ -198,6 +198,18 @@ Client runs `window.open(url, '_blank', 'noopener,noreferrer')`. Prefer `ui.open
 | `theme` | `light\|dark\|system` | Applied via next-themes; persisted under `clay-theme` |
 
 Sent by `ui.theme.set(...)`.
+
+### `palette`
+
+```json
+{ "op": "palette", "palette": "ocean" }
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `palette` | `string` | Sets `<html data-palette>` (`kiln` / empty clears to default); persisted under `clay-palette` and restored before first paint |
+
+Sent by `ui.theme.palette(...)`.
 
 ### `runJavaScript`
 

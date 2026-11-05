@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Controls Extra',
   icon: 'layers',
-  order: 87,
+  order: 42,
+  group: 'Forms & controls',
+  groupIcon: 'sliders-horizontal',
 };
 
 ui.page('/examples/controls-extra', () => {

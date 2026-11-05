@@ -5,7 +5,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Kanban',
   icon: 'columns-3',
-  order: 89,
+  order: 62,
+  group: 'Apps',
+  groupIcon: 'app-window',
 };
 
 const LANES: KanbanLane[] = [

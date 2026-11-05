@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Form Demo',
   icon: 'form-input',
-  order: 80,
+  order: 40,
+  group: 'Forms & controls',
+  groupIcon: 'sliders-horizontal',
 };
 
 const DRAFT_KEY = 'formDemo';

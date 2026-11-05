@@ -1494,6 +1494,7 @@ const CLAY_UI_BUILDER_METHODS = new Set([
   'row',
   'column',
   'container',
+  'grid',
   'hero',
   'card',
   'dialog',

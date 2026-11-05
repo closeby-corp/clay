@@ -66,6 +66,7 @@ import {
   column as columnFactory,
   container as containerFactory,
   hero as heroFactory,
+  grid as gridFactory,
   card as cardFactory,
   dialog as dialogFactory,
   dialogStack as dialogStackFactory,
@@ -242,6 +243,8 @@ import {
   type LineChartStyleProps,
   type SparklineProps,
   type CardProps,
+  type GridProps,
+  type LayoutProps,
   type DialogProps,
   type DialogStackProps,
   type DialogStackStepOptions,
@@ -471,6 +474,7 @@ import {
   TimerHandle,
   type TimerOptions,
   type ThemeMode,
+  type ThemePalette,
   type DraftStorage,
   type DraftOptions,
   type UrlStateOptions,
@@ -512,6 +516,8 @@ export {
 
 
 export type {
+  GridProps,
+  LayoutProps,
   ButtonProps,
   IconButtonProps,
   ButtonVariant,
@@ -698,6 +704,7 @@ export type {
   NotifyType,
   ToastPosition,
   ThemeMode,
+  ThemePalette,
   PageMeta,
   NavFromPagesOptions,
   PageOptions,
@@ -1255,31 +1262,41 @@ export function sparkline(props: SparklineProps): Element {
 }
 
 /** Horizontal flex row (`fn` or props-first). Prefer `ui.row`. */
-export function row(fn: () => void, props?: Parameters<typeof rowFactory>[1]): Element;
-export function row(props: Parameters<typeof rowFactory>[0], fn: () => void): Element;
+export function row(fn: () => void, props?: LayoutProps): Element;
+export function row(props: LayoutProps, fn: () => void): Element;
 export function row(a: any, b?: any): Element {
   return rowFactory(a, b);
 }
 
 /** Vertical flex column (`fn` or props-first). Prefer `ui.column`. */
-export function column(fn: () => void, props?: Parameters<typeof columnFactory>[1]): Element;
-export function column(props: Parameters<typeof columnFactory>[0], fn: () => void): Element;
+export function column(fn: () => void, props?: LayoutProps): Element;
+export function column(props: LayoutProps, fn: () => void): Element;
 export function column(a: any, b?: any): Element {
   return columnFactory(a, b);
 }
 
 /** Layout container (`fn` or props-first). Prefer `ui.container`. */
-export function container(fn: () => void, props?: Parameters<typeof containerFactory>[1]): Element;
-export function container(props: Parameters<typeof containerFactory>[0], fn: () => void): Element;
+export function container(fn: () => void, props?: LayoutProps): Element;
+export function container(props: LayoutProps, fn: () => void): Element;
 export function container(a: any, b?: any): Element {
   return containerFactory(a, b);
 }
 
 /** Hero section (`fn` or props-first). Prefer `ui.hero`. */
-export function hero(fn: () => void, props?: Parameters<typeof heroFactory>[1]): Element;
-export function hero(props: Parameters<typeof heroFactory>[0], fn: () => void): Element;
+export function hero(fn: () => void, props?: LayoutProps): Element;
+export function hero(props: LayoutProps, fn: () => void): Element;
 export function hero(a: any, b?: any): Element {
   return heroFactory(a, b);
+}
+
+/**
+ * Responsive grid that fills the width (`fn` or props-first). Prefer `ui.grid`.
+ * `minColWidth` auto-fits columns (default 16rem); `cols` fixes the count. See {@link GridProps}.
+ */
+export function grid(fn: () => void, props?: GridProps): Element;
+export function grid(props: GridProps, fn: () => void): Element;
+export function grid(a: any, b?: any): Element {
+  return gridFactory(a, b);
 }
 
 /** Card with optional header/footer (`fn` or props-first). Prefer `ui.card`. See {@link CardProps}. */
@@ -1925,6 +1942,7 @@ export const ui = {
   row,
   column,
   container,
+  grid,
   hero,
   card,
   app,

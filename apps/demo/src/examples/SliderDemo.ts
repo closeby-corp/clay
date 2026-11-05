@@ -2,9 +2,11 @@ import { ui, reactive, subscribe } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {
-  label: 'Slider Demo',
+  label: 'Slider & select',
   icon: 'sliders-horizontal',
-  order: 70,
+  order: 43,
+  group: 'Forms & controls',
+  groupIcon: 'sliders-horizontal',
 };
 
 ui.page('/examples/slider-demo', () => {

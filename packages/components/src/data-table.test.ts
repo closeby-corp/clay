@@ -991,3 +991,121 @@ describe('DataTableElement', () => {
     expect((table.props.rows as unknown[]).length).toBe(3);
   });
 });
+
+describe('fill / maxHeight / onRowClick', () => {
+  test('fill and maxHeight are serialized with defaults', () => {
+    const defaults = new DataTableElement(rows, { columns });
+    expect(defaults.props.fill).toBe(false);
+    expect(defaults.props.maxHeight).toBeNull();
+
+    const sized = new DataTableElement(rows, { columns, fill: true, maxHeight: '70vh' });
+    expect(sized.props.fill).toBe(true);
+    expect(sized.props.maxHeight).toBe('70vh');
+  });
+
+  test('rowClickable is true only when onRowClick is given', () => {
+    expect(new DataTableElement(rows, { columns }).props.rowClickable).toBe(false);
+    const clickable = new DataTableElement(rows, { columns, onRowClick: () => {} });
+    expect(clickable.props.rowClickable).toBe(true);
+  });
+
+  test('rowClick calls onRowClick with a copy of the row', async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 10,
+      onRowClick: (row) => {
+        seen.push(row);
+      },
+    });
+    await table.handleEvent('rowClick', { rowKey: 3 });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject(rows[2]);
+    expect(seen[0]).not.toBe(rows[2]);
+  });
+
+  test('rowClick with an unknown rowKey does not call onRowClick', async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const table = new DataTableElement(rows, {
+      columns,
+      keyField: 'id',
+      pageSize: 10,
+      onRowClick: (row) => {
+        seen.push(row);
+      },
+    });
+    await table.handleEvent('rowClick', { rowKey: 999 });
+    expect(seen).toEqual([]);
+  });
+});
+
+describe('formats / highlightChanges / stackOnMobile', () => {
+  const colsOf = (table: DataTableElement) =>
+    table.props.columns as Array<Record<string, unknown>>;
+
+  test('format and formatOptions are serialized on client columns', () => {
+    const table = new DataTableElement(rows, {
+      columns: [
+        {
+          key: 'hours',
+          header: 'Hours',
+          format: 'currency',
+          formatOptions: { currency: 'EUR', locale: 'de-DE', decimals: 2 },
+        },
+        { key: 'title', header: 'Title' },
+      ],
+    });
+    const [hours, title] = colsOf(table);
+    expect(hours!.format).toBe('currency');
+    expect(hours!.formatOptions).toEqual({ currency: 'EUR', locale: 'de-DE', decimals: 2 });
+    expect(title!.format).toBeUndefined();
+    expect(title!.formatOptions).toBeUndefined();
+  });
+
+  test('numeric formats default align to right; an explicit align wins', () => {
+    for (const format of ['number', 'currency', 'percent', 'bytes'] as const) {
+      const table = new DataTableElement(rows, {
+        columns: [{ key: 'hours', header: 'Hours', format }],
+      });
+      expect(colsOf(table)[0]!.align).toBe('right');
+    }
+
+    const explicit = new DataTableElement(rows, {
+      columns: [{ key: 'hours', header: 'Hours', format: 'number', align: 'left' }],
+    });
+    expect(colsOf(explicit)[0]!.align).toBe('left');
+  });
+
+  test('date formats do not change align', () => {
+    for (const format of ['date', 'datetime', 'relative'] as const) {
+      const table = new DataTableElement(rows, {
+        columns: [{ key: 'title', header: 'Title', format }],
+      });
+      expect(colsOf(table)[0]!.align).toBeUndefined();
+    }
+  });
+
+  test('highlightChanges and stackOnMobile default false and pass through when true', () => {
+    const defaults = new DataTableElement(rows, { columns });
+    expect(defaults.props.highlightChanges).toBe(false);
+    expect(defaults.props.stackOnMobile).toBe(false);
+
+    const enabled = new DataTableElement(rows, {
+      columns,
+      highlightChanges: true,
+      stackOnMobile: true,
+    });
+    expect(enabled.props.highlightChanges).toBe(true);
+    expect(enabled.props.stackOnMobile).toBe(true);
+  });
+
+  test('setHighlightChanges toggles the wire prop without rebuilding', () => {
+    const table = new DataTableElement(rows, { columns });
+    expect(table.props.highlightChanges).toBe(false);
+    expect(table.setHighlightChanges(true)).toBe(table);
+    expect(table.props.highlightChanges).toBe(true);
+    table.setHighlightChanges(false);
+    expect(table.props.highlightChanges).toBe(false);
+  });
+});

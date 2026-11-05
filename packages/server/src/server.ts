@@ -50,6 +50,13 @@ export type ClayServerConfig = {
    */
   css?: string | string[];
   /**
+   * Default colour palette (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`,
+   * `graphite`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom
+   * `data-palette` defined in `css`). Sessions can
+   * switch live with `ui.theme.palette(name)`. Default: `kiln`.
+   */
+  palette?: string;
+  /**
    * Directory for `POST /upload` files.
    * Absolute or relative to `process.cwd()`. Default: `.clay-uploads`.
    */
@@ -135,15 +142,20 @@ function resolveDir(dir: string | undefined, fallback: string): string {
   return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
 }
 
-function spaHtml(title: string, customCssHrefs: string[], dev: boolean): string {
+function sanitizePaletteName(value: string): string {
+  return value.replace(/[^a-z0-9-]/gi, '');
+}
+
+function spaHtml(title: string, customCssHrefs: string[], dev: boolean, palette?: string): string {
   const customLinks = customCssHrefs
     .map((href) => `  <link rel="stylesheet" href="${href}" />`)
     .join('\n');
   const devBoot = dev ? `  <script>window.__CLAY_DEV__=true</script>\n` : '';
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en"${palette ? ` data-palette="${sanitizePaletteName(palette)}"` : ''}>
 <head>
   <meta charset="UTF-8" />
+  <script>try{var p=localStorage.getItem('clay-palette');if(p)document.documentElement.dataset.palette=p}catch(e){}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <link rel="stylesheet" href="/assets/index.css" />
@@ -172,6 +184,7 @@ type ResolvedConfig = {
   sessionAbsoluteMs?: number;
   sessionExpiredPath: string;
   dev: boolean;
+  palette?: string;
 };
 
 type WsData = {
@@ -249,6 +262,7 @@ export class ClayServer {
       sessionAbsoluteMs: config.sessionAbsoluteMs,
       sessionExpiredPath,
       dev: config.dev ?? process.env.NODE_ENV !== 'production',
+      palette: config.palette,
     };
 
     if (authSecret) {
@@ -296,7 +310,7 @@ export class ClayServer {
       sessionExpiredPath,
     } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
-    const html = spaHtml(title, customCssHrefs, this.config.dev);
+    const html = spaHtml(title, customCssHrefs, this.config.dev, this.config.palette);
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
     this.server = Bun.serve({
@@ -457,6 +471,9 @@ export class ClayServer {
               for (const [k, v] of Object.entries(msg.tabStorage)) {
                 if (isJsonSafeStorageValue(v)) session.tab.set(k, v);
               }
+            }
+            if (typeof msg.palette === 'string' && /^[a-z0-9-]+$/i.test(msg.palette)) {
+              session.clientPalette = msg.palette;
             }
             if (typeof msg.hash === 'string') {
               session.urlHash = msg.hash.startsWith('#') ? msg.hash.slice(1) : msg.hash;

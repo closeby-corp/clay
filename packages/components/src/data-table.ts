@@ -12,6 +12,41 @@ export type TableColumnFilter = 'text' | 'facet';
 /** Sticky column edge while the table scrolls horizontally. */
 export type TableColumnPin = 'left' | 'right';
 
+/** Browser-side display format for a column. */
+export type TableColumnFormat =
+  | 'number'
+  | 'currency'
+  | 'percent'
+  | 'date'
+  | 'datetime'
+  | 'relative'
+  | 'bytes';
+
+export type TableColumnFormatOptions = {
+  /** ISO 4217 currency code (for `format: 'currency'`). Default `'USD'`. */
+  currency?: string;
+  /** BCP 47 locale. Default: the browser's locale. */
+  locale?: string;
+  /** Fixed number of fraction digits. */
+  decimals?: number;
+};
+
+const TABLE_COLUMN_FORMATS: ReadonlySet<string> = new Set<TableColumnFormat>([
+  'number',
+  'currency',
+  'percent',
+  'date',
+  'datetime',
+  'relative',
+  'bytes',
+]);
+const NUMERIC_TABLE_COLUMN_FORMATS: ReadonlySet<string> = new Set<TableColumnFormat>([
+  'number',
+  'currency',
+  'percent',
+  'bytes',
+]);
+
 /** Built-in footer aggregate, or a custom reducer over the aggregate row set. */
 export type TableColumnAggregate =
   | 'sum'
@@ -81,6 +116,13 @@ export type TableColumn = {
    * provided / current-page rows when `manualPagination` is true).
    */
   aggregate?: TableColumnAggregate;
+  /**
+   * Display format applied in the browser. Sorting/filtering still use the raw value.
+   * Numeric formats right-align by default.
+   */
+  format?: TableColumnFormat;
+  /** Options for `format`. */
+  formatOptions?: TableColumnFormatOptions;
   /** Pin this column while scrolling horizontally. */
   pin?: TableColumnPin;
 };
@@ -167,8 +209,27 @@ export type DataTableProps = {
   density?: DataTableDensity;
   /** Alternate-row striping. Default `false`. */
   zebra?: boolean;
+  /**
+   * Grow to fill the parent's height (works with `ui.column({ fillViewport })` / grow);
+   * the table body scrolls instead of the default max height.
+   */
+  fill?: boolean;
+  /** CSS length for the scroll area's max height (e.g. `'32rem'`, `'70vh'`). Default unchanged (client decides). */
+  maxHeight?: string;
+  /**
+   * Briefly highlight rows that were added or whose values changed since the last update (live data).
+   * Default `false`.
+   */
+  highlightChanges?: boolean;
+  /**
+   * Below ~640px wide, render each row as a stacked card (label: value) instead of a horizontally
+   * scrolling table. Default `false`.
+   */
+  stackOnMobile?: boolean;
   actions?: DataTableAction[];
   onAction?: (actionId: string, row: Record<string, unknown>) => void | Promise<void>;
+  /** Called with a copy of the row when a body row is clicked. */
+  onRowClick?: (row: Record<string, unknown>) => void | Promise<void>;
   /** Toolbar actions applied to the current selection (requires `selectable`). */
   bulkActions?: DataTableAction[];
   onBulkAction?: (
@@ -261,6 +322,7 @@ type SortPayload = {
   sorts?: DataTableSort[];
 };
 type ActionPayload = { actionId?: string; rowKey?: string | number };
+type RowClickPayload = { rowKey?: string | number };
 type BulkActionPayload = { actionId?: string; rowKeys?: Array<string | number> };
 type ColumnFilterPayload = { key?: string; value?: string };
 type ColumnVisibilityPayload = { key?: string; visible?: boolean };
@@ -291,6 +353,8 @@ type ClientColumn = {
   pin?: TableColumnPin;
   /** Built-in aggregate name when set (custom functions are opaque to the client). */
   aggregate?: 'sum' | 'avg' | 'count' | 'min' | 'max';
+  format?: TableColumnFormat;
+  formatOptions?: TableColumnFormatOptions;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -462,10 +526,17 @@ function toClientColumns(
       filter === 'facet'
         ? deriveFacetOptions(col, facetRowsByKey?.get(col.key) ?? [])
         : undefined;
+    const format =
+      typeof col.format === 'string' && TABLE_COLUMN_FORMATS.has(col.format)
+        ? col.format
+        : undefined;
+    const align =
+      col.align ??
+      (format && NUMERIC_TABLE_COLUMN_FORMATS.has(format) ? 'right' : undefined);
     return {
       key: col.key,
       header: col.header,
-      align: col.align,
+      align,
       sortable: col.sortable,
       filter,
       facetOptions,
@@ -481,6 +552,8 @@ function toClientColumns(
         col.aggregate === 'max'
           ? col.aggregate
           : undefined,
+      format,
+      formatOptions: format ? col.formatOptions : undefined,
     };
   });
 }
@@ -810,6 +883,10 @@ export class DataTableElement extends Element {
   private manualTotalRows: number | null;
   private density: DataTableDensity;
   private zebra: boolean;
+  private fill: boolean;
+  private highlightChanges: boolean;
+  private stackOnMobile: boolean;
+  private maxHeight?: string;
   private searchable: boolean;
   private searchPlaceholder: string;
   private filterDebounceMs: number;
@@ -832,6 +909,7 @@ export class DataTableElement extends Element {
   private actions: DataTableAction[];
   private bulkActions: DataTableAction[];
   private onActionFn?: (actionId: string, row: Record<string, unknown>) => void | Promise<void>;
+  private onRowClickFn?: (row: Record<string, unknown>) => void | Promise<void>;
   private onBulkActionFn?: (
     actionId: string,
     rowKeys: Array<string | number>,
@@ -872,6 +950,10 @@ export class DataTableElement extends Element {
         ? props.density
         : 'default';
     const zebra = props.zebra === true;
+    const fill = props.fill === true;
+    const maxHeight = props.maxHeight;
+    const highlightChanges = props.highlightChanges === true;
+    const stackOnMobile = props.stackOnMobile === true;
     const actions = props.actions ?? [];
     const bulkActions = props.bulkActions ?? [];
     const keyField = props.keyField ?? ROW_ID_FIELD;
@@ -946,6 +1028,11 @@ export class DataTableElement extends Element {
       manualSorting,
       density,
       zebra,
+      fill,
+      maxHeight: maxHeight ?? null,
+      highlightChanges,
+      stackOnMobile,
+      rowClickable: Boolean(props.onRowClick),
       totalRows: 0,
       totalPages: 1,
       footer: null,
@@ -964,6 +1051,10 @@ export class DataTableElement extends Element {
     this.manualTotalRows = manualTotalRows;
     this.density = density;
     this.zebra = zebra;
+    this.fill = fill;
+    this.highlightChanges = highlightChanges;
+    this.stackOnMobile = stackOnMobile;
+    this.maxHeight = maxHeight;
     this.searchable = searchable;
     this.searchPlaceholder = searchPlaceholder;
     this.filterDebounceMs = filterDebounceMs;
@@ -986,6 +1077,7 @@ export class DataTableElement extends Element {
     this.actions = actions;
     this.bulkActions = bulkActions;
     this.onActionFn = props.onAction;
+    this.onRowClickFn = props.onRowClick;
     this.onBulkActionFn = props.onBulkAction;
     this.onReorderFn = props.onReorder;
     this.onSelectionChangeFn = props.onSelectionChange;
@@ -1009,6 +1101,7 @@ export class DataTableElement extends Element {
     this.on('export', (value) => this.handleExport(value));
     this.on('page', (value) => this.handlePage(value));
     this.on('action', (value) => this.handleAction(value));
+    this.on('rowClick', (value) => this.handleRowClick(value));
     this.on('bulkAction', (value) => this.handleBulkAction(value));
     this.on('reorder', (value) => this.handleReorder(value));
     this.on('selectionChange', (value) => this.handleSelectionChange(value));
@@ -1112,6 +1205,16 @@ export class DataTableElement extends Element {
 
   setZebra(zebra: boolean): this {
     this.zebra = zebra === true;
+    this.syncView();
+    return this;
+  }
+
+  /**
+   * Turn the live change flash on or off without rebuilding the table.
+   * Mirrors the `highlightChanges` constructor option; existing rows keep their scroll and sort.
+   */
+  setHighlightChanges(on: boolean): this {
+    this.highlightChanges = on === true;
     this.syncView();
     return this;
   }
@@ -1320,6 +1423,14 @@ export class DataTableElement extends Element {
     const row = this.sourceRows.find((r) => String(r[this.keyField]) === String(payload.rowKey));
     if (!row) return;
     await this.onActionFn(actionId, { ...row });
+  }
+
+  private async handleRowClick(value: unknown): Promise<void> {
+    if (!this.onRowClickFn) return;
+    const payload = (value ?? {}) as RowClickPayload;
+    const row = this.sourceRows.find((r) => String(r[this.keyField]) === String(payload.rowKey));
+    if (!row) return;
+    await this.onRowClickFn({ ...row });
   }
 
   private async handleBulkAction(value: unknown): Promise<void> {
@@ -1613,6 +1724,11 @@ export class DataTableElement extends Element {
       manualSorting: this.manualSorting,
       density: this.density,
       zebra: this.zebra,
+      fill: this.fill,
+      maxHeight: this.maxHeight ?? null,
+      highlightChanges: this.highlightChanges,
+      stackOnMobile: this.stackOnMobile,
+      rowClickable: Boolean(this.onRowClickFn),
       totalRows,
       totalPages,
       footer,

@@ -5,7 +5,9 @@ import visitorsSeed from './dashboard-visitors.json';
 export const pageMeta = {
   label: 'Charts',
   icon: 'chart-area',
-  order: 90,
+  order: 31,
+  group: 'Data',
+  groupIcon: 'table',
 };
 
 const monthly = [

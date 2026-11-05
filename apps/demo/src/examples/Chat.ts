@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Chat',
   icon: 'message-square',
-  order: 30,
+  order: 60,
+  group: 'Apps',
+  groupIcon: 'app-window',
 };
 
 interface ChatMessage {

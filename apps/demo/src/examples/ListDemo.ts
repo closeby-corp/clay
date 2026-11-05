@@ -5,7 +5,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'List',
   icon: 'clipboard-list',
-  order: 90,
+  order: 32,
+  group: 'Data',
+  groupIcon: 'table',
 };
 
 const INITIAL: ListGroup[] = [

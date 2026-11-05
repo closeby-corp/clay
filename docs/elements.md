@@ -211,4 +211,6 @@ ui.label('Hello').classes('text-3xl font-bold text-muted-foreground');
 
 Layout `gap` uses a small numeric scale mapped to `gap-0` … `gap-8` in the client.
 
-The client ships a light ShadCN-style theme (CSS variables in `packages/client/src/index.css`). Override tokens at runtime with `ui.run({ css: './globals.css' })`.
+The client ships the "kiln" theme — warm neutrals, a fired-clay primary, vivid chart colours, light + dark (ShadCN-style CSS variables in `packages/client/src/index.css`, Plus Jakarta Sans bundled). Override tokens at runtime with `ui.run({ css: './globals.css' })`; Clay extras include `--clay-brand-from` / `--clay-brand-to` and the `clay-brand-gradient`, `clay-brand-text`, `clay-ambient` classes.
+
+Twelve more palettes ship alongside kiln — `cobalt`, `ocean`, `forest`, `orchid`, `citrus`, `graphite`, `neon`, plus the blues `sky`, `navy`, `indigo`, `denim`, `midnight` (each light + dark, in `packages/client/src/palettes.css`). Pick the app default with `ui.run({ palette: 'ocean' })` or switch per session with `ui.theme.palette('neon')`. Custom palettes: define `:root[data-palette="mine"] { … }` and `:root.dark[data-palette="mine"] { … }` in your `css` file, then `ui.theme.palette('mine')`.

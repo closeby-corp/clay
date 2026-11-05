@@ -31,6 +31,8 @@ export type ServerMessage =
   | { op: 'download'; filename: string; mime: string; content: string }
   | { op: 'clipboard'; content: string }
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
+  /** Colour palette name → `<html data-palette>` (`kiln` / empty = default). */
+  | { op: 'palette'; palette: string }
   | { op: 'runJavaScript'; code: string }
   | { op: 'setUrlHash'; hash: string }
   | { op: 'setUrlSearch'; search: string; mode?: 'replace' | 'push' }
@@ -72,6 +74,8 @@ export type ClientMessage =
       browserStorage?: Record<string, unknown>;
       clientStorage?: Record<string, unknown>;
       tabStorage?: Record<string, unknown>;
+      /** Palette the page currently shows (`<html data-palette>`, `kiln` when unset). */
+      palette?: string;
     }
   | { op: 'event'; id: string; type: string; value?: unknown }
   /** Same-path popstate: search/hash only (no remount). */

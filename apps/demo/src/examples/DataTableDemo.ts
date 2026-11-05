@@ -5,7 +5,9 @@ import { exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'DataTable',
   icon: 'table-2',
-  order: 60,
+  order: 30,
+  group: 'Data',
+  groupIcon: 'table',
 };
 
 type Task = {
@@ -267,6 +269,7 @@ ui.page('/examples/datatable', () => {
         { id: 'status', label: 'Status', icon: 'refresh-cw' },
         { id: 'delete', label: 'Delete', icon: 'trash-2', variant: 'destructive' },
       ],
+      onRowClick: (row) => ui.notify(`Opened task #${row.id}: ${row.title}`, 'info'),
       onAction: async (actionId, row) => {
         if (actionId === 'delete') {
           const sure = await ui.confirm(`Delete “${row.title}”? This cannot be undone.`, {
@@ -565,6 +568,46 @@ ui.page('/examples/datatable', () => {
         { key: 'title', header: 'Title' },
         { key: 'status', header: 'Status' },
       ],
+    });
+
+    exampleSection(
+      'Live data',
+      'format (currency · percent · bytes · relative) + highlightChanges + stackOnMobile. A timer updates rows every 2s — changed rows flash. Narrow the window below 640px to see stacked cards.',
+    );
+    const services = ['api', 'web', 'worker', 'billing', 'search', 'auth'].map((name, i) => ({
+      id: name,
+      service: name,
+      revenue: 1200 + i * 875.5,
+      errorRate: 0.004 * (i + 1),
+      memory: (180 + i * 96) * 1024 * 1024,
+      deployedAt: new Date(Date.now() - (i + 1) * 47 * 60 * 1000).toISOString(),
+    }));
+    const liveTable = ui.dataTable(services, {
+      keyField: 'id',
+      pageSize: 0,
+      highlightChanges: true,
+      stackOnMobile: true,
+      columnToggle: false,
+      exportable: false,
+      onRowClick: (row) => ui.notify(`Service ${row.service}`, 'info'),
+      columns: [
+        { key: 'service', header: 'Service' },
+        { key: 'revenue', header: 'Revenue', format: 'currency', formatOptions: { currency: 'EUR' }, aggregate: 'sum' },
+        { key: 'errorRate', header: 'Errors', format: 'percent', formatOptions: { decimals: 1 } },
+        { key: 'memory', header: 'Memory', format: 'bytes' },
+        { key: 'deployedAt', header: 'Deployed', format: 'relative' },
+      ],
+    });
+    ui.timer(2, () => {
+      const i = Math.floor(Math.random() * services.length);
+      const s = services[i]!;
+      services[i] = {
+        ...s,
+        revenue: Math.round((s.revenue + Math.random() * 90) * 100) / 100,
+        errorRate: Math.max(0, s.errorRate + (Math.random() - 0.5) * 0.004),
+        deployedAt: Math.random() < 0.2 ? new Date().toISOString() : s.deployedAt,
+      };
+      liveTable.setRows([...services]);
     });
 
     exampleSection(

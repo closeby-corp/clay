@@ -4,7 +4,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Timer & content',
   icon: 'clock',
-  order: 85,
+  order: 22,
+  group: 'Reactivity',
+  groupIcon: 'zap',
 };
 
 ui.page('/examples/timer-content', () => {

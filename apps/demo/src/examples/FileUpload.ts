@@ -6,7 +6,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'File Upload',
   icon: 'upload',
-  order: 40,
+  order: 45,
+  group: 'Forms & controls',
+  groupIcon: 'sliders-horizontal',
 };
 
 ui.page('/examples/upload', () => {

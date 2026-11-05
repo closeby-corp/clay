@@ -14,7 +14,9 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Orders (let)',
   icon: 'clipboard-list',
-  order: 13,
+  order: 21,
+  group: 'Reactivity',
+  groupIcon: 'zap',
 };
 
 ui.page('/examples/reactive-let-orders-let', () => {

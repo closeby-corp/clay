@@ -5,7 +5,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Gantt',
   icon: 'chart-gantt',
-  order: 91,
+  order: 63,
+  group: 'Apps',
+  groupIcon: 'app-window',
 };
 
 const INITIAL: GanttRow[] = [

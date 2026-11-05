@@ -18,6 +18,7 @@
     "@domternal/extension-markdown": "^0.14.0",
     "@domternal/react": "^0.14.0",
     "@domternal/theme": "^0.14.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-checkbox": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.22",

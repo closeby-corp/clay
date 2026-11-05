@@ -73,6 +73,8 @@ export class ClientSession {
    * Prefer `getUrlSearch` / `setUrlSearch` / `updateUrlSearch` over reading `window`.
    */
   urlSearch = '';
+  /** Palette reported by the client on hello (restored from storage / server default). */
+  clientPalette: string | null = null;
   root: Element | null = null;
   isMounted = false;
 
@@ -261,6 +263,10 @@ export class ClientSession {
 
   setTheme(theme: 'light' | 'dark' | 'system'): void {
     this.send({ op: 'theme', theme });
+  }
+
+  setPalette(palette: string): void {
+    this.send({ op: 'palette', palette });
   }
 
   /** Sync client `location.hash` (pass without `#`; empty clears). */

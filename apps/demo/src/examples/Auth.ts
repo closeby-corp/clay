@@ -11,7 +11,9 @@ import {
 export const pageMeta = {
   label: 'Account',
   icon: 'lock',
-  order: 73,
+  order: 70,
+  group: 'Account',
+  groupIcon: 'lock',
 };
 
 ui.page('/examples/auth', () => {

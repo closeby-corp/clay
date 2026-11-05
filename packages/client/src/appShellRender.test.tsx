@@ -20,13 +20,13 @@ describe('app shell heading render', () => {
       nav: [{ label: 'Reports', href: '/reports', active: true }],
     });
 
-    expect(html).toContain('<h1 class="text-base font-medium">Reports</h1>');
+    expect(html).toContain('<h1 class="text-base font-semibold tracking-tight">Reports</h1>');
   });
 
   test('uses the brand when headerTitle and active nav are omitted', () => {
     const html = renderApp({ title: 'My App', nav: [] });
 
-    expect(html).toContain('<h1 class="text-base font-medium">My App</h1>');
+    expect(html).toContain('<h1 class="text-base font-semibold tracking-tight">My App</h1>');
   });
 
   test('preserves an explicitly empty headerTitle', () => {
@@ -36,6 +36,6 @@ describe('app shell heading render', () => {
       nav: [{ label: 'Reports', href: '/reports', active: true }],
     });
 
-    expect(html).toContain('<h1 class="text-base font-medium"></h1>');
+    expect(html).toContain('<h1 class="text-base font-semibold tracking-tight"></h1>');
   });
 });
