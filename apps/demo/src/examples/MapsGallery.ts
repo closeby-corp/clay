@@ -620,7 +620,7 @@ ui.page('/examples/maps', () => {
         const quakes = buildSeismicHeatmap();
         let globe = true;
         const heat = ui.map({
-          center: [150, 15],
+          center: [80, 25],
           zoom: 1.4,
           height: '28rem',
           projection: 'globe',
