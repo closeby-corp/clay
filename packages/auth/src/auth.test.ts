@@ -3,7 +3,7 @@ import { hashPassword, verifyPassword } from './password';
 import { createLoginLimiter } from './limiter';
 import { createAuthGuards } from './guards';
 import { auditRecord, clearAuditRecords, listAuditRecords } from './audit';
-import { storage, ClientSession, clearPages, setCurrentSession } from '@close-by/clay-core';
+import { storage, ClientSession, clearPages, setCurrentSession, setRoleResolver } from '@close-by/clay-core';
 
 describe('hashPassword / verifyPassword', () => {
   test('round-trips', () => {
@@ -57,6 +57,20 @@ describe('createAuthGuards', () => {
     });
     expect(requireRole('admin')).toBeNull();
     expect(requireRole('user')?.role).toBe('user');
+  });
+
+  test('requireRole uses the shared role resolver when set', () => {
+    const { requireRole } = createAuthGuards<{ id: string }>({
+      getUser: () => ({ id: 'u1' }),
+      onUnauthenticated: () => {},
+    });
+    setRoleResolver(() => ['editor', 'viewer']);
+    try {
+      expect(requireRole('editor')?.id).toBe('u1');
+      expect(requireRole('admin')).toBeNull();
+    } finally {
+      setRoleResolver(null);
+    }
   });
 
   test('mustChangePassword redirects', () => {

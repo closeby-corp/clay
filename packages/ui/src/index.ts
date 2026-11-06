@@ -465,6 +465,10 @@ import {
   updateUrlSearch as updateUrlSearchCore,
   openExternal as openExternalCore,
   redirect as redirectCore,
+  setRoleResolver,
+  hasRole as hasRoleCore,
+  forRoles as forRolesCore,
+  type RoleResolver,
   scroll as scrollCore,
   timer as timerCore,
   storage as storageCore,
@@ -1690,6 +1694,30 @@ export function redirect(url: string): void {
   redirectCore(url);
 }
 
+/** True when the current user has at least one of `roles` (needs `ui.run({ getRoles })`). */
+export function hasRole(roles: string | readonly string[]): boolean {
+  return hasRoleCore(roles);
+}
+
+/**
+ * Build `content` only for users with one of `roles`, else `fallback`.
+ * Skipped content is never sent to the browser. Needs `ui.run({ getRoles })`.
+ *
+ * @example
+ * ```ts
+ * ui.forRoles(['admin', 'manager'], () => {
+ *   ui.button('Delete project', { onClick: remove });
+ * }, () => ui.label('Ask an admin for access'));
+ * ```
+ */
+export function forRoles(
+  roles: string | readonly string[],
+  content: () => void,
+  fallback?: () => void,
+): void {
+  forRolesCore(roles, content, fallback);
+}
+
 /** Open a URL in a new tab. Prefer over `runJavaScript('window.open…')`. */
 export function openExternal(url: string): void {
   openExternalCore(url);
@@ -1789,6 +1817,12 @@ export function page(path: string, fn: () => void, options?: PageOptions): void 
  * Extends {@link ClayServerConfig} (port, auth, storage, uploads, session timeouts).
  */
 export type RunConfig = ClayServerConfig & {
+  /**
+   * Current user's role(s), read while pages build. Enables `ui.forRoles`,
+   * `element.roles([...])`, `ui.hasRole`, and default role filtering in
+   * `ui.navFromPages()` / `requireRole`. Return `null` / `[]` when signed out.
+   */
+  getRoles?: RoleResolver;
   /** Global dashboard shell; wraps every page unless `ui.page(..., { shell: false })`. */
   app?: AppProps;
   /**
@@ -1887,7 +1921,8 @@ export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {
 
   cfg = applyClayTailwind(cfg);
 
-  const { app: appProps, tailwind: _tailwind, ...serverConfig } = cfg;
+  const { app: appProps, tailwind: _tailwind, getRoles, ...serverConfig } = cfg;
+  setRoleResolver(getRoles ?? null);
   if (appProps) {
     setPageWrapper((pageFn) => app(appProps, pageFn));
   } else {
@@ -2035,6 +2070,8 @@ export const ui = {
   updateUrlSearch,
   openExternal,
   redirect,
+  forRoles,
+  hasRole,
   runJavaScript,
   scroll,
   timer,

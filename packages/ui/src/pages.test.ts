@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { fileURLToPath } from 'url';
 import { join } from 'path';
-import { getRegisteredPaths, page, setPageWrapper } from '@close-by/clay-core';
+import { getRegisteredPaths, page, setPageWrapper, setRoleResolver } from '@close-by/clay-core';
 import {
   attachPageMeta,
   loadPages,
@@ -79,6 +79,15 @@ describe('loadPages + navFromPages', () => {
       '/examples/admin-only',
     );
     expect(navFromPages().map((n) => n.href)).not.toContain('/examples/admin-only');
+
+    // With ui.run({ getRoles }), no-arg navFromPages uses the current roles.
+    setRoleResolver(() => ['admin']);
+    try {
+      expect(navFromPages().map((n) => n.href)).toContain('/examples/admin-only');
+      expect(navFromPages({ role: 'user' }).map((n) => n.href)).not.toContain('/examples/admin-only');
+    } finally {
+      setRoleResolver(null);
+    }
   });
 
   test('groupExamples nests example routes under a parent item', () => {

@@ -1,4 +1,4 @@
-import { getCurrentSession } from '@close-by/clay-core';
+import { currentRoles, getCurrentSession, hasRoleResolver } from '@close-by/clay-core';
 
 /** Options for {@link createAuthGuards}. */
 export type AuthGuardsOptions<TUser> = {
@@ -66,9 +66,12 @@ export function createAuthGuards<TUser>(options: AuthGuardsOptions<TUser>) {
   ): TUser | null {
     const user = requireAuth();
     if (!user) return null;
+    // Default: ui.run({ getRoles }) when configured, else `user.role`.
     const getRoles =
       opts?.getRoles ??
-      ((u: TUser) => (u as { role?: string }).role ?? []);
+      (hasRoleResolver()
+        ? () => currentRoles()
+        : (u: TUser) => (u as { role?: string }).role ?? []);
     const have = new Set(
       ([] as string[]).concat(getRoles(user) ?? []).filter(Boolean),
     );

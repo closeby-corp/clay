@@ -65,6 +65,35 @@ ui.page('/admin', () => {
 
 Nav filtering is not authorization. Always guard pages that must not leak data.
 
+### Role-based content
+
+Tell Clay how to read the current user's roles once, then show or hide parts of a page by role:
+
+```ts
+ui.run({
+  authSecret,
+  getRoles: () => getSessionUser()?.roles ?? [], // string, string[] or null
+});
+
+ui.page('/projects', () => {
+  if (!requireAuth()) return;
+
+  ui.forRoles(['admin', 'manager'], () => {
+    ui.button('Delete project', { onClick: deleteProject });
+    ui.dataTable(auditRows);
+  }, () => ui.label('Ask an admin for access')); // optional fallback
+
+  ui.button('Approve', { onClick: approve }).roles(['admin']);
+  if (ui.hasRole('admin')) { /* plain check */ }
+});
+```
+
+- Checks run on the server while the page builds. Hidden content is never sent to the browser, and its handlers don't exist, so they can't be triggered.
+- With `getRoles` set, `ui.navFromPages()` (no arguments) and `requireRole(...)` use the same roles — no need to pass them separately.
+- Roles are read when the page builds. Signing in or out reconnects and rebuilds, so the UI follows. A role changed while someone is signed in applies on their next page load.
+- Without `getRoles`, role checks treat the user as having no roles (fail closed) and log a warning once.
+- Still check the role inside handlers that change data — cheap protection against mistakes elsewhere.
+
 ## Single sign-on (OIDC)
 
 `@close-by/clay-auth` signs users in with any OpenID Connect provider (authorization code + PKCE). The provider is only used to sign in: once its ID token is verified, Clay sets its usual signed auth cookie, so everything above (`resolveUserId`, guards, idle expiry) works unchanged and there are no provider tokens to refresh.

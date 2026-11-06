@@ -50,6 +50,7 @@ export function createDemoRunConfig(overrides: Partial<RunConfig> = {}): RunConf
     sessionAbsoluteMs: overrides.sessionAbsoluteMs ?? auth.sessionAbsoluteMs,
     sessionExpiredPath: overrides.sessionExpiredPath ?? auth.sessionExpiredPath,
     css: overrides.css ?? auth.css,
+    getRoles: overrides.getRoles ?? (() => getSessionUser()?.role ?? null),
     routes: overrides.routes ?? demoOidcRoutes(overrides.port ?? 3000),
     app: overrides.app ?? demoAppShell(overrides.title),
   };

@@ -3,6 +3,7 @@ import { getCurrentParent, getCurrentSession, withParent } from './context';
 import { subscribe, trackReads } from './reactive';
 import type { ElementNode } from './protocol';
 import type { ClientSession } from './session';
+import { hasRole } from './roles';
 
 export type EventHandler = (value?: unknown) => void | Promise<void>;
 
@@ -87,6 +88,27 @@ export class Element {
       child.parent = null;
     }
     return this.add(child);
+  }
+
+  /**
+   * Keep this element only for users with at least one of `roles`
+   * (see `ui.run({ getRoles })`). Otherwise it is removed and destroyed before
+   * it reaches the client, handlers included. Call while building.
+   */
+  roles(roles: string | readonly string[]): this {
+    if (hasRole(roles)) return this;
+    const parent = this.parent;
+    if (parent) {
+      const idx = parent.children.indexOf(this);
+      if (idx >= 0) parent.children.splice(idx, 1);
+      this.parent = null;
+      const session = parent.session;
+      if (session?.isMounted) {
+        session.enqueuePatch({ op: 'setChildren', id: parent.id, children: parent.children.map((c) => c.toJSON()) });
+      }
+    }
+    this.destroy();
+    return this;
   }
 
   clearChildren(): void {

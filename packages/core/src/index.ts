@@ -99,3 +99,11 @@ export type {
   ServerMessage,
   ClientMessage,
 } from './protocol';
+export {
+  setRoleResolver,
+  hasRoleResolver,
+  currentRoles,
+  hasRole,
+  forRoles,
+  type RoleResolver,
+} from './roles';

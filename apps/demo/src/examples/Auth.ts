@@ -72,6 +72,31 @@ ui.page('/examples/auth', () => {
 
         ui.card(
           {
+            title: 'Role-based content',
+            description: 'Built on the server per role — hidden parts never reach the browser.',
+            gap: 3,
+          },
+          () => {
+            ui.forRoles(
+              'admin',
+              () => ui.alert('ui.forRoles: only administrators see this block.'),
+              () => ui.label('ui.forRoles fallback: members see this line instead.').classes('text-sm text-muted-foreground'),
+            );
+            ui.row(
+              () => {
+                ui.button('Everyone sees this', { variant: 'outline' });
+                ui.button('Admins only', {
+                  variant: 'destructive',
+                  onClick: () => ui.notify('Admin action', 'success'),
+                }).roles(['admin']);
+              },
+              { gap: 2 },
+            );
+          },
+        );
+
+        ui.card(
+          {
             title: 'Preferences',
             description: 'Saved for this browser while you stay signed in.',
             gap: 3,

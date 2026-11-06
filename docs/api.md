@@ -99,6 +99,7 @@ ui.run({
 | `sessionAbsoluteMs` | `number` | | Optional: clear auth + redirect after this time since hello |
 | `sessionExpiredPath` | `string` | `'/'` | SPA path after idle/absolute expiry |
 | `resolveUserId` | `(ctx) => …` | cookie helper when `authSecret` set | Trusted identity on WebSocket hello |
+| `getRoles` | `() => string \| string[] \| null` | | Current user's roles. Enables `ui.forRoles`, `ui.hasRole`, `.roles()`, and default filtering in `ui.navFromPages()` / `requireRole` — see [Production — role-based content](./production.md#role-based-content) |
 | `routes` | `Record<path, (req, ctx) => Response>` | | Extra HTTP routes, exact path, any method. `ctx.signIn(userId, location)` / `ctx.signOut(location)` redirect and set/clear the auth cookie. Used for OAuth callbacks — see [Production — single sign-on](./production.md#single-sign-on-oidc) |
 
 #### Auth cookie recipe
@@ -1816,6 +1817,8 @@ onClick: async () => {
 | `ui.updateUrlSearch(patch, opts?)` | `void` | Merge query keys; `null`/`''` deletes |
 | `ui.urlState(defaults, opts?)` | reactive object | `ui.state` + hydrate/sync query string (prefer this) |
 | `ui.openExternal(url)` | `void` | `window.open` in a new tab (`noopener`) |
+| `ui.forRoles(roles, build, fallback?)` | `void` | Run `build` only for users with one of `roles`, else `fallback`; skipped content never reaches the browser |
+| `ui.hasRole(roles)` | `boolean` | Current user has one of `roles` |
 | `ui.redirect(url)` | `void` | Full-page navigation in the current tab (`location.assign`) — for sign-in routes / external pages; use `ui.navigate` for app pages |
 | `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
 | `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |
@@ -2057,6 +2060,7 @@ Returned by every `ui.*` factory.
 | Method | Description |
 |--------|-------------|
 | `.classes(...names)` | Append Tailwind/utility classes; patches `className` |
+| `.roles(list)` | Keep only for users with one of the roles (`ui.run({ getRoles })`); otherwise removed before it reaches the client. Call while building |
 | `.style(string \| Record)` | Set inline style string / object |
 | `.on(event, handler)` | Register additional event handler |
 | `.setText(text)` | Set `props.text` and patch |

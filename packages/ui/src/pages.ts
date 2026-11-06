@@ -1,3 +1,4 @@
+import { currentRoles, hasRoleResolver } from '@close-by/clay-core';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { join } from 'path';
 import { readFile } from 'fs/promises';
@@ -248,6 +249,10 @@ export function navFromPages(opts?: NavFromPagesOptions): AppNavItem[] {
   if (opts?.role) viewer.add(opts.role);
   if (opts?.roles) {
     for (const r of opts.roles) viewer.add(r);
+  }
+  // No explicit role given → use ui.run({ getRoles }) when configured.
+  if (opts?.role === undefined && opts?.roles === undefined && hasRoleResolver()) {
+    for (const r of currentRoles()) viewer.add(r);
   }
 
   const paths = getRegisteredPaths();
