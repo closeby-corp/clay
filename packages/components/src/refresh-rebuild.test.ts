@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ClientSession, RefreshableElement, clearPages, page, setPageWrapper } from '@close-by/clay-core';
+import { ClientSession, Element, RefreshableElement, clearPages, page, setPageWrapper } from '@close-by/clay-core';
 import { dataTable, type DataTableElement } from './data-table';
 import { map, type MapElement } from './map';
 
@@ -101,5 +101,48 @@ describe('rebuild inside a refreshable keeps elements live', () => {
 
     expect(m.id).toBe(onScreenId);
     expect((m.props.markers as { lngLat: number[] }[])[0]!.lngLat).toEqual([5, 6]);
+  });
+});
+
+describe('elements rendered inside table cells', () => {
+  const findButton = (o: unknown): string | undefined => {
+    if (!o || typeof o !== 'object') return;
+    const n = o as { type?: string; id?: string };
+    if (n.type === 'button') return n.id;
+    for (const v of Object.values(o)) {
+      const r = findButton(v);
+      if (r) return r;
+    }
+  };
+
+  test('cell buttons respond before and after rows are replaced', async () => {
+    const hits: number[] = [];
+    let table!: DataTableElement;
+    const { session } = mountWith(() => {
+      table = dataTable([{ id: 1 }], {
+        columns: [
+          { key: 'id', render: (r) => new Element('button', { label: 'go', onClick: () => hits.push(r.id as number) }) },
+        ],
+      });
+    });
+    const first = findButton(table.props.rows)!;
+    await session.handleMessage({ op: 'event', id: first, type: 'click' } as never);
+
+    table.setRows([{ id: 2 }]);
+    session.flushPatches();
+    const second = findButton(table.props.rows)!;
+    expect(session.getElement(first)).toBeUndefined();
+    await session.handleMessage({ op: 'event', id: second, type: 'click' } as never);
+
+    expect(hits).toEqual([1, 2]);
+  });
+
+  test('sorting with an empty list clears the sort', async () => {
+    let table!: DataTableElement;
+    const { session } = mountWith(() => {
+      table = dataTable(ROWS, { sorts: [{ key: 'name', dir: 'desc' }] });
+    });
+    await session.handleMessage({ op: 'event', id: table.id, type: 'sort', value: { sorts: [] } } as never);
+    expect(table.getSorts()).toEqual([]);
   });
 });

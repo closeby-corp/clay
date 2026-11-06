@@ -2014,6 +2014,11 @@ export function BoundDataTable({
                               emit(id, 'sort', { key: col.key, multi: true });
                               return;
                             }
+                            // asc → desc → unsorted
+                            if (active && sortDir === 'desc') {
+                              emit(id, 'sort', { sorts: sorts.filter((s) => s.key !== col.key) });
+                              return;
+                            }
                             const nextDir: DataTableSortDir =
                               active && sortDir === 'asc' ? 'desc' : 'asc';
                             emit(id, 'sort', { key: col.key, dir: nextDir });
@@ -2122,6 +2127,18 @@ export function BoundDataTable({
                                   <ChevronsUpDown className="size-3.5" />
                                   Add to multi-sort
                                 </DropdownMenuItem>
+                                {sorts.some((s) => s.key === col.key) ? (
+                                  <DropdownMenuItem
+                                    onSelect={() =>
+                                      emit(id, 'sort', {
+                                        sorts: sorts.filter((s) => s.key !== col.key),
+                                      })
+                                    }
+                                  >
+                                    <X className="size-3.5" />
+                                    Clear sort
+                                  </DropdownMenuItem>
+                                ) : null}
                                 <DropdownMenuSeparator />
                               </>
                             ) : null}

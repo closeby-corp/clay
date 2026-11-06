@@ -1,4 +1,4 @@
-import { Element, withDetached, withParent } from '@close-by/clay-core';
+import { Element, withDetached, withParent, type ClientSession } from '@close-by/clay-core';
 import type { ElementNode } from '@close-by/clay-core';
 
 export type TableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
@@ -563,12 +563,13 @@ export function cellValue(col: TableColumn, row: Record<string, unknown>): unkno
   return col.value ? col.value(row) : row[col.key];
 }
 
-function buildCellDisplay(col: TableColumn, row: Record<string, unknown>): unknown {
+function buildCellDisplay(col: TableColumn, row: Record<string, unknown>, keep: Element[]): unknown {
   if (col.render) {
     const result = withDetached(() => col.render!(row));
     if (result instanceof Element) {
       const node = result.toJSON();
-      result.destroy();
+      // Keep it alive so events from buttons etc. inside the cell reach their handlers.
+      keep.push(result);
       return { __ui: node } satisfies UiCell;
     }
     return result;
@@ -579,28 +580,30 @@ function buildCellDisplay(col: TableColumn, row: Record<string, unknown>): unkno
 function buildDetailDisplay(
   row: Record<string, unknown>,
   detailFn: (row: Record<string, unknown>) => void,
+  keep: Element[],
 ): UiCell {
-  const root = new Element('column', { gap: 4 });
+  const root = withDetached(() => new Element('column', { gap: 4 }));
   withDetached(() => {
     withParent(root, () => detailFn(row));
   });
   const node = root.toJSON();
-  root.destroy();
+  keep.push(root);
   return { __ui: node };
 }
 
 function buildDisplayRow(
   row: Record<string, unknown>,
   columns: TableColumn[],
-  detailFn?: (row: Record<string, unknown>) => void,
+  detailFn: ((row: Record<string, unknown>) => void) | undefined,
+  keep: Element[],
 ): Record<string, unknown> {
   const cells: Record<string, unknown> = {};
   for (const col of columns) {
-    cells[col.key] = buildCellDisplay(col, row);
+    cells[col.key] = buildCellDisplay(col, row, keep);
   }
   const out: Record<string, unknown> = { ...row, [CELLS_FIELD]: cells };
   if (detailFn) {
-    out[DETAIL_FIELD] = buildDetailDisplay(row, detailFn);
+    out[DETAIL_FIELD] = buildDetailDisplay(row, detailFn, keep);
   }
   return out;
 }
@@ -871,6 +874,8 @@ export class DataTableElement extends Element {
   private columnsExplicit: boolean;
   private keyField: string;
   private sorts: DataTableSort[] = [];
+  /** Elements rendered inside cells / detail drawers; kept registered so their events work. */
+  private cellElements: Element[] = [];
   private filter = '';
   private columnFilters: Record<string, string> = {};
   private hiddenKeys = new Set<string>();
@@ -1217,6 +1222,24 @@ export class DataTableElement extends Element {
     this.highlightChanges = on === true;
     this.syncView();
     return this;
+  }
+
+  private swapCellElements(next: Element[]): void {
+    const session = this.session;
+    if (session) for (const el of next) if (el.session !== session) el.setSession(session);
+    for (const el of this.cellElements) el.destroy();
+    this.cellElements = next;
+  }
+
+  override setSession(session: ClientSession): void {
+    super.setSession(session);
+    for (const el of this.cellElements ?? []) el.setSession(session);
+  }
+
+  override destroy(): void {
+    for (const el of this.cellElements) el.destroy();
+    this.cellElements = [];
+    super.destroy();
   }
 
   /** Replace the ordered multi-sort list. Empty clears sort. */
@@ -1683,8 +1706,9 @@ export class DataTableElement extends Element {
       this.groupBy && !this.manualPagination
         ? groupRows(processed, this.groupBy, this.columns).groups
         : [];
+    const cellElements: Element[] = [];
     const visible = pageRows.map((row) => {
-      const display = buildDisplayRow(row, visibleCols, this.detailFn);
+      const display = buildDisplayRow(row, visibleCols, this.detailFn, cellElements);
       if (this.groupBy && !this.manualPagination) {
         display[GROUP_KEY_FIELD] = resolveGroupValue(row, this.groupBy, this.columns).key;
       }
@@ -1703,6 +1727,7 @@ export class DataTableElement extends Element {
       }
     }
 
+    this.swapCellElements(cellElements);
     const footer = this.buildFooter(visibleCols, this.aggregateRows());
     const sorts = this.sorts.map((s) => ({ ...s }));
 
