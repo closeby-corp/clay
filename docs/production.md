@@ -65,6 +65,48 @@ ui.page('/admin', () => {
 
 Nav filtering is not authorization. Always guard pages that must not leak data.
 
+## Single sign-on (OIDC)
+
+`@close-by/clay-auth` signs users in with any OpenID Connect provider (authorization code + PKCE). The provider is only used to sign in: once its ID token is verified, Clay sets its usual signed auth cookie, so everything above (`resolveUserId`, guards, idle expiry) works unchanged and there are no provider tokens to refresh.
+
+```ts
+import { createOidcLogin } from '@close-by/clay-auth';
+
+const sso = createOidcLogin({
+  issuer: process.env.OIDC_ISSUER!, // discovery: ${issuer}/.well-known/openid-configuration
+  clientId: process.env.OIDC_CLIENT_ID!,
+  clientSecret: process.env.OIDC_CLIENT_SECRET, // only for confidential clients
+  redirectUri: 'https://hub.example.com/auth/callback',
+  async onSignIn(claims) {
+    // Upsert your user; return the Clay user id, or null to refuse.
+    await users.upsert(claims.sub, { email: claims.email });
+    return claims.sub;
+  },
+});
+
+ui.run({
+  authSecret: process.env.CLAY_AUTH_SECRET!,
+  routes: sso.routes({ afterLogin: '/', afterLogout: '/login', errorPath: '/login' }),
+});
+
+// Sign-in button (full page load — the route redirects to the provider):
+ui.button('Sign in', { onClick: () => ui.redirect('/auth/login?returnTo=/reports') });
+// Sign-out (clears the cookie, then signs out at the provider):
+ui.button('Sign out', { onClick: () => ui.redirect('/auth/logout') });
+```
+
+Routes: `GET /auth/login` (accepts `?returnTo=/path`, same-origin paths only) → provider → `GET /auth/callback` → cookie set → `returnTo`. `GET /auth/logout` clears the cookie and goes to the provider's sign-out. Failures land on `errorPath?auth_error=<state|expired|invalid_token|denied|provider|…>`.
+
+What is checked: `state` (one-shot HttpOnly cookie scoped to the callback path, 10 min), PKCE `S256`, ID token RS256 signature against the provider's JWKS (re-fetched on unknown `kid`), `iss`, `aud`, `exp`/`iat` (60 s skew), and `nonce`.
+
+**Provider setup:** register an app/client that allows the authorization code flow with scopes `openid email profile`, callback URL `https://<host>/auth/callback`, and sign-out return URL `https://<host><afterLogout>`. Map roles from whatever claim your provider puts groups in, inside `onSignIn`.
+
+**Sign-out:** uses the discovery `end_session_endpoint` when the provider has one. Otherwise pass `logoutUrl: (returnTo) => '…'` with the provider's sign-out URL; without either, sign-out only clears Clay's cookie.
+
+**Behind an authenticating proxy:** if a reverse proxy or load balancer already signs users in and forwards a signed identity header, skip the routes and read (and verify) that header in `resolveUserId`.
+
+The demo enables a "Sign in with SSO" button on `/examples/auth/login` when `OIDC_ISSUER` and `OIDC_CLIENT_ID` are set (see `apps/demo/src/examples/_oidc.ts` for the optional variables).
+
 ## Rate limits & abuse
 
 Clay does not ship a global rate limiter. For handlers that trigger expensive work (ClickHouse queries, re-dispatch, file export):

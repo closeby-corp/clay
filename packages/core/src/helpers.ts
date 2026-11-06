@@ -83,6 +83,14 @@ export function updateUrlSearch(
   session.setUrlSearch(params.toString(), opts);
 }
 
+/**
+ * Full-page navigation in the current tab (leaves the SPA). Use for external
+ * sign-in pages or server routes such as `/auth/login`; use `navigate` for app pages.
+ */
+export function redirect(url: string): void {
+  getCurrentSession()?.redirect(url);
+}
+
 /** Open `url` in a new browser tab (`noopener,noreferrer`). */
 export function openExternal(url: string): void {
   getCurrentSession()?.openExternal(url);

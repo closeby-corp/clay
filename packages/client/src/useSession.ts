@@ -268,6 +268,8 @@ export function useClaySession(path: string) {
           }
         }
         rememberLocation();
+      } else if (msg.op === 'redirect') {
+        window.location.assign(msg.url);
       } else if (msg.op === 'openExternal') {
         try {
           window.open(msg.url, '_blank', 'noopener,noreferrer');

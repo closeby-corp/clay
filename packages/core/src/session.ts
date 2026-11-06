@@ -294,6 +294,11 @@ export class ClientSession {
     });
   }
 
+  /** Full-page navigation in the current tab. */
+  redirect(url: string): void {
+    this.send({ op: 'redirect', url });
+  }
+
   /** Open `url` in a new tab on the client (`noopener`). */
   openExternal(url: string): void {
     this.send({ op: 'openExternal', url });

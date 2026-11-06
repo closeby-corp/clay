@@ -51,6 +51,7 @@ export {
   setUrlSearch,
   updateUrlSearch,
   openExternal,
+  redirect,
   runJavaScript,
   scroll,
   scrollTo,

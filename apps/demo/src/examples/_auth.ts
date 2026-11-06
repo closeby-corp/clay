@@ -149,6 +149,11 @@ export async function clearSessionUser(options?: { path?: string }): Promise<voi
     const map = { ...(await authStore.get()) };
     delete map[user.username];
     await authStore.set(map);
+    // SSO users also sign out at the provider (the route clears the cookie too).
+    if (user.username.startsWith('sso:')) {
+      ui.redirect('/auth/logout');
+      return;
+    }
   }
   ui.clearAuthSession({ path: options?.path ?? LOGIN_PATH });
 }

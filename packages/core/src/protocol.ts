@@ -47,6 +47,7 @@ export type ServerMessage =
   | { op: 'setUrlSearch'; search: string; mode?: 'replace' | 'push' }
   /** `window.open(url, '_blank', 'noopener,noreferrer')` on the client. */
   | { op: 'openExternal'; url: string }
+  | { op: 'redirect'; url: string }
   | {
       op: 'scroll';
       target: 'window' | 'selector';

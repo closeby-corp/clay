@@ -180,6 +180,14 @@ Client sets `location.hash` via `history.replaceState` (`hash` has no leading `#
 
 Client sets `location.search` via `history.replaceState` or `pushState` (`mode`, default `replace`). `search` has no leading `?`; empty string clears. Pathname and hash are preserved. Hydrated the other way on `hello.search` and re-synced in place on `urlchange`. Prefer `ui.setUrlSearch` / `ui.updateUrlSearch` / `ui.getUrlSearch`. See [URL search](./url-search.md).
 
+### `redirect`
+
+```json
+{ "op": "redirect", "url": "/auth/login?returnTo=/reports" }
+```
+
+Client runs `window.location.assign(url)` — a full page load that leaves the SPA. Prefer `ui.redirect`.
+
 ### `openExternal`
 
 ```json

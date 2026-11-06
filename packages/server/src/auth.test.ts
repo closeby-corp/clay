@@ -113,4 +113,40 @@ describe('resolveUserId auth hook', () => {
     expect(seenHello).toBe('fallback-bob');
     ws.close();
   });
+
+  test('custom routes can sign the browser in and out', async () => {
+    const secret = 'route-secret';
+    clay = new ClayServer({
+      port: 0,
+      clientDir: dir,
+      userStorageDir: false,
+      authSecret: secret,
+      routes: {
+        '/auth/callback': (_req, ctx) => ctx.signIn(ctx.url.searchParams.get('u')!, '/home'),
+        '/auth/logout': (_req, ctx) => ctx.signOut('/bye'),
+        '/hello': () => new Response('hi'),
+      },
+    });
+    server = clay.start();
+    const base = `http://127.0.0.1:${clay.port}`;
+
+    const res = await fetch(`${base}/auth/callback?u=alice`, { redirect: 'manual' });
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/home');
+    const cookie = res.headers.get('set-cookie')!;
+    expect(cookie).toContain('clay-auth=');
+    expect(cookie).toContain('HttpOnly');
+    const { resolveUserIdFromAuthCookie } = await import('./auth-cookie');
+    const userId = resolveUserIdFromAuthCookie(secret)({
+      headers: new Headers({ cookie: cookie.split(';')[0]! }),
+      path: '/',
+    });
+    expect(userId).toBe('alice');
+
+    const out = await fetch(`${base}/auth/logout`, { redirect: 'manual' });
+    expect(out.headers.get('location')).toBe('/bye');
+    expect(out.headers.get('set-cookie')).toContain('Max-Age=0');
+
+    expect(await (await fetch(`${base}/hello`)).text()).toBe('hi');
+  });
 });

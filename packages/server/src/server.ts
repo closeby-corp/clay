@@ -5,6 +5,9 @@ import {
   handleAuthSessionDelete,
   handleAuthSessionPost,
   resolveUserIdFromAuthCookie,
+  signAuthToken,
+  authSessionSetCookieHeader,
+  authSessionClearCookieHeader,
 } from './auth-cookie';
 import { clearAuthSession, configureAuthSession } from './auth-session';
 import { handleMultipartUpload, UploadError } from './upload';
@@ -105,6 +108,11 @@ export type ClayServerConfig = {
   /** Auth cookie Max-Age in seconds. Default 12 hours. */
   authCookieMaxAgeSec?: number;
   /**
+   * Extra HTTP routes, matched by exact path before the app's pages
+   * (e.g. an OAuth callback). Any method; return a `Response`.
+   */
+  routes?: Record<string, ClayRouteHandler>;
+  /**
    * Sign out after this many ms without client events.
    * Optional — omit to disable idle expiry.
    */
@@ -126,6 +134,23 @@ export type ClayServerConfig = {
    */
   dev?: boolean;
 };
+
+/** Helpers passed to {@link ClayServerConfig.routes} handlers. */
+export type ClayRouteContext = {
+  url: URL;
+  /**
+   * Redirect to `location` and sign the browser in as `userId` (sets the auth cookie).
+   * Requires `authSecret`.
+   */
+  signIn(userId: string, location: string): Response;
+  /** Redirect to `location` and clear the auth cookie. */
+  signOut(location: string): Response;
+};
+
+export type ClayRouteHandler = (
+  req: Request,
+  ctx: ClayRouteContext,
+) => Response | Promise<Response>;
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dir, '../../client/dist');
 const DEFAULT_UPLOAD_DIR = '.clay-uploads';
@@ -191,6 +216,7 @@ type ResolvedConfig = {
   resolveUserId?: ClayServerConfig['resolveUserId'];
   authSecret?: string;
   authCookieMaxAgeSec: number;
+  routes: Record<string, ClayRouteHandler>;
   sessionIdleMs?: number;
   sessionAbsoluteMs?: number;
   sessionExpiredPath: string;
@@ -270,6 +296,7 @@ export class ClayServer {
       resolveUserId,
       authSecret,
       authCookieMaxAgeSec,
+      routes: config.routes ?? {},
       sessionIdleMs: config.sessionIdleMs,
       sessionAbsoluteMs: config.sessionAbsoluteMs,
       sessionExpiredPath,
@@ -318,6 +345,7 @@ export class ClayServer {
       resolveUserId,
       authSecret,
       authCookieMaxAgeSec,
+      routes,
       sessionIdleMs,
       sessionAbsoluteMs,
       sessionExpiredPath,
@@ -343,6 +371,29 @@ export class ClayServer {
             return new Response('WebSocket upgrade failed', { status: 400 });
           }
           return undefined as unknown as Response;
+        }
+
+        const route = Object.hasOwn(routes, url.pathname) ? routes[url.pathname] : undefined;
+        if (route) {
+          const redirectWith = (location: string, cookie: string) =>
+            new Response(null, {
+              status: 302,
+              headers: { Location: location, 'Set-Cookie': cookie, 'Cache-Control': 'no-store' },
+            });
+          return route(req, {
+            url,
+            signIn: (userId, location) => {
+              if (!authSecret) throw new Error('signIn requires ui.run({ authSecret })');
+              return redirectWith(
+                location,
+                authSessionSetCookieHeader(signAuthToken(userId, authSecret), {
+                  secret: authSecret,
+                  maxAgeSec: authCookieMaxAgeSec,
+                }),
+              );
+            },
+            signOut: (location) => redirectWith(location, authSessionClearCookieHeader()),
+          });
         }
 
         if (url.pathname === '/auth/session' && authSecret) {

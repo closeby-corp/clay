@@ -13,3 +13,11 @@ export {
   type AuditEntry,
   type AuditRecordOptions,
 } from './audit';
+export {
+  createOidcLogin,
+  safeReturnTo,
+  type OidcClaims,
+  type OidcLoginOptions,
+  type OidcRoutesOptions,
+  type OidcRouteHandler,
+} from './oidc';

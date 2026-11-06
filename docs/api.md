@@ -99,6 +99,7 @@ ui.run({
 | `sessionAbsoluteMs` | `number` | | Optional: clear auth + redirect after this time since hello |
 | `sessionExpiredPath` | `string` | `'/'` | SPA path after idle/absolute expiry |
 | `resolveUserId` | `(ctx) => …` | cookie helper when `authSecret` set | Trusted identity on WebSocket hello |
+| `routes` | `Record<path, (req, ctx) => Response>` | | Extra HTTP routes, exact path, any method. `ctx.signIn(userId, location)` / `ctx.signOut(location)` redirect and set/clear the auth cookie. Used for OAuth callbacks — see [Production — single sign-on](./production.md#single-sign-on-oidc) |
 
 #### Auth cookie recipe
 
@@ -118,7 +119,7 @@ ui.establishAuthSession(userId, { path: '/account' });
 ui.clearAuthSession({ path: '/login' });
 ```
 
-Password hashing, login rate limits, and `requireAuth` / `requireRole` live in optional `@close-by/clay-auth`. See `/examples/auth`.
+Password hashing, login rate limits, OIDC single sign-on (`createOidcLogin`), and `requireAuth` / `requireRole` live in optional `@close-by/clay-auth`. See `/examples/auth` and [Production — single sign-on](./production.md#single-sign-on-oidc).
 
 Returns `ClayServer` with `.start()` / `.stop()` / `.port` (`.start()` is already called by `ui.run`).
 
@@ -1815,6 +1816,7 @@ onClick: async () => {
 | `ui.updateUrlSearch(patch, opts?)` | `void` | Merge query keys; `null`/`''` deletes |
 | `ui.urlState(defaults, opts?)` | reactive object | `ui.state` + hydrate/sync query string (prefer this) |
 | `ui.openExternal(url)` | `void` | `window.open` in a new tab (`noopener`) |
+| `ui.redirect(url)` | `void` | Full-page navigation in the current tab (`location.assign`) — for sign-in routes / external pages; use `ui.navigate` for app pages |
 | `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
 | `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |
 | `ui.theme.palette(name)` | `void` | Switch colour palette for this client (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`, `graphite`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom one); remembered across reloads |

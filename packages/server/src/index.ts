@@ -1,4 +1,4 @@
-export { ClayServer, type ClayServerConfig, type ResolveUserIdContext } from './server';
+export { ClayServer, type ClayServerConfig, type ResolveUserIdContext, type ClayRouteContext, type ClayRouteHandler } from './server';
 export {
   AUTH_COOKIE_NAME,
   signAuthToken,

@@ -41,6 +41,7 @@ export type ServerMessage =
   | { op: 'setUrlHash'; hash: string }
   | { op: 'setUrlSearch'; search: string; mode?: 'replace' | 'push' }
   | { op: 'openExternal'; url: string }
+  | { op: 'redirect'; url: string }
   | {
       op: 'scroll';
       target: 'window' | 'selector';

@@ -464,6 +464,7 @@ import {
   setUrlSearch as setUrlSearchCore,
   updateUrlSearch as updateUrlSearchCore,
   openExternal as openExternalCore,
+  redirect as redirectCore,
   scroll as scrollCore,
   timer as timerCore,
   storage as storageCore,
@@ -1681,6 +1682,14 @@ export function updateUrlSearch(
   updateUrlSearchCore(patch, opts);
 }
 
+/**
+ * Full-page navigation in the current tab — for external sign-in pages or
+ * server routes (`/auth/login`). Use `ui.navigate` for app pages.
+ */
+export function redirect(url: string): void {
+  redirectCore(url);
+}
+
 /** Open a URL in a new tab. Prefer over `runJavaScript('window.open…')`. */
 export function openExternal(url: string): void {
   openExternalCore(url);
@@ -2025,6 +2034,7 @@ export const ui = {
   setUrlSearch,
   updateUrlSearch,
   openExternal,
+  redirect,
   runJavaScript,
   scroll,
   timer,
