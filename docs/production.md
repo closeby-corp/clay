@@ -95,6 +95,8 @@ ui.button('Sign in', { onClick: () => ui.redirect('/auth/login?returnTo=/reports
 ui.button('Sign out', { onClick: () => ui.redirect('/auth/logout') });
 ```
 
+All options are plain values — `process.env` above is just one source. Pass strings from a config file, a secrets manager, or literals; the library reads no environment variables itself. Keep `clientSecret` and `authSecret` out of source control.
+
 Routes: `GET /auth/login` (accepts `?returnTo=/path`, same-origin paths only) → provider → `GET /auth/callback` → cookie set → `returnTo`. `GET /auth/logout` clears the cookie and goes to the provider's sign-out. Failures land on `errorPath?auth_error=<state|expired|invalid_token|denied|provider|…>`.
 
 What is checked: `state` (one-shot HttpOnly cookie scoped to the callback path, 10 min), PKCE `S256`, ID token RS256 signature against the provider's JWKS (re-fetched on unknown `kid`), `iss`, `aud`, `exp`/`iat` (60 s skew), and `nonce`.
@@ -105,7 +107,7 @@ What is checked: `state` (one-shot HttpOnly cookie scoped to the callback path, 
 
 **Behind an authenticating proxy:** if a reverse proxy or load balancer already signs users in and forwards a signed identity header, skip the routes and read (and verify) that header in `resolveUserId`.
 
-The demo enables a "Sign in with SSO" button on `/examples/auth/login` when `OIDC_ISSUER` and `OIDC_CLIENT_ID` are set (see `apps/demo/src/examples/_oidc.ts` for the optional variables).
+The demo (which, unlike the library, reads env variables for convenience) enables a "Sign in with SSO" button on `/examples/auth/login` when `OIDC_ISSUER` and `OIDC_CLIENT_ID` are set (see `apps/demo/src/examples/_oidc.ts` for the optional variables).
 
 ## Rate limits & abuse
 
