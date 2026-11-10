@@ -200,3 +200,14 @@ describe('app layout', () => {
     });
   });
 });
+
+describe('app mobileNav', () => {
+  const nav = [{ label: 'Home', href: '/' }];
+  const mobileNavOf = (mobileNav?: 'tabs' | 'menu') =>
+    app({ nav, mobileNav }, () => {}).props.mobileNav;
+
+  test('defaults to tabs and passes menu through', () => {
+    expect(mobileNavOf()).toBe('tabs');
+    expect(mobileNavOf('menu')).toBe('menu');
+  });
+});

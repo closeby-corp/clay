@@ -16,7 +16,7 @@ export function App() {
 
   return (
     <>
-      <div className="pointer-events-none fixed bottom-3 left-3 z-50 flex items-center gap-1.5">
+      <div className="pointer-events-none fixed bottom-[calc(0.75rem+var(--clay-tabbar-h,0px))] left-3 z-50 flex items-center gap-1.5">
         <ConnectionStatus connected={connected} hasTree={tree != null} />
         <SoundToggle />
       </div>

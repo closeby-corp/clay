@@ -403,3 +403,17 @@ html {
 .clay-row-flash > td {
   animation: clay-row-flash 1.6s var(--clay-ease-out) both;
 }
+/* Phone / PWA polish: safe areas, no double-tap zoom, no tap flash. */
+html {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+#root {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* The app shell is min-h-svh and pads its own content; padding #root too would make every page scroll. */
+#root:has([data-slot="sidebar-wrapper"]) {
+  padding-bottom: 0;
+}

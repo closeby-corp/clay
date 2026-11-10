@@ -16,6 +16,8 @@ import { NavDocuments } from './shell/nav-documents';
 import { NavMain } from './shell/nav-main';
 import { NavSecondary } from './shell/nav-secondary';
 import { NavUser } from './shell/nav-user';
+import { BottomTabs } from './shell/bottom-tabs';
+import { usePhone } from './hooks/use-phone';
 import { SiteHeader } from './shell/site-header';
 import { resolveAppShellTitle } from './shell/active-nav';
 import {
@@ -52,6 +54,7 @@ export function BoundAppShell({
   navSecondary = [],
   documents = [],
   primaryAction,
+  mobileNav = 'tabs',
   className,
   style,
   pageKey,
@@ -66,12 +69,16 @@ export function BoundAppShell({
   navSecondary?: ShellNavItem[];
   documents?: ShellNavItem[];
   primaryAction?: ShellPrimaryAction | null;
+  /** Phones: `'tabs'` (default) shows a bottom tab bar, `'menu'` only the hamburger sheet. */
+  mobileNav?: 'tabs' | 'menu';
   className?: string;
   style?: CSSProperties;
   /** Changes on navigation (top-level page element ids) → replays the page entry. */
   pageKey?: string;
   children: ReactNode;
 }) {
+  const phone = usePhone();
+  const tabs = phone && mobileNav !== 'menu' && nav.length > 0;
   const pageTitle = resolveAppShellTitle({
     title,
     headerTitle,
@@ -128,15 +135,18 @@ export function BoundAppShell({
         ) : null}
       </Sidebar>
       <SidebarInset className="clay-ambient">
-        <SiteHeader title={pageTitle} />
+        <SiteHeader title={pageTitle} hideTrigger={tabs} />
         <div className="@container/main flex flex-1 flex-col">
           {/* --clay-viewport-offset = header + vertical padding (+ inset margins on md+), for `fillViewport`. */}
-          <div className="flex flex-1 flex-col gap-4 py-4 [--clay-viewport-offset:calc(var(--header-height)+2rem)] md:gap-6 md:py-6 md:[--clay-viewport-offset:calc(var(--header-height)+4rem)]">
+          <div className={cn("flex flex-1 flex-col gap-4 py-4 [--clay-viewport-offset:calc(var(--header-height)+2rem)] md:gap-6 md:py-6 md:[--clay-viewport-offset:calc(var(--header-height)+4rem)]", tabs ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-[calc(1.5rem+env(safe-area-inset-bottom))]")}>
             {/* Sidebar chrome stays mounted (sticky app key); the page inset remounts per page. */}
             <PageEnter key={pageKey}>{children}</PageEnter>
           </div>
         </div>
       </SidebarInset>
+      {tabs ? (
+        <BottomTabs nav={nav} hasOtherNav={navSecondary.length > 0 || documents.length > 0 || !!user} />
+      ) : null}
     </SidebarProvider>
   );
 }

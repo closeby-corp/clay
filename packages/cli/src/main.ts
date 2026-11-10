@@ -35,6 +35,7 @@ function buildRunConfig(opts: {
   port: number;
   title: string;
   app: boolean;
+  pwa?: boolean;
 }): RunConfig {
   const config: RunConfig = {
     port: opts.port,
@@ -47,6 +48,7 @@ function buildRunConfig(opts: {
       nav: ui.navFromPages(),
     };
   }
+  if (opts.pwa) config.pwa = true;
   return config;
 }
 
@@ -258,6 +260,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     port: args.port,
     title,
     app: args.app,
+    pwa: args.pwa,
   });
   if (isDir) {
     config = await applyDirRunConfig(absEntry, config);

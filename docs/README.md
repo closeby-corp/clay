@@ -11,6 +11,7 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | Doc | Description |
 |-----|-------------|
 | [Getting started](./getting-started.md) | Install, `clay` CLI, create a page |
+| [Mobile and installable apps](./mobile.md) | Phone tab bar (`mobileNav`), installable app (`pwa`, `--pwa`) |
 | [Boot: CLI vs library](./boot.md) | Production `ui.run` path, `clientDir`, `_run.ts`, reload stubs |
 | [Tailwind](./tailwind.md) | Zero-config utilities from page modules; optional tokens |
 | [Sample app](./tutorial.md) | Step-by-step tasks list, then two pages + shell |
@@ -24,6 +25,7 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | [Elements](./elements.md) | All element types and props |
 | [Maps](./maps.md) | `ui.map`: MapLibre markers, routes, arcs, GeoJSON, clusters; palette theming and in-place updates |
 | [WebSocket protocol](./protocol.md) | Client ↔ server message formats |
+| [Compatibility](./compatibility.md) | Public API promise, aliases, and compatibility checks |
 | [Architecture](./architecture.md) | Packages, data flow, and ownership |
 | [Examples](./examples.md) | Demo apps and patterns |
 | [Reactive `let`](./reactive-let.md) | NiceGUI-style `let` transform (opt-in `--reactive-let`) |

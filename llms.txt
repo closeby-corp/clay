@@ -11,6 +11,8 @@ Notes for agents:
 - Update existing nodes with `setText` / `setValue` / bindings. Prefer `ui.state` + `ui.auto` (+ `ui.timer`) for async/live UIs; `ui.refreshable` for simple one-shot rebuilds. Shared or persisted state: `ui.storage` (`tab` / `user` / `app`).
 - Never use `window` / `navigator` in page code — use `ui.clipboard`, `ui.setUrlHash`, `ui.getUrlSearch` / `ui.updateUrlSearch`, `ui.openExternal`.
 - Runtime is Bun. In this repo: `bun run build:client`, then `bun run demo` (http://localhost:4000) or `bun run clay hello.ts`.
+- Installable app is opt-in: `ui.run({ pwa: true })` or `clay ./pages --app --pwa` adds a manifest and an app-shell service worker (see docs/mobile.md).
+- On phones the `app` nav becomes a bottom tab bar; `app: { mobileNav: 'menu' }` keeps only the sidebar sheet.
 - `ui.ai.*` is visual primitives only — no model or streaming runtime.
 - Agent skill (Cursor / compatible tools): `@close-by/clay/SKILL.md` — copy to `.cursor/skills/clay/SKILL.md` or read from `node_modules` when installed.
 
@@ -20,6 +22,7 @@ Notes for agents:
 - [Getting started](docs/getting-started.md): Install, `clay` CLI, first app, publishing
 - [Boot](docs/boot.md): CLI vs library, `clientDir`, `_run.ts`, reload stubs
 - [Tailwind](docs/tailwind.md): Scanned utilities + `ui.run({ css })`
+- [Mobile and installable apps](docs/mobile.md): Phone tab bar (`mobileNav`), installable PWA (`ui.run({ pwa })`, `--pwa`)
 - [Sample app](docs/tutorial.md): Step-by-step tasks list, then two pages + shell
 - [Concepts](docs/concepts.md): Sessions, element tree, patches, refreshable, bindings, storage
 - [Browser APIs](docs/browser-apis.md): `ui.clipboard` / hash / `openExternal` — no `window` in page code
@@ -37,6 +40,7 @@ Notes for agents:
 
 - [Architecture](docs/architecture.md): Packages and data flow
 - [WebSocket protocol](docs/protocol.md): Message formats
+- [Compatibility](docs/compatibility.md): Public API promise, aliases, and compatibility checks
 - [AI UI](docs/ai.md): `ui.ai.*` visual primitives
 - [Reactive let](docs/reactive-let.md): `ui.state` / `ui.auto` and the compile-time `let` transform
 - [DuckDB](docs/duckdb.md): `@close-by/clay-duckdb`

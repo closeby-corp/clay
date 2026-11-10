@@ -201,6 +201,12 @@ Server patches still reconcile when `props.value` changes (e.g. `draft.text = ''
 
 Field `error` is **server-owned** (via initial props, `.setError`, or `ui.validate`). It is not optimistic — the client shows `props.error` after `updateProps` patches.
 
+## On phones
+
+On phone-sized touch screens (max-width 767px and coarse pointer), `select` uses the native picker
+and `date` uses the native date picker. `dropdownmenu` and `combobox` open bottom sheets.
+Props and events stay the same. Desktop rendering is unchanged.
+
 ## Styling
 
 Prefer Tailwind utility classes via `.classes(...)`:

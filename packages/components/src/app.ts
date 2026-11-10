@@ -36,6 +36,11 @@ export type AppProps = {
   documents?: AppNavItem[];
   /** Optional CTA above primary nav; omitted by default (no Quick Create). */
   primaryAction?: AppPrimaryAction;
+  /**
+   * Phone navigation. Default `'tabs'`: a bottom tab bar (up to 4 top-level items plus "More").
+   * `'menu'` keeps only the hamburger sidebar sheet.
+   */
+  mobileNav?: 'tabs' | 'menu';
   className?: string;
 };
 
@@ -128,6 +133,7 @@ export function app(props: AppProps, fn: () => void): Element {
     navSecondary,
     documents,
     primaryAction: props.primaryAction ?? null,
+    mobileNav: props.mobileNav ?? 'tabs',
     className: props.className,
   });
   withParent(el, fn);

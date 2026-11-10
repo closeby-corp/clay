@@ -149,6 +149,7 @@ bun run clay ./pages --app --title "My App"
 | `-p, --port` | Port (default `3000`) |
 | `-t, --title` | HTML / shell title |
 | `--app` | Dashboard shell + nav from discovered pages |
+| `--pwa` | Installable app: manifest + service worker ([Mobile and installable apps](./mobile.md)) |
 | `--no-open` | Do not open the browser |
 | `--reload` | Restart on file changes (`bun --watch`); opens the browser once; prints `↻ clay: reloading…` and re-imports pages (clears `require.cache`) |
 | `--reactive-let` | Enable compile-time reactive `let` Bun loader (**off** by default; still needs `// @clay-reactive` or `"use reactive";` in source) |

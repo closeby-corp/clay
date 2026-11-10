@@ -23,11 +23,17 @@ describe('parseArgs', () => {
       title: 'Demo',
       app: true,
       open: false,
+      pwa: false,
       reload: true,
       reactiveLet: 'auto',
       tailwind: true,
       help: false,
     });
+  });
+
+  test('--pwa', () => {
+    expect(parseArgs(['app.ts']).pwa).toBe(false);
+    expect(parseArgs(['app.ts', '--pwa']).pwa).toBe(true);
   });
 
   test('--reactive-let', () => {

@@ -11,6 +11,16 @@ import {
 } from './auth-cookie';
 import { clearAuthSession, configureAuthSession } from './auth-session';
 import { handleMultipartUpload, UploadError } from './upload';
+import {
+  clientVersion,
+  KILL_SWITCH_SW,
+  pwaHeadHtml,
+  pwaManifest,
+  pwaServiceWorker,
+  resolvePwa,
+  type ClayPwaConfig,
+  type ResolvedPwa,
+} from './pwa';
 
 /** JSON-serializable values only (skip functions / circular / exotic objects). */
 function isJsonSafeStorageValue(value: unknown): boolean {
@@ -114,6 +124,15 @@ export type ClayServerConfig = {
    */
   routes?: Record<string, ClayRouteHandler>;
   /**
+   * Make the app installable (PWA), opt-in. Adds a web app manifest, theme-color and
+   * Apple meta tags, icons, and a service worker that caches the app shell so the
+   * installed app opens offline (the client then shows its reconnecting state).
+   * `true` uses defaults; pass an object to set name, colors, display mode or a custom
+   * `icon`. Routes `/manifest.webmanifest` and `/sw.js` can be overridden via `routes`.
+   * Default: off (turning it off later also unregisters previously installed workers).
+   */
+  pwa?: boolean | ClayPwaConfig;
+  /**
    * Sign out after this many ms without client events.
    * Optional — omit to disable idle expiry.
    */
@@ -183,6 +202,7 @@ function spaHtml(
   dev: boolean,
   palette?: string,
   sound?: boolean,
+  pwa?: ResolvedPwa,
 ): string {
   const customLinks = customCssHrefs
     .map((href) => `  <link rel="stylesheet" href="${href}" />`)
@@ -193,8 +213,8 @@ function spaHtml(
 <head>
   <meta charset="UTF-8" />
   <script>try{var p=localStorage.getItem('clay-palette');if(p)document.documentElement.dataset.palette=p;var s=localStorage.getItem('clay-sound');if(s)document.documentElement.dataset.sound=s}catch(e){}</script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0${pwa ? ', viewport-fit=cover' : ''}" />
+${pwa ? pwaHeadHtml(pwa) : ''}  <title>${title}</title>
   <link rel="stylesheet" href="/assets/index.css" />
 ${customLinks ? `${customLinks}\n` : ''}</head>
 <body class="min-h-screen bg-background text-foreground antialiased">
@@ -205,6 +225,7 @@ ${devBoot}  <script type="module" src="/assets/index.js"></script>
 }
 
 type ResolvedConfig = {
+  pwa?: ResolvedPwa;
   port: number;
   title: string;
   clientDir: string;
@@ -298,6 +319,7 @@ export class ClayServer {
       authSecret,
       authCookieMaxAgeSec,
       routes: config.routes ?? {},
+      pwa: resolvePwa(config.pwa, config.title ?? 'Clay'),
       sessionIdleMs: config.sessionIdleMs,
       sessionAbsoluteMs: config.sessionAbsoluteMs,
       sessionExpiredPath,
@@ -352,7 +374,9 @@ export class ClayServer {
       sessionExpiredPath,
     } = this.config;
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
-    const html = spaHtml(title, customCssHrefs, this.config.dev, this.config.palette, this.config.sound);
+    const pwa = this.config.pwa;
+    const html = spaHtml(title, customCssHrefs, this.config.dev, this.config.palette, this.config.sound, pwa);
+    const swSource = pwa ? pwaServiceWorker(clientVersion(clientDir), pwa, customCssHrefs) : KILL_SWITCH_SW;
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
     this.server = Bun.serve({
@@ -394,6 +418,28 @@ export class ClayServer {
               );
             },
             signOut: (location) => redirectWith(location, authSessionClearCookieHeader()),
+          });
+        }
+
+        if (url.pathname === '/sw.js') {
+          return new Response(swSource, {
+            headers: {
+              'Content-Type': 'text/javascript; charset=utf-8',
+              'Cache-Control': 'no-cache',
+            },
+          });
+        }
+        if (url.pathname === '/manifest.webmanifest' && !pwa) {
+          return new Response('Not found', { status: 404 });
+        }
+        if (pwa && url.pathname === '/manifest.webmanifest') {
+          return new Response(JSON.stringify(pwaManifest(pwa)), {
+            headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' },
+          });
+        }
+        if (pwa?.icon && url.pathname === pwa.icon.url) {
+          return new Response(Bun.file(pwa.icon.file), {
+            headers: { 'Content-Type': pwa.icon.type, 'Cache-Control': 'no-cache' },
           });
         }
 

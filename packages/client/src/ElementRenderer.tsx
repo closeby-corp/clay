@@ -44,6 +44,7 @@ import {
   BoundAiSelectionActions,
   BoundAiFineTune,
 } from './ai';
+import { usePhone } from './hooks/use-phone';
 import { useOptimisticValue } from './useOptimisticValue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -202,6 +203,7 @@ import {
 } from '@/components/ui/sheet';
 import {
   Drawer,
+  DrawerTrigger,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
@@ -272,7 +274,7 @@ import {
 import { cn } from '@/lib/utils';
 import { IconText, StatusDot } from './IconText';
 import { Timeline, StepperView, type TimelineItemView } from './ComposedWidgets';
-import { CalendarIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Minus, Plus, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
+import { CalendarIcon, CheckIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Minus, Plus, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
 import { format, parseISO, isValid, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
@@ -594,6 +596,7 @@ function BoundSelect({
   style: unknown;
   emit: Emit;
 }) {
+  const phone = usePhone();
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
   const options = (props.options as Array<{ value: string; label: string }>) ?? [];
@@ -605,25 +608,45 @@ function BoundSelect({
       data-invalid={error ? true : undefined}
     >
       {props.label ? <Label>{String(props.label)}</Label> : null}
-      <Select
-        value={value || undefined}
-        disabled={!!props.disabled}
-        onValueChange={(next) => {
-          setValue(next);
-          if (hasEvent(props, 'change')) emit(id, 'change', next);
-        }}
-      >
-        <SelectTrigger style={asStyle(style)} aria-invalid={!!error}>
-          <SelectValue placeholder={String(props.placeholder ?? 'Select…')} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {phone ? (
+        <div className="w-full [&>div]:w-full">
+          <NativeSelect
+            value={value}
+            disabled={!!props.disabled}
+            aria-invalid={!!error}
+            className="w-full"
+            style={asStyle(style)}
+            onChange={(event) => {
+              const next = event.target.value;
+              setValue(next);
+              if (hasEvent(props, 'change')) emit(id, 'change', next);
+            }}
+          >
+            <option value="" disabled>{String(props.placeholder ?? 'Select…')}</option>
+            {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </NativeSelect>
+        </div>
+      ) : (
+        <Select
+          value={value || undefined}
+          disabled={!!props.disabled}
+          onValueChange={(next) => {
+            setValue(next);
+            if (hasEvent(props, 'change')) emit(id, 'change', next);
+          }}
+        >
+          <SelectTrigger style={asStyle(style)} aria-invalid={!!error}>
+            <SelectValue placeholder={String(props.placeholder ?? 'Select…')} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
@@ -1468,6 +1491,48 @@ function BoundDropdownMenu({
   emit: Emit;
   children: ElementNode[];
 }) {
+  const phone = usePhone();
+  const [open, setOpen] = useState(false);
+  if (phone) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen} direction="bottom">
+        <DrawerTrigger asChild>
+          <Button
+            type="button"
+            variant={(props.variant as any) ?? 'outline'}
+            className={className}
+            style={asStyle(style)}
+          >
+            {String(props.label ?? 'Menu')}
+          </Button>
+        </DrawerTrigger>
+        <DrawerContent aria-describedby={undefined}>
+          <DrawerHeader><DrawerTitle>{String(props.label ?? 'Menu')}</DrawerTitle></DrawerHeader>
+          <div className="max-h-[60vh] overflow-y-auto px-4 pb-4">
+            {children.map((child) => {
+              if (child.type === 'dropdownseparator') return <Separator key={child.id} className="my-1" />;
+              if (child.type !== 'dropdownitem') return null;
+              return (
+                <Button
+                  type="button"
+                  key={child.id}
+                  variant="ghost"
+                  className={cn('min-h-11 w-full justify-start', child.props.variant === 'destructive' && 'text-destructive')}
+                  disabled={!!child.props.disabled}
+                  onClick={() => {
+                    if (hasEvent(child.props, 'select')) emit(child.id, 'select', child.props.value);
+                    setOpen(false);
+                  }}
+                >
+                  {String(child.props.label ?? child.props.value ?? '')}
+                </Button>
+              );
+            })}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
   void id;
   return (
     <DropdownMenu>
@@ -2865,11 +2930,22 @@ function BoundCombobox({
   style: unknown;
   emit: Emit;
 }) {
+  const phone = usePhone();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
   const options = (props.options as ComboboxOption[]) ?? [];
   const selected = options.find((opt) => opt.value === value) ?? null;
   const error = fieldError(props);
+
+  const pick = (next: string) => {
+    setValue(next);
+    if (hasEvent(props, 'change')) emit(id, 'change', next);
+    if (hasEvent(props, 'input')) emit(id, 'input', next);
+    setOpen(false);
+  };
+  const filtered = options.filter((opt) => opt.label.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div
@@ -2878,34 +2954,73 @@ function BoundCombobox({
       data-invalid={error ? true : undefined}
     >
       {props.label ? <Label>{String(props.label)}</Label> : null}
-      <Combobox
-        items={options}
-        value={selected}
-        disabled={!!props.disabled}
-        onValueChange={(next) => {
-          const nextValue = next?.value ?? '';
-          setValue(nextValue);
-          if (hasEvent(props, 'change')) emit(id, 'change', nextValue);
-          if (hasEvent(props, 'input')) emit(id, 'input', nextValue);
-        }}
-      >
-        <ComboboxInput
-          placeholder={String(props.placeholder ?? 'Search…')}
+      {phone ? (
+        <Drawer open={open} onOpenChange={setOpen} direction="bottom">
+          <DrawerTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('w-full justify-between font-normal', !selected && 'text-muted-foreground')}
+              disabled={!!props.disabled}
+              aria-invalid={!!error}
+              onClick={() => setSearch('')}
+            >
+              {selected ? selected.label : String(props.placeholder ?? 'Search…')}
+              <ChevronDownIcon className="size-4 shrink-0" />
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent aria-describedby={undefined}>
+            <DrawerHeader><DrawerTitle>{String(props.label ?? 'Search…')}</DrawerTitle></DrawerHeader>
+            <div className="flex min-h-0 flex-col gap-2 px-4 pb-4">
+              <Input
+                value={search}
+                placeholder={String(props.placeholder ?? 'Search…')}
+                aria-label={String(props.label ?? props.placeholder ?? 'Search options')}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <div className="max-h-[50vh] overflow-y-auto">
+                {filtered.length === 0 ? <p className="p-3 text-sm text-muted-foreground">No results.</p> : null}
+                {filtered.map((opt) => (
+                  <Button type="button" key={opt.value} variant="ghost" className="min-h-11 w-full justify-between" onClick={() => pick(opt.value)}>
+                    {opt.label}
+                    {opt.value === value ? <CheckIcon className="size-4" /> : null}
+                  </Button>
+                ))}
+              </div>
+              {selected ? <Button type="button" variant="ghost" className="min-h-11 w-full" onClick={() => pick('')}>Clear</Button> : null}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Combobox
+          items={options}
+          value={selected}
           disabled={!!props.disabled}
-          showClear={!!selected}
-          aria-invalid={!!error}
-        />
-        <ComboboxContent>
-          <ComboboxEmpty>No results.</ComboboxEmpty>
-          <ComboboxList>
-            {(item) => (
-              <ComboboxItem key={item.value} value={item}>
-                {item.label}
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
+          onValueChange={(next) => {
+            const nextValue = next?.value ?? '';
+            setValue(nextValue);
+            if (hasEvent(props, 'change')) emit(id, 'change', nextValue);
+            if (hasEvent(props, 'input')) emit(id, 'input', nextValue);
+          }}
+        >
+          <ComboboxInput
+            placeholder={String(props.placeholder ?? 'Search…')}
+            disabled={!!props.disabled}
+            showClear={!!selected}
+            aria-invalid={!!error}
+          />
+          <ComboboxContent>
+            <ComboboxEmpty>No results.</ComboboxEmpty>
+            <ComboboxList>
+              {(item) => (
+                <ComboboxItem key={item.value} value={item}>
+                  {item.label}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      )}
       {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
@@ -2934,6 +3049,7 @@ function BoundDate({
   style: unknown;
   emit: Emit;
 }) {
+  const phone = usePhone();
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
   const selected = parseDateValue(value);
@@ -2947,36 +3063,52 @@ function BoundDate({
       data-invalid={error ? true : undefined}
     >
       {props.label ? <Label>{String(props.label)}</Label> : null}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            id={`date-${id}`}
-            variant="outline"
-            disabled={!!props.disabled}
-            aria-invalid={!!error}
-            className={cn(
-              'w-full justify-start text-left font-normal',
-              !selected && 'text-muted-foreground',
-            )}
-          >
-            <CalendarIcon className="mr-2 size-4" />
-            {selected ? format(selected, 'PPP') : String(props.placeholder ?? 'Pick a date')}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={selected}
-            onSelect={(day) => {
-              const next = day ? format(day, 'yyyy-MM-dd') : '';
-              setValue(next);
-              setOpen(false);
-              if (hasEvent(props, 'change')) emit(id, 'change', next);
-              if (hasEvent(props, 'input')) emit(id, 'input', next);
-            }}
-          />
-        </PopoverContent>
-      </Popover>
+      {phone ? (
+        <Input
+          id={`date-${id}`}
+          type="date"
+          value={selected ? format(selected, 'yyyy-MM-dd') : ''}
+          disabled={!!props.disabled}
+          aria-invalid={!!error}
+          onChange={(event) => {
+            const next = event.target.value;
+            setValue(next);
+            if (hasEvent(props, 'change')) emit(id, 'change', next);
+            if (hasEvent(props, 'input')) emit(id, 'input', next);
+          }}
+        />
+      ) : (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id={`date-${id}`}
+              variant="outline"
+              disabled={!!props.disabled}
+              aria-invalid={!!error}
+              className={cn(
+                'w-full justify-start text-left font-normal',
+                !selected && 'text-muted-foreground',
+              )}
+            >
+              <CalendarIcon className="mr-2 size-4" />
+              {selected ? format(selected, 'PPP') : String(props.placeholder ?? 'Pick a date')}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selected}
+              onSelect={(day) => {
+                const next = day ? format(day, 'yyyy-MM-dd') : '';
+                setValue(next);
+                setOpen(false);
+                if (hasEvent(props, 'change')) emit(id, 'change', next);
+                if (hasEvent(props, 'input')) emit(id, 'input', next);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      )}
       {error ? <FieldError>{error}</FieldError> : null}
     </div>
   );
@@ -3696,6 +3828,7 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
           navSecondary={navSecondary}
           documents={documents}
           primaryAction={primaryAction}
+          mobileNav={props.mobileNav === 'menu' ? 'menu' : 'tabs'}
           pageKey={children.map((c) => c.id).join('|')}
           className={className}
           style={asStyle(style)}

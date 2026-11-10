@@ -93,6 +93,7 @@ ui.run({
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 | `sound` | `boolean` | | Play short synthesized interface sounds by default (`false`). See [Sound](#sound). |
 | `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate |
+| `pwa` | `boolean \| ClayPwaConfig` | | Installable app: web manifest, icons, and a service worker that caches the app shell. See [Mobile and installable apps](./mobile.md#installable-app-pwa) |
 | `authSecret` | `string` | | Enables signed auth cookies (`POST`/`DELETE /auth/session`), `ui.establishAuthSession` / `ui.clearAuthSession`, and default `resolveUserId` from the cookie |
 | `authCookieMaxAgeSec` | `number` | `43200` (12h) | Auth cookie Max-Age |
 | `sessionIdleMs` | `number` | | Optional: clear auth + redirect after this idle time |
@@ -1960,6 +1961,7 @@ Sidebar layout for multi-page apps. Prefer `ui.run({ app })` so every page inher
 | `user` | `AppUser` | Optional user menu (`name`, `email`, `avatar?`) |
 | `variant` | `'sidebar' \| 'inset'` | Shell layout variant |
 | `collapsible` | `'offcanvas' \| 'icon' \| 'none'` | Sidebar collapse behavior |
+| `mobileNav` | `'tabs' \| 'menu'` | Phone navigation. Default `'tabs'` (bottom tab bar); `'menu'` keeps only the sidebar sheet. See [Mobile](./mobile.md#keep-only-the-menu) |
 | `className` | `string` | Extra classes on the shell |
 
 `AppNavItem`: `{ label, href, icon?, description?, items? }` — `icon` is a Lucide kebab-case name (full set; e.g. `home`, `gauge`, `sparkles`). Nested `items` render as collapsible sub-links in the sidebar.

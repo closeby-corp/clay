@@ -4,6 +4,8 @@ export type CliArgs = {
   title?: string;
   app: boolean;
   open: boolean;
+  /** Make the app installable (manifest + service worker). */
+  pwa: boolean;
   reload: boolean;
   /**
    * Reactive-let Bun loader:
@@ -32,6 +34,7 @@ Options:
   --app              Wrap pages in the app shell with navFromPages()
   --open             Open the browser (default)
   --no-open          Do not open the browser
+  --pwa              Make the app installable (web manifest + offline app shell)
   --reload           Restart on file changes (Bun --watch); opens browser once;
                      prints ↻ on each reload and re-imports pages with a cache bust
   --tailwind         Auto-build Tailwind from the entry (default)
@@ -61,6 +64,7 @@ export function parseArgs(argv: string[]): CliArgs {
     port: 3000,
     app: false,
     open: true,
+    pwa: false,
     reload: false,
     reactiveLet: 'auto',
     tailwind: true,
@@ -79,6 +83,8 @@ export function parseArgs(argv: string[]): CliArgs {
       args.open = true;
     } else if (a === '--no-open') {
       args.open = false;
+    } else if (a === '--pwa') {
+      args.pwa = true;
     } else if (a === '--reload') {
       args.reload = true;
     } else if (a === '--tailwind') {

@@ -13,6 +13,7 @@ The usual way to run an app is the **`clay` CLI** — a file or a folder of page
 `clay hello.ts` or `clay ./pages --app` is a running app. From there:
 
 - **Pages and shell** — routes, sidebar nav from `pageMeta`, optional dashboard chrome (`--app`)
+- **Mobile and install** — bottom tab bar on phones, optional installable home-screen app (`--pwa`). See [docs/mobile.md](./docs/mobile.md)
 - **Forms** — inputs, validation, `ui.draft` that survives reconnect
 - **Data** — DataTable (sort, filter, grouping, remote paging), charts, DuckDB / ClickHouse / Kibana helpers
 - **Auth** — signed cookies, roles, login limiter, audit log
@@ -66,6 +67,7 @@ bunx clay ./pages --app --title "My App"
 | `-p, --port` | Port (default `3000`) |
 | `-t, --title` | HTML / shell title |
 | `--app` | Shell + nav from discovered `pageMeta` |
+| `--pwa` | Installable app: manifest + service worker |
 | `--reload` | Restart on file changes |
 | `--no-open` | Do not open the browser |
 
