@@ -1822,7 +1822,7 @@ onClick: async () => {
 | `ui.redirect(url)` | `void` | Full-page navigation in the current tab (`location.assign`) — for sign-in routes / external pages; use `ui.navigate` for app pages |
 | `ui.theme.set(mode)` | `void` | Push `light` \| `dark` \| `system` to this client |
 | `ui.theme.get()` | `ThemeMode \| null` | Last value set on this session |
-| `ui.theme.palette(name)` | `void` | Switch colour palette for this client (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`, `graphite`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom one); remembered across reloads |
+| `ui.theme.palette(name)` | `void` | Switch colour palette for this client (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`, `graphite`, `chalk`, `brutal`, `terminal`, `editorial`, `bubble`, `soothe`, `nebula`, `studio`, `iris`, `ledger`, `contrast`, `dim`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom one); remembered across reloads |
 | `ui.theme.getPalette()` | `ThemePalette \| null` | Last palette set, else the one the client reported on connect |
 | `ui.theme.palettes` | `readonly string[]` | Built-in palette names |
 | `ui.sound.set(on)` | `void` | Turn automatic interface sounds on/off for this client; remembered across reloads. See [Sound](#sound) |

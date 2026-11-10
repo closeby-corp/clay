@@ -54,7 +54,8 @@ export type ClayServerConfig = {
   css?: string | string[];
   /**
    * Default colour palette (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`,
-   * `graphite`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom
+   * `graphite`, `chalk`, `brutal`, `terminal`, `editorial`, `bubble`, `soothe`, `nebula`, `studio`, `iris`, `ledger`, `contrast`, `dim`, `neon`,
+   * `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom
    * `data-palette` defined in `css`). Sessions can
    * switch live with `ui.theme.palette(name)`. Default: `kiln`.
    */

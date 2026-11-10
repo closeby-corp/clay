@@ -17,6 +17,18 @@ const SWATCHES: Record<string, { blurb: string; colors: string[] }> = {
   forest: { blurb: 'Earthy greens, sage', colors: ['oklch(0.5 0.12 150)', 'oklch(0.72 0.14 110)', 'oklch(0.62 0.09 190)'] },
   orchid: { blurb: 'Playful magenta-violet', colors: ['oklch(0.53 0.21 318)', 'oklch(0.6 0.2 280)', 'oklch(0.68 0.19 355)'] },
   citrus: { blurb: 'Bright, energetic amber', colors: ['oklch(0.83 0.17 85)', 'oklch(0.68 0.19 45)', 'oklch(0.75 0.18 130)'] },
+  chalk: { blurb: 'Pure neutral greys, one blue accent', colors: ['#2a64d0', '#438f6d', '#b07432'] },
+  brutal: { blurb: 'Square edges, bold type and hard shadows', colors: ["#ffe600", "#247347", "#805200"] },
+  terminal: { blurb: 'Phosphor green, square edges and monospace', colors: ["#39ff88", "#7dffb0", "#ffc857"] },
+  editorial: { blurb: 'Cream paper, serif type and fine rules', colors: ["#b3261e", "#326343", "#865b16"] },
+  bubble: { blurb: 'Soft lavender, rounded cards and playful type', colors: ["#6540ed", "#33734f", "#875c14"] },
+  soothe: { blurb: 'Calm periwinkle, flat cards and pill buttons', colors: ['#15151d', '#79a99a', '#f3dde7'] },
+  nebula: { blurb: 'Deep navy glass with violet glow', colors: ['#0069e5', '#01b574', '#ffb547'] },
+  studio: { blurb: 'Crisp monochrome SaaS with dashed dividers', colors: ['#0a0a0a', '#06cc75', '#f5b418'] },
+  iris: { blurb: 'Violet brand, soft shadows and Poppins', colors: ['#6464c5', '#2fbf71', '#f2a93b'] },
+  ledger: { blurb: 'Clean fintech blue with compact cards', colors: ['#1e5fff', '#22c55e', '#f59e0b'] },
+  contrast: { blurb: 'Accessibility: bold borders and highly legible type', colors: ['#0040c1', '#009E73', '#E69F00'] },
+  dim: { blurb: 'Low-glare surfaces and soft dark neutrals', colors: ['#376bd0', '#2d8040', '#946c1c'] },
   graphite: { blurb: 'Monochrome, high contrast', colors: ['oklch(0.24 0.005 260)', 'oklch(0.55 0.01 260)', 'oklch(0.62 0.19 255)'] },
   neon: { blurb: 'Synthwave pink + cyan', colors: ['oklch(0.55 0.25 335)', 'oklch(0.72 0.15 205)', 'oklch(0.8 0.2 135)'] },
   sky: { blurb: 'Airy light blue', colors: ['oklch(0.53 0.15 240)', 'oklch(0.75 0.12 205)', 'oklch(0.82 0.1 180)'] },
@@ -42,7 +54,7 @@ ui.page('/examples/themes', () => {
     ui.column(() => {
       exampleHeader(
         undefined,
-        'Thirteen palettes, each with light + dark. ui.run({ palette }) sets the app default; ui.theme.palette(name) switches live.',
+        'Twenty-five palettes, each with light + dark. ui.run({ palette }) sets the app default; ui.theme.palette(name) switches live.',
       );
 
       exampleSection('Palette', 'Click to switch this session — your choice is remembered across reloads.');
