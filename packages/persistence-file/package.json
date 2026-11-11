@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-persistence-file",
-  "version": "0.2.24",
+  "version": "0.2.25",
   "description": "File-backed persistence adapters for Clay",
   "license": "MIT",
   "type": "module",

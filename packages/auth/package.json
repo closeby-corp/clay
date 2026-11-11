@@ -1,6 +1,6 @@
 {
   "name": "@close-by/clay-auth",
-  "version": "0.2.24",
+  "version": "0.2.25",
   "description": "Thin auth helpers for Clay apps (password hash, login rate limit, OIDC sign-in, requireAuth/requireRole, audit)",
   "license": "MIT",
   "type": "module",
