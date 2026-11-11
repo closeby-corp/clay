@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import { Area, AreaChart, Line, LineChart } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -59,6 +59,7 @@ export function BoundSparkline({
   const styleProp =
     typeof style === 'object' && style ? (style as CSSProperties) : undefined;
   const chartKey = cssSafeKey(yKey);
+  const gradientId = `spark-fill-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}-${chartKey}`;
   const config = useStableValue({
     [chartKey]: { label: yKey, color },
   });
@@ -82,7 +83,7 @@ export function BoundSparkline({
       ) : (
         <AreaChart accessibilityLayer data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
           <defs>
-            <linearGradient id={`spark-fill-${chartKey}`} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={color} stopOpacity={0.35} />
               <stop offset="95%" stopColor={color} stopOpacity={0.02} />
             </linearGradient>
@@ -91,7 +92,7 @@ export function BoundSparkline({
             type="monotone"
             dataKey={yKey}
             stroke={color}
-            fill={`url(#spark-fill-${chartKey})`}
+            fill={`url(#${gradientId})`}
             strokeWidth={2}
             dot={false}
             isAnimationActive={anim}

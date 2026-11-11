@@ -18,6 +18,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Shiki defaults to light colors; switch dual-theme blocks with the app theme. */
+html.dark .shiki-themes,
+html.dark .shiki-themes span {
+  color: var(--shiki-dark) !important;
+}
+
 /* Scan demo authoring files so ui.classes('…') utilities are generated */
 @source "../../../apps/demo/src/**/*.ts";
 @source "../../../packages/components/src/**/*.ts";

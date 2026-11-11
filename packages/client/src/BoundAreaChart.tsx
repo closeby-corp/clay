@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
 import {
   ChartContainer,
@@ -41,6 +42,7 @@ export function BoundAreaChart({
     showLegend,
   } = parseCartesianProps(props);
   const stacked = props.stacked !== false;
+  const gradientId = `area-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const { filteredData, period, setPeriod, periods: periodDefs } = useInteractiveChartData(
     data,
     xKey,
@@ -57,7 +59,7 @@ export function BoundAreaChart({
           {series.map((s) => {
             const key = cssSafeKey(s.key);
             return (
-              <linearGradient key={key} id={`fill-${key}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient key={key} id={`${gradientId}-${key}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={`var(--color-${key})`} stopOpacity={0.8} />
                 <stop offset="95%" stopColor={`var(--color-${key})`} stopOpacity={0.1} />
               </linearGradient>
@@ -93,7 +95,7 @@ export function BoundAreaChart({
               type="natural"
 isAnimationActive={anim}
               animationDuration={400}
-              fill={`url(#fill-${key})`}
+              fill={`url(#${gradientId}-${key})`}
               stroke={`var(--color-${key})`}
               stackId={stacked ? 'a' : undefined}
             />

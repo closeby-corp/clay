@@ -47,14 +47,14 @@ export function BoundCodeBlock({
       try {
         const next = await codeToHtml(code, {
           lang: language,
-          theme: 'github-dark',
+          themes: { light: 'github-light', dark: 'github-dark' },
         });
         if (!cancelled) setHtml(next);
       } catch {
         try {
           const next = await codeToHtml(code, {
             lang: 'text',
-            theme: 'github-dark',
+            themes: { light: 'github-light', dark: 'github-dark' },
           });
           if (!cancelled) setHtml(next);
         } catch {
