@@ -1,8 +1,8 @@
-import { ui, subscribe } from '@close-by/clay';
-import { exampleFrame, exampleHeader } from '../chrome';
+import { ui, reactive, subscribe } from '@close-by/clay';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
-  label: 'Form Demo',
+  label: 'Forms',
   icon: 'form-input',
   order: 40,
   group: 'Forms & controls',
@@ -34,14 +34,29 @@ function resetForm(form: typeof defaults): void {
   Object.assign(form, defaults);
 }
 
-ui.page('/examples/form-demo', () => {
+ui.page('/examples/forms', () => {
   const form = ui.draft(DRAFT_KEY, defaults);
+
+  const qty = ui.state({ value: 4 });
+  const phone = ui.state({ country: 'US', value: '5550100', e164: '15555550100' });
+  const plan = ui.state({ tier: 'pro' });
+  const filters = ui.state({ status: 'open', query: 'release' });
+  const search = ui.state({ value: 'clay', pinned: false });
+  const perms = ui.state({ value: ['read', 'write'] as string[] });
+  const range = ui.state({ from: '', to: '' });
+  const wizard = ui.state({ step: 0 });
+  const state = reactive({
+    volume: 50,
+    brightness: 75,
+    muted: false,
+    theme: 'light',
+  });
 
   exampleFrame(() => {
     ui.column(() => {
       exampleHeader(
         undefined,
-        'bindValue + live summary; draft survives reconnect / --reload. Submit gated by ui.validate.',
+        'Fill out a profile, explore input controls, and plan a report with a guided wizard.',
       );
 
       ui.card(
@@ -249,6 +264,288 @@ ui.page('/examples/form-demo', () => {
       for (const key of Object.keys(form)) {
         subscribe(form, key, () => summary.refresh());
       }
+
+      exampleSection('Field + inputs', 'Choose seats, enter a phone number, and select a plan.');
+      ui.auto(() => {
+        ui.field(
+          {
+            label: 'Seats',
+            description: 'Per workspace license',
+            error: qty.value < 1 ? 'At least one seat' : '',
+          },
+          () => {
+            ui.numberField({
+              value: qty.value,
+              min: 1,
+              max: 99,
+              step: 1,
+              onChange: (v) => {
+                qty.value = v;
+              },
+            });
+          },
+        );
+
+        ui.field({ label: 'Phone', description: 'Country dial + local digits' }, () => {
+          ui.phoneInput({
+            country: phone.country,
+            value: phone.value,
+            onChange: ({ country, value, e164 }) => {
+              phone.country = country;
+              phone.value = value;
+              phone.e164 = e164;
+            },
+          });
+          ui.label(() => `E.164: ${phone.e164}`).classes('text-xs text-muted-foreground');
+        });
+
+        ui.field({ label: 'Plan' }, () => {
+          ui.nativeSelect({
+            options: [
+              { value: 'free', label: 'Free' },
+              { value: 'pro', label: 'Pro' },
+              { value: 'team', label: 'Team' },
+            ],
+            value: plan.tier,
+            onChange: (v) => {
+              plan.tier = v;
+            },
+          });
+        });
+      });
+
+      exampleSection('Input group', 'Enter a site name and open its address.');
+      ui.auto(() => {
+        ui.inputGroup({
+          label: 'Site URL',
+          prefix: 'https://',
+          suffix: '.dev',
+          value: search.value,
+          placeholder: 'app',
+          buttonLabel: 'Go',
+          onInput: (v) => {
+            search.value = v;
+          },
+          onButtonClick: () => ui.notify(`Open https://${search.value}.dev`, 'info'),
+        });
+      });
+
+      exampleSection(
+        'Filter bar',
+        'Search by status or text, then remove filters individually or clear them all.',
+      );
+      ui.auto(() => {
+        ui.filterBar(
+          {
+            chips: [
+              ...(filters.status
+                ? [{ id: 'status', label: 'Status', value: filters.status }]
+                : []),
+              ...(filters.query.trim()
+                ? [{ id: 'query', label: 'Search', value: filters.query.trim() }]
+                : []),
+            ],
+            onRemoveChip: (id) => {
+              if (id === 'status') filters.status = '';
+              if (id === 'query') filters.query = '';
+            },
+            onClear: () => {
+              filters.status = '';
+              filters.query = '';
+            },
+          },
+          () => {
+            ui.nativeSelect({
+              options: [
+                { value: '', label: 'Any status' },
+                { value: 'open', label: 'Open' },
+                { value: 'done', label: 'Done' },
+              ],
+              value: filters.status,
+              onChange: (v) => {
+                filters.status = v;
+              },
+            });
+            ui.input({
+              placeholder: 'Search…',
+              value: filters.query,
+              onInput: (v) => {
+                filters.query = v;
+              },
+            });
+          },
+        );
+      });
+
+      exampleSection('Toggle', 'Pin or unpin a panel.');
+      ui.auto(() => {
+        ui.row({ gap: 2 }, () => {
+          ui.toggle({
+            icon: 'pin',
+            text: 'Pin panel',
+            pressed: search.pinned,
+            variant: 'outline',
+            onPressedChange: (p) => {
+              search.pinned = p;
+            },
+          });
+          ui.label(() => (search.pinned ? 'Pinned' : 'Unpinned')).classes('text-sm text-muted-foreground');
+        });
+      });
+
+      exampleSection('Checkbox group', 'Select the permissions to grant.');
+      ui.auto(() => {
+        ui.checkboxGroup({
+          label: 'Permissions',
+          orientation: 'horizontal',
+          value: perms.value,
+          options: [
+            { value: 'read', label: 'Read' },
+            { value: 'write', label: 'Write' },
+            { value: 'admin', label: 'Admin' },
+          ],
+          onChange: (next) => {
+            perms.value = next;
+          },
+        });
+        ui.label(() => `Selected: ${perms.value.join(', ') || 'none'}`).classes(
+          'text-sm text-muted-foreground',
+        );
+      });
+
+      exampleSection('Linked controls', 'Adjust audio and display preferences together.');
+      ui.card(
+        {
+          title: 'Controls',
+          description: 'Sliders, checkbox, and select bound to the same reactive object.',
+          gap: 4,
+        },
+        () => {
+          ui.slider({
+            min: 0,
+            max: 100,
+            value: state.volume,
+            label: 'Volume',
+            showValue: true,
+          }).bindValue(state, 'volume');
+
+          ui.slider({
+            min: 0,
+            max: 100,
+            value: state.brightness,
+            label: 'Brightness',
+            showValue: true,
+          }).bindValue(state, 'brightness');
+
+          ui.checkbox({ label: 'Mute audio', checked: state.muted }).bindValue(state, 'muted');
+
+          ui.select({
+            label: 'Theme',
+            value: state.theme,
+            options: [
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+              { value: 'system', label: 'System' },
+            ],
+          }).bindValue(state, 'theme');
+        },
+      );
+
+      const valuesUi = ui.refreshable(() => {
+        ui.card(
+          {
+            title: 'Current values',
+            description: 'Updates when any bound field changes.',
+            gap: 2,
+          },
+          () => {
+            ui.label(`Volume: ${state.volume}`).classes('text-sm');
+            ui.label(`Brightness: ${state.brightness}`).classes('text-sm');
+            ui.label(`Muted: ${state.muted ? 'Yes' : 'No'}`).classes('text-sm');
+            ui.label(`Theme: ${state.theme}`).classes('text-sm');
+          },
+        );
+      });
+
+      for (const key of ['volume', 'brightness', 'muted', 'theme'] as const) {
+        subscribe(state, key, () => valuesUi.refresh());
+      }
+
+      ui.row(() => {
+        ui.button('Max volume', {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => {
+            state.volume = 100;
+          },
+        });
+        ui.button('Mute', {
+          variant: 'secondary',
+          size: 'sm',
+          onClick: () => {
+            state.muted = true;
+            state.volume = 0;
+          },
+        });
+      }, { gap: 2 });
+
+      exampleSection('Date range', 'Choose a date window with presets or the calendar.');
+      ui.auto(() => {
+        ui.dateRange({
+          label: 'Filter window',
+          from: range.from,
+          to: range.to,
+          onChange: ({ from, to }) => {
+            range.from = from;
+            range.to = to;
+          },
+        });
+        ui.label(() =>
+          range.from && range.to
+            ? `Selected: ${range.from} – ${range.to}`
+            : 'No range selected',
+        ).classes('text-sm text-muted-foreground');
+      });
+
+      exampleSection('Stepper', 'Choose a report window, review it, and finish.');
+      ui.auto(() => {
+        ui.stepper(
+          {
+            index: wizard.step,
+            onIndexChange: (i) => {
+              wizard.step = i;
+            },
+          },
+          (s) => {
+            s.step({ title: 'Plan', description: 'Pick a range' }, () => {
+              ui.dateRange({
+                label: 'Report window',
+                from: range.from,
+                to: range.to,
+                onChange: ({ from, to }) => {
+                  range.from = from;
+                  range.to = to;
+                },
+              });
+            });
+            s.step({ title: 'Review', description: 'Confirm filters' }, () => {
+              ui.label(() =>
+                range.from && range.to
+                  ? `Range: ${range.from} → ${range.to}`
+                  : 'Pick a date range on the previous step.',
+              ).classes('text-sm');
+            });
+            s.step({ title: 'Done' }, () => {
+              ui.button('Finish', {
+                onClick: () => {
+                  ui.notify('Stepper complete', 'success');
+                  wizard.step = 0;
+                },
+              });
+            });
+          },
+        );
+      });
     }, { gap: 6 });
   });
 });

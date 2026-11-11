@@ -5,7 +5,7 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Gantt',
   icon: 'chart-gantt',
-  order: 63,
+  order: 64,
   group: 'Apps',
   groupIcon: 'app-window',
 };
@@ -53,7 +53,7 @@ ui.page('/examples/gantt', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.gantt — owns rows/dates/markers/deps; itemMove + markerAdd settle the model (no outer ui.auto remount).',
+          'Plan tasks on a timeline, drag dates, and add markers with a double-click on the header.',
         );
 
         exampleSection(

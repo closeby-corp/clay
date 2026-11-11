@@ -41,7 +41,7 @@ const FEATURES: Array<{ icon: string; title: string; body: string; href: string 
   },
   {
     icon: 'palette',
-    title: 'Thirteen palettes',
+    title: 'Twenty-five palettes',
     body: 'Warm, cool, mono and neon, each with light and dark. Switch live or set a default per app.',
     href: '/examples/themes',
   },

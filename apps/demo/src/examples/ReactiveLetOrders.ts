@@ -33,7 +33,7 @@ ui.page('/examples/reactive-let-orders', () => {
   exampleFrame(() => {
     exampleHeader(
       undefined,
-      'Master–detail regions with ui.state / ui.auto. Sibling: Orders (let) needs bun run cli:reactive-let.',
+      'Browse orders with ui.state / ui.auto. For Orders (let), run with the Clay CLI (`clay`) to enable the let transform.',
     );
 
     ui.column({ gap: 4, className: 'w-full' }, () => {

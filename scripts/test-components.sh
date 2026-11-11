@@ -4,7 +4,7 @@
 # Tests all ValueComponent types (Input, Slider, Checkbox, Select, TextArea)
 
 BASE_URL="${BASE_URL:-http://localhost:4000}"
-DEMO_PATH="/examples/form-demo"
+DEMO_PATH="/examples/forms"
 
 # Colors for output
 RED='\033[0;31m'

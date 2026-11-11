@@ -145,7 +145,7 @@ ui.page('/examples/datatable', () => {
     ui.row(() => {
       exampleHeader(
         undefined,
-        'Kitchen-sink DataTable: search, facets, edit, export, bulk actions, and the leftovers below.',
+        'Explore DataTable search, facets, editing, export, bulk actions, and more examples below.',
       );
       ui.button('Add task', {
         size: 'sm',

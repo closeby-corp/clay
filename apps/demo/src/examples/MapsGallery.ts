@@ -10,7 +10,7 @@ import type {
 } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
-export const pageMeta = { label: 'Gallery', icon: 'map', order: 37, group: 'Maps', groupIcon: 'map' };
+export const pageMeta = { label: 'Map gallery', icon: 'map', order: 37, group: 'Maps', groupIcon: 'map' };
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */

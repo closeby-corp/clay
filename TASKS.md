@@ -4,11 +4,9 @@ Current product gaps (not a historical checklist). DaisyUI / HTMX-era iterations
 
 Source for the open items below: [clay-review.md](./clay-review.md) (UQ Hub ops dashboard on Clay 0.1.0).
 
-ReUI-style component batches (3–6): see [TASKS-reui-batches.md](./TASKS-reui-batches.md) — all items shipped in-repo; publish separately.
+Shipped admin, form and list widget checklists (timeline through checkboxGroup) are in [`TASKS.archive.md`](./TASKS.archive.md#component-widgets-shipped).
 
-Batch 7 (inputGroup, toggle, descriptionList, staticTable, aspectRatio, itemList, checkboxGroup): see [TASKS-reui-batch7.md](./TASKS-reui-batch7.md).
-
-Dogfood: `/examples/ops-console` — master–detail ops console exercising batches 1–7 (see [ops-patterns.md](./docs/ops-patterns.md)).
+Reference app: `/examples/ops-console` — a master–detail ops console that uses those widgets together (see [ops-patterns.md](./docs/ops-patterns.md)).
 
 ## Soon — from UQ Hub feedback
 
@@ -69,6 +67,12 @@ Dogfood: `/examples/ops-console` — master–detail ops console exercising batc
 
 ## Later
 
+### Widget candidates
+
+- [ ] **`ui.dateTime`** — date + time picker
+- [ ] **`ui.multiSelect`** — multi-value combobox outside DataTable
+- [ ] **`ui.attachmentList`** — file chips paired with `ui.upload`
+
 ### NiceGUI / scale
 
 - [x] **North-star: write `let`, get implicit dependency tracking** (NiceGUI-style — no manual `ui.auto` wrapping)
@@ -127,8 +131,8 @@ Dogfood: `/examples/ops-console` — master–detail ops console exercising batc
 
 ## Done (recent)
 
-- Chart analytics (ReUI batch 2): `ui.sparkline`, extended `ChartChrome` (`headline`, custom `periods`, `loading`), composed `referenceLine` / `referenceArea` + dual `yAxisId`; fixed composed chart period selector prop
-- Composed widgets: `ui.timeline`, `ui.stepper`, `ui.dateRange` (ReUI-style batch 1)
+- Chart analytics: `ui.sparkline`, extended `ChartChrome` (`headline`, custom `periods`, `loading`), composed `referenceLine` / `referenceArea` + dual `yAxisId`; fixed composed chart period selector prop
+- Composed widgets: `ui.timeline`, `ui.stepper`, `ui.dateRange`
 - NiceGUI let parity: nested/rest destructuring, loop-scoped keyed state, shadow renames, nested `auto` reuse; docs happy path ([`docs/reactive-let.md`](./docs/reactive-let.md))
 - Reactive follow-up: `ui.auto` in-place `updateProps` when tree shape is stable; expanded `let` transform (non-leading / nested blocks / more initializers); `ui.label(() => …)` + `bindText`
 - Reactive Phase 2 MVP: `@close-by/clay-compiler` transform + `clay --reactive-let` Bun loader (subset `let` → `ui.state` / `ui.auto`)

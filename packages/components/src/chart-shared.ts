@@ -9,7 +9,7 @@ export type ChartSeries = {
   yAxisId?: 'left' | 'right';
 };
 
-/** Headline metric row above a chart (ReUI-style analytics card). */
+/** Headline metric row above a chart (analytics card). */
 export type ChartHeadline = {
   value: string | number;
   trend?: string;

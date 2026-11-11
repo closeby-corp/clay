@@ -156,3 +156,47 @@ Historical DaisyUI / HTMX-era checklist. For the live backlog, see [`TASKS.md`](
 ## Project Complete! 🎉
 
 All iterations implemented successfully.
+
+
+## Component widgets (shipped)
+
+Admin-console and form-density widgets, built by wiring existing ShadCN client primitives. Demos: `/examples/forms`, `/examples/navigation`, `/examples/feedback`, `/examples/content`, `/examples/charts`, `/examples/datatable`; all of them together in `/examples/ops-console`.
+
+### Composed widgets and chart chrome
+- [x] `ui.timeline`, `ui.stepper`, `ui.dateRange`
+- [x] `ui.sparkline`, extended `ChartChrome`, composed reference line/area + dual axis
+- [x] `ui.feedList`, `ui.feedRow`
+- [x] Nav subitems, `pageMeta.group`, sidebar groups
+
+### Admin chrome
+- [x] **`ui.buttonGroup`** — segmented actions / view toggles
+- [x] **`ui.empty`** — empty states for tables/feeds
+- [x] **`ui.pagination`** — simple pager outside `dataTable`
+- [x] **`ui.filterBar`** — chip row + "clear all" + slot for `select` / `combobox` / `dateRange`
+
+### Form density
+- [x] **`ui.numberField`** — steppers, min/max, currency-friendly numeric input
+- [x] **`ui.phoneInput`** — country code + validation mask (lightweight, no libphonenumber)
+- [x] **`ui.field`** — label + description + error row
+- [x] **`ui.nativeSelect`** — lightweight select when combobox is overkill
+- [x] **`ui.inputGroup`** — prefix/suffix addons, optional inline action button
+- [x] **`ui.toggle`** — pressed toolbar control (≠ `switch`, ≠ `toggleGroup`)
+- [x] **`ui.checkboxGroup`** — multi-select checkbox set
+
+### App shell and display
+- [x] **`ui.navigationMenu`** — top nav mega-menu
+- [x] **`ui.stat` v2** — optional inline sparkline per stat card
+- [x] **`ui.notice`** — dismissible app-wide banner (auth expiry, maintenance)
+- [x] **`ui.descriptionList`** — key/value rows for detail panes
+- [x] **`ui.staticTable`** — read-only HTML table for small datasets
+- [x] **`ui.aspectRatio`** — fixed-ratio wrapper with child slot
+- [x] **`ui.itemList`** — settings / notification rows
+
+### Scheduling and tables
+- [x] **`ui.eventCalendar`** — month grid + day event list
+- [x] **`ui.dataTable` filter chips** — active search/column filters as removable chips in the toolbar
+
+### Out of scope (for now)
+- More chart types (heatmap, funnel) — polish is chrome + recipes
+- A copy-paste block library — prefer a few wire types + `docs/ops-patterns.md` recipes
+- Duplicate list widgets — `list` (DnD), `feedRow` (ops feed), `dataTable` (grid) stay separate tools

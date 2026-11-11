@@ -2,14 +2,16 @@ import { ui, type TimerHandle } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
-  label: 'Feedback',
+  label: 'Feedback & status',
   icon: 'help-circle',
-  order: 23,
-  group: 'Reactivity',
-  groupIcon: 'zap',
+  order: 52,
+  group: 'Components',
+  groupIcon: 'component',
 };
 
 ui.page('/examples/feedback', () => {
+  let ticks = 0;
+  const noticeOpen = ui.state({ on: true });
   let progressValue = 35;
   let anim: TimerHandle | null = null;
 
@@ -17,42 +19,12 @@ ui.page('/examples/feedback', () => {
     ui.column(() => {
       exampleHeader(
         undefined,
-        'Alerts, spinner, progress, separators, and ui.theme.set (Appearance).',
+        'Alerts, notices, loading indicators, live updates, and timelines.',
       );
 
       exampleSection('Alerts', 'Default and destructive variants.');
       ui.alert('Heads up — your session is synced over WebSocket.');
       ui.alert('Something went wrong while saving.', { variant: 'destructive' });
-
-      ui.separator();
-
-      exampleSection('Appearance', 'ui.theme.set("light" | "dark" | "system") — server pushes theme to the client.');
-      ui.row(() => {
-        ui.button('Light', {
-          variant: 'outline',
-          size: 'sm',
-          onClick: () => {
-            ui.theme.set('light');
-            ui.notify('Theme: light', 'info');
-          },
-        });
-        ui.button('Dark', {
-          variant: 'outline',
-          size: 'sm',
-          onClick: () => {
-            ui.theme.set('dark');
-            ui.notify('Theme: dark', 'info');
-          },
-        });
-        ui.button('System', {
-          variant: 'outline',
-          size: 'sm',
-          onClick: () => {
-            ui.theme.set('system');
-            ui.notify('Theme: system', 'info');
-          },
-        });
-      }, { gap: 2 });
 
       ui.separator();
 
@@ -146,6 +118,133 @@ ui.page('/examples/feedback', () => {
           }, { gap: 2 });
         },
       );
+      ui.separator();
+
+      exampleSection('Live clock', 'Repeating timer updates a label every second.');
+      ui.card({ title: 'Server time', description: 'Session-scoped setInterval.', gap: 4 }, () => {
+        const clockLabel = ui
+          .label(new Date().toLocaleTimeString())
+          .classes('text-3xl font-semibold tabular-nums tracking-tight');
+        const tickLabel = ui.label('Ticks: 0').classes('text-sm text-muted-foreground');
+
+        const clock = ui.timer(1, () => {
+          ticks++;
+          clockLabel.setText(new Date().toLocaleTimeString());
+          tickLabel.setText(`Ticks: ${ticks}`);
+        });
+
+        ui.row(() => {
+          ui.button('Pause', {
+            variant: 'outline',
+            size: 'sm',
+            onClick: () => clock.deactivate(),
+          });
+          ui.button('Resume', {
+            variant: 'outline',
+            size: 'sm',
+            onClick: () => clock.activate(),
+          });
+          ui.button('Cancel', {
+            variant: 'destructive',
+            size: 'sm',
+            onClick: () => {
+              clock.cancel();
+              ui.notify('Timer cancelled', 'warning');
+              console.log('Timer cancelled');
+            },
+          });
+        }, { gap: 2 });
+      });
+      ui.separator();
+
+      exampleSection('Notice', 'ui.notice — dismissible app banner.');
+      ui.auto(() => {
+        if (noticeOpen.on) {
+          ui.notice('Scheduled maintenance tonight 02:00–03:00 UTC.', {
+            variant: 'warning',
+            icon: 'triangle-alert',
+            onDismiss: () => {
+              noticeOpen.on = false;
+            },
+          });
+        } else {
+          ui.button('Show notice again', {
+            size: 'sm',
+            variant: 'outline',
+            onClick: () => {
+              noticeOpen.on = true;
+            },
+          });
+        }
+      });
+      ui.separator();
+
+      exampleSection(
+        'Empty',
+        'ui.empty — placeholder when a list/table has no rows (icon + copy + optional CTA).',
+      );
+      ui.empty(
+        {
+          title: 'No orders yet',
+          description: 'This is what users see instead of a blank panel.',
+          icon: 'inbox',
+        },
+        () => {
+          ui.button('Create order', {
+            size: 'sm',
+            onClick: () => ui.notify('Create order', 'info'),
+          });
+        },
+      );
+      ui.separator();
+
+      exampleSection('Timeline', 'Deploy log with collapsible body and status nodes.');
+      ui.timeline({
+        items: [
+          {
+            id: '1',
+            at: '2026-08-29 22:01',
+            title: 'Build started',
+            description: 'ci/clay-main #4821',
+            status: 'completed',
+            icon: 'play',
+          },
+          {
+            id: '2',
+            at: '2026-08-29 22:04',
+            title: 'Running tests',
+            status: 'completed',
+            badge: '486 pass',
+            badgeColor: 'emerald',
+          },
+          {
+            id: '3',
+            at: '2026-08-29 22:06',
+            title: 'Publishing npm',
+            status: 'active',
+            icon: 'upload',
+            body: 'Publishing @close-by/clay-core@0.2.4\nPublishing @close-by/clay@0.2.4',
+            defaultOpen: true,
+          },
+          {
+            id: '4',
+            title: 'Smoke hub',
+            status: 'pending',
+            description: 'Awaiting publish',
+          },
+        ],
+      });
+      ui.separator();
+
+      exampleSection('Horizontal timeline', 'Milestone-style summary.');
+      ui.timeline({
+        orientation: 'horizontal',
+        items: [
+          { title: 'Alpha', at: 'Q1', status: 'completed' },
+          { title: 'Beta', at: 'Q2', status: 'completed' },
+          { title: 'GA', at: 'Q3', status: 'active' },
+        ],
+      });
     }, { gap: 6 });
   });
 });

@@ -2,14 +2,14 @@ import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
-  label: 'Controls',
+  label: 'Navigation & layout',
   icon: 'sliders-horizontal',
-  order: 41,
-  group: 'Forms & controls',
-  groupIcon: 'sliders-horizontal',
+  order: 51,
+  group: 'Components',
+  groupIcon: 'component',
 };
 
-ui.page('/examples/controls', () => {
+ui.page('/examples/navigation', () => {
   const palette = ui.command({ open: false, placeholder: 'Jump to…' }, (c) => {
     c.group('Navigation', (g) => {
       g.item('home', 'Home', {
@@ -28,6 +28,9 @@ ui.page('/examples/controls', () => {
     });
   });
 
+  const page = ui.state({ n: 2 });
+  const view = ui.state({ mode: 'list' as 'list' | 'grid' | 'board' });
+
   const viewMode = ui.state({ value: 'list' });
 
   exampleFrame(() => {
@@ -35,7 +38,7 @@ ui.page('/examples/controls', () => {
       () => {
         exampleHeader(
           undefined,
-          'Menubar, command palette, carousel, resizable, scroll area, keybinds — plus ui.state / ui.auto.',
+          'Explore menus, keyboard shortcuts, and flexible page layouts.',
         );
 
         exampleSection('Menubar', 'ui.menubar — submenus, checkbox, and radio items.');
@@ -139,7 +142,7 @@ ui.page('/examples/controls', () => {
             },
             () => {
               for (let i = 1; i <= scrollRows.n; i++) {
-                ui.label(`Row ${i}`).classes('text-sm');
+                ui.label(`Row ${i}`).classes('block text-sm');
               }
             },
           );
@@ -189,31 +192,65 @@ ui.page('/examples/controls', () => {
           ui.label('(ignored while typing in inputs).').classes('text-sm text-muted-foreground');
         });
 
-        exampleSection(
-          'Reactive auto',
-          'ui.state + ui.auto — rebuild when tracked reads change (MVP for compile-time let).',
-        );
-        const s = ui.state({ count: 0 });
-        ui.auto(() => {
-          ui.row(
-            () => {
-              ui.label(`Count: ${s.count}`).classes('text-sm tabular-nums');
-              ui.button('+', {
-                size: 'sm',
-                onClick: () => {
-                  s.count++;
-                },
+
+        exampleSection('Navigation menu', 'Browse pages through links and a dropdown menu.');
+        ui.card({ className: 'overflow-visible p-4' }, () => {
+          ui.navigationMenu((menu) => {
+            menu.link('Overview', { href: '/examples/dashboard', active: true });
+            menu.menu('Product', (sub) => {
+              sub.link({
+                label: 'Analytics',
+                description: 'Charts and KPIs',
+                href: '/examples/charts',
               });
-              ui.button('Reset', {
+              sub.link({
+                label: 'Data table',
+                description: 'Grid + filter chips',
+                href: '/examples/datatable',
+              });
+            });
+            menu.link('Docs', {
+              onSelect: () => ui.notify('Docs clicked', 'info'),
+            });
+          });
+        });
+
+        exampleSection('Button group', 'Switch between list, grid, and board views.');
+        ui.auto(() => {
+          ui.buttonGroup(() => {
+            for (const mode of ['list', 'grid', 'board'] as const) {
+              ui.button(mode, {
                 size: 'sm',
                 variant: 'outline',
+                className: view.mode === mode ? 'bg-accent' : undefined,
                 onClick: () => {
-                  s.count = 0;
+                  view.mode = mode;
                 },
               });
-            },
-            { gap: 2 },
-          );
+            }
+          });
+          ui.label(() => `View: ${view.mode}`).classes('text-sm text-muted-foreground');
+        });
+
+        exampleSection('Pagination', 'Move between pages with numbered and previous or next buttons.');
+        ui.auto(() => {
+          ui.card({ className: 'p-4' }, () => {
+            ui.pagination({
+              page: page.n,
+              pageCount: 8,
+              onChange: (n) => {
+                page.n = n;
+              },
+            });
+          });
+          ui.label(() => `Page ${page.n} of 8`).classes('text-sm text-muted-foreground');
+        });
+
+        exampleSection('Aspect ratio', 'Keep a media tile at a consistent width and height ratio.');
+        ui.aspectRatio({ ratio: 16 / 9, className: 'max-w-md' }, () => {
+          ui.card({ className: 'flex h-full items-center justify-center border-0 shadow-none' }, () => {
+            ui.label('16:9 tile').classes('text-muted-foreground');
+          });
         });
       },
       { gap: 6 },

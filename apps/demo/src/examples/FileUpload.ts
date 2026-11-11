@@ -4,7 +4,7 @@ import { unlink } from 'node:fs/promises';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {
-  label: 'File Upload',
+  label: 'File upload',
   icon: 'upload',
   order: 45,
   group: 'Forms & controls',

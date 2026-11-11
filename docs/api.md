@@ -2116,7 +2116,7 @@ form.name = 'Ada'; // persisted
 ui.draft.clear('formDemo'); // drop storage key; reset the object yourself if needed
 ```
 
-See Form Demo (`/examples/form-demo`).
+See Forms (`/examples/forms`).
 
 ### `ui.auto(fn)`
 

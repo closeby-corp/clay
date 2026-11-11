@@ -5,9 +5,9 @@ import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'List',
   icon: 'clipboard-list',
-  order: 32,
-  group: 'Data',
-  groupIcon: 'table',
+  order: 63,
+  group: 'Apps',
+  groupIcon: 'app-window',
 };
 
 const INITIAL: ListGroup[] = [
@@ -39,7 +39,7 @@ ui.page('/examples/list', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.list — list owns groups/item order; itemMove settles the model (no outer ui.auto remount).',
+          'Organize items into groups, drag to reorder, and reset the list.',
         );
 
         exampleSection(

@@ -1,6 +1,5 @@
 /**
- * Ops console dogfood — one real master–detail surface using current Clay APIs
- * (batches 1–7). Prefer this over another ReUI showcase when testing density.
+ * Order triage console with filters, a live order list, and detail panels.
  */
 import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
@@ -8,7 +7,7 @@ import { exampleFrame, exampleHeader } from '../chrome';
 export const pageMeta = {
   label: 'Ops console',
   icon: 'radar',
-  order: 65,
+  order: 67,
   group: 'Apps',
   groupIcon: 'app-window',
 };
@@ -206,13 +205,11 @@ ui.page('/examples/ops-console', () => {
     ui.column({ gap: 3, className: 'w-full' }, () => {
       exampleHeader(
         undefined,
-        'Dogfood master–detail: filterBar → feedList → descriptionList / staticTable. Fake orders data.',
+        'Triage live orders: filter, pick a row, inspect details.',
       );
 
       ui.row({ gap: 2 }, () => {
         ui.link('Orders (state/auto)', '/examples/reactive-let-orders');
-        ui.link('ReUI batch 7', '/examples/reui-batch-7');
-        ui.link('ReUI batches 3–6', '/examples/reui-batches');
       });
 
       ui.auto(() => {

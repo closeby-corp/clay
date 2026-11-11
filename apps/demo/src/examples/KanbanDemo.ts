@@ -75,7 +75,7 @@ ui.page('/examples/kanban', () => {
       () => {
         exampleHeader(
           undefined,
-          'ui.kanban — board owns columns/lanes/selection; cardMove + cardSelect settle the model (no outer ui.auto remount).',
+          'Move cards between columns and lanes, select a card to inspect it, and reset the board.',
         );
 
         exampleSection(

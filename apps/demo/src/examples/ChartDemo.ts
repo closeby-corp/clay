@@ -10,6 +10,16 @@ export const pageMeta = {
   groupIcon: 'table',
 };
 
+const SPARK = [
+  { d: 'Mon', v: 12 },
+  { d: 'Tue', v: 18 },
+  { d: 'Wed', v: 14 },
+  { d: 'Thu', v: 22 },
+  { d: 'Fri', v: 19 },
+  { d: 'Sat', v: 24 },
+  { d: 'Sun', v: 21 },
+];
+
 const monthly = [
   { month: 'January', desktop: 186, mobile: 80 },
   { month: 'February', desktop: 305, mobile: 200 },
@@ -115,6 +125,26 @@ ui.page('/examples/charts', () => {
           color: 'var(--chart-2)',
         });
       }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
+
+      exampleSection('Stat with sparkline', 'ui.stat items accept an inline sparkline.');
+      ui.stat([
+        {
+          title: 'Active users',
+          value: '2,847',
+          trend: '+12.5%',
+          trendDirection: 'up',
+          footer: 'Trending up this week',
+          sparkline: { data: SPARK, xKey: 'd', yKey: 'v', type: 'area' },
+        },
+        {
+          title: 'Latency p95',
+          value: '142ms',
+          trend: '-8%',
+          trendDirection: 'down',
+          description: 'Last 7 days',
+          sparkline: { data: SPARK, xKey: 'd', yKey: 'v', type: 'line', color: 'var(--chart-2)' },
+        },
+      ]);
 
       exampleSection('Monthly overview', 'ui.chart.categories → .area(); stacked by default.');
       ui.chart

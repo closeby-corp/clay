@@ -5,7 +5,7 @@ import { exampleHeader, exampleSection } from '../chrome';
 export const pageMeta = {
   label: 'Flow',
   icon: 'workflow',
-  order: 64,
+  order: 66,
   group: 'Apps',
   groupIcon: 'app-window',
 };

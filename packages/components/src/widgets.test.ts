@@ -22,7 +22,7 @@ import {
   checkboxGroup,
 } from './index';
 
-describe('ReUI batch components', () => {
+describe('Admin and form widgets', () => {
   test('buttonGroup builds container', () => {
     const el = buttonGroup(() => {}, { orientation: 'horizontal' });
     expect(el.type).toBe('buttonGroup');

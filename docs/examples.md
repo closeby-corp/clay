@@ -7,7 +7,7 @@ After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http:
 
 ## Sidebar groups
 
-Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the home page's catalog share one structure: **Start here** (themes, fill layout, counter, todo, kitchen sink) → **Reactivity** → **Data** → **Maps** (gallery, delivery tracker, store locator, globe, uptime monitor) → **Forms & controls** → **Overlays & layout** → **Apps** → **Account** → **ReUI batches**. Order within a group is `pageMeta.order`.
+Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the home page's catalog share one structure: **Start here** (themes, fill layout, counter, todo, kitchen sink) → **Reactivity** → **Data** → **Maps** (map gallery, delivery tracker, store locator, globe, uptime monitor) → **Forms & controls** → **Components** → **Apps** (including List, Kanban, Gantt, Flow, and Ops console) → **Account**. Order within a group is `pageMeta.order`.
 
 ## Catalog
 
@@ -16,34 +16,30 @@ Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the h
 | `/` | `Home.ts` | Landing page: hero, live counter + source side by side (`ui.codeBlock`), feature grid, catalog grouped via `ui.navFromPages()` (same as sidebar) |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
+| `/examples/reactive-let-orders` | `ReactiveLetOrders.ts` | Order filters and master–detail views with `ui.state` / `ui.auto` |
+| `/examples/reactive-let-orders-let` | `ReactiveLetOrdersLet.ts` | The same order workflow with reactive `let` variables and the Clay CLI transform |
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
 | `/examples/ai` | `AiDemo.ts` | `ui.ai.*` gallery — chat, prompt bar, loader/thinking, agent cards, diff/insights/fine-tune (static props; no model runtime) |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
 | `/examples/dashboard` | `Dashboard.ts` | `stat`, `areaChart`, full-chrome `dataTable` (views, editors, detail drawer) |
 | `/examples/datatable` | `DataTableDemo.ts` | Multi-sort (Shift+click / badges), footer aggregates + a11y hints, column pin, remote filter/sort + pagination; density/zebra, editors (Enter/Esc + focus restore), resize, virtualization (≥40, coexists with reorder via windowed drop targets); facets, bulk, collapse/expand, loading/empty; `ui.table` sugar |
-| `/examples/composed` | `ComposedDemo.ts` | ReUI batch 1: `ui.timeline`, `ui.stepper`, `ui.dateRange`, `ui.feedList`/`ui.feedRow`, `ui.sparkline` |
-| `/examples/ops-console` | `OpsConsoleDemo.ts` | Dogfood ops console: `filterBar` → `feedList` → `descriptionList` / `staticTable` (batches 1–7 in one surface) |
-| `/examples/reui-batches` | `ReuiBatchesDemo.ts` | ReUI batches 3–6: `buttonGroup`, `empty`, `pagination`, `filterBar`, form inputs, `navigationMenu`, `notice`, `stat`+sparkline, `eventCalendar`, datatable `showFilterChips` |
-| `/examples/reui-batch-7` | `ReuiBatch7Demo.ts` | ReUI batch 7: `inputGroup`, `toggle`, `descriptionList`, `staticTable`, `aspectRatio`, `itemList`, `checkboxGroup` |
-| `/examples/charts` | `ChartDemo.ts` | `ui.chart.*`, `ui.sparkline`, composed/scatter charts |
+| `/examples/ops-console` | `OpsConsoleDemo.ts` | Order triage: `filterBar` → `feedList` → `descriptionList` / `staticTable` |
+| `/examples/charts` | `ChartDemo.ts` | `ui.chart.*`, `ui.sparkline`, composed/scatter charts, `stat` + sparkline |
+| `/examples/live-table` | `LiveTableStress.ts` | High-frequency table updates, configurable row count, and live price changes |
 | `/examples/live-charts` | `LiveCharts.ts` | Live charts: `appendData` sliding windows, `setData` tweens, `upsertData` buckets, live gauge and sparklines |
-| `/examples/slider-demo` | `SliderDemo.ts` | Slider, checkbox, select + bindings |
 | `/examples/themes` | `ThemesDemo.ts` | Palette gallery: `ui.theme.palette`, light/dark, component preview |
 | `/examples/layout` | `LayoutDemo.ts` | Fill layout: `fillViewport`, `grow`, `scroll`, `ui.grid` |
-| `/examples/feedback` | `FeedbackDemo.ts` | Alerts, progress, timer, `ui.theme`, `ui.runJavaScript` / `ui.scroll` |
-| `/examples/form-demo` | `FormDemo.ts` | Form + validate + `ui.draft` + rating / colorPicker / tags |
+| `/examples/feedback` | `FeedbackDemo.ts` | Feedback & status: alert, spinner, progress, `runJavaScript` / scroll, live timer clock, notice, empty, timeline |
+| `/examples/forms` | `FormDemo.ts` | Forms: validation, `ui.draft`, slider, checkbox, select, rating, color picker, tags, field, numberField, phoneInput, nativeSelect, inputGroup, toggle, checkboxGroup, dateRange, stepper |
 | `/examples/auth` | `Auth.ts` (+ login/admin/change-password) | Signed cookie session, hashed passwords, login lockout, role-gated admin + audit log |
-| `/examples/timer-content` | `TimerContent.ts` | `ui.timer`, markdown, html, image |
-| `/examples/overlays` | `OverlaysDemo.ts` | Breadcrumb, dropdown/context menu, hover card, popover, dialog/sheet/drawer |
-| `/examples/dialog-stack` | `DialogStackDemo.ts` | `ui.dialogStack` multi-step stacked modal |
-| `/examples/controls` | `ControlsDemo.ts` | Menubar (submenu/checkbox/radio), command dialog + inline, carousel, resizable, scroll-area, `ui.state` / `ui.auto` |
-| `/examples/controls-extra` | `ControlsExtra.ts` | `ui.codeBlock` (Shiki), `ui.tree` |
-| `/examples/media-extra` | `MediaExtra.ts` | `ui.relativeTime`, `ui.qrCode`, `ui.imageZoom`, `ui.imageCrop` |
+| `/examples/overlays` | `OverlaysDemo.ts` | Breadcrumb, dropdown/context menu, hover card, popover, dialog/sheet/drawer, `dialogStack` multi-step stacked modal |
+| `/examples/navigation` | `NavigationDemo.ts` | Navigation & layout: menubar, command, carousel, resizable, scrollArea, keybind, viewportEnter, navigationMenu, buttonGroup, pagination, aspectRatio |
+| `/examples/content` | `ContentDemo.ts` | Content & media: markdown, html, codeBlock, descriptionList, staticTable, itemList, tree, image, imageZoom, imageCrop, qrCode, iframe, relativeTime, eventCalendar |
 | `/examples/editor` | `EditorDemo.ts` | `ui.editor` HTML + Markdown side-by-side, bindValue |
 | `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` swimlanes, card detail drawer, element-owned `cardMove`/`cardSelect`, reset via APIs |
-| `/examples/list` | `ListDemo.ts` | `ui.list` element-owned groups, `itemMove` settle, reset via `setGroups` |
+| `/examples/list` | `ListDemo.ts` | Apps: `ui.list` groups, drag to reorder, reset via `setGroups` |
 | `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` owned rows/dates/markers/deps, cross-row drag, header double-click markers, `itemMove` / `markerAdd` settle |
-| `/examples/flow` | `FlowDemo.ts` | Four `ui.flow` demos: ETL with in-node controls + labeled edges + dagre auto-layout, multi-handle approval branches, fan-in/out + `addNode` dynamic stages, group/`parentId` nesting (flow-owned edges/positions; no outer diagram `ui.auto`) |
+| `/examples/flow` | `FlowDemo.ts` | Four `ui.flow` demos: ETL with in-node controls + labeled edges + dagre auto-layout, multi-handle approval branches, fan-in/out + `addNode` dynamic stages, group/`parentId` nesting with interactive edges and positions |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/maps` | `MapsGallery.ts` | `ui.map` gallery: markers and popups, routes, arcs, choropleth, clusters, compact analytics map |
 | `/examples/delivery-tracker` | `DeliveryTracker.ts` | `ui.map` route progress and courier marker: `updateRoute` / `upsertMarker` on a timer, `fill` layout |

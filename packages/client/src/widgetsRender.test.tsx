@@ -4,7 +4,7 @@ import { ElementRenderer } from './ElementRenderer';
 
 const emit = () => {};
 
-describe('ReUI client render smoke', () => {
+describe('Widget client render smoke', () => {
   test('notice renders message text', () => {
     const html = renderToStaticMarkup(
       <ElementRenderer

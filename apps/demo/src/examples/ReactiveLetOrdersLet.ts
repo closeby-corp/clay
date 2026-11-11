@@ -32,7 +32,7 @@ ui.page('/examples/reactive-let-orders-let', () => {
   exampleFrame(() => {
     exampleHeader(
       undefined,
-      'Same UI as Orders (state/auto), written with let. Run: bun run cli:reactive-let',
+      'Same UI as Orders (state/auto), written with let. Run with the Clay CLI (`clay`) to enable the let transform.',
     );
 
     ui.column({ gap: 4, className: 'w-full' }, () => {
