@@ -180,7 +180,7 @@ export function BoundEditor({
   return (
     <div
       className={cn(
-        'clay-editor flex w-full flex-col gap-0 overflow-hidden rounded-md border bg-background',
+        'clay-editor flex w-full min-w-0 max-w-full flex-col gap-0 overflow-hidden rounded-md border bg-background [&_.dm-toolbar]:min-w-0 [&_.dm-toolbar]:max-w-full [&_.dm-toolbar]:flex-wrap [&_.dm-toolbar-group]:flex-wrap [&_pre]:max-w-full [&_pre]:overflow-x-auto',
         className,
       )}
       style={asStyle(style)}
@@ -188,7 +188,7 @@ export function BoundEditor({
     >
       <EditorProvider editor={editor}>
         {editor ? <DomternalToolbar /> : null}
-        <div className="dm-editor min-h-[12rem] px-3 py-2">
+        <div className="dm-editor min-h-[12rem] min-w-0 max-w-full [&_.tiptap]:min-w-0 [&_.tiptap]:max-w-full px-3 py-2">
           <div ref={editorRef} />
         </div>
         {editor ? (

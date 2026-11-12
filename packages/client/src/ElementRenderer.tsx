@@ -2467,7 +2467,7 @@ function BoundCarousel({
   return (
     <Carousel
       orientation={props.orientation === 'vertical' ? 'vertical' : 'horizontal'}
-      className={cn('w-full max-w-sm', className)}
+      className={cn('w-full min-w-0 max-w-sm overflow-hidden', className)}
       style={asStyle(style)}
     >
       <CarouselContent>
@@ -2483,8 +2483,8 @@ function BoundCarousel({
       </CarouselContent>
       {showControls ? (
         <>
-          <CarouselPrevious />
-          <CarouselNext />
+          <CarouselPrevious className={props.orientation === 'vertical' ? 'top-2' : 'left-2'} />
+          <CarouselNext className={props.orientation === 'vertical' ? 'bottom-2' : 'right-2'} />
         </>
       ) : null}
     </Carousel>

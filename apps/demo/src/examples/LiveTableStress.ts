@@ -33,13 +33,9 @@ const makeRows = (n: number): Row[] => {
 
 ui.page('/examples/live-table', () => {
   // State
-  let rowCount = 500;
-  let tickMs = 250;
-  let churnPct = 5;
-  let highlight = true;
-  let running = true;
+  const controls = ui.state({ rowCount: 500, tickMs: 250, churnPct: 5, highlight: true, running: true });
 
-  let rows = makeRows(rowCount);
+  let rows = makeRows(controls.rowCount);
   let table!: DataTableElement;
   let timer!: ReturnType<typeof ui.timer>;
 
@@ -55,7 +51,6 @@ ui.page('/examples/live-table', () => {
   let mRows: ReturnType<typeof ui.label>;
   let mTarget: ReturnType<typeof ui.label>;
 
-  let controlsUi: ReturnType<typeof ui.refreshable>;
 
   // Throttled to at most one paint every 500ms (forced on control changes).
   const paintMetrics = (force = false) => {
@@ -70,13 +65,13 @@ ui.page('/examples/live-table', () => {
     mTicks.setText(String(ticks));
     mRate.setText(Math.round(changed / span).toLocaleString());
     mTime.setText(avg.toFixed(2));
-    mRows.setText(rowCount.toLocaleString());
-    mTarget.setText(String(Math.round(1000 / tickMs)));
+    mRows.setText(controls.rowCount.toLocaleString());
+    mTarget.setText(String(Math.round(1000 / controls.tickMs)));
   };
 
   const tick = () => {
     const t0 = performance.now();
-    const k = Math.ceil((rowCount * churnPct) / 100);
+    const k = Math.ceil((controls.rowCount * controls.churnPct) / 100);
     const iso = new Date().toISOString();
     for (let n = 0; n < k; n++) {
       const i = Math.floor(Math.random() * rows.length);
@@ -103,42 +98,37 @@ ui.page('/examples/live-table', () => {
   // so no explicit unmount is needed. Changing the interval cancels the old handle.
   const startTimer = () => {
     timer?.cancel();
-    timer = ui.timer(tickMs / 1000, tick);
-    if (!running) timer.deactivate();
+    timer = ui.timer(controls.tickMs / 1000, tick);
+    if (!controls.running) timer.deactivate();
   };
 
   const setRowCount = (n: number) => {
-    rowCount = n;
+    controls.rowCount = n;
     rows = makeRows(n);
     table.setRows([...rows]);
     paintMetrics(true);
-    controlsUi.refresh();
   };
 
   const setTickMs = (ms: number) => {
-    tickMs = ms;
+    controls.tickMs = ms;
     startTimer();
     paintMetrics(true);
-    controlsUi.refresh();
   };
 
   const setChurn = (pct: number) => {
-    churnPct = pct;
-    controlsUi.refresh();
+    controls.churnPct = pct;
   };
 
   const setHighlight = (on: boolean) => {
-    if (highlight === on) return;
-    highlight = on;
-    table.setHighlightChanges(highlight);
-    controlsUi.refresh();
+    if (controls.highlight === on) return;
+    controls.highlight = on;
+    table.setHighlightChanges(controls.highlight);
   };
 
   const togglePause = () => {
-    running = !running;
-    if (running) timer.activate();
+    controls.running = !controls.running;
+    if (controls.running) timer.activate();
     else timer.deactivate();
-    controlsUi.refresh();
   };
 
   const choiceRow = (
@@ -165,13 +155,13 @@ ui.page('/examples/live-table', () => {
       );
 
       ui.card({ title: 'Controls', description: 'Pick the data size, update rate, churn and highlight mode.', gap: 3 }, () => {
-        controlsUi = ui.refreshable(() => {
+        ui.auto(() => {
           ui.column(() => {
             choiceRow(
               'Rows',
               [100, 500, 1000, 2000].map((n) => ({
                 text: n.toLocaleString(),
-                active: rowCount === n,
+                active: controls.rowCount === n,
                 onClick: () => setRowCount(n),
               })),
             );
@@ -179,7 +169,7 @@ ui.page('/examples/live-table', () => {
               'Update every',
               [1000, 250, 100, 50].map((ms) => ({
                 text: `${ms}ms`,
-                active: tickMs === ms,
+                active: controls.tickMs === ms,
                 onClick: () => setTickMs(ms),
               })),
             );
@@ -187,16 +177,16 @@ ui.page('/examples/live-table', () => {
               'Churn',
               [1, 5, 20, 50].map((pct) => ({
                 text: `${pct}%`,
-                active: churnPct === pct,
+                active: controls.churnPct === pct,
                 onClick: () => setChurn(pct),
               })),
             );
             choiceRow('Highlight', [
-              { text: 'On', active: highlight, onClick: () => setHighlight(true) },
-              { text: 'Off', active: !highlight, onClick: () => setHighlight(false) },
+              { text: 'On', active: controls.highlight, onClick: () => setHighlight(true) },
+              { text: 'Off', active: !controls.highlight, onClick: () => setHighlight(false) },
             ]);
             choiceRow('Feed', [
-              { text: running ? 'Pause' : 'Resume', active: false, onClick: togglePause },
+              { text: controls.running ? 'Pause' : 'Resume', active: false, onClick: togglePause },
             ]);
           }, { gap: 2 });
         });
@@ -214,14 +204,14 @@ ui.page('/examples/live-table', () => {
         mTicks = statValue('Ticks', '0');
         mRate = statValue('Rows changed / s', '0');
         mTime = statValue('Server tick time (avg ms, last 20)', '0.00');
-        mRows = statValue('Rows', String(rowCount));
-        mTarget = statValue('Updates/s target', String(Math.round(1000 / tickMs)));
+        mRows = statValue('Rows', String(controls.rowCount));
+        mTarget = statValue('Updates/s target', String(Math.round(1000 / controls.tickMs)));
       });
 
       ui.card({ title: 'Live table', description: 'Virtualized: only visible rows are in the DOM. Changed rows flash for 1.6s.', gap: 3 }, () => {
         table = ui.dataTable(rows, {
           keyField: 'id',
-          highlightChanges: highlight,
+          highlightChanges: controls.highlight,
           pageSize: 0,
           fill: false,
           maxHeight: '28rem',

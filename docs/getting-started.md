@@ -6,13 +6,21 @@
 - Node-compatible OS (macOS / Linux / WSL)
 - For local tarball installs: npm (links co-installed `file:` packages; Bun may try the registry for rewritten versions)
 
-## Outside the monorepo
+## Install from npm
+
+```bash
+bun add @close-by/clay-cli @close-by/clay
+# transitive: core, components, server, persistence-file
+# optional: bun add @close-by/clay-auth
+```
+
+Use `bun init`’s tsconfig or set `"extends": "@close-by/clay/page-tsconfig"` in your `tsconfig.json`.
 
 Consumers import `@close-by/clay` and run apps with the `clay` binary from `@close-by/clay-cli`. The CLI ships prebuilt Vite assets (`client-dist`); you do **not** need `@close-by/clay-client` or a monorepo `build:client`.
 
 Walkthrough (tasks list → two pages + `--app`): [Sample app](./tutorial.md).
 
-### From local packs (this repo)
+### Contributors: local packs
 
 ```bash
 # In the Clay checkout:
@@ -22,38 +30,21 @@ bun run pack:publishable   # build:client + bun pm pack → dist-pack/*.tgz
 
 # In your app directory:
 npm install \
-  /path/to/clay/dist-pack/close-by-clay-core-0.1.0.tgz \
-  /path/to/clay/dist-pack/close-by-clay-auth-0.1.0.tgz \
-  /path/to/clay/dist-pack/close-by-clay-compiler-0.1.0.tgz \
-  /path/to/clay/dist-pack/close-by-clay-persistence-file-0.1.0.tgz \
-  /path/to/clay/dist-pack/close-by-clay-components-0.1.0.tgz \
-  /path/to/clay/dist-pack/close-by-clay-server-0.1.0.tgz \
-  /path/to/clay/dist-pack/close-by-clay-0.1.0.tgz \
-  /path/to/clay/dist-pack/close-by-clay-cli-0.1.0.tgz
+  '/path/to/clay/dist-pack/close-by-clay-core-<version>.tgz' \
+  '/path/to/clay/dist-pack/close-by-clay-auth-<version>.tgz' \
+  '/path/to/clay/dist-pack/close-by-clay-compiler-<version>.tgz' \
+  '/path/to/clay/dist-pack/close-by-clay-persistence-file-<version>.tgz' \
+  '/path/to/clay/dist-pack/close-by-clay-components-<version>.tgz' \
+  '/path/to/clay/dist-pack/close-by-clay-server-<version>.tgz' \
+  '/path/to/clay/dist-pack/close-by-clay-<version>.tgz' \
+  '/path/to/clay/dist-pack/close-by-clay-cli-<version>.tgz'
 ```
 
-Install **all** runtime tarballs together so `@close-by/clay` and `@close-by/clay-*@0.1.0` resolve from the co-installed packs (they are not on the public registry yet).
-
-### When published to npm
-
-```bash
-bun add @close-by/clay-cli @close-by/clay
-# transitive: core, components, server, persistence-file
-# optional: bun add @close-by/clay-auth
-```
+Replace `<version>` with the packed version. Install **all** runtime tarballs together so `@close-by/clay` and `@close-by/clay-*@<version>` resolve from the co-installed packs.
 
 ### Publishing to npm (maintainers)
 
-Runtime packages are scoped (`@close-by/clay` and `@close-by/clay-*`) and public (`publishConfig.access: public`). Publish **in dependency order** so the registry can resolve rewritten versions:
-
-1. `@close-by/clay-core`
-2. `@close-by/clay-auth`
-3. `@close-by/clay-compiler`
-4. `@close-by/clay-persistence-file`
-5. `@close-by/clay-components`
-6. `@close-by/clay-server`
-7. `@close-by/clay`
-8. `@close-by/clay-cli`
+Runtime packages are scoped and public. The canonical package list and dependency publish order are in [`scripts/publishable.ts`](../scripts/publishable.ts).
 
 ```bash
 # In the Clay checkout:
@@ -63,20 +54,6 @@ npm login                          # once; needs rights on the @close-by org
 bun run publish:dry                # pack + validate + npm publish --dry-run (no upload)
 bun run publish:npm                # pack + validate + real npm publish (same order)
 # Re-run is safe: versions already on npm are skipped.
-```
-
-Equivalent manual flow from packed tarballs:
-
-```bash
-bun run pack:publishable
-npm publish ./dist-pack/close-by-clay-core-0.1.0.tgz --access public
-npm publish ./dist-pack/close-by-clay-auth-0.1.0.tgz --access public
-npm publish ./dist-pack/close-by-clay-compiler-0.1.0.tgz --access public
-npm publish ./dist-pack/close-by-clay-persistence-file-0.1.0.tgz --access public
-npm publish ./dist-pack/close-by-clay-components-0.1.0.tgz --access public
-npm publish ./dist-pack/close-by-clay-server-0.1.0.tgz --access public
-npm publish ./dist-pack/close-by-clay-0.1.0.tgz --access public
-npm publish ./dist-pack/close-by-clay-cli-0.1.0.tgz --access public
 ```
 
 `publish:dry` checks each tarball for rewritten deps (no `workspace:*`), `license` / README / LICENSE, CLI `bin` + `client-dist`, `@close-by/clay` `docs/` (via `prepack` → `scripts/sync-docs.ts`), then runs `npm publish --dry-run`. `publish:npm` looks up each `name@version` on the registry and **skips** if it is already published (resume after a partial failure). Use `--skip-pack` to reuse an existing `dist-pack/`: `bun scripts/publish-from-pack.ts --dry-run --skip-pack`.
@@ -202,7 +179,7 @@ Open:
 - Source packages keep `workspace:*` for the monorepo; `bun pm pack` / publish rewrites them to the package version.
 - `@close-by/clay-client` is **private**; only its Vite `dist` is copied into `@close-by/clay-cli` (`copy-client` / CLI `prepack`, also invoked by `build:client`).
 - Root stays `private: true`. Each runtime package ships `license`, `README.md`, `LICENSE`, and `publishConfig.access: public`.
-- Publish order: `core` → `auth` → `compiler` → `persistence-file` → `components` → `server` → `ui` → `cli` (see **Publishing to npm** above).
+- Publishable packages and dependency order: [`scripts/publishable.ts`](../scripts/publishable.ts).
 
 ## Library mode (multi-page entrypoint)
 

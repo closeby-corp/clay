@@ -88,9 +88,8 @@ const arcsFor = (now: number): MapArcGroup[] => [
 ];
 
 ui.page('/examples/globe', () => {
-  let filter: 'all' | 'awake' = 'all';
+  const state = ui.state({ filter: 'all' as 'all' | 'awake', awakeKey: '' });
   let globe!: ReturnType<typeof ui.map>;
-  let lastAwakeKey = '';
   const timeLabels = new Map<string, ReturnType<typeof ui.label>>();
 
   const awakeKey = (now: number) => members.filter((m) => isAwake(m, now)).map((m) => m.id).join(',');
@@ -98,7 +97,7 @@ ui.page('/examples/globe', () => {
   // Markers and arcs for the current filter and time.
   const syncMap = () => {
     const now = Date.now();
-    const shown = members.filter((m) => filter === 'all' || isAwake(m, now));
+    const shown = members.filter((m) => state.filter === 'all' || isAwake(m, now));
     const you: MapMarkerDatum = {
       id: 'you',
       lngLat: ME,
@@ -111,14 +110,9 @@ ui.page('/examples/globe', () => {
     globe.setArcs(arcsFor(now));
   };
 
-  let listUi!: ReturnType<typeof ui.refreshable>;
-  let toggleUi!: ReturnType<typeof ui.refreshable>;
-
   const setFilter = (next: 'all' | 'awake') => {
-    if (filter === next) return;
-    filter = next;
-    toggleUi.refresh();
-    listUi.refresh();
+    if (state.filter === next) return;
+    state.filter = next;
     syncMap();
   };
 
@@ -130,7 +124,7 @@ ui.page('/examples/globe', () => {
       ] as const) {
         ui.button(text, {
           size: 'sm',
-          variant: filter === value ? 'default' : 'outline',
+          variant: state.filter === value ? 'default' : 'outline',
           onClick: () => setFilter(value),
         });
       }
@@ -138,9 +132,10 @@ ui.page('/examples/globe', () => {
   };
 
   const renderList = () => {
+    state.awakeKey;
     timeLabels.clear();
     const now = Date.now();
-    const shown = members.filter((m) => filter === 'all' || isAwake(m, now));
+    const shown = members.filter((m) => state.filter === 'all' || isAwake(m, now));
     if (shown.length === 0) {
       ui.label('Nobody is awake right now.').classes('text-sm text-muted-foreground');
       return;
@@ -170,9 +165,8 @@ ui.page('/examples/globe', () => {
     const now = Date.now();
     for (const m of members) timeLabels.get(m.id)?.setText(clock(localDate(m, now)));
     const key = awakeKey(now);
-    if (key !== lastAwakeKey) {
-      lastAwakeKey = key;
-      listUi.refresh();
+    if (key !== state.awakeKey) {
+      state.awakeKey = key;
     }
     syncMap();
   };
@@ -186,9 +180,9 @@ ui.page('/examples/globe', () => {
 
       ui.row({ grow: true, gap: 4, wrap: false, className: 'max-md:flex-col' }, () => {
         ui.column({ gap: 2, className: 'min-h-0 md:w-80 md:shrink-0' }, () => {
-          toggleUi = ui.refreshable(renderToggle);
+          ui.auto(renderToggle);
           ui.card({ title: 'Members', description: 'Click a name to fly there.', scroll: true, grow: true, gap: 1 }, () => {
-            listUi = ui.refreshable(renderList);
+            ui.auto(renderList);
           });
         });
 
@@ -206,6 +200,6 @@ ui.page('/examples/globe', () => {
   });
 
   syncMap();
-  lastAwakeKey = awakeKey(Date.now());
+  state.awakeKey = awakeKey(Date.now());
   ui.timer(30, tick);
 });

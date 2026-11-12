@@ -87,7 +87,7 @@ describe('Orders-shaped reactive-let proof', () => {
   test('demo let page transforms to separate list/detail regions', () => {
     const path = join(
       import.meta.dir,
-      '../../../apps/demo/src/examples/ReactiveLetOrdersLet.ts',
+      '../../../examples/reactive-let-orders.ts',
     );
     const src = readFileSync(path, 'utf8');
     expect(src.startsWith('// @clay-reactive')).toBe(true);

@@ -6,6 +6,8 @@ You write imperative `ui.*` code on the server. Clay owns a per-client element t
 
 For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these guides. The [agent skill](./SKILL.md) ships with `@close-by/clay` at package root (`SKILL.md`).
 
+[Live demo](https://clay.close-by.org/) · [Examples catalog](./examples.md)
+
 ## Guides
 
 | Doc | Description |
@@ -36,20 +38,19 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 
 ## Quick start
 
+The runtime packages are published to npm. The CLI includes prebuilt client assets.
+
 ```bash
-bun install
-bun run build:client   # monorepo: build + copy client into @close-by/clay-cli
-bun run clay hello.ts
+bun add @close-by/clay-cli @close-by/clay
+bunx clay hello.ts
 # → http://localhost:3000
 ```
-
-Outside the monorepo: `bun run pack:publishable` then install the `dist-pack/*.tgz` set (see [Getting started](./getting-started.md)), or `bun add @close-by/clay-cli @close-by/clay` once published. Maintainers: `bun run publish:dry` / `publish:npm` (order core → … → cli). Shipped CLI includes prebuilt client assets — no separate `build:client` after install.
 
 ```typescript
 // hello.ts
 import { ui } from '@close-by/clay';
 
-ui.run(() => {
+export default function () {
   let count = 0;
   const label = ui.label(`Count: ${count}`);
 
@@ -67,14 +68,16 @@ ui.run(() => {
       },
     });
   });
-});
+}
 ```
 
 Multi-page with shell:
 
 ```bash
-bun run clay ./pages --app --title "My App"
+bunx clay ./pages --app --title "My App"
 ```
+
+`ui.run` is library mode; see [Boot](./boot.md).
 
 Or library-style entry (`loadPages` + `ui.run({ app })`) — see [Getting started](./getting-started.md).
 

@@ -14,6 +14,7 @@ import {
   type ServerMessage,
 } from '@close-by/clay-core';
 import { ClayServer } from './server';
+import { onDispose } from './dispose';
 
 function findByType(node: ElementNode, type: string): ElementNode[] {
   const out: ElementNode[] = [];
@@ -96,7 +97,12 @@ describe('WebSocket session protocol', () => {
   });
 
   test('hello → mount → event → patch → navigate remount hello', async () => {
+    let disposedA = 0;
+    let disposedB = 0;
+    let resolveDisposedB!: () => void;
+    const closedB = new Promise<void>((resolve) => { resolveDisposedB = resolve; });
     page('/ws-a', () => {
+      onDispose(() => { disposedA++; });
       const label = new Element('label', { text: '0' });
       new Element('button', {
         text: 'inc',
@@ -110,6 +116,7 @@ describe('WebSocket session protocol', () => {
       });
     });
     page('/ws-b', () => {
+      onDispose(() => { disposedB++; resolveDisposedB(); });
       new Element('label', { text: 'arrived' });
     });
 
@@ -156,9 +163,14 @@ describe('WebSocket session protocol', () => {
       if (remounted.op !== 'mount') return;
       expect(findByType(remounted.tree, 'label')[0]!.props.text).toBe('arrived');
       expect(remounted.sessionId).not.toBe(mounted.sessionId);
+      expect(disposedA).toBe(1);
+      expect(disposedB).toBe(0);
     } finally {
       ws.close();
     }
+    await closedB;
+    expect(disposedB).toBe(1);
+    expect(disposedA).toBe(1);
   });
 
   test('hello userId wires storage.user across remount', async () => {

@@ -1,4 +1,4 @@
-import { ui, reactive, subscribe } from '@close-by/clay';
+import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
@@ -45,7 +45,7 @@ ui.page('/examples/forms', () => {
   const perms = ui.state({ value: ['read', 'write'] as string[] });
   const range = ui.state({ from: '', to: '' });
   const wizard = ui.state({ step: 0 });
-  const state = reactive({
+  const state = ui.state({
     volume: 50,
     brightness: 75,
     muted: false,
@@ -118,7 +118,7 @@ ui.page('/examples/forms', () => {
             'darkMode',
           );
 
-          ui.label('OTP').classes('text-sm font-medium');
+          exampleSection('One-time code · ui.inputOtp', 'Enter the six-digit code to confirm your identity.');
           ui.inputOtp({
             length: 6,
             onComplete: (code) => ui.notify(`OTP complete: ${code}`, 'success'),
@@ -228,7 +228,7 @@ ui.page('/examples/forms', () => {
         },
       );
 
-      const summary = ui.refreshable(() => {
+      ui.auto(() => {
         ui.card(
           {
             title: 'Live values',
@@ -261,9 +261,6 @@ ui.page('/examples/forms', () => {
         );
       });
 
-      for (const key of Object.keys(form)) {
-        subscribe(form, key, () => summary.refresh());
-      }
 
       exampleSection('Field + inputs', 'Choose seats, enter a phone number, and select a plan.');
       ui.auto(() => {
@@ -451,7 +448,7 @@ ui.page('/examples/forms', () => {
         },
       );
 
-      const valuesUi = ui.refreshable(() => {
+      ui.auto(() => {
         ui.card(
           {
             title: 'Current values',
@@ -467,9 +464,6 @@ ui.page('/examples/forms', () => {
         );
       });
 
-      for (const key of ['volume', 'brightness', 'muted', 'theme'] as const) {
-        subscribe(state, key, () => valuesUi.refresh());
-      }
 
       ui.row(() => {
         ui.button('Max volume', {

@@ -93,7 +93,8 @@ export function BoundAreaChart({
               key={key}
               dataKey={s.key}
               type="natural"
-isAnimationActive={anim}
+              // Interactive ranges must paint immediately while the responsive width settles.
+              isAnimationActive={interactive ? false : anim}
               animationDuration={400}
               fill={`url(#${gradientId}-${key})`}
               stroke={`var(--color-${key})`}

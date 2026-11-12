@@ -2,9 +2,7 @@
 
 Multi-database DuckDB wrapper: named instances, `ATTACH` for DuckDB/SQLite/Postgres/MySQL, and insert/update/delete helpers.
 
-```bash
-bun add @close-by/clay-duckdb   # or depend on workspace:* inside this monorepo
-```
+**Monorepo only — not published to npm yet.** Depend on `@close-by/clay-duckdb` with `workspace:*` inside this monorepo.
 
 ## Connect multiple databases
 

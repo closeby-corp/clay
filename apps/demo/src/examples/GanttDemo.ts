@@ -144,7 +144,7 @@ ui.page('/examples/gantt', () => {
           { gap: 3 },
         );
       },
-      { gap: 6 },
+      { gap: 3 },
     );
   });
 });

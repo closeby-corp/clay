@@ -1,6 +1,7 @@
 import { ui } from '@close-by/clay';
+import { rowsToCsv, rowsToJson } from '@close-by/clay-components';
 import type { DataTableDensity, DataTableElement } from '@close-by/clay';
-import { exampleHeader, exampleSection } from '../chrome';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
   label: 'DataTable',
@@ -71,10 +72,7 @@ ui.page('/examples/datatable', () => {
   let largeTable: DataTableElement;
   let loadingDemo: DataTableElement;
   let remoteTable: DataTableElement | undefined;
-  let density: DataTableDensity = 'default';
-  let zebra = true;
-  let chromeUi: ReturnType<typeof ui.refreshable>;
-  let remoteStatusUi: ReturnType<typeof ui.refreshable>;
+  const controls = ui.state({ density: 'default' as DataTableDensity, zebra: true, remoteRevision: 0 });
 
   const matchesColumnFilters = (
     row: Task,
@@ -138,15 +136,15 @@ ui.page('/examples/datatable', () => {
       remote.setRows(pool.slice(start, start + pageSize));
       remote.setTotalRows(pool.length);
     });
-    remoteStatusUi?.refresh();
+    controls.remoteRevision++;
   };
 
+  exampleFrame(() => {
   ui.column(() => {
-    ui.row(() => {
-      exampleHeader(
+    exampleHeader(
         undefined,
         'Explore DataTable search, facets, editing, export, bulk actions, and more examples below.',
-      );
+      () => {
       ui.button('Add task', {
         size: 'sm',
         onClick: async () => {
@@ -173,35 +171,40 @@ ui.page('/examples/datatable', () => {
           ui.notify('Task added', 'success');
         },
       });
-    }, { gap: 4 }).classes('items-start justify-between');
+      for (const format of ['CSV', 'JSON'] as const) {
+        ui.button(`Export ${format}`, { variant: 'outline', size: 'sm', onClick: () => {
+          const columns = Object.keys(seed[0]!).map((key) => ({ key, header: key }));
+          ui.download(`tasks.${format.toLowerCase()}`, format === 'CSV' ? 'text/csv' : 'application/json',
+            format === 'CSV' ? rowsToCsv(tasks, columns) : rowsToJson(tasks, columns));
+        } });
+      }
+    });
 
     exampleSection(
       'Feature tour',
-      'Shift+click column headers to multi-sort · Title pinned left, Owner pinned right (Columns menu can re-pin) · Hours and Billable sum in the sticky footer · Reorder works with virtualization on large bodies (drag near the scroll edge to reach off-window rows; see the large table below).',
+      'Search, edit, and select tasks. Shift-click headers to sort by several columns, or drag rows to reorder them.',
     );
 
-    chromeUi = ui.refreshable(() => {
+    ui.auto(() => {
       ui.row(() => {
         ui.label('Density').classes('text-sm text-muted-foreground self-center');
         for (const d of DENSITIES) {
           ui.button(d, {
             size: 'sm',
-            variant: density === d ? 'default' : 'outline',
+            variant: controls.density === d ? 'default' : 'outline',
             onClick: () => {
-              density = d;
+              controls.density = d;
               table.setDensity(d);
-              chromeUi.refresh();
             },
           });
         }
         ui.label('Zebra').classes('text-sm text-muted-foreground self-center ml-2');
-        ui.button(zebra ? 'On' : 'Off', {
+        ui.button(controls.zebra ? 'On' : 'Off', {
           size: 'sm',
-          variant: zebra ? 'default' : 'outline',
+          variant: controls.zebra ? 'default' : 'outline',
           onClick: () => {
-            zebra = !zebra;
-            table.setZebra(zebra);
-            chromeUi.refresh();
+            controls.zebra = !controls.zebra;
+            table.setZebra(controls.zebra);
           },
         });
       }, { gap: 2 }).classes('flex-wrap items-center');
@@ -210,6 +213,7 @@ ui.page('/examples/datatable', () => {
     const statusLabel = ui.label(`${tasks.length} tasks`).classes('text-sm text-muted-foreground');
 
     table = ui.dataTable(tasks, {
+      stackOnMobile: true,
       keyField: 'id',
       searchable: true,
       searchPlaceholder: 'Search tasks…',
@@ -218,8 +222,8 @@ ui.page('/examples/datatable', () => {
       groupBy: 'status',
       pageSize: 8,
       pageSizeOptions: [5, 8, 10, 20],
-      density,
-      zebra,
+      density: controls.density,
+      zebra: controls.zebra,
       exportFilename: 'tasks',
       emptyTitle: 'No tasks',
       emptyDescription: 'Try clearing status facets or search.',
@@ -359,7 +363,7 @@ ui.page('/examples/datatable', () => {
 
     exampleSection(
       'Large table (virtualized + reorder)',
-      `${LARGE_ROW_COUNT} rows, no pagination — virtualizes at ≥40 body items and stays reorderable. Drag near the scroll edge to bring off-window rows into drop range. Shift+click to multi-sort; Title / Owner stay pinned left / right.`,
+      `Browse ${LARGE_ROW_COUNT} rows without pagination. Drag near the scroll edge to reorder distant rows, or shift-click headers to sort by several columns.`,
     );
     largeTable = ui.dataTable(largeRows, {
       keyField: 'id',
@@ -414,9 +418,10 @@ ui.page('/examples/datatable', () => {
 
     exampleSection(
       'Remote filter / sort / page',
-      '`manualPagination` turns off local filter/sort/slice. Read `getQuery()`, refetch with `withLoading`, then `setRows` + `setTotalRows`. Facets use `onColumnFilterChange` the same way. Shift+click still builds a multi-sort list for the server.',
+      'Search, filter, sort, and page through results loaded from the server.',
     );
-    remoteStatusUi = ui.refreshable(() => {
+    ui.auto(() => {
+      void controls.remoteRevision;
       const q = remoteTable?.getQuery() ?? {
         page: 1,
         pageSize: 5,
@@ -495,7 +500,7 @@ ui.page('/examples/datatable', () => {
 
     exampleSection(
       'Staged builder (`ui.table`)',
-      '`.manualPagination()` / `.density()` / `.zebra()` sugar over the same DataTable element.',
+      'Build a table one option at a time.',
     );
     ui.table(tasks.slice(0, 6))
       .id('id')
@@ -517,7 +522,7 @@ ui.page('/examples/datatable', () => {
       )
       .build();
 
-    exampleSection('Filter chips', 'showFilterChips — active search + column filters as removable chips.');
+    exampleSection('Filter chips', 'Remove active searches and column filters individually.');
     ui.dataTable(tasks.slice(0, 12), {
       keyField: 'id',
       searchable: true,
@@ -572,7 +577,7 @@ ui.page('/examples/datatable', () => {
 
     exampleSection(
       'Live data',
-      'format (currency · percent · bytes · relative) + highlightChanges + stackOnMobile. A timer updates rows every 2s — changed rows flash. Narrow the window below 640px to see stacked cards.',
+      'Watch rows update every two seconds and flash when values change. Narrow the window to see stacked cards.',
     );
     const services = ['api', 'web', 'worker', 'billing', 'search', 'auth'].map((name, i) => ({
       id: name,
@@ -612,7 +617,7 @@ ui.page('/examples/datatable', () => {
 
     exampleSection(
       'Key / value object',
-      'ui.table(plainObject) — Key / Value rows with search.',
+      'Search configuration values in a two-column table.',
     );
     ui.table({
       host: 'localhost',
@@ -625,4 +630,5 @@ ui.page('/examples/datatable', () => {
       .search('Search config…')
       .build();
   }, { gap: 6 });
+  });
 });

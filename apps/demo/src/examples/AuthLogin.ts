@@ -38,9 +38,10 @@ ui.page(
     ui.container({ centered: true, width: 'sm' }, () => {
       ui.column(
         () => {
+          ui.link('← Back to demo', '/');
+          ui.html('<h1 class="text-2xl font-semibold tracking-tight">Sign in to Clay Demo</h1>');
           ui.card(
             {
-              title: 'Sign in to Clay Demo',
               description: 'Use a demo account to open My account and try role-based access.',
               gap: 4,
             },

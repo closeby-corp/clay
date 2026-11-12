@@ -18,4 +18,6 @@ export default function () {
 bunx clay hello.ts
 ```
 
-Docs: shipped with the package at `node_modules/@close-by/clay/docs/`. Agent skill: `node_modules/@close-by/clay/SKILL.md` (or `@close-by/clay/skill`). See [getting-started.md](docs/getting-started.md) after install.
+Live demo: [clay.close-by.org](https://clay.close-by.org/).
+
+Docs: shipped with the package at `node_modules/@close-by/clay/docs/`. Agent skill: `node_modules/@close-by/clay/SKILL.md` (or `@close-by/clay/skill`). See [getting-started.md](https://github.com/closeby-corp/clay/blob/main/docs/getting-started.md) after install.

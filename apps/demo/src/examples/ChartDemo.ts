@@ -1,5 +1,5 @@
 import { ui } from '@close-by/clay';
-import { exampleHeader, exampleSection } from '../chrome';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 import visitorsSeed from './dashboard-visitors.json';
 
 export const pageMeta = {
@@ -58,29 +58,27 @@ function jitterSeries(): Record<string, unknown>[] {
 }
 
 ui.page('/examples/charts', () => {
-    let liveData = jitterSeries();
-    let liveChart: ReturnType<typeof ui.refreshable>;
+    const live = ui.state({ data: jitterSeries() });
 
+  exampleFrame(() => {
     ui.column(() => {
-      ui.row(() => {
-        exampleHeader(
+      exampleHeader(
           undefined,
-          'ui.chart.categories / timeSeries / pie / radar / radial / scatter / composed — builders preferred; props APIs still available.',
-        );
-        ui.button('Resample monthly', {
+          'Explore traffic, sales, and trends with interactive charts.',
+        () => {
+        ui.iconButton({ label: 'Resample monthly', icon: 'refresh-cw',
           variant: 'outline',
           size: 'sm',
           onClick: () => {
-            liveData = jitterSeries();
-            liveChart.refresh();
+            live.data = jitterSeries();
             ui.notify('Chart data updated', 'success');
           },
         });
-      }, { gap: 4 }).classes('items-start justify-between');
+      });
 
       exampleSection(
         'Interactive visitors',
-        'ui.chart.timeSeries — ISO dates enable client-side period tabs; optional headline metric.',
+        'Choose a date range to compare mobile and desktop visits.',
       );
       ui.chart
         .timeSeries(visitorsSeed as Record<string, unknown>[])
@@ -97,7 +95,7 @@ ui.page('/examples/charts', () => {
 
       exampleSection(
         'Sparkline KPIs',
-        'ui.sparkline — compact metric card with inline area/line mini chart.',
+        'Track key metrics with compact trend charts.',
       );
       const sparkRows = (visitorsSeed as Record<string, unknown>[]).slice(-14).map((row) => ({
         date: row.date,
@@ -126,7 +124,7 @@ ui.page('/examples/charts', () => {
         });
       }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
 
-      exampleSection('Stat with sparkline', 'ui.stat items accept an inline sparkline.');
+      exampleSection('Stat with sparkline', 'Compare headline numbers and their recent trends.');
       ui.stat([
         {
           title: 'Active users',
@@ -146,7 +144,7 @@ ui.page('/examples/charts', () => {
         },
       ]);
 
-      exampleSection('Monthly overview', 'ui.chart.categories → .area(); stacked by default.');
+      exampleSection('Monthly overview', 'Compare monthly traffic across channels.');
       ui.chart
         .categories(monthly)
         .x('month')
@@ -156,7 +154,7 @@ ui.page('/examples/charts', () => {
         .height(240)
         .area();
 
-      exampleSection('Bar chart', 'ui.chart.categories → .bar(); set stacked / layout in the terminal opts.');
+      exampleSection('Bar chart', 'Compare values with stacked and horizontal bars.');
       ui.chart
         .categories(monthly)
         .x('month')
@@ -179,7 +177,7 @@ ui.page('/examples/charts', () => {
           stacked: true,
         });
 
-      exampleSection('Line chart', 'Same cartesian builder; interactive date filter via timeSeries.');
+      exampleSection('Line chart', 'Follow traffic over time and choose a date range.');
       ui.chart
         .categories(monthly)
         .x('month')
@@ -190,7 +188,7 @@ ui.page('/examples/charts', () => {
           height: 240,
         });
 
-      exampleSection('Pie / donut', 'ui.chart.pie.fromRows / fromMetrics (donut terminal).');
+      exampleSection('Pie / donut', 'Compare each browser’s share of visitors.');
       ui.row(() => {
         ui.chart.pie
           .fromRows(browserShare, { name: 'browser', value: 'visitors' })
@@ -207,7 +205,7 @@ ui.page('/examples/charts', () => {
           .donut(60);
       }, { gap: 4 }).classes('w-full items-stretch [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0');
 
-      exampleSection('Radar chart', 'ui.chart.radar(data, angleKey).series(…).build().');
+      exampleSection('Radar chart', 'Compare strengths across several categories.');
       ui.chart
         .radar(monthly, 'month')
         .series(monthlySeries)
@@ -218,7 +216,7 @@ ui.page('/examples/charts', () => {
 
       exampleSection(
         'Radial chart',
-        'ui.chart.radial.fromRows / stackedGauge — rings or a center-labeled gauge.',
+        'See progress as rings or a central gauge.',
       );
       ui.row(() => {
         ui.chart.radial
@@ -240,7 +238,7 @@ ui.page('/examples/charts', () => {
 
       exampleSection(
         'Scatter chart',
-        'ui.chart.scatter(data).x().y().group?().series?().build().',
+        'Explore the relationship between two measurements.',
       );
       ui.chart
         .scatter([
@@ -265,7 +263,7 @@ ui.page('/examples/charts', () => {
 
       exampleSection(
         'Composed chart',
-        'ui.chart.composed — mixed geometries, dual Y-axis, reference line/area.',
+        'Compare bars and lines on the same chart.',
       );
       const revenueMix = monthly.map((row, index) => ({
         month: row.month,
@@ -296,12 +294,12 @@ ui.page('/examples/charts', () => {
         .build();
 
       exampleSection(
-        'Live refreshable',
-        'Rebuild the chart tree from the server with ui.refreshable.',
+        'Live chart · ui.state + ui.auto',
+        'Resample the monthly traffic to see the chart update automatically.',
       );
-      liveChart = ui.refreshable(() => {
+      ui.auto(() => {
         ui.chart
-          .categories(liveData)
+          .categories(live.data)
           .x('month')
           .series(monthlySeries)
           .area({
@@ -311,7 +309,7 @@ ui.page('/examples/charts', () => {
           });
       });
 
-      exampleSection('Bare chart', 'Omit title/description for a plain sparkline-style chart.');
+      exampleSection('Bare chart', 'Embed a compact chart inside a card.');
       ui.card(
         {
           title: 'Embedded',
@@ -328,28 +326,7 @@ ui.page('/examples/charts', () => {
         },
       );
 
-      exampleSection(
-        'Props API (legacy)',
-        'ui.areaChart / pieChart / … — same Element output as the builders above.',
-      );
-      ui.areaChart({
-        title: 'Desktop vs mobile (props)',
-        description: 'Direct areaChart props blob.',
-        height: 220,
-        data: monthly,
-        xKey: 'month',
-        series: [
-          { key: 'mobile', label: 'Mobile' },
-          { key: 'desktop', label: 'Desktop' },
-        ],
-      });
-      ui.pieChart({
-        title: 'Browser share (props)',
-        description: 'nameKey + valueKey rows.',
-        height: 240,
-        data: browserShare,
-        nameKey: 'browser',
-        valueKey: 'visitors',
-      });
+      ui.externalLink('Chart API documentation', 'https://github.com/closeby-corp/clay/blob/main/docs/api.md');
     }, { gap: 6 });
+  });
 });

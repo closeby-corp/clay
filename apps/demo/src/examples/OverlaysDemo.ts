@@ -18,14 +18,14 @@ ui.page('/examples/overlays', () => {
           'Explore menus, contextual details, and dialogs for focused tasks.',
         );
 
-        exampleSection('Breadcrumb', 'ui.breadcrumb([{ label, href? }, …]).');
+        exampleSection('Breadcrumb', 'Follow links back through the page hierarchy.');
         ui.breadcrumb([
           { label: 'Examples', href: '/' },
           { label: 'Overlays', href: '/examples/overlays' },
           { label: 'Current' },
         ]);
 
-        exampleSection('Chrome bits', 'Avatar, tooltip, skeleton.');
+        exampleSection('Chrome bits', 'See profile images, hover hints, and loading placeholders.');
         ui.row(
           () => {
             ui.avatar({ src: 'https://github.com/shadcn.png', alt: 'shadcn', fallback: 'CN', size: 'lg' });
@@ -38,7 +38,7 @@ ui.page('/examples/overlays', () => {
           { gap: 3 },
         );
 
-        exampleSection('Dropdown menu', 'ui.dropdownMenu — items, separators, destructive variants.');
+        exampleSection('Dropdown menu', 'Choose actions and preferences from a menu.');
         ui.dropdownMenu({ label: 'Actions', variant: 'outline' }, (m) => {
           m.item('edit', 'Edit', {
             onSelect: () => ui.notify('Edit selected', 'info'),
@@ -50,7 +50,7 @@ ui.page('/examples/overlays', () => {
           });
         });
 
-        exampleSection('Context menu', 'ui.contextMenu — right-click the dashed trigger.');
+        exampleSection('Context menu', 'Right-click the dashed area to see available actions.');
         ui.contextMenu({ label: 'Right-click this target' }, (m) => {
           m.item('copy', 'Copy', { onSelect: () => ui.notify('Copy', 'info') });
           m.separator();
@@ -60,7 +60,7 @@ ui.page('/examples/overlays', () => {
           });
         });
 
-        exampleSection('Hover card / popover', 'ui.hoverCard + ui.popover (server-owned open).');
+        exampleSection('Hover card / popover', 'Hover for a preview or open a popup with more details.');
         ui.row(
           () => {
             ui.hoverCard({ text: 'Extra context on hover.', side: 'bottom' }, () => {
@@ -78,7 +78,7 @@ ui.page('/examples/overlays', () => {
           { gap: 3 },
         );
 
-        exampleSection('Tabs', 'Server-owned tab value for sheet / drawer / dialog copy.');
+        exampleSection('Tabs', 'Switch between views.');
         ui.tabs({ value: 'sheet' }, (t) => {
           t.tab('sheet', 'Sheet', () => {
             ui.label('Side panel for filters and secondary tasks. Server owns open/close.')
@@ -94,7 +94,7 @@ ui.page('/examples/overlays', () => {
           });
         });
 
-        exampleSection('Disclosure', 'Accordion and collapsible.');
+        exampleSection('Disclosure', 'Expand sections to read more.');
         ui.accordion((a) => {
           a.item('one', 'Getting started', () => {
             ui.label('Wire factories → ElementRenderer → ui facade.');
@@ -110,7 +110,7 @@ ui.page('/examples/overlays', () => {
 
         exampleSection(
           'Modals',
-          'Dialog + ui.alertDialog (confirm pattern) + sheet + drawer — open/close from the server.',
+          'Open a dialog, confirmation, side panel, or drawer.',
         );
 
         const confirm = ui.dialog(

@@ -66,7 +66,7 @@ Clay lifts `count` into `ui.state`, turns the label into `bindText`, and leaves 
 | When to use `let` + pragma | When to stay on Phase 1 |
 |-----------------------------|-------------------------|
 | Counters, toggles, filters on demo pages | Async fetch before first paint, heavy CJS imports |
-| Orders-shaped proof pages (`ReactiveLetOrdersLet.ts`) | Per-row mutable state without stable row keys |
+| Orders-shaped proof pages (`examples/reactive-let-orders.ts`) | Per-row mutable state without stable row keys |
 | Teaching / prototyping NiceGUI-style UX | You want zero Bun loader / compiler in the path |
 
 Phase 1 remains the **escape hatch** — copy patterns from [`ReactiveLetOrders.ts`](../apps/demo/src/examples/ReactiveLetOrders.ts) when Phase 2 limits bite.
@@ -206,13 +206,15 @@ Tests: `packages/compiler/src/transform.test.ts`, `packages/core/src/auto.test.t
 | Page | Syntax | Run |
 |------|--------|-----|
 | [`ReactiveLetOrders.ts`](../apps/demo/src/examples/ReactiveLetOrders.ts) | Phase 1 `state` / `auto` | `bun run cli` |
-| [`ReactiveLetOrdersLet.ts`](../apps/demo/src/examples/ReactiveLetOrdersLet.ts) | `let` + `// @clay-reactive` | `bun run cli:reactive-let` |
+| [`examples/reactive-let-orders.ts`](../examples/reactive-let-orders.ts) | `let` + `// @clay-reactive` | `bun run clay examples/reactive-let-orders.ts --reactive-let` (from repo root) |
 
 ```bash
-cd apps/demo && bun run cli                 # Orders (state/auto) — always interactive
-cd apps/demo && bun run cli:reactive-let    # both pages; let page needs this
+bun run demo:cli                           # Orders at /examples/reactive-let-orders, always interactive
+bun run clay examples/reactive-let-orders.ts --reactive-let  # standalone let proof, same route
 ```
 
-Compiler coverage: `packages/compiler/src/orders-proof.test.ts` transforms the let demo and asserts separate list/detail regions (no mega-`auto`).
+The demo Orders page includes the let source as a code block. The standalone copy stays outside the auto-loaded demo pages.
+
+Compiler coverage: `packages/compiler/src/orders-proof.test.ts` transforms the standalone let example and asserts separate list/detail regions (no mega-`auto`).
 
 Without `--reactive-let`, `let` assignments are silent no-ops (no error).

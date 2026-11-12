@@ -29,3 +29,5 @@ export {
   type UploadedFileInfo,
   type UploadHandlerOptions,
 } from './upload';
+
+export { onDispose } from './dispose';

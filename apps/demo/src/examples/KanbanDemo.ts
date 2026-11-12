@@ -141,13 +141,14 @@ ui.page('/examples/kanban', () => {
               variant: 'outline',
               onClick: () => {
                 board.selectCard('c1');
+                status.lastSelect = 'c1';
               },
             });
           },
           { gap: 2 },
         );
       },
-      { gap: 6 },
+      { gap: 3 },
     );
   });
 });

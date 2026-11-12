@@ -22,7 +22,7 @@ ui.page('/examples/feedback', () => {
         'Alerts, notices, loading indicators, live updates, and timelines.',
       );
 
-      exampleSection('Alerts', 'Default and destructive variants.');
+      exampleSection('Alerts', 'Read informational and error messages.');
       ui.alert('Heads up — your session is synced over WebSocket.');
       ui.alert('Something went wrong while saving.', { variant: 'destructive' });
 
@@ -30,7 +30,7 @@ ui.page('/examples/feedback', () => {
 
       exampleSection(
         'JS bridge',
-        'ui.runJavaScript / ui.scroll.to / ui.scroll.intoView — thin protocol ops.',
+        'Scroll the page or run a browser action.',
       );
       ui.row(() => {
         ui.button('Scroll bottom', {
@@ -55,7 +55,7 @@ ui.page('/examples/feedback', () => {
 
       ui.separator();
 
-      exampleSection('Spinner', 'Inline loading indicator.');
+      exampleSection('Spinner', 'Show that work is in progress.');
       ui.row(() => {
         ui.spinner();
         ui.label('Loading…').classes('text-sm text-muted-foreground');
@@ -63,7 +63,7 @@ ui.page('/examples/feedback', () => {
 
       ui.separator();
 
-      exampleSection('Progress', 'Driven by buttons and a short timer.');
+      exampleSection('Progress', 'Adjust progress manually or watch it advance automatically.');
       ui.card(
         { title: 'Upload progress', description: 'Value is 0–100 on the element.', gap: 4 },
         () => {
@@ -120,7 +120,7 @@ ui.page('/examples/feedback', () => {
       );
       ui.separator();
 
-      exampleSection('Live clock', 'Repeating timer updates a label every second.');
+      exampleSection('Live clock', 'Watch the clock update each second, or pause it.');
       ui.card({ title: 'Server time', description: 'Session-scoped setInterval.', gap: 4 }, () => {
         const clockLabel = ui
           .label(new Date().toLocaleTimeString())
@@ -157,7 +157,7 @@ ui.page('/examples/feedback', () => {
       });
       ui.separator();
 
-      exampleSection('Notice', 'ui.notice — dismissible app banner.');
+      exampleSection('Notice', 'Dismiss a banner and show it again.');
       ui.auto(() => {
         if (noticeOpen.on) {
           ui.notice('Scheduled maintenance tonight 02:00–03:00 UTC.', {
@@ -181,7 +181,7 @@ ui.page('/examples/feedback', () => {
 
       exampleSection(
         'Empty',
-        'ui.empty — placeholder when a list/table has no rows (icon + copy + optional CTA).',
+        'Show a helpful message and action when there are no results.',
       );
       ui.empty(
         {
@@ -198,7 +198,7 @@ ui.page('/examples/feedback', () => {
       );
       ui.separator();
 
-      exampleSection('Timeline', 'Deploy log with collapsible body and status nodes.');
+      exampleSection('Timeline', 'Expand deployment events to read their details.');
       ui.timeline({
         items: [
           {
@@ -236,7 +236,7 @@ ui.page('/examples/feedback', () => {
       });
       ui.separator();
 
-      exampleSection('Horizontal timeline', 'Milestone-style summary.');
+      exampleSection('Horizontal timeline', 'Follow the milestones of a project.');
       ui.timeline({
         orientation: 'horizontal',
         items: [

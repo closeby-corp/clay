@@ -148,7 +148,7 @@ import { StackedRows } from './data-table/StackedRows';
 /** Virtualize body once row count is large enough to matter. */
 const VIRTUALIZE_THRESHOLD = 40;
 const LEADING_COL_WIDTH = 32;
-const ACTIONS_COL_WIDTH = 40;
+const ACTIONS_COL_WIDTH = 48;
 const DEFAULT_COL_WIDTH = 140;
 const MIN_COL_WIDTH = 72;
 const MAX_COL_WIDTH = 480;
@@ -1010,7 +1010,7 @@ export function BoundDataTable({
 
   const hasLeftPins = columns.some((c) => c.pin === 'left');
   const hasRightPins = columns.some((c) => c.pin === 'right');
-  const showFooterRow = footerCells != null && Object.keys(footerCells).length > 0;
+  const showFooterRow = columns.some((col) => footerCells?.[col.key] != null && footerCells[col.key] !== '');
   const pinOffsetsNeedMeasure = hasLeftPins || hasRightPins;
   const [pinScrollShadow, setPinScrollShadow] = useState({
     left: false,
@@ -1043,7 +1043,7 @@ export function BoundDataTable({
       if (col.pin) {
         min += columnWidths[col.key] ?? defaultColWidth;
       } else {
-        min += MIN_COL_WIDTH;
+        min += columnWidths[col.key] ?? (col.editor === 'date' ? defaultColWidth : col.aggregate ? 140 : MIN_COL_WIDTH);
       }
     }
     return min;
@@ -1670,8 +1670,9 @@ export function BoundDataTable({
       {reorderable ? (
         <TableCell
           className={cn(
-            'w-8 overflow-hidden px-1',
+            'overflow-hidden',
             cellPad,
+            'px-1',
             stickyCellBg({
               active: hasLeftPins,
               zebra: zebra && i % 2 === 1,
@@ -1687,8 +1688,9 @@ export function BoundDataTable({
       {selectable ? (
         <TableCell
           className={cn(
-            'w-8 overflow-hidden px-1',
+            'overflow-hidden',
             cellPad,
+            'px-1',
             stickyCellBg({
               active: hasLeftPins,
               zebra: zebra && i % 2 === 1,
@@ -1744,8 +1746,9 @@ export function BoundDataTable({
       {actions.length > 0 ? (
         <TableCell
           className={cn(
-            'w-8 overflow-hidden px-1',
+            'overflow-hidden',
             cellPad,
+            'px-1',
             stickyCellBg({
               active: hasRightPins,
               zebra: zebra && i % 2 === 1,
@@ -1753,7 +1756,7 @@ export function BoundDataTable({
             }),
             hasRightPins && 'sticky z-[4]',
           )}
-          style={trailingStickyStyle(hasRightPins, 0, 4)}
+          style={{ ...trailingStickyStyle(hasRightPins, 0, 4), width: ACTIONS_COL_WIDTH, minWidth: ACTIONS_COL_WIDTH, maxWidth: ACTIONS_COL_WIDTH }}
         >
           {renderRowActionsMenu(rowKey)}
         </TableCell>
@@ -1879,7 +1882,7 @@ export function BoundDataTable({
               width:
                 columnWidths[col.key] ??
                 // Native date inputs need ~130px; table-fixed would otherwise squeeze them.
-                (col.pin || col.editor === 'date' ? defaultColWidth : undefined),
+                (col.pin || col.editor === 'date' ? defaultColWidth : col.aggregate ? 140 : undefined),
             }}
           />
         ))}
@@ -1951,8 +1954,7 @@ export function BoundDataTable({
             const filterActive = facet
               ? parseFacetFilter(columnFilters[col.key]).length > 0
               : (columnFilters[col.key] ?? '').trim().length > 0;
-            // Active (filtered or pinned) columns keep their controls inline and visible.
-            const controlsActive = filterActive || Boolean(col.pin);
+            // Controls overlay on demand so pinned columns retain their label width.
             return (
               <TableHead
                 key={col.key}
@@ -1999,7 +2001,7 @@ export function BoundDataTable({
                           variant="ghost"
                           size="sm"
                           className={cn(
-                            '-ml-2 min-w-0 shrink gap-1.5 px-2 font-medium',
+                            'min-w-0 flex-1 gap-1.5 px-0 font-medium',
                             density === 'compact' ? 'h-7' : 'h-8',
                           )}
                           aria-label={
@@ -2024,9 +2026,12 @@ export function BoundDataTable({
                             emit(id, 'sort', { key: col.key, dir: nextDir });
                           }}
                         >
-                          <span className="truncate">{col.header}</span>
+                          <span className="min-w-0 flex-1 truncate" title={col.header}>{col.header}</span>
                           <SortIcon
-                            className="size-3.5 shrink-0 text-muted-foreground"
+                            className={cn(
+                              "size-3.5 shrink-0 text-muted-foreground",
+                              !active && "hidden group-hover/th:block group-focus-within/th:block",
+                            )}
                             aria-hidden
                           />
                           {active && sorts.length > 1 ? (
@@ -2044,7 +2049,7 @@ export function BoundDataTable({
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <span className="min-w-0 truncate font-medium">
+                    <span className="min-w-0 flex-1 truncate font-medium" title={col.header}>
                       {col.header}
                       {col.aggregate ? (
                         <span className="sr-only">
@@ -2057,8 +2062,8 @@ export function BoundDataTable({
                     <div
                       className={cn(
                         'flex shrink-0 items-center gap-0.5 transition-opacity',
-                        !controlsActive &&
-                          'absolute inset-y-0 right-1 bg-gradient-to-l from-muted via-muted to-transparent pl-3 opacity-0 pointer-events-none group-hover/th:opacity-100 group-hover/th:pointer-events-auto group-focus-within/th:opacity-100 group-focus-within/th:pointer-events-auto has-[[data-state=open]]:opacity-100 has-[[data-state=open]]:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto',
+                        'absolute inset-y-0 right-1 bg-gradient-to-l from-muted via-muted to-transparent pl-3 opacity-0 pointer-events-none group-hover/th:opacity-100 group-hover/th:pointer-events-auto group-focus-within/th:opacity-100 group-focus-within/th:pointer-events-auto has-[[data-state=open]]:opacity-100 has-[[data-state=open]]:pointer-events-auto [@media(hover:none)]:static [@media(hover:none)]:bg-none [@media(hover:none)]:pl-1 [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto',
+                        filterActive && 'opacity-100 pointer-events-auto',
                       )}
                     >
                       {columnFilterable ? (
@@ -2387,7 +2392,7 @@ export function BoundDataTable({
             {actions.length > 0 ? (
               <TableCell
                 className={cn('overflow-hidden bg-muted', hasRightPins && 'sticky z-[4]')}
-                style={trailingStickyStyle(hasRightPins, 0, 4)}
+                style={{ ...trailingStickyStyle(hasRightPins, 0, 4), width: ACTIONS_COL_WIDTH, minWidth: ACTIONS_COL_WIDTH, maxWidth: ACTIONS_COL_WIDTH }}
               />
             ) : null}
           </TableRow>

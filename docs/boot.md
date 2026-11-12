@@ -98,7 +98,7 @@ If you run **`tsc --noEmit`** (or IDE typecheck) on the app repo, exclude reload
 
 Without that exclude, a leftover stub from a crashed dev session can produce spurious TS errors until you delete `.clay-reload/`. Clay apps that only typecheck `pages/` and `src/` rarely need more; monorepos should exclude `.clay-reload` at the app root `tsconfig.json`.
 
-Legacy `_clay-reload-*.ts` files under `pages/` (pre-0.2.5) should be deleted; modern Clay writes outside the tree.
+Legacy `_clay-reload-*.ts` files under `pages/` (pre-0.2.5) should be deleted; modern Clay writes to `<cwd>/.clay-reload/`, inside the project tree but outside `pages/`.
 
 ## Reactive-let
 

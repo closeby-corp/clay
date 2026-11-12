@@ -1,5 +1,5 @@
 import { ui } from '@close-by/clay';
-import { exampleFrame, exampleHeader } from '../chrome';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
   label: 'Counter',
@@ -10,22 +10,22 @@ export const pageMeta = {
 };
 
 ui.page('/examples/counter', () => {
-    let count = 0;
-    let history: number[] = [];
+    const state = ui.state({ count: 0, history: [] as number[] });
 
     exampleFrame(() => {
       ui.column(() => {
-        exampleHeader(undefined, 'Element refs, setText, and refreshable history.');
+        exampleHeader(undefined, 'Change the count and follow its history. State updates the display automatically.');
 
         ui.card(
           { title: 'Preview', description: 'Click to update the count over WebSocket.', gap: 6 },
           () => {
-            const countLabel = ui
-              .label(String(count))
+            ui.auto(() => {
+              ui.label(String(state.count))
               .classes('text-4xl font-semibold tabular-nums tracking-tight');
+            });
 
-            const historyUi = ui.refreshable(() => {
-              ui.label(history.length ? history.join(' → ') : 'No history yet').classes(
+            ui.auto(() => {
+              ui.label(state.history.length ? state.history.join(' → ') : 'No history yet').classes(
                 'text-sm text-muted-foreground',
               );
             });
@@ -34,32 +34,35 @@ ui.page('/examples/counter', () => {
               ui.button('Decrement', {
                 variant: 'outline',
                 onClick: () => {
-                  count--;
-                  history = [...history, count];
-                  countLabel.setText(String(count));
-                  historyUi.refresh();
+                  state.count--;
+                  state.history = [...state.history, state.count];
                 },
               });
               ui.button('Reset', {
                 variant: 'ghost',
                 onClick: () => {
-                  count = 0;
-                  history = [];
-                  countLabel.setText(String(count));
-                  historyUi.refresh();
+                  state.count = 0;
+                  state.history = [];
                 },
               });
               ui.button('Increment', {
                 onClick: () => {
-                  count++;
-                  history = [...history, count];
-                  countLabel.setText(String(count));
-                  historyUi.refresh();
+                  state.count++;
+                  state.history = [...state.history, state.count];
                 },
               });
             }, { gap: 2 });
           },
         );
+        exampleSection('Escape hatch: ui.refreshable', 'Rebuild a block explicitly when its data is outside reactive state.');
+        let refreshes = 0;
+        const manual = ui.refreshable(() => {
+          ui.label(`Manual rebuilds: ${refreshes}`);
+        });
+        ui.button('Rebuild manually', { variant: 'outline', onClick: () => {
+          refreshes++;
+          manual.refresh();
+        } });
       }, { gap: 6 });
     });
 });

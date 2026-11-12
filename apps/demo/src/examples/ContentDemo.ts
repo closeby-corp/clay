@@ -39,7 +39,7 @@ ui.page('/examples/content', () => {
     ui.column(() => {
       exampleHeader(undefined, 'Text, structured content, images, embeds, and calendars.');
 
-      exampleSection('Markdown', 'Client parses with marked and sanitizes with DOMPurify.');
+      exampleSection('Markdown', 'Read formatted text with headings, lists, and links.');
       ui.markdown(`# Hello from the server
 
 This is **bold**, this is *italic*, and here is a [link](https://example.com).
@@ -53,13 +53,13 @@ ui.timer(1, () => label.setText(new Date().toISOString()));
 `);
       ui.separator();
 
-      exampleSection('HTML', 'Trusted server HTML (XSS risk — only pass content you control).');
+      exampleSection('HTML', 'Display trusted HTML content. Only use content you control.');
       ui.html(
         '<p class="text-sm">Trusted <strong style="color:var(--primary)">HTML</strong> from the server.</p>',
       );
       ui.separator();
 
-      exampleSection('Code block', 'ui.codeBlock — Shiki highlight + optional copy.');
+      exampleSection('Code block', 'Read highlighted code and copy it to the clipboard.');
       ui.codeBlock({
         language: 'typescript',
         code: `import { ui } from '@close-by/clay';
@@ -71,7 +71,7 @@ ui.page('/hello', () => {
       });
       ui.separator();
 
-      exampleSection('Description list', 'ui.descriptionList — master-detail key/value rows.');
+      exampleSection('Description list', 'Review details as labelled values.');
       ui.descriptionList({
         horizontal: true,
         items: [
@@ -83,7 +83,7 @@ ui.page('/hello', () => {
       });
       ui.separator();
 
-      exampleSection('Static table', 'ui.staticTable — small read-only datasets (bordered + hover by default).');
+      exampleSection('Static table', 'Compare a small set of read-only records.');
       ui.staticTable({
         caption: 'Recent queries',
         striped: true,
@@ -107,7 +107,7 @@ ui.page('/hello', () => {
       });
       ui.separator();
 
-      exampleSection('Item list', 'ui.itemList — settings / notification rows.');
+      exampleSection('Item list', 'Browse settings and notifications.');
       ui.itemList({
         items: [
           {
@@ -135,7 +135,7 @@ ui.page('/hello', () => {
       });
       ui.separator();
 
-      exampleSection('Tree', 'ui.tree — nested nodes with select + expand.');
+      exampleSection('Tree', 'Expand folders and select nested items.');
       const treePanel = ui.refreshable(() => {
         ui.tree({
           selected: treeState.selected,
@@ -182,7 +182,7 @@ ui.page('/hello', () => {
 
       exampleSection(
         'Related forms',
-        'ui.rating, ui.colorPicker, and ui.tags with bindValue + draft.',
+        'Try ratings, colors, and tags in a saved form.',
       );
       ui.button('Open Forms', {
         variant: 'outline',
@@ -194,7 +194,7 @@ ui.page('/hello', () => {
       });
       ui.separator();
 
-      exampleSection('Image', 'Plain img with src URL.');
+      exampleSection('Image', 'Display an image from a URL.');
       ui.image('https://picsum.photos/seed/clay/640/240', {
         alt: 'Sample photo',
         className: 'rounded-md border',
@@ -203,7 +203,7 @@ ui.page('/hello', () => {
 
       exampleSection(
         'Image zoom',
-        'ui.imageZoom — click for a zoom overlay (plain ui.image stays non-interactive).',
+        'Click the image to see a larger view.',
       );
       ui.imageZoom({
         src: 'https://picsum.photos/seed/clay-zoom/640/360',
@@ -214,7 +214,7 @@ ui.page('/hello', () => {
 
       exampleSection(
         'Image crop',
-        'ui.imageCrop — drag/zoom the crop area, then Crop to emit a data URL preview.',
+        'Drag and zoom the image, then crop it to preview the result.',
       );
       ui.imageCrop({
         src: 'https://picsum.photos/seed/clay-crop/800/600',
@@ -239,7 +239,7 @@ ui.page('/hello', () => {
       });
       ui.separator();
 
-      exampleSection('QR code', 'ui.qrCode — SVG from a string (error-correction level M by default).');
+      exampleSection('QR code', 'Scan a code to open a link.');
       ui.row(
         () => {
           ui.qrCode({ value: 'https://example.com', size: 160 });
@@ -251,7 +251,7 @@ ui.page('/hello', () => {
 
       exampleSection(
         'Iframe',
-        'ui.iframe — first-class embed (prefer over ui.html with an iframe tag).',
+        'View embedded content inside the page.',
       );
       ui.iframe('https://example.com', {
         title: 'Example embed',
@@ -263,7 +263,7 @@ ui.page('/hello', () => {
 
       exampleSection(
         'Relative time',
-        'ui.relativeTime — multi-timezone clock; ticks every second when date is omitted.',
+        'Compare the current time across time zones.',
       );
       ui.relativeTime({
         timezones: [
@@ -276,7 +276,7 @@ ui.page('/hello', () => {
 
       exampleSection(
         'Fixed instant',
-        'Pass date to freeze the clock (no live tick).',
+        'Compare the same moment across time zones.',
       );
       ui.relativeTime({
         date: '2026-08-08T12:00:00Z',
@@ -288,7 +288,7 @@ ui.page('/hello', () => {
 
       exampleSection(
         'Event calendar',
-        'ui.eventCalendar — month grid (dots on event days) + day list on the right.',
+        'Choose a day to see its events.',
       );
       ui.auto(() => {
         ui.eventCalendar({

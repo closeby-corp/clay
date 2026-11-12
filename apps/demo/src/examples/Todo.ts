@@ -1,4 +1,4 @@
-import { ui, reactive } from '@close-by/clay';
+import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {
@@ -16,16 +16,14 @@ interface Todo {
 }
 
 ui.page('/examples/todo', () => {
-    let todos: Todo[] = [];
-    let todoFilter: 'all' | 'active' | 'completed' = 'all';
-    const draft = reactive({ text: '' });
+    const state = ui.state({ todos: [] as Todo[], todoFilter: 'all' as 'all' | 'active' | 'completed' });
+    const draft = ui.state({ text: '' });
 
     exampleFrame(() => {
       ui.column(() => {
-        exampleHeader(undefined, 'bindValue on the draft input, refreshable filtered list.');
+        exampleHeader(undefined, 'Add tasks, mark them complete, and filter the list. Changes appear automatically.');
 
         ui.card({ title: 'Tasks', description: 'Add items, filter, and toggle completion.', gap: 4 }, () => {
-        let listUi: ReturnType<typeof ui.refreshable>;
 
         ui.row(() => {
           const input = ui.input({ placeholder: 'What needs to be done?' }).classes('flex-1');
@@ -34,45 +32,41 @@ ui.page('/examples/todo', () => {
             onClick: () => {
               const text = draft.text.trim();
               if (!text) return;
-              todos = [...todos, { id: Date.now().toString(), text, completed: false }];
+              state.todos = [...state.todos, { id: Date.now().toString(), text, completed: false }];
               draft.text = '';
-              listUi.refresh();
             },
           });
         }, { gap: 2 });
 
-        listUi = ui.refreshable(() => {
-          const filtered = todos.filter((todo) => {
-            if (todoFilter === 'active') return !todo.completed;
-            if (todoFilter === 'completed') return todo.completed;
+        ui.auto(() => {
+          const filtered = state.todos.filter((todo) => {
+            if (state.todoFilter === 'active') return !todo.completed;
+            if (state.todoFilter === 'completed') return todo.completed;
             return true;
           });
-          const completedCount = todos.filter((t) => t.completed).length;
-          const activeCount = todos.filter((t) => !t.completed).length;
+          const completedCount = state.todos.filter((t) => t.completed).length;
+          const activeCount = state.todos.filter((t) => !t.completed).length;
 
           ui.row(() => {
             ui.button('All', {
-              variant: todoFilter === 'all' ? 'secondary' : 'ghost',
+              variant: state.todoFilter === 'all' ? 'secondary' : 'ghost',
               size: 'sm',
               onClick: () => {
-                todoFilter = 'all';
-                listUi.refresh();
+                state.todoFilter = 'all';
               },
             });
             ui.button(`Active (${activeCount})`, {
-              variant: todoFilter === 'active' ? 'secondary' : 'ghost',
+              variant: state.todoFilter === 'active' ? 'secondary' : 'ghost',
               size: 'sm',
               onClick: () => {
-                todoFilter = 'active';
-                listUi.refresh();
+                state.todoFilter = 'active';
               },
             });
             ui.button(`Completed (${completedCount})`, {
-              variant: todoFilter === 'completed' ? 'secondary' : 'ghost',
+              variant: state.todoFilter === 'completed' ? 'secondary' : 'ghost',
               size: 'sm',
               onClick: () => {
-                todoFilter = 'completed';
-                listUi.refresh();
+                state.todoFilter = 'completed';
               },
             });
           }, { gap: 1 });
@@ -87,18 +81,16 @@ ui.page('/examples/todo', () => {
                     checked: todo.completed,
                     label: todo.text,
                     onChange: (checked) => {
-                      todos = todos.map((t) =>
+                      state.todos = state.todos.map((t) =>
                         t.id === todo.id ? { ...t, completed: Boolean(checked) } : t,
                       );
-                      listUi.refresh();
                     },
                   }).classes(todo.completed ? 'flex-1 line-through opacity-60' : 'flex-1');
                   ui.button('Delete', {
                     variant: 'ghost',
                     size: 'sm',
                     onClick: () => {
-                      todos = todos.filter((t) => t.id !== todo.id);
-                      listUi.refresh();
+                      state.todos = state.todos.filter((t) => t.id !== todo.id);
                     },
                   });
                 }, { gap: 2 }).classes('items-center rounded-md border px-3 py-2');
@@ -106,7 +98,7 @@ ui.page('/examples/todo', () => {
             }, { gap: 2 });
           }
 
-          ui.label(`${completedCount} of ${todos.length} completed`).classes('text-xs text-muted-foreground');
+          ui.label(`${completedCount} of ${state.todos.length} completed`).classes('text-xs text-muted-foreground');
         });
       });
       }, { gap: 6 });

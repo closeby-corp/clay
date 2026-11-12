@@ -65,7 +65,6 @@ type DragState = {
   moved: boolean;
 };
 
-const SIDEBAR_WIDTH = 176;
 const ROW_HEIGHT = 48;
 const HEADER_HEIGHT = 44;
 const BAR_HEIGHT = 28;
@@ -223,8 +222,9 @@ function barGeometries(
   pxPerDay: number,
 ): Map<string, BarGeom> {
   const map = new Map<string, BarGeom>();
+  let rowTop = 0;
   rows.forEach((row, rowIndex) => {
-    for (const item of row.items) {
+    for (const [itemIndex, item] of row.items.entries()) {
       const s = parseDay(item.start);
       const e = parseDay(item.end);
       if (!s || !e) continue;
@@ -238,9 +238,10 @@ function barGeometries(
         rowIndex,
         left,
         right: left + width,
-        cy: rowIndex * ROW_HEIGHT + ROW_HEIGHT / 2,
+        cy: rowTop + itemIndex * ROW_HEIGHT + ROW_HEIGHT / 2,
       });
     }
+    rowTop += Math.max(1, row.items.length) * ROW_HEIGHT;
   });
   return map;
 }
@@ -292,9 +293,34 @@ export function BoundGantt({
   const readonly = !!props.readonly;
 
   const { start: rangeStart, end: rangeEnd } = resolveRange(rows, markers, rangeProp);
-  const spanDays = Math.max(1, differenceInCalendarDays(rangeEnd, rangeStart));
-  const pxPerDay = pxPerDayForSpan(spanDays);
-  const timelineWidth = Math.max(320, spanDays * pxPerDay);
+  const spanDays = Math.max(1, differenceInCalendarDays(rangeEnd, rangeStart) + 1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+  const timelineWidth = Math.max(320, spanDays * pxPerDayForSpan(spanDays), availableWidth);
+  const pxPerDay = timelineWidth / spanDays;
+
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    const sidebar = sidebarRef.current;
+    if (!scroll || !sidebar) return;
+    const measure = () => setAvailableWidth(Math.max(0, scroll.clientWidth - sidebar.offsetWidth));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroll);
+    observer.observe(sidebar);
+    return () => observer.disconnect();
+  }, []);
+
+  const initiallyScrolled = useRef(false);
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll || !availableWidth || initiallyScrolled.current) return;
+    const dates = rows.flatMap((row) => row.items.map((item) => parseDay(item.start))).filter((d): d is Date => !!d);
+    if (!dates.length) return;
+    initiallyScrolled.current = true;
+    scroll.scrollLeft = Math.max(0, differenceInCalendarDays(minDate(dates), rangeStart) * pxPerDay - 16);
+  }, [availableWidth, rows, rangeStart.getTime(), pxPerDay]);
 
   const months = eachMonthOfInterval({ start: rangeStart, end: rangeEnd });
   const today = startOfDay(new Date());
@@ -328,11 +354,12 @@ export function BoundGantt({
     const y = clientY - rect.top;
     if (y < 0) return currentRows[0]!.id;
     if (y >= rect.height) return currentRows[currentRows.length - 1]!.id;
-    const index = Math.min(
-      currentRows.length - 1,
-      Math.max(0, Math.floor(y / ROW_HEIGHT)),
-    );
-    return currentRows[index]?.id ?? null;
+    let bottom = 0;
+    for (const row of currentRows) {
+      bottom += Math.max(1, row.items.length) * ROW_HEIGHT;
+      if (y < bottom) return row.id;
+    }
+    return currentRows[currentRows.length - 1]!.id;
   };
 
   useEffect(() => {
@@ -459,22 +486,23 @@ export function BoundGantt({
   };
 
   const geoms = barGeometries(rows, dayToX, pxPerDay);
-  const bodyHeight = Math.max(ROW_HEIGHT, rows.length * ROW_HEIGHT);
+  const bodyHeight = Math.max(ROW_HEIGHT, rows.reduce((height, row) => height + Math.max(1, row.items.length) * ROW_HEIGHT, 0));
 
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-lg border bg-background text-sm',
+        'w-full min-w-0 max-w-full overflow-hidden rounded-lg border bg-background text-sm',
         className,
       )}
       style={asStyle(style)}
       data-readonly={readonly || undefined}
     >
-      <div className="flex max-h-[560px] overflow-auto">
+      <p className="border-b px-3 py-1 text-xs text-muted-foreground sm:hidden">Swipe horizontally to explore the timeline →</p>
+      <div ref={scrollRef} className="flex max-h-[560px] overflow-x-scroll overflow-y-auto [scrollbar-width:thin]" style={{ scrollbarColor: 'var(--muted-foreground) var(--muted)' }} tabIndex={0} role="region" aria-label="Gantt timeline — scroll horizontally to see all dates">
         {/* Sidebar */}
         <div
-          className="sticky left-0 z-20 shrink-0 border-r bg-background"
-          style={{ width: SIDEBAR_WIDTH }}
+          ref={sidebarRef}
+          className="sticky left-0 z-20 w-24 shrink-0 border-r bg-background sm:w-44"
         >
           <div
             className="sticky top-0 z-10 border-b bg-muted/40 px-3 text-xs font-medium text-muted-foreground"
@@ -489,7 +517,7 @@ export function BoundGantt({
                 'flex items-center border-b px-3 font-medium',
                 hoverRowId === row.id && 'bg-accent/50',
               )}
-              style={{ height: ROW_HEIGHT }}
+              style={{ height: Math.max(1, row.items.length) * ROW_HEIGHT }}
               title={row.title}
             >
               <span className="truncate">{row.title}</span>
@@ -498,7 +526,7 @@ export function BoundGantt({
         </div>
 
         {/* Timeline */}
-        <div className="relative min-w-0 flex-1">
+        <div className="relative shrink-0" style={{ width: timelineWidth }}>
           <div style={{ width: timelineWidth, minWidth: '100%' }}>
             {/* Header — double-click to add a marker when not readonly */}
             <div
@@ -515,7 +543,7 @@ export function BoundGantt({
             >
               <div className="relative h-full" style={{ width: timelineWidth }}>
                 {months.map((month, i) => {
-                  const left = dayToX(month);
+                  const left = Math.max(0, dayToX(month));
                   const next = months[i + 1];
                   const right = next ? dayToX(next) : timelineWidth;
                   const width = Math.max(40, right - left);
@@ -631,7 +659,7 @@ export function BoundGantt({
                     'relative border-b',
                     hoverRowId === row.id && 'bg-accent/40',
                   )}
-                  style={{ height: ROW_HEIGHT }}
+                  style={{ height: Math.max(1, row.items.length) * ROW_HEIGHT }}
                   data-row-id={row.id}
                 >
                   {row.items.map((item, itemIndex) => {
@@ -651,7 +679,7 @@ export function BoundGantt({
                       <div
                         key={item.id}
                         className={cn(
-                          'absolute top-1/2 flex -translate-y-1/2 items-center overflow-hidden rounded-md px-2 text-xs font-medium shadow-sm select-none',
+                          'absolute flex items-center overflow-hidden rounded-md px-2 text-xs font-medium shadow-sm select-none',
                           color,
                           !readonly && 'cursor-grab active:cursor-grabbing',
                           isDragging && 'z-10 ring-2 ring-foreground/20',
@@ -659,6 +687,7 @@ export function BoundGantt({
                         )}
                         style={{
                           left,
+                          top: itemIndex * ROW_HEIGHT + (ROW_HEIGHT - BAR_HEIGHT) / 2,
                           width: barWidth,
                           height: BAR_HEIGHT,
                         }}

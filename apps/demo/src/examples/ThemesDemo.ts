@@ -48,7 +48,7 @@ const sales = [
 ];
 
 ui.page('/examples/themes', () => {
-  let current = ui.theme.getPalette() ?? 'kiln';
+  const state = ui.state({ current: ui.theme.getPalette() ?? 'kiln' });
 
   exampleFrame(() => {
     ui.column(() => {
@@ -58,18 +58,17 @@ ui.page('/examples/themes', () => {
       );
 
       exampleSection('Palette', 'Click to switch this session — your choice is remembered across reloads.');
-      const picker = ui.refreshable(() => {
+      ui.auto(() => {
         ui.grid({ minColWidth: '13rem', gap: 3 }, () => {
           for (const name of ui.theme.palettes) {
             const swatch = SWATCHES[name]!;
             ui.column(() => {
               ui.button(name, {
-                variant: name === current ? 'default' : 'outline',
+                variant: name === state.current ? 'default' : 'outline',
                 className: 'w-full capitalize',
                 onClick: () => {
-                  current = name;
+                  state.current = name;
                   ui.theme.palette(name);
-                  picker.refresh();
                 },
               });
               ui.row(() => {

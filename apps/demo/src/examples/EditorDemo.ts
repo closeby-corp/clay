@@ -80,7 +80,7 @@ ui.page('/examples/editor', () => {
             ).classes('min-w-0 flex-1');
           },
           { gap: 6 },
-        ).classes('flex-col lg:flex-row items-stretch');
+        ).classes('min-w-0 max-w-full flex-nowrap flex-col lg:flex-row items-stretch');
 
         ui.separator();
 

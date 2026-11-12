@@ -6,7 +6,7 @@ Inspired by [NiceGUI](https://nicegui.io/): imperative `ui.*` calls, per-tab ses
 
 The usual way to run an app is the **`clay` CLI** — a file or a folder of pages, no Vite app of your own.
 
-**Docs:** [docs/README.md](./docs/README.md) · **Agents:** [llms.txt](./llms.txt)
+**Live demo:** [clay.close-by.org](https://clay.close-by.org/) · **Docs:** [docs/README.md](./docs/README.md) · **Agents:** [llms.txt](./llms.txt)
 
 ## What you can build
 
@@ -72,6 +72,8 @@ bunx clay ./pages --app --title "My App"
 | `--no-open` | Do not open the browser |
 
 `ui.page(...)` without `ui.run` is the same idea — the CLI starts the server. `ui.run()` still works if you want to boot it yourself (library mode). More in [Getting started](./docs/getting-started.md).
+
+See everything: [live demo](https://clay.close-by.org/) · [example source](./apps/demo/src/examples/).
 
 ## Sample app
 
@@ -210,7 +212,7 @@ You mutate elements (`setText`, `refreshable`, bindings). Clay sends patches. Th
 | [Architecture](./docs/architecture.md) | Packages and data flow |
 | [WebSocket protocol](./docs/protocol.md) | Message formats |
 | [AI UI](./docs/ai.md) | `ui.ai.*` primitives |
-| [DuckDB](./docs/duckdb.md) / [ClickHouse](./docs/clickhouse.md) / [Kibana](./docs/kibana.md) | Data clients |
+| [DuckDB](./docs/duckdb.md) / [ClickHouse](./docs/clickhouse.md) / [Kibana](./docs/kibana.md) | Data clients (DuckDB and Kibana: monorepo only — not published to npm yet) |
 
 ## Packages
 
@@ -224,8 +226,8 @@ You mutate elements (`setText`, `refreshable`, bindings). Clay sends patches. Th
 | `@close-by/clay-client` | React + ShadCN renderer (private; build is copied into the CLI) |
 | `@close-by/clay-auth` | Password hash, login limiter, guards, audit |
 | `@close-by/clay-compiler` | Optional compile-time reactive `let` |
-| `@close-by/clay-persistence-file` / `@close-by/clay-persistence-redis` | Storage adapters |
-| `@close-by/clay-duckdb` / `@close-by/clay-clickhouse` / `@close-by/clay-kibana` | Data clients |
+| `@close-by/clay-persistence-file` / `@close-by/clay-persistence-redis` | Storage adapters (Redis: monorepo only — not published to npm yet) |
+| `@close-by/clay-duckdb` / `@close-by/clay-clickhouse` / `@close-by/clay-kibana` | Data clients (DuckDB and Kibana: monorepo only — not published to npm yet) |
 
 ## Scripts
 

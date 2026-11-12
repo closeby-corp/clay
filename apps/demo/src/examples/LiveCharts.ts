@@ -1,5 +1,5 @@
 import { ui } from '@close-by/clay';
-import { exampleHeader, exampleSection } from '../chrome';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 
 export const pageMeta = {
   label: 'Live charts',
@@ -38,13 +38,14 @@ ui.page('/examples/live-charts', () => {
   let cpu = 42;
   let tick = 0;
 
+  exampleFrame(() => {
   ui.column(() => {
     exampleHeader(
       undefined,
       'Every chart below updates in place on a timer. Streams use appendData (only new points go over the wire); snapshots use setData so bars and slices tween to their new values.',
     );
 
-    exampleSection('Streaming window', 'chart.appendData(point, { max: 40 }) — once a second, the oldest point drops off.');
+    exampleSection('Streaming window', 'A new point arrives each second and the oldest point drops off.');
     const latency = ui.lineChart({
       title: 'Request latency',
       description: 'Milliseconds, last 40 s',
@@ -110,7 +111,7 @@ ui.page('/examples/live-charts', () => {
       });
     });
 
-    exampleSection('KPI cards', 'ui.stat(...).updateItem(title, patch) and appendSparkline(title, point, { max }) — one card changes, the rest stay put.');
+    exampleSection('KPI cards', 'Watch individual metrics and their recent trends update.');
     let mrr = 48_200;
     let sessions = 300;
     const kpis = ui.stat([
@@ -131,7 +132,7 @@ ui.page('/examples/live-charts', () => {
       kpis.updateItem('Active sessions', { value: sessions });
     });
 
-    exampleSection('Snapshots', 'chart.setData(rows) every 2 s — same rows, new values, so the marks tween instead of redrawing.');
+    exampleSection('Snapshots', 'Values update every two seconds with smooth transitions.');
     ui.grid({ minColWidth: '20rem', gap: 4 }, () => {
       const bars = ui.barChart({
         title: 'Orders by region',
@@ -159,7 +160,7 @@ ui.page('/examples/live-charts', () => {
       });
     });
 
-    exampleSection('Growing bucket', 'chart.upsertData(row) — the current minute keeps updating; a new minute appends.');
+    exampleSection('Growing bucket', 'Watch the current minute grow until a new minute begins.');
     let minuteCount = 0;
     const minuteKey = () => new Date().toTimeString().slice(0, 5);
     const perMinute = ui.areaChart({
@@ -195,6 +196,7 @@ ui.page('/examples/live-charts', () => {
   ui.timer(1, () => {
     tick += 1;
     for (const fn of timers) fn();
+  });
   });
 });
 

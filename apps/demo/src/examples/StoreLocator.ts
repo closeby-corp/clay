@@ -49,34 +49,29 @@ function markersFor(list: Store[], selectedId: string | null) {
 }
 
 ui.page('/examples/store-locator', () => {
-  let query = '';
-  let selectedId: string | null = null;
-  let visible: Store[] = STORES;
-  let listUi!: ReturnType<typeof ui.refreshable>;
+  const state = ui.state({ query: '', selectedId: null as string | null, visible: STORES });
   let map!: ReturnType<typeof ui.map>;
 
   const select = (id: string, fly: boolean) => {
     const store = STORES.find((s) => s.id === id);
     if (!store) return;
-    selectedId = id;
-    map.setMarkers(markersFor(visible, selectedId));
+    state.selectedId = id;
+    map.setMarkers(markersFor(state.visible, state.selectedId));
     if (fly) map.flyTo(store.lngLat, 14);
     map.showPopup(store.lngLat, { title: store.name, description: `${store.address}, ${store.city}` });
-    listUi.refresh();
   };
 
   const applyFilter = () => {
-    const q = query.trim().toLowerCase();
-    visible = STORES.filter(
+    const q = state.query.trim().toLowerCase();
+    state.visible = STORES.filter(
       (s) => !q || s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q),
     );
-    if (selectedId && !visible.some((s) => s.id === selectedId)) {
-      selectedId = null;
+    if (state.selectedId && !state.visible.some((s) => s.id === state.selectedId)) {
+      state.selectedId = null;
       map.closePopup();
     }
-    map.setMarkers(markersFor(visible, selectedId));
+    map.setMarkers(markersFor(state.visible, state.selectedId));
     map.fitBounds('markers', { padding: 48 });
-    listUi.refresh();
   };
 
   exampleFrame(() => {
@@ -95,19 +90,19 @@ ui.page('/examples/store-locator', () => {
           () => {
             const search = ui.input({ placeholder: 'Search by name or city' });
             search.on('input', (value) => {
-              query = String(value ?? '');
+              state.query = String(value ?? '');
               applyFilter();
             });
 
-            listUi = ui.refreshable(() => {
-              if (visible.length === 0) {
+            ui.auto(() => {
+              if (state.visible.length === 0) {
                 ui.label('No stores match your search.').classes('py-6 text-center text-sm text-muted-foreground');
                 return;
               }
               ui.column(
                 () => {
-                  for (const s of visible) {
-                    const selected = s.id === selectedId;
+                  for (const s of state.visible) {
+                    const selected = s.id === state.selectedId;
                     ui.column(
                       () => {
                         ui.button(s.name, {
@@ -150,7 +145,7 @@ ui.page('/examples/store-locator', () => {
             center: [-6, 40],
             zoom: 5,
             controls: { zoom: true, compass: false, position: 'top-right' },
-            markers: markersFor(visible, selectedId),
+            markers: markersFor(state.visible, state.selectedId),
             onMarkerClick: (marker) => select(marker.id, false),
           });
         });

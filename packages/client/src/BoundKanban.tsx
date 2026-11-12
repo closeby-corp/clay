@@ -280,7 +280,7 @@ function ColumnDroppable({
   onCardClick?: (cardId: string) => void;
 }) {
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-lg border bg-muted/40">
+    <div className="flex min-w-64 flex-1 flex-col rounded-lg border bg-muted/40">
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <h3 className="text-sm font-medium">{column.title}</h3>
         <span className="text-xs text-muted-foreground">{column.cards.length}</span>
@@ -322,10 +322,10 @@ function SwimlaneBoard({
       : effectiveLanes;
 
   return (
-    <div className="flex min-w-max flex-col gap-3">
+    <div className="flex w-full flex-col gap-3">
       <div
         className="grid gap-3"
-        style={{ gridTemplateColumns: `8rem repeat(${columns.length}, 18rem)` }}
+        style={{ gridTemplateColumns: `5rem repeat(${columns.length}, minmax(16rem, 1fr))` }}
       >
         <div />
         {columns.map((column) => (
@@ -342,7 +342,7 @@ function SwimlaneBoard({
         <div
           key={lane.id || '__unassigned'}
           className="grid gap-3"
-          style={{ gridTemplateColumns: `8rem repeat(${columns.length}, 18rem)` }}
+          style={{ gridTemplateColumns: `5rem repeat(${columns.length}, minmax(16rem, 1fr))` }}
         >
           <div className="flex items-start pt-2">
             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -702,7 +702,8 @@ export function BoundKanban({
   };
 
   return (
-    <div className={cn('w-full', className)} style={asStyle(style)}>
+    <div className={cn('w-full min-w-0 max-w-full', className)} style={asStyle(style)}>
+      <p className="mb-2 text-xs text-muted-foreground sm:hidden">Swipe horizontally to see all columns →</p>
       <DndContext
         id={`${id}-kanban-dnd`}
         sensors={sensors}
@@ -712,7 +713,13 @@ export function BoundKanban({
         onDragEnd={onDragEnd}
         onDragCancel={onDragCancel}
       >
-        <div className="overflow-x-auto pb-2">
+        <div
+          className="min-w-0 max-w-full overflow-x-auto pb-2 [scrollbar-width:thin]"
+          style={{ scrollbarColor: 'var(--muted-foreground) var(--muted)' }}
+          tabIndex={0}
+          role="region"
+          aria-label="Kanban board — scroll horizontally to see all columns"
+        >
           {useLanes ? (
             <SwimlaneBoard
               columns={columns}
@@ -721,7 +728,7 @@ export function BoundKanban({
               onCardClick={openCard}
             />
           ) : (
-            <div className="flex gap-3">
+            <div className="flex w-full min-w-0 gap-3">
               {columns.map((column) => (
                 <ColumnDroppable
                   key={column.id}

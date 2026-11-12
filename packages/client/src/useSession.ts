@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { applyPatch } from './applyPatch';
+import { echoValueEvent } from './echoValueEvent';
 import {
   applyClientStorageOp,
   applyScrollOp,
@@ -105,6 +106,11 @@ export function useClaySession(path: string) {
 
   const emit = useCallback(
     (id: string, type: string, value?: unknown) => {
+      setState((s) => {
+        if (!s.tree) return s;
+        const tree = echoValueEvent(s.tree, id, type, value);
+        return tree === s.tree ? s : { ...s, tree };
+      });
       send({ op: 'event', id, type, value });
     },
     [send],

@@ -3,13 +3,13 @@
  * Orders-shaped proof authored with reactive `let`.
  *
  * Requires the Bun loader:
- *   cd apps/demo && bun run cli:reactive-let
+ *   bun run clay examples/reactive-let-orders.ts --reactive-let
  *
  * Without `--reactive-let`, clicks update locals but the UI will not refresh
- * (silent no-op). Compare with `ReactiveLetOrders.ts` (Phase 1 state/auto).
+ * (silent no-op). Compare with `apps/demo/src/examples/ReactiveLetOrders.ts` (Phase 1 state/auto).
  */
 import { ui } from '@close-by/clay';
-import { exampleFrame, exampleHeader } from '../chrome';
+import { exampleFrame, exampleHeader } from '../apps/demo/src/chrome';
 
 export const pageMeta = {
   label: 'Orders (let)',
@@ -19,7 +19,7 @@ export const pageMeta = {
   groupIcon: 'zap',
 };
 
-ui.page('/examples/reactive-let-orders-let', () => {
+ui.page('/examples/reactive-let-orders', () => {
   let filter = '';
   let selectedId = '';
   let rows = [
@@ -32,7 +32,7 @@ ui.page('/examples/reactive-let-orders-let', () => {
   exampleFrame(() => {
     exampleHeader(
       undefined,
-      'Same UI as Orders (state/auto), written with let. Run with the Clay CLI (`clay`) to enable the let transform.',
+      'The Orders UI, written with let. Run with the Clay CLI (`clay`) to enable the let transform.',
     );
 
     ui.column({ gap: 4, className: 'w-full' }, () => {

@@ -41,7 +41,7 @@ ui.page('/examples/navigation', () => {
           'Explore menus, keyboard shortcuts, and flexible page layouts.',
         );
 
-        exampleSection('Menubar', 'ui.menubar — submenus, checkbox, and radio items.');
+        exampleSection('Menubar', 'Browse menus, choose options, and toggle preferences.');
         ui.menubar((m) => {
           m.menu('File', (menu) => {
             menu.item('new', 'New', { onSelect: () => ui.notify('New', 'info') });
@@ -81,7 +81,7 @@ ui.page('/examples/navigation', () => {
           });
         });
 
-        exampleSection('Command palette', 'ui.command — dialog (⌘K-style) and inline list.');
+        exampleSection('Command palette', 'Find an action in a searchable popup or inline list.');
         ui.button('Open command palette', {
           variant: 'outline',
           onClick: () => palette.open(),
@@ -101,7 +101,7 @@ ui.page('/examples/navigation', () => {
           },
         );
 
-        exampleSection('Carousel', 'ui.carousel with slides.');
+        exampleSection('Carousel', 'Browse slides with the navigation controls.');
         ui.carousel((c) => {
           c.slide(() => {
             ui.label('Slide one').classes('text-sm font-medium');
@@ -114,7 +114,7 @@ ui.page('/examples/navigation', () => {
           });
         });
 
-        exampleSection('Resizable', 'ui.resizable — drag the handle between panels.');
+        exampleSection('Resizable', 'Drag the handle to resize the panels.');
         ui.resizable({ className: 'h-40' }, (r) => {
           r.panel({ defaultSize: 40, minSize: 20 }, () => {
             ui.label('Left panel').classes('text-sm text-muted-foreground');
@@ -127,7 +127,7 @@ ui.page('/examples/navigation', () => {
 
         exampleSection(
           'Scroll area',
-          'ui.scrollArea — clipped viewport; onNearEnd fires when scrolled near the bottom.',
+          'Scroll to the bottom to load more items.',
         );
         const scrollRows = ui.state({ n: 20 });
         ui.auto(() => {
@@ -150,7 +150,7 @@ ui.page('/examples/navigation', () => {
 
         exampleSection(
           'Viewport enter',
-          'ui.viewportEnter — IntersectionObserver; onEnter once when scrolled into view.',
+          'Scroll down to reveal content when it enters view.',
         );
         ui.column({ className: 'gap-2 min-h-[28rem]' }, () => {
           ui.label('Scroll the page so the box below enters the viewport.').classes(
@@ -174,7 +174,7 @@ ui.page('/examples/navigation', () => {
 
         exampleSection(
           'Keybinds',
-          'ui.keybind — headless chords; ui.kbd shows platform-aware glyphs.',
+          'Use keyboard shortcuts to trigger actions.',
         );
         ui.keybind({
           keys: 'mod+k',

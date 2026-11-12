@@ -2,6 +2,8 @@
 
 Authenticated (or internal) Kibana REST client: arbitrary API calls, Elasticsearch via console proxy or `/elasticsearch`, and `search_after` pagination for walking every matching log line.
 
+**Monorepo only — not published to npm yet.** Depend on `@close-by/clay-kibana` with `workspace:*` inside this monorepo.
+
 ```typescript
 import { Kibana } from '@close-by/clay-kibana';
 

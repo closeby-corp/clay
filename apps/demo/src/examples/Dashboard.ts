@@ -1,6 +1,6 @@
 import { ui } from '@close-by/clay';
 import type { DataTableElement } from '@close-by/clay';
-import { exampleHeader } from '../chrome';
+import { exampleFrame, exampleHeader } from '../chrome';
 import documentsSeed from './dashboard-documents.json';
 import visitorsSeed from './dashboard-visitors.json';
 
@@ -37,15 +37,11 @@ const reviewerOptions = [
   { value: 'Assign reviewer', label: 'Assign reviewer' },
 ];
 
-ui.page('/examples/dashboard', () => {
-    let revenue = 1250;
-    let customers = 1234;
-    let accounts = 45678;
-    let growth = 4.5;
+ui.page('/examples/dashboard', () => exampleFrame(() => {
+    const stats = ui.state({ revenue: 1250, customers: 1234, accounts: 45678, growth: 4.5 });
     let docs = (documentsSeed as DocumentRow[]).map((d) => ({ ...d }));
     let nextId = Math.max(...docs.map((d) => d.id), 0) + 1;
     let table: DataTableElement;
-    let statsUi: ReturnType<typeof ui.refreshable>;
 
     ui.column(() => {
       ui.row(() => {
@@ -57,20 +53,19 @@ ui.page('/examples/dashboard', () => {
           variant: 'outline',
           size: 'sm',
           onClick: () => {
-            revenue += Math.random() * 40;
-            customers += Math.floor(Math.random() * 20) - 5;
-            accounts += Math.floor(Math.random() * 100);
-            growth = Math.max(0.5, growth + (Math.random() - 0.45));
-            statsUi.refresh();
+            stats.revenue += Math.random() * 40;
+            stats.customers += Math.floor(Math.random() * 20) - 5;
+            stats.accounts += Math.floor(Math.random() * 100);
+            stats.growth = Math.max(0.5, stats.growth + (Math.random() - 0.45));
           },
         });
       }, { gap: 4 }).classes('items-start justify-between');
 
-      statsUi = ui.refreshable(() => {
+      ui.auto(() => {
         ui.stat([
           {
             title: 'Total Revenue',
-            value: `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            value: `$${stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             trend: '+12.5%',
             trendDirection: 'up',
             footer: 'Trending up this month',
@@ -78,7 +73,7 @@ ui.page('/examples/dashboard', () => {
           },
           {
             title: 'New Customers',
-            value: customers.toLocaleString(),
+            value: stats.customers.toLocaleString(),
             trend: '-20%',
             trendDirection: 'down',
             footer: 'Down 20% this period',
@@ -86,7 +81,7 @@ ui.page('/examples/dashboard', () => {
           },
           {
             title: 'Active Accounts',
-            value: accounts.toLocaleString(),
+            value: stats.accounts.toLocaleString(),
             trend: '+12.5%',
             trendDirection: 'up',
             footer: 'Strong user retention',
@@ -94,7 +89,7 @@ ui.page('/examples/dashboard', () => {
           },
           {
             title: 'Growth Rate',
-            value: `${growth.toFixed(1)}%`,
+            value: `${stats.growth.toFixed(1)}%`,
             trend: '+4.5%',
             trendDirection: 'up',
             footer: 'Steady performance',
@@ -105,7 +100,6 @@ ui.page('/examples/dashboard', () => {
 
       ui.areaChart({
         title: 'Total Visitors',
-        description: 'Total for the last 3 months',
         interactive: true,
         data: visitorsSeed as Record<string, unknown>[],
         xKey: 'date',
@@ -116,6 +110,7 @@ ui.page('/examples/dashboard', () => {
       });
 
       table = ui.dataTable(docs, {
+        stackOnMobile: true,
         keyField: 'id',
         searchable: true,
         searchPlaceholder: 'Search sections…',
@@ -325,4 +320,4 @@ ui.page('/examples/dashboard', () => {
         },
       });
     }, { gap: 6 });
-});
+}));

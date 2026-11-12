@@ -501,10 +501,12 @@ import {
 } from '@close-by/clay-core';
 import {
   ClayServer,
+  onDispose,
   type ClayServerConfig,
   establishAuthSession as establishAuthSessionCore,
   clearAuthSession as clearAuthSessionCore,
 } from '@close-by/clay-server';
+export { onDispose };
 import {
   loadPages,
   navFromPages,
@@ -2075,6 +2077,7 @@ export const ui = {
   runJavaScript,
   scroll,
   timer,
+  onDispose,
   storage,
   theme,
   sound,

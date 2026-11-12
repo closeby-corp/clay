@@ -33,6 +33,8 @@ Notes for agents:
 
 ## Examples
 
+- [Live demo](https://clay.close-by.org/): Browse the running examples
+
 - [Examples catalog](docs/examples.md): Demo routes and patterns
 - [Demo pages](apps/demo/src/examples/): Runnable `ui.page` modules
 
@@ -43,7 +45,8 @@ Notes for agents:
 - [Compatibility](docs/compatibility.md): Public API promise, aliases, and compatibility checks
 - [AI UI](docs/ai.md): `ui.ai.*` visual primitives
 - [Reactive let](docs/reactive-let.md): `ui.state` / `ui.auto` and the compile-time `let` transform
-- [DuckDB](docs/duckdb.md): `@close-by/clay-duckdb`
+- [DuckDB](docs/duckdb.md): `@close-by/clay-duckdb` — monorepo only — not published to npm yet
+- Redis persistence: `@close-by/clay-persistence-redis` — monorepo only — not published to npm yet (see [storage API](docs/api.md))
 - [ClickHouse](docs/clickhouse.md): `@close-by/clay-clickhouse`
-- [Kibana](docs/kibana.md): `@close-by/clay-kibana`
+- [Kibana](docs/kibana.md): `@close-by/clay-kibana` — monorepo only — not published to npm yet
 - [NiceGUI](https://nicegui.io/documentation): Inspiration for the `ui.*` style

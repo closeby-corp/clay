@@ -79,7 +79,7 @@ export function BoundCodeBlock({
 
   return (
     <div
-      className={cn('group relative overflow-hidden rounded-md border bg-muted/40', className)}
+      className={cn('group relative min-w-0 max-w-full overflow-hidden rounded-md border bg-muted/40', className)}
       style={asStyle(style)}
     >
       {sensitive && !revealed ? (
@@ -108,12 +108,12 @@ export function BoundCodeBlock({
           {html ? (
             <div
               className={cn(
-                'overflow-x-auto text-sm [&_pre]:m-0 [&_pre]:!bg-transparent [&_pre]:p-4 [&_code]:font-mono [&_code]:text-[13px]',
+                'min-w-0 text-sm [&_pre]:overflow-x-auto [&_pre]:[scrollbar-width:auto] [&_pre]:m-0 [&_pre]:!bg-transparent [&_pre]:p-4 [&_code]:font-mono [&_code]:text-[13px]',
               )}
               dangerouslySetInnerHTML={{ __html: html }}
             />
           ) : (
-            <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap">
+            <pre className="overflow-x-auto [scrollbar-width:auto] p-4 font-mono text-[13px] leading-relaxed whitespace-pre">
               {code}
             </pre>
           )}

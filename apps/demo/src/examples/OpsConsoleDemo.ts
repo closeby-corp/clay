@@ -306,13 +306,13 @@ ui.page('/examples/ops-console', () => {
         ).classes('text-xs text-muted-foreground');
       });
 
-      ui.resizable(
+      ui.row(
         {
-          orientation: 'horizontal',
-          className: 'h-[calc(100vh-16rem)] min-h-[28rem] w-full rounded-md border',
+          align: 'stretch',
+          className: '!grid grid-cols-1 sm:grid-cols-[minmax(0,42fr)_minmax(0,58fr)] sm:h-[calc(100vh-16rem)] min-h-[28rem] w-full rounded-md border',
         },
-        (r) => {
-          r.panel({ defaultSize: 42, minSize: 30 }, () => {
+        () => {
+          ui.column({ className: 'min-w-0 p-3' }, () => {
             ui.column({ gap: 2, className: 'flex h-full flex-col overflow-hidden p-2' }, () => {
               ui.auto(() => {
                 const filtered = live.orders.filter((o) =>
@@ -378,7 +378,7 @@ ui.page('/examples/ops-console', () => {
             });
           });
 
-          r.panel({ defaultSize: 58, minSize: 36 }, () => {
+          ui.column({ className: 'min-w-0 border-t sm:border-t-0 sm:border-l p-3' }, () => {
             ui.column({ gap: 3, className: 'h-full overflow-auto p-4' }, () => {
               ui.auto(() => {
                 const order = live.orders.find((o) => o.id === live.selectedId);

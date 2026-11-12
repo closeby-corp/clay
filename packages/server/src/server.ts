@@ -10,6 +10,7 @@ import {
   authSessionClearCookieHeader,
 } from './auth-cookie';
 import { clearAuthSession, configureAuthSession } from './auth-session';
+import { disposeSession } from './dispose';
 import { handleMultipartUpload, UploadError } from './upload';
 import {
   clientVersion,
@@ -272,7 +273,7 @@ function expireSession(data: WsData, expiredPath: string): void {
     }
   });
   setCurrentSession(null);
-  session.destroy();
+  disposeSession(session);
   data.session = null;
 }
 
@@ -533,7 +534,7 @@ export class ClayServer {
 
           if (msg.op === 'hello') {
             clearExpiryTimer(data);
-            data.session?.destroy();
+            if (data.session) disposeSession(data.session);
             const session = new ClientSession(msg.path, (out) => {
               try {
                 ws.send(JSON.stringify(out));
@@ -622,7 +623,7 @@ export class ClayServer {
         close(ws) {
           const data = ws.data as WsData;
           clearExpiryTimer(data);
-          data.session?.destroy();
+          if (data.session) disposeSession(data.session);
           data.session = null;
         },
       },

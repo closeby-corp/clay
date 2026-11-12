@@ -114,10 +114,10 @@ ui.page('/examples/auth/admin', () => {
           );
         });
 
-        getAuthStore().subscribe(() => {
+        ui.onDispose(getAuthStore().subscribe(() => {
           roster = listSignedInUsers();
           rosterUi.refresh();
-        });
+        }));
 
         const auditUi = ui.refreshable(() => {
           ui.card(

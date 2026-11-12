@@ -90,7 +90,7 @@ ui.page('/', () => {
           });
         }, { gap: 3 }).classes('mt-2');
         ui.codeBlock({ code: 'bun add @close-by/clay-cli @close-by/clay && bunx clay hello.ts', language: 'bash' })
-          .classes('mt-4 w-full max-w-xl text-left');
+          .classes('mt-4 min-w-0 w-full max-w-xl text-left');
       });
 
       // ── Live proof + code ───────────────────────────────────────────────
@@ -98,6 +98,7 @@ ui.page('/', () => {
         ui.card(
           {
             title: 'hello.ts',
+            className: 'min-w-0',
             description: 'This is the whole app. No build step, no client code.',
             gap: 3,
           },

@@ -12,7 +12,7 @@ export const pageMeta = {
 };
 
 ui.page('/examples/upload', () => {
-  const files = (ui.storage.tab.get<UploadedFile[]>('files') ?? []).slice();
+  const state = ui.state({ files: (ui.storage.tab.get<UploadedFile[]>('files') ?? []).slice() });
 
   exampleFrame(() => {
     ui.column(() => {
@@ -29,11 +29,9 @@ ui.page('/examples/upload', () => {
           gap: 4,
         },
         () => {
-          let listUi: ReturnType<typeof ui.refreshable>;
 
           const persist = () => {
-            ui.storage.tab.set('files', files.slice());
-            listUi.refresh();
+            ui.storage.tab.set('files', state.files.slice());
           };
 
           ui.upload({
@@ -52,7 +50,7 @@ ui.page('/examples/upload', () => {
               ui.notify('Upload cancelled', 'warning');
             },
             onUpload: async (file) => {
-              files.push(file);
+              state.files = [...state.files, file];
               const count = ((await ui.storage.user.get<number>('uploadCount')) ?? 0) + 1;
               await ui.storage.user.set('uploadCount', count);
               ui.notify(`Uploaded ${file.name} (lifetime uploads: ${count})`, 'success');
@@ -75,7 +73,7 @@ ui.page('/examples/upload', () => {
               ui.notify('Upload cancelled', 'warning');
             },
             onUpload: async (file) => {
-              files.push(file);
+              state.files = [...state.files, file];
               const count = ((await ui.storage.user.get<number>('uploadCount')) ?? 0) + 1;
               await ui.storage.user.set('uploadCount', count);
               ui.notify(`Uploaded ${file.name} (lifetime uploads: ${count})`, 'success');
@@ -83,15 +81,15 @@ ui.page('/examples/upload', () => {
             },
           });
 
-          listUi = ui.refreshable(() => {
-            if (files.length === 0) {
+          ui.auto(() => {
+            if (state.files.length === 0) {
               ui.label('No files uploaded yet.').classes(
                 'py-6 text-center text-sm text-muted-foreground',
               );
               return;
             }
             ui.column(() => {
-              for (const file of files) {
+              for (const file of state.files) {
                 ui.row(() => {
                   ui.column(() => {
                     ui.label(file.name).classes('truncate text-sm font-medium');
@@ -119,8 +117,8 @@ ui.page('/examples/upload', () => {
                     variant: 'ghost',
                     size: 'sm',
                     onClick: async () => {
-                      const idx = files.indexOf(file);
-                      if (idx >= 0) files.splice(idx, 1);
+                      const idx = state.files.indexOf(file);
+                      if (idx >= 0) state.files = state.files.filter((_, i) => i !== idx);
                       try {
                         await unlink(file.path);
                       } catch {

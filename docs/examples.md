@@ -3,7 +3,11 @@
 Demo entry: [`apps/demo/src/main.ts`](../apps/demo/src/main.ts)  
 Pages: [`apps/demo/src/examples/`](../apps/demo/src/examples/) (auto-loaded via `ui.loadPages`)
 
-After `bun run build:client && bun run demo` (or `bun run demo:cli`), open http://localhost:4000.
+Live: https://clay.close-by.org/ · locally in this repo: `bun run build:client && bun run demo` (or `bun run demo:cli`), then open http://localhost:4000.
+
+## Standalone apps
+
+- [`examples/tailwind-app/`](../examples/tailwind-app/): Standalone app with Tailwind utilities.
 
 ## Sidebar groups
 
@@ -16,8 +20,7 @@ Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the h
 | `/` | `Home.ts` | Landing page: hero, live counter + source side by side (`ui.codeBlock`), feature grid, catalog grouped via `ui.navFromPages()` (same as sidebar) |
 | `/examples/counter` | `Counter.ts` | `setText`, `refreshable`, button variants |
 | `/examples/todo` | `Todo.ts` | `reactive`, `bindValue`, list `refreshable`, filters |
-| `/examples/reactive-let-orders` | `ReactiveLetOrders.ts` | Order filters and master–detail views with `ui.state` / `ui.auto` |
-| `/examples/reactive-let-orders-let` | `ReactiveLetOrdersLet.ts` | The same order workflow with reactive `let` variables and the Clay CLI transform |
+| `/examples/reactive-let-orders` | `ReactiveLetOrders.ts` | Order filters and master–detail views with `ui.state` / `ui.auto`, plus the equivalent reactive `let` source (runnable copy: `examples/reactive-let-orders.ts` with the Clay CLI) |
 | `/examples/chat` | `Chat.ts` | `ui.storage.app` (persisted messages + ephemeral presence), async `get`/`set` |
 | `/examples/ai` | `AiDemo.ts` | `ui.ai.*` gallery — chat, prompt bar, loader/thinking, agent cards, diff/insights/fine-tune (static props; no model runtime) |
 | `/examples/upload` | `FileUpload.ts` | `ui.upload` button + dropzone (progress/abort/size), `ui.storage.tab` / `user`, `ui.download`, `ui.clipboard` |
@@ -39,7 +42,8 @@ Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the h
 | `/examples/kanban` | `KanbanDemo.ts` | `ui.kanban` swimlanes, card detail drawer, element-owned `cardMove`/`cardSelect`, reset via APIs |
 | `/examples/list` | `ListDemo.ts` | Apps: `ui.list` groups, drag to reorder, reset via `setGroups` |
 | `/examples/gantt` | `GanttDemo.ts` | `ui.gantt` owned rows/dates/markers/deps, cross-row drag, header double-click markers, `itemMove` / `markerAdd` settle |
-| `/examples/flow` | `FlowDemo.ts` | Four `ui.flow` demos: ETL with in-node controls + labeled edges + dagre auto-layout, multi-handle approval branches, fan-in/out + `addNode` dynamic stages, group/`parentId` nesting with interactive edges and positions |
+| `/examples/flow` | `FlowDemo.ts` | `ui.flow` ETL pipeline with in-node controls, labeled edges and dagre auto-layout; multi-handle approval branches |
+| `/examples/flow-editing` | `FlowEditingDemo.ts` | Fan-in/out with `addNode` dynamic stages; group/`parentId` nesting |
 | `/examples/data-clients` | `DataClientsDemo.ts` | DuckDB / Kibana / ClickHouse integration story (mock-friendly) |
 | `/examples/maps` | `MapsGallery.ts` | `ui.map` gallery: markers and popups, routes, arcs, choropleth, clusters, compact analytics map |
 | `/examples/delivery-tracker` | `DeliveryTracker.ts` | `ui.map` route progress and courier marker: `updateRoute` / `upsertMarker` on a timer, `fill` layout |

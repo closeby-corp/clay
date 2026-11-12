@@ -58,32 +58,34 @@ ui.page('/examples/chat', () => {
             }, { gap: 1 });
           });
 
+          let disposed = false;
+          ui.onDispose(() => {
+            disposed = true;
+          });
           const sync = async () => {
             messageList = await messages.get();
             onlineList = await onlineUsers.get();
+            if (disposed) return;
             presence.setText(`${onlineList.length} online`);
             chatUi.refresh();
           };
           void sync();
-          messages.subscribe(() => {
+          ui.onDispose(messages.subscribe(() => {
             void sync();
-          });
-          onlineUsers.subscribe(() => {
+          }));
+          ui.onDispose(onlineUsers.subscribe(() => {
             void sync();
-          });
+          }));
 
-          const username = ui.input({
-            label: 'Name',
-            value: 'Anonymous',
-            placeholder: 'Display name',
-          });
-          const messageText = ui.input({ label: 'Message', placeholder: 'Type a message…' });
+          const draft = ui.state({ user: 'Anonymous', text: '' });
+          ui.input({ label: 'Name', placeholder: 'Display name' }).bindValue(draft, 'user');
+          ui.input({ label: 'Message', placeholder: 'Type a message…' }).bindValue(draft, 'text');
 
           ui.row(() => {
             ui.button('Send', {
               onClick: async () => {
-                const text = String(messageText.get() ?? '').trim();
-                const user = String(username.get() ?? '').trim() || 'Anonymous';
+                const text = draft.text.trim();
+                const user = draft.user.trim() || 'Anonymous';
                 if (!text) return;
                 const users = await onlineUsers.get();
                 if (!users.includes(user)) {
@@ -98,7 +100,7 @@ ui.page('/examples/chat', () => {
                     timestamp: new Date().toLocaleTimeString(),
                   },
                 ]);
-                messageText.set('');
+                draft.text = '';
               },
             });
           });

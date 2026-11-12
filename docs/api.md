@@ -1000,7 +1000,7 @@ registerFlowEdgeTypes({ labeled: BaduiLabeledEdge });
 
 Then reference those keys from the server: `flow.node({ nodeType: 'fancy', … })` / edge `type: 'labeled'`, and optionally list them on the flow as `customNodeTypes` / `customEdgeTypes`.
 
-See Flow Demo (`/examples/flow`) for richer patterns:
+See the Flow demos (`/examples/flow` for 1–2, `/examples/flow-editing` for 3–4) for richer patterns:
 
 1. **ETL pipeline** — select/switch/progress/buttons inside nodes; labeled smoothstep edges + dagre auto-layout  
 2. **Branching approval** — multi-handle triage (`yes` / `no` sources), rating + badges  
@@ -1833,6 +1833,7 @@ onClick: async () => {
 | `ui.runJavaScript(code)` | `void` | Eval trusted snippet in the browser |
 | `ui.scroll.to(opts)` | `void` | Scroll window (`top` / `bottom` / px) |
 | `ui.scroll.intoView(selector, opts?)` | `void` | `Element.scrollIntoView` via selector |
+| `ui.onDispose(callback)` | `void` | Register synchronous cleanup during a page build or event; runs once on disconnect, navigation, or reconnect page replacement. Requires an active session, so call it synchronously during the build or at the start of a handler (not after an `await`); callbacks run in registration order and errors are logged without stopping other cleanup. |
 | `ui.timer(interval, callback, options?)` | `TimerHandle` | Session-scoped timer; `interval` in **seconds**; `{ once? }`; `.activate()` / `.deactivate()` / `.cancel()` |
 | `ui.upload(props?)` | `Element` | Multipart HTTP upload; see below |
 | `ui.storage.tab` | | Per-browser-tab map (sessionStorage mirror) |
@@ -1894,9 +1895,10 @@ User storage requires a `userId` on the session. The built-in client sends an an
 const messages = ui.storage.app.create<Message[]>('chatMessages', []);
 const online = ui.storage.app.create<string[]>('onlineUsers', [], { persist: false });
 
-messages.subscribe((list) => {
+// Inside a page builder, unsubscribe when this page is disposed.
+ui.onDispose(messages.subscribe((list) => {
   // update UI for this session
-});
+}));
 
 await messages.set([...(await messages.get()), newMessage]);
 await messages.update((prev) => [...prev, newMessage]);
@@ -1910,12 +1912,12 @@ await messages.update((prev) => [...prev, newMessage]);
 | `storage.app.create(key, initial, options?)` | Get or create named store; `{ persist?: boolean }` |
 | `.get()` | `Promise<T>` — load from adapter when persisted |
 | `.set(v)` / `.update(fn)` | `Promise<void>` — save when persisted |
-| `.subscribe(listener)` | Listen for changes |
+| `.subscribe(listener)` | Listen for changes; returns an unsubscribe function. Pass it to `ui.onDispose` for page-scoped listeners; subscriptions created outside a session remain process-wide. |
 | `storage.app.clearAll()` | Test helper (clears app stores only) |
 | `storage.clearAll()` | Test helper (clears app stores + user bags + both adapters) |
 | `createMemoryPersistence()` | In-memory adapter for tests (`@close-by/clay-core`) |
 | `createFilePersistence({ dir })` | File-backed adapter (`@close-by/clay-persistence-file`) |
-| `createRedisPersistence({ client, keyPrefix? })` | Redis adapter (`@close-by/clay-persistence-redis`) — multi-process app/user bags; keep WS sticky |
+| `createRedisPersistence({ client, keyPrefix? })` | Redis adapter (`@close-by/clay-persistence-redis`; monorepo only — not published to npm yet) — multi-process app/user bags; keep WS sticky |
 
 `PersistenceAdapter`:
 

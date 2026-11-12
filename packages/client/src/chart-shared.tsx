@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 export type ChartSeries = {
@@ -239,15 +238,7 @@ export function useInteractiveChartData(
 } {
   const periodDefs = useStableValue(periods?.length ? periods : DEFAULT_PERIODS);
   const defaultPeriod = periodDefs[0]?.value ?? '90d';
-  const isMobile = useIsMobile();
   const [period, setPeriod] = useState(defaultPeriod);
-
-  useEffect(() => {
-    if (interactive && isMobile) {
-      const mobileDefault = periodDefs.find((p) => p.value === '7d') ?? periodDefs[periodDefs.length - 1];
-      if (mobileDefault) setPeriod(mobileDefault.value);
-    }
-  }, [interactive, isMobile, periodDefs]);
 
   const filteredData = useMemo(() => {
     if (!interactive) return data;
@@ -317,7 +308,9 @@ export function ChartChrome({
   const styleProp =
     typeof style === 'object' && style ? (style as CSSProperties) : undefined;
   const periodDefs = periods?.length ? periods : DEFAULT_PERIODS;
-  const showChrome = Boolean(title || description || headline || interactive);
+  const periodLabel = periodDefs.find((p) => p.value === period)?.label;
+  const activeDescription = description || (interactive && periodLabel ? `Total for the ${periodLabel.toLowerCase()}` : '');
+  const showChrome = Boolean(title || activeDescription || headline || interactive);
 
   if (!showChrome) {
     return (
@@ -334,7 +327,7 @@ export function ChartChrome({
     >
       <CardHeader>
         {title ? <CardTitle>{title}</CardTitle> : null}
-        {description ? <CardDescription>{description}</CardDescription> : null}
+        {activeDescription ? <CardDescription>{activeDescription}</CardDescription> : null}
         {headline ? <ChartHeadlineRow headline={headline} /> : null}
         {interactive && period && setPeriod ? (
           <CardAction>
