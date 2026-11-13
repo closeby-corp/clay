@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 type Row = Record<string, unknown>;
 
-const EMPTY: Set<string> = new Set();
+type Flash = { expiresAt: number; gen: 0 | 1 };
+const EMPTY: Map<string, Flash> = new Map();
 
 /** Stable JSON: object keys sorted at every level, internal "__" fields dropped. */
 function normalize(value: unknown): unknown {
@@ -41,42 +42,56 @@ export function diffRowKeys(
   return { changed, snapshot };
 }
 
-/** Keys of rows added/changed by the latest `rows` update, cleared after `durationMs`. */
+/** Per-row expiry and alternating classes let repeated changes restart the animation. */
 export function useRowChangeFlash(
   rows: Record<string, unknown>[],
   keyOf: (row: Record<string, unknown>, index: number) => string,
   enabled: boolean,
   durationMs = 1600,
-): Set<string> {
+): (key: string) => string | undefined {
   const snapshotRef = useRef<Map<string, string> | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [flashing, setFlashing] = useState<Set<string>>(EMPTY);
+  const [flashing, setFlashing] = useState<Map<string, Flash>>(EMPTY);
 
   useEffect(() => {
     if (!enabled) {
       snapshotRef.current = null;
+      setFlashing(EMPTY);
       return;
     }
     const { changed, snapshot } = diffRowKeys(snapshotRef.current, rows, keyOf);
     snapshotRef.current = snapshot;
     if (changed.size === 0) return;
 
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
-    setFlashing((active) => new Set([...active, ...changed]));
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      setFlashing(EMPTY);
-    }, durationMs);
+    const now = Date.now();
+    setFlashing((active) => {
+      const next = new Map(active);
+      for (const key of changed) {
+        next.set(key, {
+          expiresAt: now + durationMs,
+          gen: active.get(key)?.gen === 0 ? 1 : 0,
+        });
+      }
+      return next;
+    });
     // keyOf is expected to be a stable/module-level function; rows identity drives the diff.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, enabled, durationMs]);
 
-  useEffect(
-    () => () => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!enabled || flashing.size === 0) return;
+    let earliest = Infinity;
+    for (const flash of flashing.values()) earliest = Math.min(earliest, flash.expiresAt);
+    const timer = setTimeout(() => {
+      const now = Date.now();
+      setFlashing((active) => new Map(
+        [...active].filter(([, flash]) => flash.expiresAt > now),
+      ));
+    }, Math.max(0, earliest - Date.now()));
+    return () => clearTimeout(timer);
+  }, [flashing, enabled]);
 
-  return enabled ? flashing : EMPTY;
+  return (key) => {
+    const flash = enabled ? flashing.get(key) : undefined;
+    return flash ? `clay-row-flash-${flash.gen === 0 ? 'a' : 'b'}` : undefined;
+  };
 }

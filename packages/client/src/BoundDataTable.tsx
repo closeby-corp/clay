@@ -40,7 +40,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  ChevronsUpDown,
   Columns3,
   Copy,
   Download,
@@ -53,7 +52,6 @@ import {
   Inbox,
   Info,
   Link2,
-  ListFilter,
   Lock,
   Mail,
   Minus,
@@ -333,76 +331,57 @@ function FacetColumnFilter({
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const options = column.facetOptions ?? [];
   const active = selected.length > 0;
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn('h-7 gap-1 border-dashed px-2 font-normal', active && 'border-solid')}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Filter ${column.header}`}
-        >
-          <ListFilter className="size-3.5 text-muted-foreground" />
-          {active ? (
-            <Badge variant="secondary" className="h-5 rounded-sm px-1 font-normal">
-              {selected.length}
-            </Badge>
-          ) : null}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="start" onClick={(e) => e.stopPropagation()}>
-        <div className="max-h-64 overflow-auto p-1">
-          {options.length === 0 ? (
-            <p className="px-2 py-3 text-center text-sm text-muted-foreground">No options</p>
-          ) : (
-            options.map((opt) => {
-              const checked = selected.includes(opt.value);
-              return (
-                <button
-                  key={opt.value === '' ? '__empty' : opt.value}
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                  onClick={() => {
-                    const next = checked
-                      ? selected.filter((v) => v !== opt.value)
-                      : [...selected, opt.value];
-                    onChange(next);
-                  }}
-                >
-                  <Checkbox
-                    checked={checked}
-                    tabIndex={-1}
-                    aria-hidden
-                    className="pointer-events-none"
-                  />
-                  <span className="min-w-0 flex-1 truncate">{opt.label}</span>
-                  {opt.count != null ? (
-                    <span className="text-xs text-muted-foreground tabular-nums">{opt.count}</span>
-                  ) : null}
-                </button>
-              );
-            })
-          )}
+    <div className="p-1">
+      <div className="max-h-64 overflow-auto p-1">
+        {options.length === 0 ? (
+          <p className="px-2 py-3 text-center text-sm text-muted-foreground">No options</p>
+        ) : (
+          options.map((opt) => {
+            const checked = selected.includes(opt.value);
+            return (
+              <button
+                key={opt.value === '' ? '__empty' : opt.value}
+                type="button"
+                aria-pressed={checked}
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                onClick={() => {
+                  const next = checked
+                    ? selected.filter((v) => v !== opt.value)
+                    : [...selected, opt.value];
+                  onChange(next);
+                }}
+              >
+                <Checkbox
+                  checked={checked}
+                  tabIndex={-1}
+                  aria-hidden
+                  className="pointer-events-none"
+                />
+                <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+                {opt.count != null ? (
+                  <span className="text-xs text-muted-foreground tabular-nums">{opt.count}</span>
+                ) : null}
+              </button>
+            );
+          })
+        )}
+      </div>
+      {active ? (
+        <div className="border-t p-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-full justify-center"
+            onClick={() => onChange([])}
+          >
+            Clear filter
+          </Button>
         </div>
-        {active ? (
-          <div className="border-t p-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-full justify-center"
-              onClick={() => onChange([])}
-            >
-              Clear filter
-            </Button>
-          </div>
-        ) : null}
-      </PopoverContent>
-    </Popover>
+      ) : null}
+    </div>
   );
 }
 
@@ -417,69 +396,41 @@ function TextColumnFilter({
   onChange: (next: string) => void;
   onCommit: (next: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const active = value.trim().length > 0;
-  const inputId = `dt-filter-${column.key}`;
-
+  const inputId = useId();
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <div className="p-1">
+      <Label htmlFor={inputId} className="sr-only">
+        Filter {column.header}
+      </Label>
+      <Input
+        id={inputId}
+        value={value}
+        placeholder="Filter…"
+        className="h-8"
+        autoFocus
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onCommit(value);
+          }
+        }}
+      />
+      {active ? (
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className={cn('h-7 gap-1 border-dashed px-2 font-normal', active && 'border-solid')}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Filter ${column.header}`}
-        >
-          <ListFilter className="size-3.5 text-muted-foreground" />
-          {active ? (
-            <Badge
-              variant="secondary"
-              className="h-5 max-w-20 truncate rounded-sm px-1 font-normal"
-            >
-              {value.trim()}
-            </Badge>
-          ) : null}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-2" align="start" onClick={(e) => e.stopPropagation()}>
-        <Label htmlFor={inputId} className="sr-only">
-          Filter {column.header}
-        </Label>
-        <Input
-          id={inputId}
-          value={value}
-          placeholder="Filter…"
-          className="h-8"
-          autoFocus
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              onCommit(value);
-              setOpen(false);
-            }
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              setOpen(false);
-            }
+          className="mt-1 h-8 w-full justify-center"
+          onClick={() => {
+            onChange('');
+            onCommit('');
           }}
-        />
-        {active ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-1 h-8 w-full justify-center"
-            onClick={() => {
-              onChange('');
-              onCommit('');
-            }}
-          >
-            Clear filter
-          </Button>
-        ) : null}
-      </PopoverContent>
-    </Popover>
+        >
+          Clear filter
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -850,7 +801,7 @@ export function BoundDataTable({
     (row: Record<string, unknown>, i: number) => String(row[keyField] ?? i),
     [keyField],
   );
-  const flashingKeys = useRowChangeFlash(rows, rowKeyOf, props.highlightChanges === true);
+  const rowFlashClass = useRowChangeFlash(rows, rowKeyOf, props.highlightChanges === true);
   const searchable = props.searchable !== false;
   const columnFilterable = props.columnFilterable !== false;
   const columnToggle = props.columnToggle !== false;
@@ -888,7 +839,12 @@ export function BoundDataTable({
     typeof props.maxHeight === 'string' && props.maxHeight.trim() !== '' ? props.maxHeight : null;
   const hiddenColumns = new Set((props.hiddenColumns as string[]) ?? []);
   const serverFilter = String(props.filter ?? '');
-  const serverColumnFilters = (props.columnFilters as Record<string, string>) ?? {};
+  const columnFiltersKey = JSON.stringify(props.columnFilters ?? {});
+  // Live row patches resend the same filters; keep pending edits until their values change.
+  const serverColumnFilters = useMemo(
+    () => JSON.parse(columnFiltersKey) as Record<string, string>,
+    [columnFiltersKey],
+  );
   const filterDebounceMs =
     props.filterDebounceMs != null && Number.isFinite(Number(props.filterDebounceMs))
       ? Math.max(0, Math.floor(Number(props.filterDebounceMs)))
@@ -970,7 +926,7 @@ export function BoundDataTable({
 
   const showPagination = pageSize > 0;
   const showFilterChips = props.showFilterChips === true;
-  const showToolbar = searchable || columnToggle || exportable || !!primaryAction || grouped;
+  const showToolbar = columnFilterable || searchable || columnToggle || exportable || !!primaryAction || grouped;
   const showBulkBar = selectable && bulkActions.length > 0 && selected.size > 0;
   const defaultViewId = views[0]?.id ?? '';
 
@@ -1458,23 +1414,64 @@ export function BoundDataTable({
     </div>
   ) : null;
 
+  const filterableColumns = allColumns;
+  const [filterPickerKey, setFilterPickerKey] = useState<string | null>(null);
+  const commitColumnFilter = (key: string, value: string) => {
+    if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
+    setColumnFilters({ ...columnFilters, [key]: value });
+    emitColumnFilter(key, value);
+  };
+  const filterEditor = (col: DataTableColumn) => isFacetColumn(col) ? (
+    <FacetColumnFilter column={col} selected={parseFacetFilter(columnFilters[col.key])}
+      onChange={(values) => setFacetFilter(col.key, values)} />
+  ) : (
+    <TextColumnFilter column={col} value={columnFilters[col.key] ?? ''}
+      onChange={(value) => {
+        setColumnFilters({ ...columnFilters, [col.key]: value });
+        scheduleColumnFilterEmit(col.key, value);
+      }}
+      onCommit={(value) => commitColumnFilter(col.key, value)} />
+  );
+  const filterPickerColumn = filterableColumns.find((col) => col.key === filterPickerKey);
+  const filterPicker = columnFilterable && filterableColumns.length > 0 ? (
+    <Popover onOpenChange={(open) => { if (!open) setFilterPickerKey(null); }}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm"><Plus className="size-3.5" /> Filter</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-1" align="start">
+        {filterPickerColumn ? (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setFilterPickerKey(null)}>‹ {filterPickerColumn.header}</Button>
+            {filterEditor(filterPickerColumn)}
+          </>
+        ) : filterableColumns.map((col) => (
+          <Button key={col.key} variant="ghost" size="sm" className="w-full justify-start"
+            onClick={() => setFilterPickerKey(col.key)}>{col.header}</Button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  ) : null;
+
   const toolbar = showToolbar ? (
-    <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
-      {searchable ? (
-        <Input
-          value={filter}
-          placeholder={String(props.searchPlaceholder ?? 'Search…')}
-          className="max-w-sm"
-          onChange={(e) => {
-            const next = e.target.value;
-            setFilter(next);
-            scheduleFilterEmit(next);
-          }}
-        />
-      ) : (
-        <div />
-      )}
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {searchable ? (
+          <Input
+            value={filter}
+            placeholder={String(props.searchPlaceholder ?? 'Search…')}
+            className="max-w-sm"
+            onChange={(e) => {
+              const next = e.target.value;
+              setFilter(next);
+              scheduleFilterEmit(next);
+            }}
+          />
+        ) : (
+          <div />
+        )}
+        {filterPicker}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
         {groupChrome}
         {columnsMenu}
         {exportMenu}
@@ -1484,48 +1481,59 @@ export function BoundDataTable({
   ) : null;
 
   const activeFilterChips = useMemo(() => {
-    if (!showFilterChips) return [];
     const chips: Array<{ id: string; label: string; value?: string }> = [];
-    if (filter.trim()) {
+    if (showFilterChips && filter.trim()) {
       chips.push({ id: '__search', label: 'Search', value: filter.trim() });
     }
-    for (const col of columns) {
+    for (const col of allColumns) {
       const raw = columnFilters[col.key];
-      if (!raw) continue;
+      if (!raw?.trim()) continue;
       let value = raw;
       if (isFacetColumn(col)) {
         const parsed = parseFacetFilter(raw);
         if (parsed.length === 0) continue;
-        value = parsed.join(', ');
+        value = parsed.map((v) => col.facetOptions?.find((opt) => opt.value === v)?.label ?? v).join(', ');
       }
       chips.push({ id: col.key, label: col.header, value });
     }
     return chips;
-  }, [showFilterChips, filter, columnFilters, columns]);
+  }, [showFilterChips, filter, columnFilters, allColumns]);
 
   const filterChipBar =
-    showFilterChips && activeFilterChips.length > 0 ? (
+    activeFilterChips.length > 0 ? (
       <div className="border-b px-4 py-2">
         <FilterChipsView
           chips={activeFilterChips}
+          renderChipText={(chip) => {
+            const col = allColumns.find((col) => col.key === chip.id);
+            return col ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" className="rounded-sm text-left hover:underline" aria-label={col.header + ' filter editor'}>
+                    {chip.label}: {chip.value}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-1">{filterEditor(col)}</PopoverContent>
+              </Popover>
+            ) : <span>{chip.label}: {chip.value}</span>;
+          }}
           onRemoveChip={(chipId) => {
             if (chipId === '__search') {
               setFilter('');
               scheduleFilterEmit('');
               return;
             }
-            const next = { ...columnFilters, [chipId]: '' };
-            setColumnFilters(next);
-            scheduleColumnFilterEmit(chipId, '');
+            commitColumnFilter(chipId, '');
           }}
           onClear={() => {
+            if (columnDebounceRef.current) clearTimeout(columnDebounceRef.current);
             setFilter('');
             scheduleFilterEmit('');
             const next = { ...columnFilters };
             for (const key of Object.keys(next)) next[key] = '';
             setColumnFilters(next);
             for (const key of Object.keys(columnFilters)) {
-              if (columnFilters[key]) scheduleColumnFilterEmit(key, '');
+              if (columnFilters[key]) emitColumnFilter(key, '');
             }
           }}
         />
@@ -1804,7 +1812,7 @@ export function BoundDataTable({
           key={rowOpts?.key ?? rowKey}
           rowKey={rowKey}
           selected={isSelected}
-          className={cn(zebraClass, flashingKeys.has(rowKey) && 'clay-row-flash')}
+          className={cn(zebraClass, rowFlashClass(rowKey))}
           measureRef={rowOpts?.measureRef}
           dataIndex={rowOpts?.dataIndex}
           clickable={rowClickable}
@@ -1827,7 +1835,7 @@ export function BoundDataTable({
         className={cn(
           zebraClass,
           rowClickable && 'cursor-pointer',
-          flashingKeys.has(rowKey) && 'clay-row-flash',
+          rowFlashClass(rowKey),
         )}
       >
         {cells}
@@ -1934,8 +1942,9 @@ export function BoundDataTable({
             const sortIdx = sortIndexByKey.get(col.key);
             const active = sortIdx != null;
             const sortDir = active ? sorts[sortIdx!]!.dir : 'asc';
-            const SortIcon = !active ? ChevronsUpDown : sortDir === 'asc' ? ArrowUp : ArrowDown;
-            const facet = columnFilterable && isFacetColumn(col);
+            const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
+            const facet = isFacetColumn(col);
+            const filterable = columnFilterable && filterableColumns.some((c) => c.key === col.key);
             const pinWidth = columnWidths[col.key] ?? (col.pin ? defaultColWidth : undefined);
             const pinStyle = pinStickyStyle(
               col.pin,
@@ -1945,12 +1954,6 @@ export function BoundDataTable({
               { zIndex: 4 },
             );
             const edge = pinEdgeSide(columns, col);
-            const pinStateLabel =
-              col.pin === 'left'
-                ? 'pinned left'
-                : col.pin === 'right'
-                  ? 'pinned right'
-                  : 'unpinned';
             const filterActive = facet
               ? parseFacetFilter(columnFilters[col.key]).length > 0
               : (columnFilters[col.key] ?? '').trim().length > 0;
@@ -2001,7 +2004,7 @@ export function BoundDataTable({
                           variant="ghost"
                           size="sm"
                           className={cn(
-                            'min-w-0 flex-1 gap-1.5 px-0 font-medium',
+                            'relative min-w-0 flex-1 gap-1 px-0 has-[>svg]:px-0 font-medium',
                             density === 'compact' ? 'h-7' : 'h-8',
                           )}
                           aria-label={
@@ -2027,13 +2030,10 @@ export function BoundDataTable({
                           }}
                         >
                           <span className="min-w-0 flex-1 truncate" title={col.header}>{col.header}</span>
-                          <SortIcon
-                            className={cn(
-                              "size-3.5 shrink-0 text-muted-foreground",
-                              !active && "hidden group-hover/th:block group-focus-within/th:block",
-                            )}
+                          {active ? <SortIcon
+                            className="size-3.5 shrink-0 text-muted-foreground"
                             aria-hidden
-                          />
+                          /> : null}
                           {active && sorts.length > 1 ? (
                             <span
                               className="shrink-0 text-[10px] font-semibold text-muted-foreground tabular-nums"
@@ -2058,142 +2058,54 @@ export function BoundDataTable({
                       ) : null}
                     </span>
                   )}
-                  {columnFilterable || hasEvent(props, 'columnPin') ? (
-                    <div
-                      className={cn(
-                        'flex shrink-0 items-center gap-0.5 transition-opacity',
-                        'absolute inset-y-0 right-1 bg-gradient-to-l from-muted via-muted to-transparent pl-3 opacity-0 pointer-events-none group-hover/th:opacity-100 group-hover/th:pointer-events-auto group-focus-within/th:opacity-100 group-focus-within/th:pointer-events-auto has-[[data-state=open]]:opacity-100 has-[[data-state=open]]:pointer-events-auto [@media(hover:none)]:static [@media(hover:none)]:bg-none [@media(hover:none)]:pl-1 [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto',
-                        filterActive && 'opacity-100 pointer-events-auto',
-                      )}
-                    >
-                      {columnFilterable ? (
-                        facet ? (
-                          <FacetColumnFilter
-                            column={col}
-                            selected={parseFacetFilter(columnFilters[col.key])}
-                            onChange={(values) => setFacetFilter(col.key, values)}
-                          />
-                        ) : (
-                          <TextColumnFilter
-                            column={col}
-                            value={columnFilters[col.key] ?? ''}
-                            onChange={(next) => {
-                              setColumnFilters({
-                                ...columnFilters,
-                                [col.key]: next,
-                              });
-                              scheduleColumnFilterEmit(col.key, next);
-                            }}
-                            onCommit={(next) => {
-                              if (columnDebounceRef.current)
-                                clearTimeout(columnDebounceRef.current);
-                              setColumnFilters({
-                                ...columnFilters,
-                                [col.key]: next,
-                              });
-                              emitColumnFilter(col.key, next);
-                            }}
-                          />
-                        )
-                      ) : null}
-                      {hasEvent(props, 'columnPin') ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={cn(
-                                'size-7 shrink-0 text-muted-foreground',
-                                col.pin && 'text-foreground',
-                              )}
-                              title="Pin column"
-                              aria-label={`${col.header} column options, ${pinStateLabel}`}
-                              aria-pressed={col.pin != null}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {col.pin ? (
-                                <Pin className="size-3.5" aria-hidden />
-                              ) : (
-                                <MoreHorizontal className="size-3.5" aria-hidden />
-                              )}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            {sortable && hasEvent(props, 'sort') ? (
-                              <>
-                                <DropdownMenuItem
-                                  onSelect={() =>
-                                    emit(id, 'sort', {
-                                      key: col.key,
-                                      multi: true,
-                                    })
-                                  }
-                                >
-                                  <ChevronsUpDown className="size-3.5" />
-                                  Add to multi-sort
-                                </DropdownMenuItem>
-                                {sorts.some((s) => s.key === col.key) ? (
-                                  <DropdownMenuItem
-                                    onSelect={() =>
-                                      emit(id, 'sort', {
-                                        sorts: sorts.filter((s) => s.key !== col.key),
-                                      })
-                                    }
-                                  >
-                                    <X className="size-3.5" />
-                                    Clear sort
-                                  </DropdownMenuItem>
-                                ) : null}
-                                <DropdownMenuSeparator />
-                              </>
-                            ) : null}
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                emit(id, 'columnPin', {
-                                  key: col.key,
-                                  pin: col.pin === 'left' ? null : 'left',
-                                })
-                              }
-                            >
-                              <Pin className="size-3.5" />
-                              {col.pin === 'left' ? 'Unpin left' : 'Pin left'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                emit(id, 'columnPin', {
-                                  key: col.key,
-                                  pin: col.pin === 'right' ? null : 'right',
-                                })
-                              }
-                            >
-                              <Pin className="size-3.5 rotate-45" />
-                              {col.pin === 'right' ? 'Unpin right' : 'Pin right'}
-                            </DropdownMenuItem>
-                            {col.pin ? (
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  emit(id, 'columnPin', {
-                                    key: col.key,
-                                    pin: null,
-                                  })
-                                }
-                              >
-                                <PinOff className="size-3.5" />
-                                Clear pin
-                              </DropdownMenuItem>
-                            ) : null}
-                            {col.aggregate ? (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem disabled>
-                                  Footer: {aggregateLabel(col.aggregate)}
-                                </DropdownMenuItem>
-                              </>
-                            ) : null}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : null}
-                    </div>
+                  {filterActive ? <span className="size-1.5 shrink-0 rounded-full bg-primary" role="img" aria-label={col.header + ' filter active'} /> : null}
+                  {(sortable && hasEvent(props, 'sort')) || filterable || hasEvent(props, 'columnPin') || (columnToggle && hasEvent(props, 'columnVisibility')) ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon"
+                          className="absolute right-0 size-6 bg-muted text-muted-foreground opacity-0 group-hover/th:opacity-100 group-focus-within/th:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:relative [@media(hover:none)]:shrink-0 [@media(hover:none)]:opacity-100"
+                          aria-label={col.header + ' column menu'}>
+                          <ChevronDown className="size-3.5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-56 p-1">
+                        {sortable && hasEvent(props, 'sort') ? (
+                          <div className="border-b pb-1">
+                            {(['asc', 'desc'] as const).map((dir) => (
+                              <Button key={dir} variant="ghost" size="sm" className="w-full justify-start"
+                                onClick={() => emit(id, 'sort', { key: col.key, dir })}>
+                                {dir === 'asc' ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />}
+                                Sort {dir === 'asc' ? 'ascending' : 'descending'}
+                              </Button>
+                            ))}
+                            {active ? <Button variant="ghost" size="sm" className="w-full justify-start"
+                              onClick={() => emit(id, 'sort', { sorts: sorts.filter((s) => s.key !== col.key) })}>Clear sort</Button> : null}
+                            <Button variant="ghost" size="sm" className="w-full justify-start"
+                              onClick={() => emit(id, 'sort', { key: col.key, multi: true })}>Add to multi-sort</Button>
+                          </div>
+                        ) : null}
+                        {filterable ? <div className="border-b py-1"><p className="px-2 text-xs text-muted-foreground">Filter {col.header}</p>{filterEditor(col)}</div> : null}
+                        {hasEvent(props, 'columnPin') ? (
+                          <div className="py-1">
+                            {(['left', 'right'] as const).map((pin) => (
+                              <Button key={pin} variant="ghost" size="sm" className="w-full justify-start"
+                                onClick={() => emit(id, 'columnPin', { key: col.key, pin })}>
+                                <Pin className="size-3.5" />Pin {pin}
+                              </Button>
+                            ))}
+                            {col.pin ? <Button variant="ghost" size="sm" className="w-full justify-start"
+                              onClick={() => emit(id, 'columnPin', { key: col.key, pin: null })}><PinOff className="size-3.5" />Unpin</Button> : null}
+                          </div>
+                        ) : null}
+                        {columnToggle && hasEvent(props, 'columnVisibility') ? (
+                          <Button variant="ghost" size="sm" className="w-full justify-start"
+                            disabled={allColumns.length - hiddenColumns.size <= 1}
+                            onClick={() => emit(id, 'columnVisibility', { key: col.key, visible: false })}>
+                            <EyeOff className="size-3.5" />Hide column
+                          </Button>
+                        ) : null}
+                      </PopoverContent>
+                    </Popover>
                   ) : null}
                 </div>
                 <ColumnResizeHandle
@@ -2421,7 +2333,7 @@ export function BoundDataTable({
         rowKey={rowKeyOf}
         renderCell={(row, col, key) => renderCellContent(row, col as DataTableColumn, key)}
         onRowActivate={props.rowClickable === true ? handleRowActivate : undefined}
-        rowClassName={(key) => (flashingKeys.has(key) ? 'clay-row-flash' : undefined)}
+        rowClassName={rowFlashClass}
         selectedKeys={selectable ? selected : undefined}
         renderSelect={selectable ? (key) => renderRowCheckbox(key, selected.has(key)) : undefined}
         renderActions={actions.length > 0 ? (_row, key) => renderRowActionsMenu(key) : undefined}
@@ -2637,8 +2549,8 @@ export function BoundDataTable({
                 fill && 'flex min-h-0 flex-1 flex-col',
               )}
             >
-              {(searchable || exportable) && (
-                <div className="flex items-center gap-2 border-b px-4 py-3">
+              {(searchable || exportable || filterPicker) && (
+                <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
                   {searchable ? (
                     <Input
                       value={filter}
@@ -2653,6 +2565,7 @@ export function BoundDataTable({
                   ) : (
                     <div />
                   )}
+                  {filterPicker}
                   <div className="ml-auto flex items-center gap-2">{exportMenu}</div>
                 </div>
               )}

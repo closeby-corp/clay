@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,10 +14,12 @@ export function FilterChipsView({
   chips,
   clearLabel = 'Clear all',
   className,
+  renderChipText,
   onClear,
   onRemoveChip,
 }: {
   chips: FilterChipView[];
+  renderChipText?: (chip: FilterChipView) => ReactNode;
   clearLabel?: string;
   className?: string;
   onClear?: () => void;
@@ -27,8 +30,12 @@ export function FilterChipsView({
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {chips.map((chip) => (
         <Badge key={chip.id} variant="secondary" className="gap-1 pr-1 font-normal">
-          <span className="text-muted-foreground">{chip.label}</span>
-          {chip.value ? <span>{chip.value}</span> : null}
+          {renderChipText ? renderChipText(chip) : (
+            <>
+              <span className="text-muted-foreground">{chip.label}</span>
+              {chip.value ? <span>{chip.value}</span> : null}
+            </>
+          )}
           {onRemoveChip ? (
             <button
               type="button"

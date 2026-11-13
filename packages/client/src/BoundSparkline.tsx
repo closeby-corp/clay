@@ -1,5 +1,5 @@
 import { useId, type CSSProperties } from 'react';
-import { Area, AreaChart, Line, LineChart } from 'recharts';
+import { Area, AreaChart, Line, LineChart, YAxis } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -70,6 +70,7 @@ export function BoundSparkline({
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
       {type === 'line' ? (
         <LineChart accessibilityLayer data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
+          <YAxis hide domain={['dataMin', 'dataMax']} />
           <Line
             type="monotone"
             dataKey={yKey}
@@ -88,6 +89,7 @@ export function BoundSparkline({
               <stop offset="95%" stopColor={color} stopOpacity={0.02} />
             </linearGradient>
           </defs>
+          <YAxis hide domain={['dataMin', 'dataMax']} />
           <Area
             type="monotone"
             dataKey={yKey}
@@ -109,6 +111,15 @@ export function BoundSparkline({
       : headline?.trendDirection === 'down'
         ? 'red'
         : undefined;
+
+  // No chrome to show (e.g. inside a table cell or stat card): render just the chart.
+  if (!title && !description && !headline) {
+    return (
+      <div className={cn('w-full min-w-0', className, props.className as string | undefined)} style={styleProp}>
+        {chart}
+      </div>
+    );
+  }
 
   return (
     <Card

@@ -402,12 +402,19 @@ html {
 }
 
 /* DataTable: rows added/changed by live updates flash briefly. */
-@keyframes clay-row-flash {
+@keyframes clay-row-flash-a {
   from { background-color: color-mix(in oklch, var(--primary) 18%, transparent); }
   to { background-color: transparent; }
 }
-.clay-row-flash > td {
-  animation: clay-row-flash 1.6s var(--clay-ease-out) both;
+@keyframes clay-row-flash-b {
+  from { background-color: color-mix(in oklch, var(--primary) 18%, transparent); }
+  to { background-color: transparent; }
+}
+.clay-row-flash-a > td {
+  animation: clay-row-flash-a 1.6s var(--clay-ease-out) both;
+}
+.clay-row-flash-b > td {
+  animation: clay-row-flash-b 1.6s var(--clay-ease-out) both;
 }
 /* Phone / PWA polish: safe areas, no double-tap zoom, no tap flash. */
 html {

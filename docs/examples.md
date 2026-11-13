@@ -29,6 +29,7 @@ Each page sets `group` / `groupIcon` in its `pageMeta`, so the sidebar and the h
 | `/examples/ops-console` | `OpsConsoleDemo.ts` | Order triage: `filterBar` → `feedList` → `descriptionList` / `staticTable` |
 | `/examples/charts` | `ChartDemo.ts` | `ui.chart.*`, `ui.sparkline`, composed/scatter charts, `stat` + sparkline |
 | `/examples/live-table` | `LiveTableStress.ts` | High-frequency table updates, configurable row count, and live price changes |
+| `/examples/live-table-components` | `LiveTableComponents.ts` | Live table cells with sparklines, change badges, and load progress bars |
 | `/examples/live-charts` | `LiveCharts.ts` | Live charts: `appendData` sliding windows, `setData` tweens, `upsertData` buckets, live gauge and sparklines |
 | `/examples/themes` | `ThemesDemo.ts` | Palette gallery: `ui.theme.palette`, light/dark, component preview |
 | `/examples/layout` | `LayoutDemo.ts` | Fill layout: `fillViewport`, `grow`, `scroll`, `ui.grid` |

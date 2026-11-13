@@ -45,12 +45,16 @@ ui.page('/examples/live-table', () => {
   const changeLog: Array<{ t: number; n: number }> = [];
   let lastPaint = -Infinity;
 
-  let mTicks: ReturnType<typeof ui.label>;
-  let mRate: ReturnType<typeof ui.label>;
-  let mTime: ReturnType<typeof ui.label>;
-  let mRows: ReturnType<typeof ui.label>;
-  let mTarget: ReturnType<typeof ui.label>;
+  let kpis: ReturnType<typeof ui.stat>;
 
+
+  // Numbers (not strings) so the stat cards animate between values.
+  const kpiItems = (rate: number, avgMs: number) => [
+    { title: 'Ticks', value: ticks, description: `Target ${Math.round(1000 / controls.tickMs)} updates/s` },
+    { title: 'Rows changed / s', value: rate },
+    { title: 'Server tick time', value: avgMs.toFixed(2), description: 'avg ms, last 20 ticks' },
+    { title: 'Rows', value: controls.rowCount },
+  ];
 
   // Throttled to at most one paint every 500ms (forced on control changes).
   const paintMetrics = (force = false) => {
@@ -62,11 +66,7 @@ ui.page('/examples/live-table', () => {
     const changed = changeLog.reduce((sum, e) => sum + e.n, 0);
     const span = changeLog.length ? Math.max(1, (now - changeLog[0]!.t) / 1000) : 1;
     const avg = timings.length ? timings.reduce((a, b) => a + b, 0) / timings.length : 0;
-    mTicks.setText(String(ticks));
-    mRate.setText(Math.round(changed / span).toLocaleString());
-    mTime.setText(avg.toFixed(2));
-    mRows.setText(controls.rowCount.toLocaleString());
-    mTarget.setText(String(Math.round(1000 / controls.tickMs)));
+    kpis.setItems(kpiItems(Math.round(changed / span), avg));
   };
 
   const tick = () => {
@@ -192,21 +192,7 @@ ui.page('/examples/live-table', () => {
         });
       });
 
-      ui.grid({ minColWidth: '10rem', gap: 3 }, () => {
-        const statValue = (title: string, initial: string) => {
-          let value!: ReturnType<typeof ui.label>;
-          ui.card({ gap: 1, className: 'py-4' }, () => {
-            ui.label(title).classes('text-sm text-muted-foreground');
-            value = ui.label(initial).classes('text-2xl font-bold tabular-nums');
-          });
-          return value;
-        };
-        mTicks = statValue('Ticks', '0');
-        mRate = statValue('Rows changed / s', '0');
-        mTime = statValue('Server tick time (avg ms, last 20)', '0.00');
-        mRows = statValue('Rows', String(controls.rowCount));
-        mTarget = statValue('Updates/s target', String(Math.round(1000 / controls.tickMs)));
-      });
+      kpis = ui.stat(kpiItems(0, 0));
 
       ui.card({ title: 'Live table', description: 'Virtualized: only visible rows are in the DOM. Changed rows flash for 1.6s.', gap: 3 }, () => {
         table = ui.dataTable(rows, {
