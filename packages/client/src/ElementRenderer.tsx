@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, Fragment, type CSSProperties, type ReactNode, type MouseEvent } from 'react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
+import { AnimatedValue } from './AnimatedValue';
 import { elementReactKey } from './stickyShell';
 import { withClayDevComments } from './clayDev';
 import { chordList, formatChordDisplay, isEditableTarget, matchesChord } from './keybind';
@@ -5050,7 +5051,7 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
                 <CardHeader>
                   <CardDescription>{item.title}</CardDescription>
                   <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                    {item.value}
+                    <AnimatedValue value={item.value} />
                   </CardTitle>
                   {item.trend ? (
                     <CardAction>
