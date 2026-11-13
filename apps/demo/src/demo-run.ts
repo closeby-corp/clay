@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { ui, type RunConfig } from '@close-by/clay';
-import { getSessionUser } from './examples/_auth';
+import { clearSessionUser, getSessionUser } from './examples/_auth';
 import { demoOidcRoutes } from './examples/_oidc';
 
 const DEFAULT_AUTH_SECRET = 'clay-demo-auth-secret-change-me';
@@ -28,6 +28,23 @@ export function demoAuthOptions(): Pick<
 export function demoAppShell(title?: string): NonNullable<RunConfig['app']> {
   return {
     title,
+    headerActions: () => { ui.themePicker(); },
+    sidebarFooter: () => { ui.presenceBadge(); },
+    account: {
+      user: () => {
+        const user = getSessionUser();
+        return user ? { name: user.name, email: user.username } : { name: 'Guest', email: 'Signed out' };
+      },
+      menu: () => {
+        if (getSessionUser()) {
+          ui.menuItem('Account', { icon: 'user', href: '/examples/auth' });
+          ui.menuSeparator();
+          ui.menuItem('Sign out', { icon: 'log-out', variant: 'destructive', onClick: () => clearSessionUser() });
+        } else {
+          ui.menuItem('Sign in', { icon: 'log-in', href: '/examples/auth/login' });
+        }
+      },
+    },
     get nav() {
       const user = getSessionUser();
       const roleOpts = user ? { role: user.role } : {};

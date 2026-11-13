@@ -71,6 +71,7 @@ import {
   dialog as dialogFactory,
   dialogStack as dialogStackFactory,
   alertDialog as alertDialogFactory,
+  menuItem, menuSeparator, menuLabel,
   dropdownMenu as dropdownMenuFactory,
   breadcrumb as breadcrumbFactory,
   contextMenu as contextMenuFactory,
@@ -501,6 +502,7 @@ import {
 } from '@close-by/clay-core';
 import {
   ClayServer,
+  presence,
   onDispose,
   type ClayServerConfig,
   establishAuthSession as establishAuthSessionCore,
@@ -1378,6 +1380,36 @@ export function alertDialog(props?: AlertDialogProps): AlertDialogElement {
   return alertDialogFactory(props);
 }
 
+export { menuItem, menuSeparator, menuLabel };
+
+/** Appearance and palette picker using the browser's existing theme persistence. */
+export function themePicker(): DropdownMenuElement {
+  const menu = dropdownMenu({ label: 'Theme', variant: 'ghost' }, () => {
+    menuLabel('Appearance');
+    for (const mode of ['light', 'dark', 'system'] as const) {
+      menuItem(mode[0].toUpperCase() + mode.slice(1), { onClick: () => themeCore.set(mode) });
+    }
+    menuSeparator();
+    menuLabel('Palette');
+    for (const palette of themeCore.palettes) {
+      menuItem(palette, { onClick: () => themeCore.palette(palette) });
+    }
+  });
+  menu.props.icon = 'palette';
+  menu.props.iconOnly = true;
+  menu.props.themePicker = true;
+  return menu;
+}
+
+/** Live process-local connected browser count. */
+export function presenceBadge(): Element {
+  return row(() => {
+    label('●').classes('animate-pulse text-xs text-green-500');
+    const online = label(`${presence.count()} online`).classes('text-sm text-muted-foreground');
+    onDispose(presence.subscribe((count) => online.setText(`${count} online`)));
+  }, { gap: 2, wrap: false }).classes('w-fit items-center rounded-full border bg-card/70 px-3 py-1 shadow-xs');
+}
+
 /** Dropdown menu (`fn` or props-first). Prefer `ui.dropdownMenu`. See {@link DropdownMenuProps}. */
 export function dropdownMenu(
   fn: (m: DropdownMenuElement) => void,
@@ -2035,6 +2067,8 @@ export const ui = {
   dialogStack,
   alertDialog,
   dropdownMenu,
+  menuItem, menuSeparator, menuLabel,
+  themePicker, presenceBadge,
   contextMenu,
   hoverCard,
   popover,
@@ -2078,6 +2112,7 @@ export const ui = {
   scroll,
   timer,
   onDispose,
+  presence,
   storage,
   theme,
   sound,

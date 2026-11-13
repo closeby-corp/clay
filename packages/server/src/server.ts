@@ -11,6 +11,7 @@ import {
 } from './auth-cookie';
 import { clearAuthSession, configureAuthSession } from './auth-session';
 import { disposeSession } from './dispose';
+import { connectPresence } from './presence';
 import { handleMultipartUpload, UploadError } from './upload';
 import {
   clientVersion,
@@ -249,7 +250,9 @@ type ResolvedConfig = {
 };
 
 type WsData = {
+  disconnectPresence?: (immediate?: boolean) => void;
   session: ClientSession | null;
+  shellSession?: ClientSession;
   headers?: Headers;
   expiryTimer?: ReturnType<typeof setInterval> | null;
 };
@@ -275,6 +278,8 @@ function expireSession(data: WsData, expiredPath: string): void {
   setCurrentSession(null);
   disposeSession(session);
   data.session = null;
+  if (data.shellSession) disposeSession(data.shellSession);
+  data.shellSession = undefined;
 }
 
 /**
@@ -380,6 +385,7 @@ export class ClayServer {
     const swSource = pwa ? pwaServiceWorker(clientVersion(clientDir), pwa, customCssHrefs) : KILL_SWITCH_SW;
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
+    const presenceConnections = this.presenceConnections;
     this.server = Bun.serve({
       port,
       async fetch(req, server) {
@@ -533,6 +539,11 @@ export class ClayServer {
           const data = ws.data as WsData;
 
           if (msg.op === 'hello') {
+            if (!data.disconnectPresence) {
+              const id = typeof msg.userId === 'string' && msg.userId ? msg.userId : crypto.randomUUID();
+              data.disconnectPresence = connectPresence(id);
+              presenceConnections.add(data.disconnectPresence);
+            }
             clearExpiryTimer(data);
             if (data.session) disposeSession(data.session);
             const session = new ClientSession(msg.path, (out) => {
@@ -593,6 +604,17 @@ export class ClayServer {
             if (typeof msg.search === 'string') {
               session.urlSearch = msg.search.startsWith('?') ? msg.search.slice(1) : msg.search;
             }
+            if (!data.shellSession) {
+              data.shellSession = new ClientSession(msg.path, (out) => {
+                try { ws.send(JSON.stringify(out)); } catch { /* socket closed */ }
+              });
+              data.shellSession.userId = session.userId;
+              for (const scope of ['browser', 'client', 'tab'] as const) {
+                for (const [key, value] of session[scope]) data.shellSession[scope].set(key, value);
+              }
+              data.shellSession.clientPalette = session.clientPalette;
+            }
+            session.shellSession = data.shellSession;
             data.session = session;
             session.mount();
 
@@ -613,7 +635,9 @@ export class ClayServer {
             }
             data.session.touch();
             // Do not await: allow concurrent events so await ui.confirm/prompt/choose can resolve
-            void data.session.handleMessage(msg).catch((err: unknown) => {
+            const target = msg.op === 'event' && data.shellSession?.getElement(msg.id)
+              ? data.shellSession : data.session;
+            void target.handleMessage(msg).catch((err: unknown) => {
               console.error(err);
               const message = err instanceof Error ? err.message : String(err);
               data.session?.notify(message, 'error');
@@ -623,7 +647,14 @@ export class ClayServer {
         close(ws) {
           const data = ws.data as WsData;
           clearExpiryTimer(data);
+          data.disconnectPresence?.();
+          if (data.disconnectPresence) {
+            const disconnect = data.disconnectPresence;
+            setTimeout(() => presenceConnections.delete(disconnect), 5000);
+          }
           if (data.session) disposeSession(data.session);
+          if (data.shellSession) disposeSession(data.shellSession);
+          data.shellSession = undefined;
           data.session = null;
         },
       },
@@ -640,7 +671,11 @@ export class ClayServer {
     return this.server;
   }
 
+  private presenceConnections = new Set<(immediate?: boolean) => void>();
+
   stop(): void {
+    for (const disconnect of this.presenceConnections) disconnect(true);
+    this.presenceConnections.clear();
     configureAuthSession(null);
     this.server?.stop();
     this.server = null;

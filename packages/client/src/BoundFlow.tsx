@@ -25,6 +25,9 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
   useUpdateNodeInternals,
+  useNodesInitialized,
+  useReactFlow,
+  useStore,
   type Connection,
   type Edge,
   type EdgeChange,
@@ -347,7 +350,7 @@ function BaduiFlowNode({ id, data }: NodeProps<Node<BaduiNodeData>>) {
     <div
       ref={rootRef}
       className={cn(
-        'min-w-[10rem] cursor-grab rounded-md border bg-card text-card-foreground shadow-sm active:cursor-grabbing',
+        'min-w-[10rem] cursor-grab rounded-md border bg-card text-sm text-card-foreground shadow-xs active:cursor-grabbing',
         data.className,
       )}
       data-slot="flow-node"
@@ -470,7 +473,7 @@ export function BaduiLabeledEdge({
       {label ? (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan pointer-events-none absolute text-[10px] font-medium"
+            className="nodrag nopan pointer-events-none absolute rounded-full border bg-card px-2 py-1 text-xs text-muted-foreground"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               ...(labelStyle as CSSProperties | undefined),
@@ -482,6 +485,24 @@ export function BaduiLabeledEdge({
       ) : null}
     </>
   );
+}
+
+const FIT_OPTIONS = { padding: 0.2, maxZoom: 1, minZoom: 0.05 };
+
+function FlowAutoFit({ enabled, revision }: { enabled: boolean; revision: string }) {
+  const initialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+  const width = useStore((state) => state.width);
+  const height = useStore((state) => state.height);
+  useEffect(() => {
+    if (!enabled || !initialized || !width || !height) return;
+    // Wait for server positions and measured node dimensions to reach the store.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => { void fitView(FIT_OPTIONS); });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [enabled, initialized, revision, width, height, fitView]);
+  return null;
 }
 
 function BoundFlowInner({
@@ -501,6 +522,16 @@ function BoundFlowInner({
   children: ElementNode[];
   renderNode: RenderNode;
 }) {
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>(() =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+  );
+  useEffect(() => {
+    const update = () => setColorMode(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    update();
+    return () => observer.disconnect();
+  }, []);
   const flowNodes = useMemo(() => {
     const list = children.filter((c) => c.type === 'flowNode');
     // Parents before children so RF can resolve parentId on first paint.
@@ -698,7 +729,7 @@ function BoundFlowInner({
 
   return (
     <div
-      className={cn('h-[28rem] w-full overflow-hidden rounded-md border bg-background', className)}
+      className={cn('clay-flow h-[28rem] w-full min-w-0 overflow-hidden rounded-md border bg-background', className)}
       style={asStyle(style)}
       data-slot="flow"
     >
@@ -716,13 +747,17 @@ function BoundFlowInner({
         nodesDraggable
         nodesConnectable
         elementsSelectable
+        colorMode={colorMode}
+        minZoom={0.05}
         fitView={fitView}
+        fitViewOptions={FIT_OPTIONS}
         deleteKeyCode={['Backspace', 'Delete']}
         proOptions={{ hideAttribution: true }}
       >
+        <FlowAutoFit enabled={fitView} revision={`${topologyKey}|${positionsKey}`} />
         <Background gap={16} size={1} />
-        {showControls ? <Controls /> : null}
-        {showMiniMap ? <MiniMap pannable zoomable /> : null}
+        {showControls ? <Controls fitViewOptions={FIT_OPTIONS} /> : null}
+        {showMiniMap ? <MiniMap pannable zoomable style={{ width: 140, height: 90 }} /> : null}
       </ReactFlow>
     </div>
   );

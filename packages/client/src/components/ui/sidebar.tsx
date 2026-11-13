@@ -39,6 +39,12 @@ type SidebarContextProps = {
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
+  width: number | null
+  limits: { min: number; max: number; default: number }
+  resize: (width: number) => void
+  dragging: boolean
+  setDragging: (dragging: boolean) => void
+  resizable: boolean
   toggleSidebar: () => void
 }
 
@@ -55,6 +61,8 @@ function useSidebar() {
 
 function SidebarProvider({
   defaultOpen = true,
+  resizable = false,
+  sidebarWidth,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -62,10 +70,41 @@ function SidebarProvider({
   children,
   ...props
 }: React.ComponentProps<"div"> & {
+  resizable?: boolean
+  sidebarWidth?: { default?: string; min?: string; max?: string }
   defaultOpen?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
+  const wrapper = React.useRef<HTMLDivElement>(null)
+  const [width, setWidth] = React.useState<number | null>(() => {
+    try {
+      const stored = Number(window.localStorage.getItem("clay:sidebar-width"))
+      return Number.isFinite(stored) && stored > 0 ? stored : null
+    } catch { return null }
+  })
+  const [limits, setLimits] = React.useState({ min: 208, max: 416, default: 288 })
+  const [dragging, setDragging] = React.useState(false)
+  React.useLayoutEffect(() => {
+    if (!resizable || !wrapper.current) return
+    const probe = document.createElement("div")
+    wrapper.current.appendChild(probe)
+    const pixels = (value: string) => {
+      probe.style.width = value
+      return probe.getBoundingClientRect().width
+    }
+    const min = pixels(sidebarWidth?.min ?? "13rem")
+    const max = Math.max(min, pixels(sidebarWidth?.max ?? "26rem"))
+    const defaults = pixels(sidebarWidth?.default ?? String(style?.["--sidebar-width" as keyof React.CSSProperties] ?? SIDEBAR_WIDTH))
+    probe.remove()
+    setLimits({ min, max, default: Math.min(max, Math.max(min, defaults)) })
+    setWidth(value => Math.min(max, Math.max(min, value ?? defaults)))
+  }, [resizable, sidebarWidth?.min, sidebarWidth?.max, sidebarWidth?.default])
+  const resize = React.useCallback((value: number) => {
+    const next = Math.min(limits.max, Math.max(limits.min, value))
+    setWidth(next)
+    try { window.localStorage.setItem("clay:sidebar-width", String(next)) } catch {}
+  }, [limits])
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
 
@@ -115,6 +154,7 @@ function SidebarProvider({
 
   const contextValue = React.useMemo<SidebarContextProps>(
     () => ({
+      width, limits, resize, dragging, setDragging, resizable,
       state,
       open,
       setOpen,
@@ -123,23 +163,26 @@ function SidebarProvider({
       setOpenMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [width, limits, resize, dragging, resizable, state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
   )
 
   return (
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
+          ref={wrapper}
+          data-resizing={dragging || undefined}
           data-slot="sidebar-wrapper"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH,
               "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
               ...style,
+              ...(resizable ? { "--sidebar-width": width === null ? sidebarWidth?.default ?? style?.["--sidebar-width" as keyof React.CSSProperties] ?? SIDEBAR_WIDTH : `${width}px` } : {}),
             } as React.CSSProperties
           }
           className={cn(
-            "group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
+            "group/sidebar-wrapper data-[resizing=true]:[&_[data-slot=sidebar-gap]]:transition-none data-[resizing=true]:[&_[data-slot=sidebar-container]]:transition-none flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
             className
           )}
           {...props}
@@ -169,8 +212,9 @@ function Sidebar({
     return (
       <div
         data-slot="sidebar"
+        data-side={side}
         className={cn(
-          "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
+          "relative flex h-full w-(--sidebar-width) shrink-0 flex-col bg-sidebar text-sidebar-foreground",
           className
         )}
         {...props}
@@ -279,27 +323,84 @@ function SidebarTrigger({
   )
 }
 
-function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar()
-
+function SidebarRail({ className, collapsible = true, ...props }: React.ComponentProps<"button"> & { collapsible?: boolean }) {
+  const { toggleSidebar, resizable, isMobile, width, limits, resize, setDragging, dragging } = useSidebar()
+  const drag = React.useRef<{ x: number; width: number; direction: number; moved: boolean; selection: string; frame: number | null; next: number } | null>(null)
+  const suppressClick = React.useRef(false)
+  const finish = React.useCallback(() => {
+    const current = drag.current
+    if (!current) return
+    if (current.frame !== null) cancelAnimationFrame(current.frame)
+    if (current.moved) resize(current.next)
+    suppressClick.current = current.moved
+    document.body.style.userSelect = current.selection
+    drag.current = null
+    setDragging(false)
+  }, [resize, setDragging])
+  React.useEffect(() => () => {
+    const current = drag.current
+    if (current) {
+      if (current.frame !== null) cancelAnimationFrame(current.frame)
+      document.body.style.userSelect = current.selection
+    }
+  }, [])
+  if (isMobile) return null
   return (
     <button
+      {...props}
+      type="button"
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
-      tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      role={resizable ? "separator" : undefined}
+      aria-label={resizable ? "Resize sidebar" : "Toggle Sidebar"}
+      aria-orientation={resizable ? "vertical" : undefined}
+      aria-valuenow={resizable ? Math.round(width ?? limits.default) : undefined}
+      aria-valuemin={resizable ? Math.round(limits.min) : undefined}
+      aria-valuemax={resizable ? Math.round(limits.max) : undefined}
+      tabIndex={0}
+      onClick={() => {
+        if (suppressClick.current) { suppressClick.current = false; return }
+        if (collapsible) toggleSidebar()
+      }}
+      onDoubleClick={() => { if (resizable) resize(limits.default) }}
+      onKeyDown={event => {
+        if (resizable && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+          event.preventDefault()
+          const direction = event.currentTarget.closest("[data-side]")?.getAttribute("data-side") === "right" ? -1 : 1
+          resize((width ?? limits.default) + (event.key === "ArrowRight" ? 16 : -16) * direction)
+        } else if (event.key === "Enter") { event.preventDefault(); if (collapsible) toggleSidebar() }
+      }}
+      onPointerDown={event => {
+        if (!resizable || event.button !== 0) return
+        suppressClick.current = false
+        const sidebar = event.currentTarget.closest("[data-slot=sidebar]")
+        drag.current = { x: event.clientX, width: width ?? limits.default, direction: sidebar?.getAttribute("data-side") === "right" ? -1 : 1, moved: false, selection: document.body.style.userSelect, frame: null, next: width ?? limits.default }
+        event.currentTarget.setPointerCapture(event.pointerId)
+      }}
+      onPointerMove={event => {
+        const current = drag.current
+        if (!current) return
+        const delta = (event.clientX - current.x) * current.direction
+        if (!current.moved && Math.abs(delta) < 4) return
+        current.moved = true
+        document.body.style.userSelect = "none"
+        setDragging(true)
+        current.next = current.width + delta
+        if (current.frame === null) current.frame = requestAnimationFrame(() => {
+          current.frame = null
+          resize(current.next)
+        })
+      }}
+      onPointerUp={finish}
+      onPointerCancel={finish}
+      onLostPointerCapture={finish}
+      title={resizable ? "Drag to resize; double-click to reset" : "Toggle Sidebar"}
       className={cn(
-        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex",
-        "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-        "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full hover:group-data-[collapsible=offcanvas]:bg-sidebar",
-        "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-        "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 touch-none group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border focus-visible:after:bg-ring md:flex",
+        resizable ? "cursor-col-resize" : "cursor-pointer",
+        dragging && "after:bg-sidebar-border",
         className
       )}
-      {...props}
     />
   )
 }

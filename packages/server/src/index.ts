@@ -31,3 +31,5 @@ export {
 } from './upload';
 
 export { onDispose } from './dispose';
+
+export { presence } from './presence';

@@ -1834,6 +1834,8 @@ onClick: async () => {
 | `ui.scroll.to(opts)` | `void` | Scroll window (`top` / `bottom` / px) |
 | `ui.scroll.intoView(selector, opts?)` | `void` | `Element.scrollIntoView` via selector |
 | `ui.onDispose(callback)` | `void` | Register synchronous cleanup during a page build or event; runs once on disconnect, navigation, or reconnect page replacement. Requires an active session, so call it synchronously during the build or at the start of a handler (not after an `await`); callbacks run in registration order and errors are logged without stopping other cleanup. |
+| `ui.presence.count()` | `number` | Process-local connected browser count, deduplicated by the browser ID in hello (shared by tabs in localStorage). Clients without an ID count per socket. Disconnects retain presence for 5 seconds so reconnects do not flicker; navigation does not change presence. |
+| `ui.presence.subscribe(fn)` | `() => void` | Subscribe to count changes, coalesced over 100ms; no initial callback. Read `count()` for the initial value. Clean up page listeners with `ui.onDispose(ui.presence.subscribe(count => label.setText(`${count} online`)))`. |
 | `ui.timer(interval, callback, options?)` | `TimerHandle` | Session-scoped timer; `interval` in **seconds**; `{ once? }`; `.activate()` / `.deactivate()` / `.cancel()` |
 | `ui.upload(props?)` | `Element` | Multipart HTTP upload; see below |
 | `ui.storage.tab` | | Per-browser-tab map (sessionStorage mirror) |
@@ -2261,3 +2263,50 @@ See [Kibana](./kibana.md) for REST access, Elasticsearch search via console prox
 ## ClickHouse (`@close-by/clay-clickhouse`)
 
 See [ClickHouse](./clickhouse.md) for the multi-connection wrapper (`connect`, `query`, CRUD, `stream`).
+
+### Shell elements
+
+`ui.run({ app })` accepts `headerActions: () => void` and `sidebarFooter: () => void`
+container builders. Build normal Clay elements inside them; their events run on the
+server. Header actions form a row at the right of the header. Phones show the first
+two children inline and put the rest in a “More header actions” popover. Footer
+content appears above the account block, including in the phone's More/menu sheet.
+`sidebarFooterCollapsed: 'hide' | 'icons'` defaults to `'hide'`; `'icons'` hides
+text spans while retaining icon controls in the collapsed desktop sidebar.
+
+`account: { user, menu?: () => void }` supplies the account dropdown.
+`user` is `{ name, email, avatar? }` (ShellUser/AppUser), or a per-session getter
+returning that object or `null`. The older static `app.user` remains supported.
+Build the menu with `ui.menuItem(label, { icon?, href?, onClick?, variant?: 'destructive' })`,
+`ui.menuSeparator()`, and `ui.menuLabel(text)`. These reuse dropdown item wire
+elements and render only inside menus (also usable inside `ui.dropdownMenu`).
+
+Shell builders and the account getter run once per WebSocket connection, in that
+user's session context. Their element subtree, event handlers, timers, subscriptions,
+and open client menus survive page navigation; only the page area remounts.
+Disconnect/reconnect tears down the shell and reruns its builders (including after
+authentication changes). `ui.onDispose` in a shell builder runs at shell teardown.
+The `nav` getter still runs on every page mount.
+
+`ui.themePicker()` builds an icon dropdown with Light, Dark, System and all built-in
+`ui.theme.palettes`. It uses the existing theme/palette bridge, applying immediately
+and persisting per browser. `ui.presenceBadge()` builds a small bordered pill with a
+pulsing green dot and live “N online” text using `ui.presence`; its subscription is
+cleaned up with `ui.onDispose`.
+
+```ts
+ui.run({
+  app: {
+    title: 'My app',
+    nav: [{ label: 'Home', href: '/' }],
+    headerActions: () => { ui.themePicker(); },
+    sidebarFooter: () => { ui.presenceBadge(); },
+    account: {
+      user: () => ({ name: 'Guest', email: 'Signed out' }),
+      menu: () => { ui.menuItem('Sign in', { href: '/login' }); },
+    },
+  },
+});
+```
+
+Desktop app sidebars resize by dragging their inner edge. `app.sidebarResizable?: boolean` defaults to `true`; set `false` to disable. `app.sidebarWidth?: { default?: string; min?: string; max?: string }` accepts CSS widths (defaults: `18rem`, `13rem`, `26rem`). Width is clamped and saved per browser in `clay:sidebar-width`. Double-click resets to the configured default; Left/Right resize by 16px and Enter toggles collapse. Phone navigation is unchanged.

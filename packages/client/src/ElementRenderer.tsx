@@ -1,3 +1,5 @@
+import { ThemePicker } from './ThemePicker';
+import { MenuItems } from './shell/menu-items';
 import { lazy, Suspense, useEffect, useRef, useState, Fragment, type CSSProperties, type ReactNode, type MouseEvent } from 'react';
 import type { ElementNode } from './protocol';
 import { BoundAppShell } from './AppShell';
@@ -277,7 +279,7 @@ import { IconText, StatusDot } from './IconText';
 import { Timeline, StepperView, type TimelineItemView } from './ComposedWidgets';
 import { CalendarIcon, CheckIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Minus, Plus, Star, TrendingDown, TrendingUp, Upload as UploadIcon, X } from 'lucide-react';
 import { format, parseISO, isValid, subDays, startOfMonth, endOfMonth } from 'date-fns';
-import { resolveNavIcon } from './shell/types';
+import { go, resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
 
 const KitchenSink = lazy(() => import('./KitchenSink'));
@@ -1494,7 +1496,7 @@ function BoundDropdownMenu({
 }) {
   const phone = usePhone();
   const [open, setOpen] = useState(false);
-  if (phone) {
+  if (phone && !props.iconOnly) {
     return (
       <Drawer open={open} onOpenChange={setOpen} direction="bottom">
         <DrawerTrigger asChild>
@@ -1512,7 +1514,9 @@ function BoundDropdownMenu({
           <div className="max-h-[60vh] overflow-y-auto px-4 pb-4">
             {children.map((child) => {
               if (child.type === 'dropdownseparator') return <Separator key={child.id} className="my-1" />;
+              if (child.type === 'dropdownlabel') return <div key={child.id} className="px-2 py-1 text-sm font-semibold">{String(child.props.text ?? '')}</div>;
               if (child.type !== 'dropdownitem') return null;
+              const Icon = child.props.icon ? resolveNavIcon(String(child.props.icon)) : null;
               return (
                 <Button
                   type="button"
@@ -1522,9 +1526,11 @@ function BoundDropdownMenu({
                   disabled={!!child.props.disabled}
                   onClick={() => {
                     if (hasEvent(child.props, 'select')) emit(child.id, 'select', child.props.value);
+                    if (child.props.href) go(String(child.props.href));
                     setOpen(false);
                   }}
                 >
+                  {Icon ? <Icon aria-hidden /> : null}
                   {String(child.props.label ?? child.props.value ?? '')}
                 </Button>
               );
@@ -1540,33 +1546,17 @@ function BoundDropdownMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant={(props.variant as any) ?? 'outline'}
+          aria-label={String(props.label ?? 'Menu')}
+          size={props.iconOnly ? 'icon' : 'default'}
           className={className}
           style={asStyle(style)}
         >
-          {String(props.label ?? 'Menu')}
+          {props.icon ? (() => { const Icon = resolveNavIcon(String(props.icon)); return <Icon aria-hidden />; })() : null}
+          {props.iconOnly ? null : String(props.label ?? 'Menu')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {children.map((child) => {
-          if (child.type === 'dropdownseparator') {
-            return <DropdownMenuSeparator key={child.id} />;
-          }
-          if (child.type !== 'dropdownitem') return null;
-          return (
-            <DropdownMenuItem
-              key={child.id}
-              variant={child.props.variant === 'destructive' ? 'destructive' : 'default'}
-              disabled={!!child.props.disabled}
-              onSelect={() => {
-                if (hasEvent(child.props, 'select')) {
-                  emit(child.id, 'select', child.props.value);
-                }
-              }}
-            >
-              {String(child.props.label ?? child.props.value ?? '')}
-            </DropdownMenuItem>
-          );
-        })}
+        <MenuItems items={children} emit={emit} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -3784,6 +3774,11 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
     ));
 
   switch (type) {
+    case 'dropdownitem':
+    case 'dropdownseparator':
+    case 'dropdownlabel':
+      return null;
+
     case 'root':
       // Flex column so top-level `grow` / `fillViewport` layouts can fill the page.
       return <div className="flex min-h-screen flex-col">{renderChildren()}</div>;
@@ -3818,9 +3813,20 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
           ? (props.user as { name: string; email: string; avatar?: string })
           : null;
 
+      const slot = (type: string) => children.find((child) => child.type === type);
+      const pageChildren = children.filter((child) => !child.type.startsWith('shell'));
+      const renderNode = (child: ElementNode) => <ElementRenderer key={child.id} node={child} emit={emit} />;
+      const footer = slot('shellSidebarFooter');
+      const menu = slot('shellAccountMenu');
       return (
         <BoundAppShell
           title={title}
+          headerActions={slot('shellHeaderActions')?.children.map(renderNode)}
+          sidebarFooter={footer ? footer.children.map(renderNode) : undefined}
+          sidebarFooterCollapsed={props.sidebarFooterCollapsed === 'icons' ? 'icons' : 'hide'}
+          sidebarResizable={props.sidebarResizable !== false}
+          sidebarWidth={props.sidebarWidth as { default?: string; min?: string; max?: string } | undefined}
+          accountMenu={menu ? <MenuItems items={menu.children} emit={emit} /> : undefined}
           headerTitle={headerTitle}
           collapsible={collapsible}
           variant={variant}
@@ -3830,11 +3836,11 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
           documents={documents}
           primaryAction={primaryAction}
           mobileNav={props.mobileNav === 'menu' ? 'menu' : 'tabs'}
-          pageKey={children.map((c) => c.id).join('|')}
+          pageKey={pageChildren.map((c) => c.id).join('|')}
           className={className}
           style={asStyle(style)}
         >
-          {renderChildren()}
+          {pageChildren.map(renderNode)}
         </BoundAppShell>
       );
     }
@@ -3997,6 +4003,7 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
       );
 
     case 'dropdownmenu':
+      if (props.themePicker) return <ThemePicker items={children} emit={emit} className={className} style={asStyle(style)} />;
       return (
         <BoundDropdownMenu
           id={id}

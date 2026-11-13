@@ -9,12 +9,16 @@ import {
   page,
   resetIdSequence,
   storage,
+  setPageWrapper,
   type ClientMessage,
   type ElementNode,
   type ServerMessage,
 } from '@close-by/clay-core';
+import { app } from '../../components/src/app';
+import { menuItem, menuSeparator, menuLabel } from '../../components/src/dropdown-menu';
 import { ClayServer } from './server';
 import { onDispose } from './dispose';
+import { presence } from './presence';
 
 function findByType(node: ElementNode, type: string): ElementNode[] {
   const out: ElementNode[] = [];
@@ -92,9 +96,118 @@ describe('WebSocket session protocol', () => {
     clay?.stop();
     clay = null;
     clearPages();
+    setPageWrapper(null);
     storage.clearAll();
     await rm(dir, { recursive: true, force: true });
   });
+
+  test('socket shell builds once, dispatches after navigation and disposes on close', async () => {
+    let builds = 0;
+    let disposed = 0;
+    let clicks = 0;
+    const config = {
+      nav: [],
+      headerActions: () => {
+        builds++;
+        onDispose(() => { disposed++; });
+        new Element('button', { text: 'Shell action', onClick: () => { clicks++; } });
+      },
+      sidebarFooter: () => { new Element('label', { text: 'Online' }); },
+      account: {
+        user: () => ({ name: 'Test', email: 'test@example.com' }),
+        menu: () => {
+          menuLabel('Account');
+          menuItem('Profile', { href: '/two' });
+          menuSeparator();
+          menuItem('Sign out', { onClick: () => { clicks++; } });
+        },
+      },
+    };
+    setPageWrapper((fn) => app(config, fn));
+    page('/one', () => { new Element('label', { text: 'One' }); });
+    page('/two', () => { new Element('label', { text: 'Two' }); });
+    clay = new ClayServer({ port: 0, userStorageDir: false, clientDir: dir });
+    clay.start();
+    const ws = await openWs(clay.port);
+    try {
+      let mounted = waitForMessage(ws, (m) => m.op === 'mount');
+      send(ws, { op: 'hello', path: '/one' });
+      const first = await mounted;
+      if (first.op !== 'mount') throw new Error('Expected mount');
+      const action = findByType(first.tree, 'button')[0]!;
+      const item = findByType(first.tree, 'dropdownitem')[1]!;
+      expect(action.props.events).toContain('click');
+      expect(findByType(first.tree, 'shellSidebarFooter')).toHaveLength(1);
+      mounted = waitForMessage(ws, (m) => m.op === 'mount');
+      send(ws, { op: 'hello', path: '/two' });
+      const second = await mounted;
+      if (second.op !== 'mount') throw new Error('Expected mount');
+      expect(findByType(second.tree, 'button')[0]!.id).toBe(action.id);
+      expect(builds).toBe(1);
+      expect(disposed).toBe(0);
+      send(ws, { op: 'event', id: action.id, type: 'click' });
+      send(ws, { op: 'event', id: item.id, type: 'select' });
+      await Bun.sleep(30);
+      expect(clicks).toBe(2);
+    } finally {
+      ws.close();
+      await Bun.sleep(30);
+    }
+    expect(disposed).toBe(1);
+  });
+
+  test('presence deduplicates browsers, survives navigation/reconnect, and expires closed clients', async () => {
+    page('/presence', () => { new Element('label', { text: 'presence' }); });
+    page('/presence-next', () => { new Element('label', { text: 'next page' }); });
+    clay = new ClayServer({ port: 0, uploadDir: dir, userStorageDir: false, clientDir: dir });
+    clay.start();
+    // Other integration tests stop Bun's raw server; let their disconnect grace expire.
+    await Bun.sleep(5200);
+    const counts: number[] = [];
+    const unsubscribe = presence.subscribe((count) => counts.push(count));
+    const sockets: WebSocket[] = [];
+    async function connect(id: string) {
+      const ws = await openWs(clay!.port);
+      sockets.push(ws);
+      const mounted = waitForMessage(ws, (m) => m.op === 'mount');
+      send(ws, { op: 'hello', path: '/presence', userId: id });
+      await mounted;
+      return ws;
+    }
+    try {
+      const first = await connect('presence-a');
+      const second = await connect('presence-b');
+      expect(presence.count()).toBe(2);
+      const tab = await connect('presence-a');
+      expect(presence.count()).toBe(2);
+      const mounted = waitForMessage(first, (m) => m.op === 'mount');
+      send(first, { op: 'hello', path: '/presence-next', userId: 'presence-a' });
+      await mounted;
+      expect(presence.count()).toBe(2);
+      await Bun.sleep(150);
+      expect(counts).toEqual([2]);
+      first.close();
+      tab.close();
+      await Bun.sleep(150);
+      expect(presence.count()).toBe(2);
+      const reconnected = await connect('presence-a');
+      await Bun.sleep(5100);
+      expect(presence.count()).toBe(2);
+      expect(counts).toEqual([2]);
+      second.close();
+      await Bun.sleep(5200);
+      expect(presence.count()).toBe(1);
+      expect(counts).toEqual([2, 1]);
+      unsubscribe();
+      reconnected.close();
+      await Bun.sleep(5200);
+      expect(presence.count()).toBe(0);
+      expect(counts).toEqual([2, 1]);
+    } finally {
+      unsubscribe();
+      for (const ws of sockets) ws.close();
+    }
+  }, 30000);
 
   test('hello → mount → event → patch → navigate remount hello', async () => {
     let disposedA = 0;

@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { NavDocuments } from './shell/nav-documents';
@@ -50,6 +51,12 @@ export function BoundAppShell({
   collapsible = 'icon',
   variant = 'inset',
   user,
+  headerActions = [],
+  sidebarFooter,
+  sidebarFooterCollapsed = 'hide',
+  sidebarResizable = true,
+  sidebarWidth,
+  accountMenu,
   nav,
   navSecondary = [],
   documents = [],
@@ -65,6 +72,12 @@ export function BoundAppShell({
   collapsible?: 'offcanvas' | 'icon' | 'none';
   variant?: 'sidebar' | 'inset' | 'floating';
   user?: ShellUser | null;
+  headerActions?: ReactNode[];
+  sidebarFooter?: ReactNode;
+  sidebarFooterCollapsed?: 'hide' | 'icons';
+  sidebarResizable?: boolean;
+  sidebarWidth?: { default?: string; min?: string; max?: string };
+  accountMenu?: ReactNode;
   nav: ShellNavItem[];
   navSecondary?: ShellNavItem[];
   documents?: ShellNavItem[];
@@ -89,10 +102,12 @@ export function BoundAppShell({
 
   return (
     <SidebarProvider
+      resizable={sidebarResizable && !phone}
+      sidebarWidth={sidebarWidth}
       className={cn(className)}
       style={
         {
-          '--sidebar-width': 'calc(var(--spacing) * 72)',
+          '--sidebar-width': sidebarWidth?.default ?? 'calc(var(--spacing) * 72)',
           '--header-height': 'calc(var(--spacing) * 12)',
           ...style,
         } as CSSProperties
@@ -128,14 +143,20 @@ export function BoundAppShell({
           <NavDocuments items={documents} />
           <NavSecondary items={navSecondary} className="mt-auto" />
         </SidebarContent>
-        {user ? (
+        {user || sidebarFooter ? (
           <SidebarFooter>
-            <NavUser user={user} />
+            {sidebarFooter ? <div className={cn(
+              'px-2 py-1',
+              !phone && sidebarFooterCollapsed === 'hide' && 'group-data-[collapsible=icon]:hidden',
+              !phone && sidebarFooterCollapsed === 'icons' && 'group-data-[collapsible=icon]:overflow-hidden group-data-[collapsible=icon]:px-0 [&_span:not(:has(svg))]:group-data-[collapsible=icon]:sr-only [&_button]:group-data-[collapsible=icon]:size-8 [&_button]:group-data-[collapsible=icon]:p-0',
+            )}>{sidebarFooter}</div> : null}
+            {user ? <NavUser user={user} menu={accountMenu} /> : null}
           </SidebarFooter>
         ) : null}
+        {!phone && sidebarResizable ? <SidebarRail collapsible={collapsible !== 'none'} /> : null}
       </Sidebar>
       <SidebarInset className="clay-ambient">
-        <SiteHeader title={pageTitle} hideTrigger={tabs} />
+        <SiteHeader title={pageTitle} hideTrigger={tabs} actions={headerActions} />
         <div className="@container/main flex flex-1 flex-col">
           {/* --clay-viewport-offset = header + vertical padding (+ inset margins on md+), for `fillViewport`. */}
           <div className={cn("flex flex-1 flex-col gap-4 py-4 [--clay-viewport-offset:calc(var(--header-height)+2rem)] md:gap-6 md:py-6 md:[--clay-viewport-offset:calc(var(--header-height)+4rem)]", tabs ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-[calc(1.5rem+env(safe-area-inset-bottom))]")}>
@@ -145,7 +166,7 @@ export function BoundAppShell({
         </div>
       </SidebarInset>
       {tabs ? (
-        <BottomTabs nav={nav} hasOtherNav={navSecondary.length > 0 || documents.length > 0 || !!user} />
+        <BottomTabs nav={nav} hasOtherNav={navSecondary.length > 0 || documents.length > 0 || !!user || !!sidebarFooter} />
       ) : null}
     </SidebarProvider>
   );

@@ -71,3 +71,14 @@ export function dropdownMenu(
   withParent(el, () => fn(el));
   return el;
 }
+
+/** Item builders shared by dropdowns and shell account menus. */
+export function menuItem(label: string, opts: {
+  icon?: string; href?: string; onClick?: () => void | Promise<void>;
+  variant?: 'destructive';
+} = {}): Element {
+  const { onClick, ...props } = opts;
+  return new Element('dropdownitem', { label, ...props, onSelect: onClick });
+}
+export function menuSeparator(): Element { return new Element('dropdownseparator', {}); }
+export function menuLabel(text: string): Element { return new Element('dropdownlabel', { text }); }

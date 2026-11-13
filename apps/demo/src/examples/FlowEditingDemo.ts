@@ -1,6 +1,6 @@
 import { ui } from '@close-by/clay';
 import type { FlowEdge, FlowPosition } from '@close-by/clay';
-import { exampleHeader, exampleSection } from '../chrome';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 import { cloneEdges, restorePositions, flowNodeText } from './_flow-shared';
 
 export const pageMeta = {
@@ -52,7 +52,7 @@ ui.page('/examples/flow-editing', () => {
     dynamicCount: 0,
   });
 
-  ui.container({ centered: true, width: '2xl' }, () => {
+  exampleFrame(() => {
     ui.column(() => {
       exampleHeader(undefined, 'Edit flow graphs with fan-in/out handles, dynamic stages, and parent groups.');
       ui.auto(() => {

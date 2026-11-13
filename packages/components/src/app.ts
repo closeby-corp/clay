@@ -1,4 +1,4 @@
-import { Element, getCurrentSession, withParent } from '@close-by/clay-core';
+import { Element, getCurrentSession, runWithSession, withDetached, withParent } from '@close-by/clay-core';
 
 export type AppNavItem = {
   label: string;
@@ -31,6 +31,12 @@ export type AppProps = {
   collapsible?: 'offcanvas' | 'icon' | 'none';
   variant?: 'sidebar' | 'inset';
   user?: AppUser;
+  headerActions?: () => void;
+  sidebarFooter?: () => void;
+  sidebarFooterCollapsed?: 'hide' | 'icons';
+  sidebarResizable?: boolean;
+  sidebarWidth?: { default?: string; min?: string; max?: string };
+  account?: { user: AppUser | (() => AppUser | null); menu?: () => void };
   nav: AppNavItem[];
   navSecondary?: AppNavItem[];
   documents?: AppNavItem[];
@@ -113,8 +119,8 @@ export function findActiveNavLabel(
 
 /**
  * SPA-style shell: dashboard sidebar + inset main content.
- * Server rebuilds the tree on each navigate (marks active nav from the session path);
- * the client keeps chrome mounted via a sticky `app` React key when structure matches.
+ * Navigation rebuilds page content and active nav. Socket-owned shell slots retain
+ * their elements and handlers; the client keeps chrome mounted with a sticky app key.
  */
 export function app(props: AppProps, fn: () => void): Element {
   const path = getCurrentSession()?.path ?? '/';
@@ -123,12 +129,46 @@ export function app(props: AppProps, fn: () => void): Element {
   const documents = serializeNav(props.documents, path);
   const activeLabel = findActiveNavLabel(nav, navSecondary, documents);
 
+  const session = getCurrentSession();
+  const owner = session?.shellSession ?? session;
+  const buildShell = () => {
+    const root = new Element('shell', {});
+    for (const [type, builder] of [
+      ['shellHeaderActions', props.headerActions],
+      ['shellSidebarFooter', props.sidebarFooter],
+      ['shellAccountMenu', props.account?.menu],
+    ] as const) {
+      if (builder) withParent(root, () => {
+        const slot = new Element(type, {});
+        withParent(slot, builder);
+      });
+    }
+    const user = props.account
+      ? (typeof props.account.user === 'function' ? props.account.user() : props.account.user)
+      : props.user;
+    root.props.user = user ?? null;
+    return root;
+  };
+  let shell: Element;
+  if (owner && owner !== session) {
+    if (!owner.root) {
+      owner.root = runWithSession(owner, () => withDetached(buildShell));
+      owner.isMounted = true;
+    }
+    shell = owner.root;
+  } else {
+    shell = withDetached(buildShell);
+  }
+
   const el = new Element('app', {
     title: props.title ?? '',
     headerTitle: props.headerTitle ?? activeLabel ?? (props.title || 'Clay'),
     collapsible: props.collapsible ?? 'icon',
     variant: props.variant ?? 'inset',
-    user: props.user ?? null,
+    user: shell.props.user,
+    sidebarFooterCollapsed: props.sidebarFooterCollapsed ?? 'hide',
+    sidebarResizable: props.sidebarResizable ?? true,
+    sidebarWidth: props.sidebarWidth,
     nav,
     navSecondary,
     documents,
@@ -137,5 +177,16 @@ export function app(props: AppProps, fn: () => void): Element {
     className: props.className,
   });
   withParent(el, fn);
+  if (owner && owner !== session) {
+    // Serialize socket-owned slots without transferring them to the disposable page.
+    const toJSON = el.toJSON.bind(el);
+    el.toJSON = () => {
+      const node = toJSON();
+      node.children.push(...shell.children.map((child) => child.toJSON()));
+      return node;
+    };
+  } else {
+    for (const slot of [...shell.children]) el.adopt(slot);
+  }
   return el;
 }

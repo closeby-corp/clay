@@ -9,6 +9,7 @@ Notes for agents:
 - Public API and wire protocol are camelCase (`onClick`, `bindValue`, `setText`).
 - Page builders run once per WebSocket session (per browser tab). `let` is per-tab, not shared.
 - Update existing nodes with `setText` / `setValue` / bindings. Prefer `ui.state` + `ui.auto` (+ `ui.timer`) for async/live UIs; `ui.refreshable` for simple one-shot rebuilds. Shared or persisted state: `ui.storage` (`tab` / `user` / `app`).
+- `ui.onDispose(unsubscribe)` cleans up page subscriptions on navigation/disconnect. `ui.presence.count()` returns process-local connected browsers, deduplicated by the localStorage browser ID (tabs share one); missing IDs count per socket. Disconnect grace is 5s; notifications batch over 100ms. Initialize a label from `count()`, then use `ui.onDispose(ui.presence.subscribe(n => label.setText(`${n} online`)))`.
 - Never use `window` / `navigator` in page code — use `ui.clipboard`, `ui.setUrlHash`, `ui.getUrlSearch` / `ui.updateUrlSearch`, `ui.openExternal`.
 - Runtime is Bun. In this repo: `bun run build:client`, then `bun run demo` (http://localhost:4000) or `bun run clay hello.ts`.
 - Installable app is opt-in: `ui.run({ pwa: true })` or `clay ./pages --app --pwa` adds a manifest and an app-shell service worker (see docs/mobile.md).
@@ -50,3 +51,6 @@ Notes for agents:
 - [ClickHouse](docs/clickhouse.md): `@close-by/clay-clickhouse`
 - [Kibana](docs/kibana.md): `@close-by/clay-kibana` — monorepo only — not published to npm yet
 - [NiceGUI](https://nicegui.io/documentation): Inspiration for the `ui.*` style
+- App shell elements: ui.run({ app: { headerActions: () => void, sidebarFooter: () => void, sidebarFooterCollapsed?: 'hide' | 'icons', account?: { user: { name, email, avatar? } | (() => user | null), menu?: () => void } } }). Static app.user remains supported. Shell builders/account getter run per socket and survive page navigation with handlers, live values and open menus; ui.onDispose runs on shell teardown. Phone header shows two actions, overflowing the rest; footer appears in More/menu sheet. ui.menuItem(label, { icon?, href?, onClick?, variant?: 'destructive' }), ui.menuSeparator(), ui.menuLabel(text) render inside dropdown/account menus. ui.themePicker() is an icon menu for Light/Dark/System and built-in palettes, with browser persistence. ui.presenceBadge() is a live “● N online” pill with automatic cleanup.
+
+Desktop app sidebars resize by dragging their inner edge. `app.sidebarResizable?: boolean` defaults to `true`; set `false` to disable. `app.sidebarWidth?: { default?: string; min?: string; max?: string }` accepts CSS widths (defaults: `18rem`, `13rem`, `26rem`). Width is clamped and saved per browser in `clay:sidebar-width`. Double-click resets to the configured default; Left/Right resize by 16px and Enter toggles collapse. Phone navigation is unchanged.

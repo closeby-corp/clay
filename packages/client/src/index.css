@@ -430,3 +430,57 @@ html {
 #root:has([data-slot="sidebar-wrapper"]) {
   padding-bottom: 0;
 }
+
+/* Keep React Flow chrome on the active Clay palette, including dark mode. */
+.clay-flow .react-flow {
+  --xy-background-color: var(--background);
+  --xy-background-pattern-color: var(--border);
+  --xy-edge-stroke: var(--muted-foreground);
+  --xy-edge-stroke-selected: var(--primary);
+  --xy-edge-label-color: var(--muted-foreground);
+  --xy-edge-label-background-color: var(--card);
+  --xy-node-background-color: var(--card);
+  --xy-node-color: var(--card-foreground);
+  --xy-node-border-radius: var(--radius);
+  --xy-handle-background-color: var(--background);
+  --xy-handle-border-color: var(--primary);
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: color-mix(in oklch, var(--background) 70%, transparent);
+  --xy-minimap-node-background-color: var(--muted);
+  --xy-minimap-node-stroke-color: var(--primary);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--accent);
+  --xy-controls-button-color: var(--muted-foreground);
+  --xy-controls-button-color-hover: var(--accent-foreground);
+  --xy-controls-button-border-color: var(--border);
+}
+.clay-flow { container-type: inline-size; }
+.clay-flow .react-flow__controls,
+.clay-flow .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+}
+.clay-flow .react-flow__node.selected > [data-slot="flow-node"] {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.clay-flow .react-flow__handle {
+  width: 9px;
+  height: 9px;
+  background: var(--background) !important;
+  border: 2px solid var(--primary) !important;
+}
+.clay-flow .react-flow__handle:hover { box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 35%, transparent); }
+.clay-flow .react-flow__edge.animated path.react-flow__edge-path,
+.clay-flow .react-flow__edge.selected path.react-flow__edge-path { stroke: var(--primary) !important; }
+.clay-flow .react-flow__edge-text { font-size: 12px; }
+.clay-flow .react-flow__edge-textbg {
+  fill: var(--card);
+  stroke: var(--border);
+  rx: 8px;
+  ry: 8px;
+}
+@container (max-width: 500px) {
+  .clay-flow .react-flow__minimap { display: none; }
+}

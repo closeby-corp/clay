@@ -1,6 +1,6 @@
 import { ui } from '@close-by/clay';
 import type { FlowEdge, FlowPosition } from '@close-by/clay';
-import { exampleHeader, exampleSection } from '../chrome';
+import { exampleFrame, exampleHeader, exampleSection } from '../chrome';
 import { cloneEdges, restorePositions, flowNodeText } from './_flow-shared';
 
 export const pageMeta = {
@@ -90,7 +90,7 @@ ui.page('/examples/flow', () => {
     decision: '' as string,
   });
 
-  ui.container({ centered: true, width: '2xl' }, () => {
+  exampleFrame(() => {
     ui.column(
       () => {
         exampleHeader(
