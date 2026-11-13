@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { clearPages, page } from '@close-by/clay-core';
+import { clientVersion } from './pwa';
 import { ClayServer, type ClayServerConfig } from './server';
 
 const PNG_1x1 = Uint8Array.from(
@@ -54,7 +55,7 @@ describe('pwa', () => {
     expect(html).not.toContain('prefers-color-scheme');
     expect(html).toContain('content="&lt;x&gt;&amp;"');
     expect(html).toContain('rel="apple-touch-icon" href="/assets/pwa/apple-touch-icon.png"');
-    expect(html).toContain("navigator.serviceWorker.register('/sw.js')");
+    expect(html).toContain("navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'})");
   });
 
   test('two theme-color tags by default', async () => {
@@ -128,6 +129,56 @@ describe('pwa', () => {
     const off = await (await get('/sw.js')).text();
     expect(off).toContain('registration.unregister()');
     expect(off).toContain('skipWaiting');
+  });
+
+  test('versions entry assets, custom CSS and worker precache with cache headers', async () => {
+    const { get } = await boot({ pwa: true });
+    const css = join(dir, 'app.css');
+    await writeFile(css, 'body{color:red}');
+    clay!.stop();
+    clay = new ClayServer({ port: 0, clientDir: dir, css, pwa: true, userStorageDir: false });
+    clay.start();
+    await writeFile(join(dir, 'index.css'), 'body{}');
+    await writeFile(join(dir, 'font-AbCd1234.woff2'), 'font');
+    // The running server snapshots the version at startup, as deployments do.
+    clay.stop();
+    clay.start();
+    const version = clientVersion(dir, [css]);
+    const html = await get('/');
+    expect(html.headers.get('cache-control')).toBe('no-cache');
+    const body = await html.text();
+    for (const asset of ['index.js', 'index.css', 'custom-0.css']) {
+      const url = '/assets/' + asset;
+      expect(body).toContain(url + '?v=' + version);
+      expect((await get(url)).headers.get('cache-control')).toBe('no-cache');
+      expect((await get(url + '?v=old')).headers.get('cache-control')).toBe('no-cache');
+      expect((await get(url + '?v=' + version)).headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+      expect(await (await get('/sw.js')).text()).toContain(url + '?v=' + version);
+    }
+    expect((await get('/assets/font-AbCd1234.woff2')).headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+    expect(body).toContain('controllerchange');
+    for (const file of ['index.js', 'index.css', 'app.css']) {
+      const before = clientVersion(dir, [css]);
+      await writeFile(join(dir, file), 'changed ' + file);
+      expect(clientVersion(dir, [css])).not.toBe(before);
+    }
+  });
+
+  test('WebSocket hello reports the deployed client version', async () => {
+    await boot();
+    const message = await new Promise<{ op: string; version: string }>((resolve, reject) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + clay!.port + '/ws');
+      ws.onopen = () => ws.send(JSON.stringify({ op: 'hello', path: '/' }));
+      ws.onerror = reject;
+      ws.onmessage = (event) => {
+        const message = JSON.parse(String(event.data));
+        if (message.op === 'clientVersion') {
+          ws.close();
+          resolve(message);
+        }
+      };
+    });
+    expect(message).toEqual({ op: 'clientVersion', version: clientVersion(dir) });
   });
 
   test('user routes override /sw.js', async () => {

@@ -201,6 +201,7 @@ function sanitizePaletteName(value: string): string {
 function spaHtml(
   title: string,
   customCssHrefs: string[],
+  version: string,
   dev: boolean,
   palette?: string,
   sound?: boolean,
@@ -214,14 +215,15 @@ function spaHtml(
 <html lang="en"${palette ? ` data-palette="${sanitizePaletteName(palette)}"` : ''} data-sound="${sound ? 'on' : 'off'}">
 <head>
   <meta charset="UTF-8" />
+  <script>window.__CLAY_VERSION__=${JSON.stringify(version)};window.__CLAY_RELOAD__=function(target){if(window.__CLAY_RELOADING__)return;try{if(sessionStorage.getItem('clay-reload')===target)return;sessionStorage.setItem('clay-reload',target)}catch(e){}window.__CLAY_RELOADING__=true;location.reload()}</script>
   <script>try{var p=localStorage.getItem('clay-palette');if(p)document.documentElement.dataset.palette=p;var s=localStorage.getItem('clay-sound');if(s)document.documentElement.dataset.sound=s}catch(e){}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0${pwa ? ', viewport-fit=cover' : ''}" />
 ${pwa ? pwaHeadHtml(pwa) : ''}  <title>${title}</title>
-  <link rel="stylesheet" href="/assets/index.css" />
+  <link rel="stylesheet" href="/assets/index.css?v=${version}" />
 ${customLinks ? `${customLinks}\n` : ''}</head>
 <body class="min-h-screen bg-background text-foreground antialiased">
   <div id="root"></div>
-${devBoot}  <script type="module" src="/assets/index.js"></script>
+${devBoot}  <script type="module" src="/assets/index.js?v=${version}"></script>
 </body>
 </html>`;
 }
@@ -379,10 +381,11 @@ export class ClayServer {
       sessionAbsoluteMs,
       sessionExpiredPath,
     } = this.config;
-    const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css`);
+    const version = clientVersion(clientDir, cssPaths);
+    const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css?v=${version}`);
     const pwa = this.config.pwa;
-    const html = spaHtml(title, customCssHrefs, this.config.dev, this.config.palette, this.config.sound, pwa);
-    const swSource = pwa ? pwaServiceWorker(clientVersion(clientDir), pwa, customCssHrefs) : KILL_SWITCH_SW;
+    const html = spaHtml(title, customCssHrefs, version, this.config.dev, this.config.palette, this.config.sound, pwa);
+    const swSource = pwa ? pwaServiceWorker(version, pwa, customCssHrefs) : KILL_SWITCH_SW;
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
     const presenceConnections = this.presenceConnections;
@@ -485,6 +488,9 @@ export class ClayServer {
 
         if (url.pathname.startsWith('/assets/')) {
           const assetName = url.pathname.slice('/assets/'.length);
+          const fixedName = /^(?:index\.(?:js|css)|custom-\d+\.css)$/.test(assetName);
+          const immutable = url.searchParams.get('v') === version || (!fixedName && /-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/i.test(assetName));
+          const cacheControl = immutable ? 'public, max-age=31536000, immutable' : 'no-cache';
           const customMatch = /^custom-(\d+)\.css$/.exec(assetName);
           if (customMatch) {
             const idx = Number(customMatch[1]);
@@ -497,7 +503,7 @@ export class ClayServer {
             return new Response(file, {
               headers: {
                 'Content-Type': 'text/css; charset=utf-8',
-                'Cache-Control': 'no-store',
+                'Cache-Control': cacheControl,
               },
             });
           }
@@ -505,7 +511,7 @@ export class ClayServer {
           const filePath = join(clientDir, assetName);
           const file = Bun.file(filePath);
           if (await file.exists()) {
-            return new Response(file);
+            return new Response(file, { headers: { 'Cache-Control': cacheControl } });
           }
           return new Response('Not found', { status: 404 });
         }
@@ -514,13 +520,13 @@ export class ClayServer {
         const paths = getRegisteredPaths();
         if (url.pathname === '/' || paths.includes(url.pathname) || url.pathname.startsWith('/examples/')) {
           return new Response(html, {
-            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
           });
         }
 
         // Fallback SPA for client-side navigation
         return new Response(html, {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
         });
       },
       websocket: {
@@ -539,6 +545,7 @@ export class ClayServer {
           const data = ws.data as WsData;
 
           if (msg.op === 'hello') {
+            ws.send(JSON.stringify({ op: 'clientVersion', version }));
             if (!data.disconnectPresence) {
               const id = typeof msg.userId === 'string' && msg.userId ? msg.userId : crypto.randomUUID();
               data.disconnectPresence = connectPresence(id);

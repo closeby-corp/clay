@@ -662,6 +662,7 @@
   "op.patch.updateProps",
   "op.server.authSession",
   "op.server.clientStorage",
+  "op.server.clientVersion",
   "op.server.clipboard",
   "op.server.dismissNotify",
   "op.server.download",

@@ -17,6 +17,7 @@ export type Patch =
   | { op: 'remove'; id: string };
 
 export type ServerMessage =
+  | { op: 'clientVersion'; version: string }
   | { op: 'mount'; sessionId: string; tree: ElementNode }
   | { op: 'patch'; patches: Patch[] }
   | { op: 'navigate'; path: string }

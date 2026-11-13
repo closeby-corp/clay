@@ -188,6 +188,11 @@ export function useClaySession(path: string) {
 
     const handleMessage = (ev: MessageEvent) => {
       const msg = JSON.parse(String(ev.data)) as ServerMessage;
+      if (msg.op === 'clientVersion') {
+        const boot = window as unknown as { __CLAY_VERSION__?: string; __CLAY_RELOAD__?: (target: string) => void };
+        if (boot.__CLAY_VERSION__ && boot.__CLAY_VERSION__ !== msg.version) boot.__CLAY_RELOAD__?.(msg.version);
+        return;
+      }
       if (msg.op === 'mount') {
         setState((s) => ({ ...s, tree: msg.tree, error: null }));
       } else if (msg.op === 'patch') {

@@ -115,7 +115,7 @@ export function pwaHeadHtml(p: ResolvedPwa): string {
     );
   }
   lines.push(
-    `  <script>if('serviceWorker' in navigator)addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})</script>`,
+    `  <script>if('serviceWorker' in navigator){var controlled=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',function(){if(controlled)window.__CLAY_RELOAD__('sw:'+window.__CLAY_VERSION__);controlled=true});addEventListener('load',function(){navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).catch(function(){})})}</script>`,
   );
   return lines.join('\n') + '\n';
 }
@@ -142,22 +142,22 @@ export function pwaManifest(p: ResolvedPwa): Record<string, unknown> {
   };
 }
 
-/** Short hash of the client bundle, used to version the worker and its cache. */
-export function clientVersion(clientDir: string): string {
-  try {
-    const file = resolve(clientDir, 'index.js');
-    if (!existsSync(file)) return 'dev';
-    return Bun.hash(readFileSync(file)).toString(16).slice(0, 10);
-  } catch {
-    return 'dev';
+/** Version every fixed-name entry asset together, including app styles. */
+export function clientVersion(clientDir: string, cssPaths: string[] = []): string {
+  const hash = new Bun.CryptoHasher('sha256');
+  for (const file of [resolve(clientDir, 'index.js'), resolve(clientDir, 'index.css'), ...cssPaths]) {
+    const content = existsSync(file) ? readFileSync(file) : new Uint8Array();
+    hash.update(String(content.length) + ':');
+    hash.update(content);
   }
+  return hash.digest('hex').slice(0, 16);
 }
 
 export function pwaServiceWorker(version: string, p: ResolvedPwa, extraUrls: string[] = []): string {
   const precache = [
     '/',
-    '/assets/index.js',
-    '/assets/index.css',
+    '/assets/index.js?v=' + version,
+    '/assets/index.css?v=' + version,
     // App CSS (`css` option + auto Tailwind) so the offline shell is styled.
     ...extraUrls,
     '/manifest.webmanifest',
