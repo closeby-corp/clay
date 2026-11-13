@@ -190,6 +190,7 @@
         "@close-by/clay-core": "workspace:*",
         "@close-by/clay-server": "workspace:*",
         "@tailwindcss/cli": "^4.3.3",
+        "postcss": "^8.5.22",
         "tailwindcss": "^4.3.3",
       },
     },

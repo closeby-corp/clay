@@ -1905,6 +1905,7 @@ function applyClayTailwind(cfg: RunConfig): RunConfig {
 
   const { cssPath } = ensureClayTailwindCss({
     content: opts.content,
+    clientDir: cfg.clientDir,
     cwd: opts.cwd ?? cwd,
     watch: opts.watch,
     appendCss: opts.appendCss,

@@ -1,0 +1,8 @@
+@layer utilities {
+  .flex,.shared { display:flex }
+  .hidden { display:none }
+  .relative { position:relative }
+  .fixed { position:fixed }
+  @media (min-width:48rem) { .md\:flex { display:flex } }
+  @media (max-width:80rem) { @supports (display:grid) { @container card (min-width:30rem) { .conditional { display:grid } } } }
+}

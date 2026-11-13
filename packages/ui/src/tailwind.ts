@@ -4,10 +4,12 @@
  *
  * Uses `@tailwindcss/cli` (utilities + theme only — client already ships base/preflight).
  */
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, watchFile, unwatchFile, writeFileSync } from 'fs';
 import { createRequire } from 'module';
 import { dirname, isAbsolute, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { resolveClayClientDir } from './client-dir.ts';
+import { filterClayTailwindCss } from './tailwind-dedupe.ts';
 
 export type ClayTailwindOptions = {
   /**
@@ -15,6 +17,8 @@ export type ClayTailwindOptions = {
    * Absolute or cwd-relative. Prefer app dirs — never the repo root with `node_modules`.
    */
   content: string[];
+  /** Client assets directory, matching ui.run({ clientDir }). */
+  clientDir?: string;
   /** Working directory for relative paths. Default `process.cwd()`. */
   cwd?: string;
   /** Output CSS path. Default `<cwd>/.clay/tailwind.css`. */
@@ -30,6 +34,8 @@ export type ClayTailwindResult = {
   /** Stop the background watch process (if any). */
   stop: () => void;
 };
+
+let warnedMissingClientCss = false;
 
 const THEME_SNIPPET = `
 /* Token utilities for app-scanned classes (vars come from the Clay client). */
@@ -186,7 +192,25 @@ export function ensureClayTailwindCss(options: ClayTailwindOptions): ClayTailwin
   writeInputCss(inputFile, sources, options.appendCss);
 
   const cliEntry = resolveTailwindCliEntry();
-  const buildArgs = [cliEntry, '-i', inputFile, '-o', outFile];
+  const generatedFile = `${outFile}.generated`;
+  const buildArgs = [cliEntry, '-i', inputFile, '-o', generatedFile];
+  const clientDir = options.clientDir ?? resolveClayClientDir();
+  const clientCssFile = [join(clientDir, 'index.css'), join(clientDir, 'assets/index.css')]
+    .find(existsSync);
+  const clientCss = clientCssFile ? readFileSync(clientCssFile, 'utf8') : undefined;
+  if (clientCss === undefined && !warnedMissingClientCss) {
+    warnedMissingClientCss = true;
+    console.warn('Clay Tailwind: client CSS not found; skipping utility deduplication.');
+  }
+  const publish = () => {
+    const generated = readFileSync(generatedFile, 'utf8');
+    const css = clientCss === undefined ? generated
+      : filterClayTailwindCss(generated, clientCss, options.appendCss);
+    // Readers see either the previous complete build or the next complete build.
+    const pendingFile = `${outFile}.pending`;
+    writeFileSync(pendingFile, css, 'utf8');
+    renameSync(pendingFile, outFile);
+  };
 
   const built = Bun.spawnSync({
     cmd: [process.execPath, ...buildArgs],
@@ -198,14 +222,23 @@ export function ensureClayTailwindCss(options: ClayTailwindOptions): ClayTailwin
     const err = built.stderr.toString() || built.stdout.toString() || `exit ${built.exitCode}`;
     throw new Error(`Clay Tailwind build failed:\n${err}`);
   }
-  if (!existsSync(outFile)) {
+  if (!existsSync(generatedFile)) {
     throw new Error(`Clay Tailwind build produced no file at ${outFile}`);
   }
 
+  publish();
+
   let child: ReturnType<typeof Bun.spawn> | null = null;
   if (options.watch) {
+    watchFile(generatedFile, { interval: 100 }, () => {
+      try {
+        publish();
+      } catch (error) {
+        console.error('Clay Tailwind post-processing failed:', error);
+      }
+    });
     child = Bun.spawn({
-      cmd: [process.execPath, ...buildArgs, '--watch'],
+      cmd: [process.execPath, ...buildArgs, '--watch=always'],
       cwd,
       stdout: 'ignore',
       stderr: 'inherit',
@@ -216,6 +249,7 @@ export function ensureClayTailwindCss(options: ClayTailwindOptions): ClayTailwin
   return {
     cssPath: outFile,
     stop: () => {
+      if (options.watch) unwatchFile(generatedFile);
       if (!child) return;
       try {
         child.kill();

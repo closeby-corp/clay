@@ -20,6 +20,8 @@ ui.run({
 });
 ```
 
+Generated utilities already shipped by the Clay client are removed in both build and watch mode, so app utilities cannot override the client’s responsive layout. Matching includes the selector, layer, and media/supports/container conditions. App-only utilities, theme variables, `appendCss`, and files supplied through `css` are preserved. If client CSS is unavailable, Clay logs once and keeps the generated output unchanged.
+
 Generated CSS lands in `.clay/tailwind.css` and is injected via `css`. Add `.clay/` to `.gitignore`.
 
 `@close-by/clay` depends on `tailwindcss` and `@tailwindcss/cli` — you do not need to install them yourself.

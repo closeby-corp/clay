@@ -1,0 +1,16 @@
+@layer theme { :root { --app-color:red } }
+@layer utilities {
+  .flex,.app-only { display:flex }
+  .hidden { display:none }
+  .relative { position:relative }
+  .fixed { position:fixed }
+  @media (width >= 48rem) { .md\:flex { display:flex } .md\:app-only { color:red } }
+  @media (width <= 80rem) { @supports (display: grid) { @container card (width >= 30rem) { .conditional { display:grid } } } }
+  @media (width >= 49rem) { .md\:flex { display:flex } }
+  @supports (display:flex) { .flex { display:flex } }
+  @layer other { .flex { display:flex } }
+  .app-parent { & .app-child { display:flex } }
+}
+:root { --app-token:blue }
+@property --app-progress { syntax: '<number>'; initial-value:0; inherits:false }
+@keyframes app-spin { from { opacity:0 } to { opacity:1 } }
