@@ -1,4 +1,4 @@
-import { ui, type MapMarkerDatum } from '@close-by/clay';
+import { ui, type MapMarkerDatum, type MapPopupBadge } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {
@@ -55,7 +55,40 @@ const BRANDS: Brand[] = [
   { name: 'Verde Bio', logo: logo('VB', '#15803d', 'circle') },
   { name: 'Maré', logo: logo('M', '#0f766e', 'square') },
 ];
-const PARTNERS = ['Glovo', 'Uber Eats', 'Bolt Food'];
+type Partner = { name: string; logo: string };
+
+/** Made-up delivery-partner wordmark: a small coloured shape plus bold text, about 3.5:1, transparent background. */
+function wordmark(name: string, color: string, shape: 'circle' | 'square' | 'triangle'): string {
+  const mark =
+    shape === 'circle'
+      ? `<circle cx="13" cy="16" r="10" fill="${color}"/><circle cx="13" cy="16" r="4" fill="#fff"/>`
+      : shape === 'square'
+        ? `<rect x="3" y="6" width="20" height="20" rx="5" fill="${color}"/>`
+        : `<path d="M3 26 L13 5 L23 26 Z" fill="${color}"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 32">${mark}<text x="30" y="24" textLength="78" lengthAdjust="spacingAndGlyphs" font-family="system-ui,sans-serif" font-size="22" font-weight="800" fill="${color}">${name}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+const PARTNERS: Partner[] = [
+  { name: 'Rota', logo: wordmark('rota', '#4f46e5', 'circle') },
+  { name: 'Zipa', logo: wordmark('zipa', '#ea580c', 'triangle') },
+  { name: 'Ciclo', logo: wordmark('ciclo', '#7c3aed', 'square') },
+];
+const OPEN_STORES = STORES.filter((s) => s.open);
+
+/** Brand name, then the delivery partner's logo. Every third open store also lists a paused partner, tinted red. */
+function badgesFor(s: Store, i: number): (string | MapPopupBadge)[] {
+  const partner = PARTNERS[i % PARTNERS.length]!;
+  const badges: (string | MapPopupBadge)[] = [
+    brandOf(i).name,
+    { label: partner.name, image: partner.logo, imageOnly: true },
+  ];
+  if (OPEN_STORES.indexOf(s) % 3 === 2) {
+    const paused = PARTNERS[(i + 1) % PARTNERS.length]!;
+    badges.push({ label: `${paused.name} (paused)`, image: paused.logo, imageOnly: true, tone: 'destructive' });
+  }
+  return badges;
+}
 
 const brandOf = (i: number) => BRANDS[i % BRANDS.length]!;
 
@@ -77,7 +110,7 @@ function markersFor(list: Store[], selectedId: string | null): MapMarkerDatum[] 
         description: `${s.address}, ${s.city}`,
         image: brand.logo,
         status: s.open ? { label: 'Open', tone: '#16a34a' } : { label: 'Closed', tone: 'destructive' },
-        badges: [brand.name, PARTNERS[i % PARTNERS.length]!],
+        badges: badgesFor(s, i),
         meta: [
           { label: 'Orders today', value: String(orders) },
           { label: 'Last order', value: lastOrder },
