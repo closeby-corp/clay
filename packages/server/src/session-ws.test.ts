@@ -101,6 +101,50 @@ describe('WebSocket session protocol', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
+  /** Raw upgrade (browser WebSocket hides ping frames); counts server ping frames (0x89) seen in `ms`. */
+  async function countPingFrames(port: number, ms: number): Promise<number> {
+    let upgraded = false;
+    let head = '';
+    let pings = 0;
+    const socket = await Bun.connect({
+      hostname: '127.0.0.1',
+      port,
+      socket: {
+        data(_s, chunk) {
+          let bytes = new Uint8Array(chunk);
+          if (!upgraded) {
+            head += new TextDecoder().decode(bytes);
+            const end = head.indexOf('\r\n\r\n');
+            if (end < 0) return;
+            upgraded = true;
+            bytes = bytes.slice(bytes.length - (head.length - end - 4));
+          }
+          // Server frames are unmasked; a ping with an empty payload is exactly [0x89, 0x00].
+          for (let i = 0; i + 1 < bytes.length; i++) if (bytes[i] === 0x89 && bytes[i + 1] === 0x00) pings++;
+        },
+      },
+    });
+    socket.write(
+      'GET /ws HTTP/1.1\r\nHost: 127.0.0.1\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' +
+        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n',
+    );
+    await Bun.sleep(ms);
+    socket.end();
+    expect(upgraded).toBe(true);
+    return pings;
+  }
+
+  test('pings open sockets so idle-timeout proxies keep quiet pages connected', async () => {
+    clay = new ClayServer({ port: 0, userStorageDir: false, clientDir: dir, wsPingIntervalMs: 40 });
+    clay.start();
+    expect(await countPingFrames(clay.port, 220)).toBeGreaterThanOrEqual(3);
+    clay.stop();
+
+    clay = new ClayServer({ port: 0, userStorageDir: false, clientDir: dir, wsPingIntervalMs: 0 });
+    clay.start();
+    expect(await countPingFrames(clay.port, 150)).toBe(0);
+  });
+
   test('socket shell builds once, dispatches after navigation and disposes on close', async () => {
     let builds = 0;
     let disposed = 0;

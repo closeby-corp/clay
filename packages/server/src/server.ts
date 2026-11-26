@@ -155,6 +155,14 @@ export type ClayServerConfig = {
    * `production`. Pass `false` to disable; `true` to force on in production builds.
    */
   dev?: boolean;
+  /**
+   * Send a WebSocket ping frame to every open socket this often, so proxies with an
+   * idle timeout (e.g. HAProxy `timeout client 30s`) don't cut quiet pages. Each cut
+   * makes the browser reconnect and remount the page. The browser answers pings itself,
+   * so this also works for background tabs whose timers are throttled.
+   * Default `20_000`; `0` disables.
+   */
+  wsPingIntervalMs?: number;
 };
 
 /** Helpers passed to {@link ClayServerConfig.routes} handlers. */
@@ -179,6 +187,7 @@ const DEFAULT_UPLOAD_DIR = '.clay-uploads';
 const DEFAULT_USER_STORAGE_DIR = '.clay-user-data';
 const DEFAULT_AUTH_MAX_AGE_SEC = 12 * 60 * 60;
 const SESSION_EXPIRY_CHECK_MS = 1_000;
+const DEFAULT_WS_PING_INTERVAL_MS = 20_000;
 
 function normalizeCssPaths(css?: string | string[]): string[] {
   if (!css) return [];
@@ -246,6 +255,7 @@ type ResolvedConfig = {
   sessionIdleMs?: number;
   sessionAbsoluteMs?: number;
   sessionExpiredPath: string;
+  wsPingIntervalMs: number;
   dev: boolean;
   palette?: string;
   sound?: boolean;
@@ -331,6 +341,7 @@ export class ClayServer {
       sessionIdleMs: config.sessionIdleMs,
       sessionAbsoluteMs: config.sessionAbsoluteMs,
       sessionExpiredPath,
+      wsPingIntervalMs: config.wsPingIntervalMs ?? DEFAULT_WS_PING_INTERVAL_MS,
       dev: config.dev ?? process.env.NODE_ENV !== 'production',
       palette: config.palette,
       sound: config.sound,
@@ -389,6 +400,20 @@ export class ClayServer {
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
     const presenceConnections = this.presenceConnections;
+    const openSockets = this.openSockets;
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    this.pingTimer = null;
+    if (this.config.wsPingIntervalMs > 0) {
+      this.pingTimer = setInterval(() => {
+        for (const ws of openSockets) {
+          try {
+            ws.ping();
+          } catch {
+            openSockets.delete(ws);
+          }
+        }
+      }, this.config.wsPingIntervalMs);
+    }
     this.server = Bun.serve({
       port,
       async fetch(req, server) {
@@ -530,7 +555,8 @@ export class ClayServer {
         });
       },
       websocket: {
-        open(_ws) {
+        open(ws) {
+          openSockets.add(ws);
           // wait for hello
         },
         async message(ws, raw) {
@@ -652,6 +678,7 @@ export class ClayServer {
           }
         },
         close(ws) {
+          openSockets.delete(ws);
           const data = ws.data as WsData;
           clearExpiryTimer(data);
           data.disconnectPresence?.();
@@ -679,8 +706,13 @@ export class ClayServer {
   }
 
   private presenceConnections = new Set<(immediate?: boolean) => void>();
+  private openSockets = new Set<{ ping(): unknown }>();
+  private pingTimer: ReturnType<typeof setInterval> | null = null;
 
   stop(): void {
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    this.pingTimer = null;
+    this.openSockets.clear();
     for (const disconnect of this.presenceConnections) disconnect(true);
     this.presenceConnections.clear();
     configureAuthSession(null);
