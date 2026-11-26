@@ -149,12 +149,21 @@ describe('pwa', () => {
     const body = await html.text();
     for (const asset of ['index.js', 'index.css', 'custom-0.css']) {
       const url = '/assets/' + asset;
-      expect(body).toContain(url + '?v=' + version);
+      const entryUrl = asset === 'index.js' ? url : url + '?v=' + version;
+      expect(body).toContain(entryUrl);
       expect((await get(url)).headers.get('cache-control')).toBe('no-cache');
       expect((await get(url + '?v=old')).headers.get('cache-control')).toBe('no-cache');
       expect((await get(url + '?v=' + version)).headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
-      expect(await (await get('/sw.js')).text()).toContain(url + '?v=' + version);
+      expect(await (await get('/sw.js')).text()).toContain(entryUrl);
     }
+    expect(body).not.toContain('index.js?v=');
+    const entry = await get('/assets/index.js');
+    const etag = entry.headers.get('etag');
+    expect(etag).toBeTruthy();
+    const revalidate = () => fetch(`http://127.0.0.1:${clay!.port}/assets/index.js`, { headers: { 'If-None-Match': etag! } });
+    expect((await revalidate()).status).toBe(304);
+    await writeFile(join(dir, 'index.js'), 'console.log(12345)');
+    expect((await revalidate()).status).toBe(200);
     expect((await get('/assets/font-AbCd1234.woff2')).headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
     expect(body).toContain('controllerchange');
     for (const file of ['index.js', 'index.css', 'app.css']) {

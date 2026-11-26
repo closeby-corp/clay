@@ -156,7 +156,7 @@ export function clientVersion(clientDir: string, cssPaths: string[] = []): strin
 export function pwaServiceWorker(version: string, p: ResolvedPwa, extraUrls: string[] = []): string {
   const precache = [
     '/',
-    '/assets/index.js?v=' + version,
+    '/assets/index.js',
     '/assets/index.css?v=' + version,
     // App CSS (`css` option + auto Tailwind) so the offline shell is styled.
     ...extraUrls,

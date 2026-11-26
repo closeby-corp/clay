@@ -220,6 +220,7 @@ function spaHtml(
     .map((href) => `  <link rel="stylesheet" href="${href}" />`)
     .join('\n');
   const devBoot = dev ? `  <script>window.__CLAY_DEV__=true</script>\n` : '';
+  // Chunks import ../index.js; a query on the entry would create a second module instance.
   return `<!DOCTYPE html>
 <html lang="en"${palette ? ` data-palette="${sanitizePaletteName(palette)}"` : ''} data-sound="${sound ? 'on' : 'off'}">
 <head>
@@ -232,9 +233,29 @@ ${pwa ? pwaHeadHtml(pwa) : ''}  <title>${title}</title>
 ${customLinks ? `${customLinks}\n` : ''}</head>
 <body class="min-h-screen bg-background text-foreground antialiased">
   <div id="root"></div>
-${devBoot}  <script type="module" src="/assets/index.js?v=${version}"></script>
+${devBoot}  <script type="module" src="/assets/index.js"></script>
 </body>
 </html>`;
+}
+
+/**
+ * Serve a client asset. Unversioned fixed-name assets (the entry, which chunks import by its bare
+ * URL) are `no-cache`, so give them a per-file ETag and answer revalidation with 304.
+ */
+function serveAsset(
+  req: Request,
+  file: ReturnType<typeof Bun.file>,
+  cacheControl: string,
+  revalidate: boolean,
+  contentType?: string,
+): Response {
+  const headers: Record<string, string> = { 'Cache-Control': cacheControl };
+  if (contentType) headers['Content-Type'] = contentType;
+  if (revalidate) {
+    headers.ETag = `W/"${file.size.toString(36)}-${file.lastModified.toString(36)}"`;
+    if (req.headers.get('If-None-Match') === headers.ETag) return new Response(null, { status: 304, headers });
+  }
+  return new Response(file, { headers });
 }
 
 type ResolvedConfig = {
@@ -525,18 +546,13 @@ export class ClayServer {
             if (!(await file.exists())) {
               return new Response('CSS file not found', { status: 404 });
             }
-            return new Response(file, {
-              headers: {
-                'Content-Type': 'text/css; charset=utf-8',
-                'Cache-Control': cacheControl,
-              },
-            });
+            return serveAsset(req, file, cacheControl, !immutable, 'text/css; charset=utf-8');
           }
 
           const filePath = join(clientDir, assetName);
           const file = Bun.file(filePath);
           if (await file.exists()) {
-            return new Response(file, { headers: { 'Cache-Control': cacheControl } });
+            return serveAsset(req, file, cacheControl, fixedName && !immutable);
           }
           return new Response('Not found', { status: 404 });
         }
