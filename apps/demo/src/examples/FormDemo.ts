@@ -30,6 +30,38 @@ const defaults = {
   color: '#3b82f6',
 };
 
+/** Made-up square brand logo: initials on a coloured tile or disc. */
+function squareLogo(initials: string, color: string, shape: 'square' | 'circle'): string {
+  const bg =
+    shape === 'circle'
+      ? `<circle cx="32" cy="32" r="32" fill="${color}"/>`
+      : `<rect width="64" height="64" rx="14" fill="${color}"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${bg}<text x="32" y="41" text-anchor="middle" font-family="system-ui,sans-serif" font-size="24" font-weight="700" fill="#fff">${initials}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/** Made-up wide partner wordmark (about 3.5:1, transparent background). */
+function wordmark(name: string, color: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 32"><rect x="3" y="6" width="20" height="20" rx="5" fill="${color}"/><text x="30" y="24" textLength="78" lengthAdjust="spacingAndGlyphs" font-family="system-ui,sans-serif" font-size="22" font-weight="800" fill="${color}">${name}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/** Logo options: square logo, wide (dark) wordmark, icon-only, broken image (label stays), plain. */
+const BRAND_OPTIONS = [
+  { value: 'acme', label: 'Acme Burgers (84)', image: squareLogo('AB', '#b45309', 'square') },
+  { value: 'nimbus', label: 'Nimbus Pizza (31)', image: squareLogo('N', '#1d4ed8', 'circle') },
+  { value: 'kettle', label: 'Kettle & Co (12)', icon: 'coffee' },
+  { value: 'lost', label: 'Lost Logo Diner (7)', image: '/logos/missing.svg' },
+  { value: 'other', label: 'Other brands (3)' },
+];
+const PARTNER_OPTIONS = [
+  { value: 'rota', label: 'Rota (403)', image: wordmark('rota', '#111827') },
+  { value: 'zipa', label: 'Zipa (212)', image: wordmark('zipa', '#ea580c') },
+  { value: 'courier', label: 'Own couriers (58)', icon: 'bike' },
+  { value: 'lost', label: 'Gone Partner (9)', image: '/logos/missing.svg' },
+  { value: 'pickup', label: 'Pickup (21)' },
+];
+
 function resetForm(form: typeof defaults): void {
   Object.assign(form, defaults);
 }
@@ -44,6 +76,7 @@ ui.page('/examples/forms', () => {
   const search = ui.state({ value: 'clay', pinned: false });
   const perms = ui.state({ value: ['read', 'write'] as string[] });
   const range = ui.state({ from: '', to: '' });
+  const logos = ui.state({ brand: 'acme', partner: 'rota' });
   const wizard = ui.state({ step: 0 });
   const state = ui.state({
     volume: 50,
@@ -261,6 +294,30 @@ ui.page('/examples/forms', () => {
         );
       });
 
+
+      exampleSection(
+        'Logo options · ui.combobox / ui.select',
+        'Options can show a logo or an icon before the label. Broken logos are hidden.',
+      );
+      ui.auto(() => {
+        ui.combobox({
+          label: 'Brand',
+          placeholder: 'Search brands…',
+          value: logos.brand,
+          options: BRAND_OPTIONS,
+          onChange: (v) => {
+            logos.brand = v;
+          },
+        });
+        ui.select({
+          label: 'Partner',
+          value: logos.partner,
+          options: PARTNER_OPTIONS,
+          onChange: (v) => {
+            logos.partner = v;
+          },
+        });
+      });
 
       exampleSection('Field + inputs', 'Choose seats, enter a phone number, and select a plan.');
       ui.auto(() => {

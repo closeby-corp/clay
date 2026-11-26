@@ -483,12 +483,25 @@ Bound boolean toggle (optimistic like checkbox).
 
 | Prop | Type | Required |
 |------|------|----------|
-| `options` | `{ value: string; label: string }[]` | yes |
+| `options` | `{ value: string; label: string; image?: string; icon?: string }[]` | yes |
 | `value` | `string` | defaults to first option |
 | `label` | `string` | |
 | `error` | `string` | |
 | `disabled` | `boolean` | |
 | `onChange` | `(value: string) => void` | |
+
+**Option logos and icons.** An option can show media before its label, in the list and in the closed trigger. `image` is a logo URL drawn at text height with its natural width (up to 4rem), so square logos and wide wordmarks both fit; it sits on a white chip so dark wordmarks stay visible on dark themes. `icon` is a Lucide icon name (as in `ui.icon`). If both are set, `image` wins. An image that fails to load is hidden (the `icon` shows instead if set) and the label stays. Image URLs follow the same rules as `ui.map` marker images (`http(s)`, relative or root-relative like `/logos/kfc.svg`, or `data:image/…`; anything else throws, e.g. `select options[2] image: expected an http(s), relative or data:image URL, got "javascript:alert(1)"`), and `icon` must be a non-empty string. On phones `ui.select` falls back to a native `<select>`, which shows labels only.
+
+```ts
+ui.combobox({
+  label: 'Brand',
+  options: [
+    { value: 'acme', label: 'Acme Burgers (84)', image: '/logos/acme.svg' },
+    { value: 'bolt', label: 'Bolt Delivery (403)', icon: 'bike' },
+    { value: 'other', label: 'Other (12)' },
+  ],
+});
+```
 
 #### `ui.radioGroup(props)`
 
@@ -510,13 +523,15 @@ Searchable select for large option lists (optimistic like select). Supports `bin
 
 | Prop | Type | Required |
 |------|------|----------|
-| `options` | `{ value: string; label: string }[]` | yes |
+| `options` | `{ value: string; label: string; image?: string; icon?: string }[]` | yes |
 | `value` | `string` | defaults to first option |
 | `label` | `string` | |
 | `placeholder` | `string` | `'Search…'` |
 | `error` | `string` | |
 | `disabled` | `boolean` | |
 | `onChange` | `(value: string) => void` | |
+
+Options take the same `image` / `icon` as `ui.select` (see **Option logos and icons** above). The selected option's media shows at the start of the input, and in the trigger button of the phone drawer. Search matches the `label` only.
 
 #### `ui.date(props?)`
 

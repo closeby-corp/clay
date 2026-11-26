@@ -1,5 +1,6 @@
 import { Element, withParent } from '@close-by/clay-core';
 import { type IconSlotProps, withIconSlot } from './icon-text';
+import { assertImageUrl, preview } from './image-url';
 
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
@@ -229,7 +230,31 @@ export function icon(name: string, props: Omit<IconProps, 'name'> = {}): Element
   });
 }
 
-export type SelectOption = { value: string; label: string };
+/** Media shown before an option label in `select` / `combobox` (list rows and the closed trigger). */
+type OptionMedia = {
+  /**
+   * Logo URL (http(s), relative / root-relative like `/logos/kfc.svg`, or `data:image/...`).
+   * Rendered at text height with natural width on a white chip; hidden if it fails to load.
+   * Wins over `icon` when both are set.
+   */
+  image?: string;
+  /** Lucide icon name (same names as `ui.icon`), shown when there is no `image`. */
+  icon?: string;
+};
+
+export type SelectOption = { value: string; label: string } & OptionMedia;
+
+function assertOptionMedia(options: readonly OptionMedia[], element: string): void {
+  if (!Array.isArray(options)) return;
+  options.forEach((opt, i) => {
+    if (opt === null || typeof opt !== 'object') return;
+    const where = `${element} options[${i}]`;
+    if (opt.image !== undefined) assertImageUrl(opt.image, `${where} image`);
+    if (opt.icon !== undefined && (typeof opt.icon !== 'string' || opt.icon.trim() === '')) {
+      throw new Error(`${where} icon: expected a non-empty Lucide icon name, got ${preview(opt.icon)}`);
+    }
+  });
+}
 
 export type SelectProps = {
   options: SelectOption[];
@@ -246,6 +271,7 @@ export type SelectProps = {
 };
 
 export function select(props: SelectProps): Element {
+  assertOptionMedia(props.options, 'select');
   return new Element('select', {
     options: props.options,
     value: props.value ?? props.options[0]?.value ?? '',
@@ -285,7 +311,7 @@ export function radioGroup(props: RadioGroupProps): Element {
   });
 }
 
-export type ComboboxOption = { value: string; label: string };
+export type ComboboxOption = { value: string; label: string } & OptionMedia;
 
 export type ComboboxProps = {
   options: ComboboxOption[];
@@ -299,6 +325,7 @@ export type ComboboxProps = {
 };
 
 export function combobox(props: ComboboxProps): Element {
+  assertOptionMedia(props.options, 'combobox');
   return new Element('combobox', {
     options: props.options,
     value: props.value ?? props.options[0]?.value ?? '',

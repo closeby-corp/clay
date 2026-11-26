@@ -586,6 +586,50 @@ function BoundTextarea({
   );
 }
 
+type ChoiceOption = { value: string; label: string; image?: string; icon?: string };
+
+/**
+ * Logo or Lucide icon before a select / combobox option label, or null if there is none. The image
+ * sits on a white chip (like map popup badges) so dark wordmarks stay visible on dark themes; it wins
+ * over `icon`. A failed image is dropped (falling back to the icon if one is set) and the label stays.
+ */
+function useOptionMedia(option: ChoiceOption | null | undefined): ReactNode {
+  const [failed, setFailed] = useState<string | null>(null);
+  const image = option?.image;
+  if (image && failed !== image) {
+    return (
+      <span data-slot="option-media" className="inline-flex shrink-0 items-center rounded-[3px] bg-white px-1 py-px">
+        <img
+          src={image}
+          alt=""
+          draggable={false}
+          className="h-4 w-auto max-w-16 object-contain"
+          onError={() => setFailed(image)}
+        />
+      </span>
+    );
+  }
+  if (option?.icon) {
+    const Icon = resolveNavIcon(option.icon);
+    return <Icon data-slot="option-media" className="size-4 shrink-0" aria-hidden />;
+  }
+  return null;
+}
+
+function OptionMedia({ option }: { option: ChoiceOption }) {
+  return <>{useOptionMedia(option)}</>;
+}
+
+/** Option media + truncating label, for list rows and triggers. */
+function OptionLabel({ option }: { option: ChoiceOption }) {
+  return (
+    <>
+      <OptionMedia option={option} />
+      <span className="min-w-0 truncate">{option.label}</span>
+    </>
+  );
+}
+
 function BoundSelect({
   id,
   props,
@@ -602,7 +646,7 @@ function BoundSelect({
   const phone = usePhone();
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
-  const options = (props.options as Array<{ value: string; label: string }>) ?? [];
+  const options = (props.options as ChoiceOption[]) ?? [];
   const error = fieldError(props);
 
   return (
@@ -644,7 +688,7 @@ function BoundSelect({
           <SelectContent>
             {options.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+                <OptionLabel option={opt} />
               </SelectItem>
             ))}
           </SelectContent>
@@ -2906,8 +2950,6 @@ function BoundRadioGroup({
   );
 }
 
-type ComboboxOption = { value: string; label: string };
-
 function BoundCombobox({
   id,
   props,
@@ -2926,8 +2968,9 @@ function BoundCombobox({
   const [search, setSearch] = useState('');
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
-  const options = (props.options as ComboboxOption[]) ?? [];
+  const options = (props.options as ChoiceOption[]) ?? [];
   const selected = options.find((opt) => opt.value === value) ?? null;
+  const selectedMedia = useOptionMedia(selected);
   const error = fieldError(props);
 
   const pick = (next: string) => {
@@ -2956,7 +2999,11 @@ function BoundCombobox({
               aria-invalid={!!error}
               onClick={() => setSearch('')}
             >
-              {selected ? selected.label : String(props.placeholder ?? 'Search…')}
+              {selected ? (
+                <span className="flex min-w-0 items-center gap-2"><OptionLabel option={selected} /></span>
+              ) : (
+                String(props.placeholder ?? 'Search…')
+              )}
               <ChevronDownIcon className="size-4 shrink-0" />
             </Button>
           </DrawerTrigger>
@@ -2973,7 +3020,7 @@ function BoundCombobox({
                 {filtered.length === 0 ? <p className="p-3 text-sm text-muted-foreground">No results.</p> : null}
                 {filtered.map((opt) => (
                   <Button type="button" key={opt.value} variant="ghost" className="min-h-11 w-full justify-between" onClick={() => pick(opt.value)}>
-                    {opt.label}
+                    <span className="flex min-w-0 items-center gap-2"><OptionLabel option={opt} /></span>
                     {opt.value === value ? <CheckIcon className="size-4" /> : null}
                   </Button>
                 ))}
@@ -2986,6 +3033,8 @@ function BoundCombobox({
         <Combobox
           items={options}
           value={selected}
+          // Search and the input text use the label only (never image/icon).
+          itemToStringLabel={(item: ChoiceOption) => item.label}
           disabled={!!props.disabled}
           onValueChange={(next) => {
             const nextValue = next?.value ?? '';
@@ -2999,13 +3048,15 @@ function BoundCombobox({
             disabled={!!props.disabled}
             showClear={!!selected}
             aria-invalid={!!error}
-          />
+          >
+            {selectedMedia ? <InputGroupAddon align="inline-start">{selectedMedia}</InputGroupAddon> : null}
+          </ComboboxInput>
           <ComboboxContent>
             <ComboboxEmpty>No results.</ComboboxEmpty>
             <ComboboxList>
               {(item) => (
                 <ComboboxItem key={item.value} value={item}>
-                  {item.label}
+                  <OptionLabel option={item} />
                 </ComboboxItem>
               )}
             </ComboboxList>
