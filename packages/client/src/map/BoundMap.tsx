@@ -1,5 +1,6 @@
-import { Fragment, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react';
 import type * as GeoJSON from 'geojson';
+import type { MapMouseEvent as MapLibreMapMouseEvent, Popup as MapLibrePopup } from 'maplibre-gl';
 import {
   Map,
   useMap,
@@ -16,20 +17,35 @@ import {
   MapArc,
   MapGeoJSON,
   MapClusterLayer,
+  useMarkerContext,
   type MapArcProps,
   type MapGeoJSONProps,
 } from '../components/ui/map';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { resolveIcon } from '../icons';
 import { ClayBasemapTint, resolveTone, useClayMapPalette, type ClayMapPalette } from './map-theme';
 import { MapHeatmap, type MapHeatmapLayerWire } from './MapHeatmap';
+import { interactiveLayerIds, isObjectClick } from './map-clicks';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 type LngLat = [number, number];
 
 // ---------- wire types (see map-contract.md) ----------
 
-type InfoData = { title?: string; description?: string; meta?: { label: string; value: string }[] };
+type InfoData = { title?: string; description?: string };
+
+type PopupAction = { id: string; label: string; icon?: string; variant?: 'default' | 'outline' | 'ghost' };
+
+type MarkerPopupData = InfoData & {
+  image?: string;
+  status?: { label: string; tone?: string };
+  badges?: string[];
+  meta?: { label: string; value: string }[];
+  actions?: PopupAction[];
+  size?: 'sm' | 'md' | 'lg';
+};
 
 type MarkerDatum = {
   id: string;
@@ -37,7 +53,8 @@ type MarkerDatum = {
   tone?: string;
   label?: string;
   tooltip?: string;
-  popup?: InfoData;
+  popup?: MarkerPopupData;
+  image?: string;
   icon?: string;
   size?: 'sm' | 'md' | 'lg';
   pulse?: boolean;
@@ -123,6 +140,8 @@ type MapWireProps = {
   clusters?: ClusterGroup[];
   popup?: ({ lngLat: LngLat } & InfoData) | null;
   camera?: CameraCommand | null;
+  /** Open marker `id`'s popup once per nonce (openMarkerPopup). */
+  openPopup?: { nonce: number; id: string } | null;
   events?: string[];
 };
 
@@ -135,6 +154,8 @@ const MERCATOR = { type: 'mercator' } as const;
 const DEFAULT_CENTER: LngLat = [0, 20];
 const MARKER_SIZE = { sm: 10, md: 14, lg: 20 } as const;
 const ICON_MARKER_SIZE = 28;
+const IMAGE_MARKER_SIZE = { sm: 24, md: 32, lg: 40 } as const;
+const POPUP_WIDTH = { sm: undefined, md: 'max-w-80', lg: 'max-w-96' } as const;
 const ROUTE_DASH: [number, number] = [2, 2];
 
 // ---------- small presentational pieces ----------
@@ -175,13 +196,122 @@ function MarkerPin({
   );
 }
 
-function InfoBody({ title, description, meta }: InfoData) {
+/** Standalone popup body (showPopup / `popup` prop). */
+function InfoBody({ title, description }: InfoData) {
   return (
     <div className="min-w-48 space-y-1.5 text-sm">
       {title && <div className="leading-snug font-medium text-foreground">{title}</div>}
       {description && <div className="text-muted-foreground">{description}</div>}
+    </div>
+  );
+}
+
+/** Round logo/photo pin. Falls back to the dot / icon pin when the image fails to load. */
+function ImagePin({
+  src,
+  color,
+  size,
+  icon,
+  pulse,
+  ring,
+}: {
+  src: string;
+  color: string;
+  size: 'sm' | 'md' | 'lg';
+  icon?: string;
+  pulse?: boolean;
+  ring: string;
+}) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (failed === src) {
+    return (
+      <MarkerPin
+        color={color}
+        diameter={icon ? ICON_MARKER_SIZE : MARKER_SIZE[size]}
+        icon={icon}
+        pulse={pulse}
+        ring={ring}
+      />
+    );
+  }
+  const diameter = IMAGE_MARKER_SIZE[size];
+  return (
+    <div className="relative" style={{ width: diameter, height: diameter }}>
+      {pulse && (
+        <span className="absolute inset-0 opacity-40">
+          <span className="block size-full animate-ping rounded-full" style={{ background: color }} />
+        </span>
+      )}
+      <span
+        className="relative block size-full overflow-hidden rounded-full"
+        style={{
+          background: '#fff',
+          boxShadow: `0 0 0 2.5px ${color}, 0 0 0 4px ${ring}, 0 1px 4px rgb(0 0 0 / 0.35)`,
+        }}
+      >
+        <img src={src} alt="" draggable={false} className="size-full object-contain" onError={() => setFailed(src)} />
+      </span>
+    </div>
+  );
+}
+
+function PopupImage({ src }: { src: string }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (failed === src) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      draggable={false}
+      className="size-10 shrink-0 rounded-md border bg-white object-contain p-0.5"
+      onError={() => setFailed(src)}
+    />
+  );
+}
+
+function MarkerPopupBody({
+  popup,
+  palette,
+  onAction,
+}: {
+  popup: MarkerPopupData;
+  palette: ClayMapPalette;
+  onAction: (actionId: string) => void;
+}) {
+  const { title, description, image, status, badges, meta, actions } = popup;
+  return (
+    <div className="min-w-48 space-y-2 text-sm">
+      {(image || title || description) && (
+        <div className="flex items-start gap-2.5">
+          {image && <PopupImage src={image} />}
+          {(title || description) && (
+            <div className="min-w-0 space-y-0.5">
+              {title && <div className="leading-snug font-medium text-foreground">{title}</div>}
+              {description && <div className="text-xs text-muted-foreground">{description}</div>}
+            </div>
+          )}
+        </div>
+      )}
+      {status && (
+        <div className="flex items-center gap-1.5 text-xs">
+          <span
+            className="size-2 shrink-0 rounded-full"
+            style={{ background: resolveTone(status.tone ?? 'muted', palette) }}
+          />
+          <span className="text-foreground">{status.label}</span>
+        </div>
+      )}
+      {badges && badges.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {badges.map((b, i) => (
+            <Badge key={`${i}-${b}`} variant="secondary" size="xs">
+              {b}
+            </Badge>
+          ))}
+        </div>
+      )}
       {meta && meta.length > 0 && (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pt-1 text-xs">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
           {meta.map((m, i) => (
             <Fragment key={`${i}-${m.label}`}>
               <dt className="text-muted-foreground">{m.label}</dt>
@@ -190,25 +320,73 @@ function InfoBody({ title, description, meta }: InfoData) {
           ))}
         </dl>
       )}
+      {actions && actions.length > 0 && (
+        <div className="flex gap-2 pt-1">
+          {actions.map((a, i) => {
+            const Icon = a.icon ? resolveIcon(a.icon) : null;
+            return (
+              <Button
+                key={a.id}
+                type="button"
+                size="xs"
+                variant={a.variant ?? (i === 0 ? 'default' : 'outline')}
+                className="flex-1"
+                onClick={() => onAction(a.id)}
+              >
+                {Icon && <Icon />}
+                {a.label}
+              </Button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
+}
+
+/** Last `openPopup` request handled, and the popup it opened. One per map, shared by all markers. */
+type OpenedPopup = { nonce?: number; popup?: MapLibrePopup };
+
+/**
+ * Opens the enclosing marker's popup once per nonce (server `openMarkerPopup`) and closes the popup
+ * an earlier request opened, so list-driven selection shows one popup at a time. Must render after
+ * <MarkerPopup> so its `marker.setPopup` effect has run. Opens via `map` rather than
+ * `marker.togglePopup()`: on a fresh mount the parent MapMarker's `addTo(map)` effect runs after
+ * this child effect, and togglePopup would call `popup.addTo(undefined)`.
+ */
+function OpenMarkerPopup({ nonce, opened }: { nonce: number; opened: MutableRefObject<OpenedPopup> }) {
+  const { marker, map } = useMarkerContext();
+  useEffect(() => {
+    if (!map || opened.current.nonce === nonce) return;
+    const popup = marker.getPopup() ?? undefined;
+    const previous = opened.current.popup;
+    opened.current = { nonce, popup };
+    if (previous && previous !== popup && previous.isOpen()) previous.remove();
+    if (popup && !popup.isOpen()) popup.setLngLat(marker.getLngLat()).addTo(map);
+  }, [map, marker, nonce, opened]);
+  return null;
 }
 
 // ---------- map-internal helpers (must render inside <Map>) ----------
 
 type ViewportPayload = { center: LngLat; zoom: number; bearing: number; pitch: number };
 
-/** Emits moveend viewport and click events; listeners are rebound only when the map instance changes. */
+/**
+ * Emits moveend viewport and click events; listeners are rebound only when the map instance changes.
+ * Clicks on markers, popups or `objectLayers` belong to those objects and do not reach `onClick`.
+ */
 function MapEvents({
   onViewport,
   onClick,
+  objectLayers,
 }: {
   onViewport?: (v: ViewportPayload) => void;
   onClick?: (lngLat: LngLat) => void;
+  objectLayers: string[];
 }) {
   const { map } = useMap();
-  const handlers = useRef({ onViewport, onClick });
-  handlers.current = { onViewport, onClick };
+  const handlers = useRef({ onViewport, onClick, objectLayers });
+  handlers.current = { onViewport, onClick, objectLayers };
 
   useEffect(() => {
     if (!map) return;
@@ -221,8 +399,16 @@ function MapEvents({
         pitch: map.getPitch(),
       });
     };
-    const onClick = (e: { lngLat: { lng: number; lat: number } }) => {
-      handlers.current.onClick?.([e.lngLat.lng, e.lngLat.lat]);
+    const onClick = (e: MapLibreMapMouseEvent) => {
+      const { onClick: handler, objectLayers } = handlers.current;
+      if (!handler) return;
+      // Same hit test the layer click handlers use, so this needs no timers.
+      const layers = objectLayers.filter((layerId) => map.getLayer(layerId));
+      const hitLayerIds = layers.length
+        ? map.queryRenderedFeatures(e.point, { layers }).map((f) => f.layer.id)
+        : [];
+      if (isObjectClick({ target: e.originalEvent.target, hitLayerIds })) return;
+      handler([e.lngLat.lng, e.lngLat.lat]);
     };
     map.on('moveend', onMoveEnd);
     map.on('click', onClick);
@@ -385,6 +571,7 @@ function ClusterLayerView({
   );
   return (
     <MapClusterLayer
+      id={group.id}
       data={data}
       clusterRadius={group.clusterRadius}
       clusterMaxZoom={group.clusterMaxZoom}
@@ -423,6 +610,9 @@ export default function BoundMap({
   const theme = p.basemap === 'light' || p.basemap === 'dark' ? p.basemap : undefined;
   const projection = p.projection === 'globe' ? GLOBE : MERCATOR;
   const ctrl = p.controls === false ? null : (p.controls ?? {});
+  // Shared across markers so a marker removed and re-added later does not reopen an old request.
+  const openedPopup = useRef<OpenedPopup>({});
+  const objectLayers = interactiveLayerIds(p, events);
 
   return (
     <div
@@ -447,6 +637,7 @@ export default function BoundMap({
         <MapEvents
           onViewport={on('viewportChange') ? (v) => emit(id, 'viewportChange', v) : undefined}
           onClick={on('mapClick') ? (lngLat) => emit(id, 'mapClick', { lngLat }) : undefined}
+          objectLayers={objectLayers}
         />
         <CameraSync camera={p.camera} />
         <ProjectionSync projection={p.projection} />
@@ -562,26 +753,40 @@ export default function BoundMap({
               onDragEnd={(ll) => fire('markerDragEnd', { id: m.id, lngLat: [ll.lng, ll.lat] })}
             >
               <MarkerContent>
-                <MarkerPin
-                  color={color}
-                  diameter={diameter}
-                  icon={m.icon}
-                  pulse={m.pulse}
-                  ring={palette.background}
-                />
+                {m.image ? (
+                  <ImagePin
+                    src={m.image}
+                    color={color}
+                    size={m.size ?? 'md'}
+                    icon={m.icon}
+                    pulse={m.pulse}
+                    ring={palette.background}
+                  />
+                ) : (
+                  <MarkerPin
+                    color={color}
+                    diameter={diameter}
+                    icon={m.icon}
+                    pulse={m.pulse}
+                    ring={palette.background}
+                  />
+                )}
                 {m.label && <MarkerLabel>{m.label}</MarkerLabel>}
               </MarkerContent>
               {m.tooltip && (
-                <MarkerTooltip>
-                  <div className="rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md">
-                    {m.tooltip}
-                  </div>
-                </MarkerTooltip>
+                <MarkerTooltip className="border bg-popover text-popover-foreground">{m.tooltip}</MarkerTooltip>
               )}
               {m.popup && (
-                <MarkerPopup>
-                  <InfoBody {...m.popup} />
+                <MarkerPopup className={POPUP_WIDTH[m.popup.size ?? 'sm']}>
+                  <MarkerPopupBody
+                    popup={m.popup}
+                    palette={palette}
+                    onAction={(actionId) => fire('popupAction', { id: m.id, actionId })}
+                  />
                 </MarkerPopup>
+              )}
+              {p.openPopup?.id === m.id && (
+                <OpenMarkerPopup nonce={p.openPopup.nonce} opened={openedPopup} />
               )}
             </MapMarker>
           );

@@ -32,6 +32,31 @@ export type MapControls = {
 
 export type MapPopupMeta = { label: string; value: string };
 
+export type MapPopupStatus = { label: string; tone?: MapToneOrColor };
+export type MapPopupAction = {
+  /** Unique within the popup. Passed to `onPopupAction`. */
+  id: string;
+  label: string;
+  /** Lucide kebab-case icon name. */
+  icon?: string;
+  /** Default: first action 'default', the rest 'outline'. */
+  variant?: 'default' | 'outline' | 'ghost';
+};
+export type MapMarkerPopup = {
+  title?: string;
+  description?: string;
+  /** Logo/thumbnail URL shown beside the title. */
+  image?: string;
+  /** Line with a coloured dot, e.g. `{ label: 'Open', tone: 'chart-2' }`. */
+  status?: MapPopupStatus;
+  badges?: string[];
+  meta?: MapPopupMeta[];
+  /** Buttons that fire `onPopupAction(actionId, marker)` on the server. */
+  actions?: MapPopupAction[];
+  /** Max width: 'sm' 248px (default), 'md' 320px, 'lg' 384px. */
+  size?: 'sm' | 'md' | 'lg';
+};
+
 export type MapMarkerDatum = {
   /** Required and unique within `markers`. Markers move in place when `lngLat` changes. */
   id: string;
@@ -42,7 +67,9 @@ export type MapMarkerDatum = {
   /** Shown on hover. */
   tooltip?: string;
   /** Shown on click. */
-  popup?: { title?: string; description?: string; meta?: MapPopupMeta[] };
+  popup?: MapMarkerPopup;
+  /** Logo or photo URL drawn inside a round pin. `tone` colours the ring. Falls back to `icon` or a dot if it fails to load. */
+  image?: string;
   /** Lucide kebab-case icon name rendered inside the pin. */
   icon?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -188,6 +215,8 @@ export type MapProps = {
   /** Standalone popup. `null` or omitted means closed. */
   popup?: MapPopupDatum | null;
 
+  /** A marker popup action button was clicked. Only actions listed in the marker's current `popup.actions` reach the handler. */
+  onPopupAction?: (actionId: string, marker: MapMarkerDatum) => void | Promise<void>;
   /** Resolved server-side: receives the current marker datum. */
   onMarkerClick?: (marker: MapMarkerDatum) => void | Promise<void>;
   /** Stored marker `lngLat` is updated before this runs. */
@@ -236,11 +265,60 @@ function assertUniqueIds(items: readonly { id: string }[], where: string): void 
   }
 }
 
+/** JSON-ish preview of a bad value for error messages, cut to 60 characters. */
+function preview(value: unknown): string {
+  const text = typeof value === 'string' ? JSON.stringify(value) : String(JSON.stringify(value) ?? value);
+  return text.length > 60 ? `${text.slice(0, 57)}...` : text;
+}
+
+/** http(s), relative / root-relative / protocol-relative paths, or data:image. No other schemes. */
+function assertImageUrl(value: unknown, where: string): asserts value is string {
+  const ok =
+    typeof value === 'string' &&
+    value !== '' &&
+    !/[\s\x00-\x1f\x7f-\x9f]/.test(value) &&
+    (!/^[a-z][a-z0-9+.-]*:/i.test(value) || /^(https?:|data:image\/)/i.test(value));
+  if (!ok) {
+    throw new Error(`${where}: expected an http(s), relative or data:image URL, got ${preview(value)}`);
+  }
+}
+
+function assertLabel(value: unknown, where: string): void {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${where}: expected a non-empty string label, got ${preview(value)}`);
+  }
+}
+
 function normalizeMarkers(markers: MapMarkerDatum[]): MapMarkerDatum[] {
   assertUniqueIds(markers, 'map markers');
   return markers.map((m) => {
     assertLngLat(m.lngLat, `map marker "${m.id}" lngLat`);
-    return { ...m, lngLat: copyLngLat(m.lngLat) };
+    const where = `map marker "${m.id}"`;
+    if (m.image !== undefined) assertImageUrl(m.image, `${where} image`);
+    const popup = m.popup;
+    if (popup) {
+      if (popup.image !== undefined) assertImageUrl(popup.image, `${where} popup image`);
+      if (popup.actions !== undefined) {
+        if (!Array.isArray(popup.actions)) throw new Error(`${where} popup actions: expected an array`);
+        assertUniqueIds(popup.actions, `${where} popup actions`);
+        popup.actions.forEach((a) => assertLabel(a.label, `${where} popup action "${a.id}" label`));
+      }
+      if (popup.status !== undefined) assertLabel(popup.status?.label, `${where} popup status label`);
+      if (popup.badges !== undefined && (!Array.isArray(popup.badges) || popup.badges.some((b) => typeof b !== 'string'))) {
+        throw new Error(`${where} popup badges: expected an array of strings`);
+      }
+    }
+    return {
+      ...m,
+      lngLat: copyLngLat(m.lngLat),
+      ...(popup && { popup: {
+        ...popup,
+        ...(popup.status && { status: { ...popup.status } }),
+        ...(popup.badges && { badges: [...popup.badges] }),
+        ...(popup.meta && { meta: popup.meta.map((row) => ({ ...row })) }),
+        ...(popup.actions && { actions: popup.actions.map((action) => ({ ...action })) }),
+      } }),
+    };
   });
 }
 
@@ -372,12 +450,14 @@ function boundsOf(points: LngLat[]): [LngLat, LngLat] {
  */
 export class MapElement extends Element {
   private cameraNonce = 0;
+  private popupNonce = 0;
 
   constructor(props: MapProps = {}) {
     super('map', toWireProps(props));
 
     const {
       onMarkerClick,
+      onPopupAction,
       onMarkerDragEnd,
       onRouteClick,
       onArcClick,
@@ -388,6 +468,15 @@ export class MapElement extends Element {
       onLocate,
     } = props;
 
+    if (onPopupAction) {
+      this.on('popupAction', async (value) => {
+        const payload = value as { id?: unknown; actionId?: unknown } | undefined;
+        const marker = this.findById(this.markerList, payload?.id);
+        if (marker && typeof payload?.actionId === 'string' && marker.popup?.actions?.some((a) => a.id === payload.actionId)) {
+          await onPopupAction(payload.actionId, marker);
+        }
+      });
+    }
     if (onMarkerClick) {
       this.on('markerClick', async (value) => {
         const marker = this.findById(this.markerList, (value as { id?: unknown } | undefined)?.id);
@@ -535,6 +624,13 @@ export class MapElement extends Element {
   /** Replace all heatmap layers. Layer ids are unique, lngLat values are finite, and weights are finite and `>= 0`. */
   setHeatmaps(layers: MapHeatmapLayer[]): this {
     this.update({ heatmaps: normalizeHeatmaps(layers) });
+    return this;
+  }
+
+  /** Open an existing marker's popup. Unknown ids are ignored. */
+  openMarkerPopup(id: string): this {
+    if (!this.findById(this.markerList, id)) return this;
+    this.update({ openPopup: { nonce: ++this.popupNonce, id } });
     return this;
   }
 

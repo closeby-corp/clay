@@ -1,4 +1,4 @@
-import { ui } from '@close-by/clay';
+import { ui, type MapMarkerDatum } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
 
 export const pageMeta = {
@@ -37,15 +37,59 @@ const STORES: Store[] = [
   { id: 'sevilla', name: 'Triana', address: 'Calle Betis 12', city: 'Sevilla', lngLat: [-6.0022, 37.3857], open: true },
 ];
 
-/** Marker per store: highlighted when selected, muted when closed. */
-function markersFor(list: Store[], selectedId: string | null) {
-  return list.map((s) => ({
-    id: s.id,
-    lngLat: s.lngLat,
-    tone: s.id === selectedId ? 'chart-2' : s.open ? 'primary' : 'muted',
-    icon: 'store',
-    tooltip: s.name,
-  }));
+type Brand = { name: string; logo: string };
+
+/** Small made-up logo: white initials on a coloured rounded square or circle, as an inline SVG data URI. */
+function logo(initials: string, color: string, shape: 'square' | 'circle'): string {
+  const bg =
+    shape === 'circle'
+      ? `<circle cx="32" cy="32" r="32" fill="${color}"/>`
+      : `<rect width="64" height="64" rx="14" fill="${color}"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${bg}<text x="32" y="41" text-anchor="middle" font-family="system-ui,sans-serif" font-size="${initials.length > 1 ? 24 : 30}" font-weight="700" fill="#fff">${initials}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+const BRANDS: Brand[] = [
+  { name: 'Grão', logo: logo('G', '#b45309', 'circle') },
+  { name: 'Forno Azul', logo: logo('FA', '#1d4ed8', 'square') },
+  { name: 'Verde Bio', logo: logo('VB', '#15803d', 'circle') },
+  { name: 'Maré', logo: logo('M', '#0f766e', 'square') },
+];
+const PARTNERS = ['Glovo', 'Uber Eats', 'Bolt Food'];
+
+const brandOf = (i: number) => BRANDS[i % BRANDS.length]!;
+
+/** Marker per store: brand logo pin, ring highlighted when selected, red when closed. */
+function markersFor(list: Store[], selectedId: string | null): MapMarkerDatum[] {
+  return list.map((s) => {
+    const i = STORES.indexOf(s);
+    const brand = brandOf(i);
+    const orders = s.open ? 18 + ((i * 37) % 41) : 0;
+    const lastOrder = s.open ? `${2 + ((i * 7) % 25)} min ago` : 'Yesterday';
+    return {
+      id: s.id,
+      lngLat: s.lngLat,
+      image: brand.logo,
+      tone: s.id === selectedId ? 'chart-2' : s.open ? 'primary' : 'destructive',
+      tooltip: s.name,
+      popup: {
+        title: s.name,
+        description: `${s.address}, ${s.city}`,
+        image: brand.logo,
+        status: s.open ? { label: 'Open', tone: '#16a34a' } : { label: 'Closed', tone: 'destructive' },
+        badges: [brand.name, PARTNERS[i % PARTNERS.length]!],
+        meta: [
+          { label: 'Orders today', value: String(orders) },
+          { label: 'Last order', value: lastOrder },
+        ],
+        actions: [
+          { id: 'open', label: 'Open store', icon: 'external-link' },
+          { id: 'directions', label: 'Directions', icon: 'navigation' },
+        ],
+        size: 'md',
+      },
+    };
+  });
 }
 
 ui.page('/examples/store-locator', () => {
@@ -58,7 +102,7 @@ ui.page('/examples/store-locator', () => {
     state.selectedId = id;
     map.setMarkers(markersFor(state.visible, state.selectedId));
     if (fly) map.flyTo(store.lngLat, 14);
-    map.showPopup(store.lngLat, { title: store.name, description: `${store.address}, ${store.city}` });
+    map.openMarkerPopup(id);
   };
 
   const applyFilter = () => {
@@ -68,7 +112,6 @@ ui.page('/examples/store-locator', () => {
     );
     if (state.selectedId && !state.visible.some((s) => s.id === state.selectedId)) {
       state.selectedId = null;
-      map.closePopup();
     }
     map.setMarkers(markersFor(state.visible, state.selectedId));
     map.fitBounds('markers', { padding: 48 });
@@ -76,7 +119,7 @@ ui.page('/examples/store-locator', () => {
 
   exampleFrame(() => {
     ui.column({ fillViewport: true, gap: 4 }, () => {
-      exampleHeader(undefined, 'Filter as you type. Rows and markers select each other; the list re-renders in place by key.');
+      exampleHeader(undefined, 'Filter as you type. Rows and markers select each other; click the empty map to clear the selection.');
 
       ui.row({ grow: true, wrap: false, gap: 4, className: 'max-md:flex-col' }, () => {
         ui.card(
@@ -147,6 +190,16 @@ ui.page('/examples/store-locator', () => {
             controls: { zoom: true, compass: false, position: 'top-right' },
             markers: markersFor(state.visible, state.selectedId),
             onMarkerClick: (marker) => select(marker.id, false),
+            // Marker and popup clicks do not also fire onMapClick, so this only runs on empty map.
+            onMapClick: () => {
+              if (!state.selectedId) return;
+              state.selectedId = null;
+              map.setMarkers(markersFor(state.visible, null));
+            },
+            onPopupAction: (actionId, marker) => {
+              const name = STORES.find((s) => s.id === marker.id)?.name ?? marker.id;
+              ui.notify(actionId === 'open' ? `Opening ${name}…` : `Directions to ${name}`);
+            },
           });
         });
       });

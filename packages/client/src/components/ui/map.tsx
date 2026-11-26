@@ -2450,6 +2450,8 @@ type MapClusterLayerProps<
   clusterThresholds?: [number, number];
   /** Color for unclustered individual points (default: "#3b82f6") */
   pointColor?: string;
+  /** Optional id for the source and layers (default: auto-generated) */
+  id?: string;
   /** Callback when an unclustered point is clicked */
   onPointClick?: (
     feature: GeoJSON.Feature<GeoJSON.Point, P>,
@@ -2479,11 +2481,13 @@ function MapClusterLayer<
   clusterColors = DEFAULT_CLUSTER_COLORS,
   clusterThresholds = DEFAULT_CLUSTER_THRESHOLDS,
   pointColor = "#3b82f6",
+  id: propId,
   onPointClick,
   onClusterClick,
 }: MapClusterLayerProps<P>) {
   const { map, isLoaded } = useMap();
-  const id = useId();
+  const autoId = useId();
+  const id = propId ?? autoId;
   const sourceId = `cluster-source-${id}`;
   const clusterLayerId = `clusters-${id}`;
   const clusterCountLayerId = `cluster-count-${id}`;
@@ -2747,6 +2751,7 @@ function MapClusterLayer<
 }
 
 export {
+  useMarkerContext,
   Map,
   useMap,
   MapMarker,
