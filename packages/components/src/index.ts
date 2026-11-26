@@ -1370,6 +1370,7 @@ export {
   type MapControlPosition,
   type MapPopupMeta,
   type MapPopupStatus,
+  type MapPopupBadge,
   type MapPopupAction,
   type MapMarkerPopup,
   type MapMarkerDatum,

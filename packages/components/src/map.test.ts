@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ClientSession } from '@close-by/clay-core';
-import { map, MapElement, type MapHeatmapLayer, type MapMarkerDatum, type MapRouteDatum } from './map';
+import { map, MapElement, type MapHeatmapLayer, type MapMarkerDatum, type MapPopupBadge, type MapRouteDatum } from './map';
 
 const MARKERS: MapMarkerDatum[] = [
   { id: 'a', lngLat: [-46.6, -23.5], label: 'A' },
@@ -354,6 +354,47 @@ describe('MapElement server state', () => {
     expect(() =>
       map({ markers: [{ id: 'm', lngLat: [0, 0], popup: { status: { label: 'Open', tone: 'chart-2' }, badges: ['A'] } }] }),
     ).not.toThrow();
+  });
+
+  test('popup badges accept strings and { label, image?, imageOnly?, tone? } objects', () => {
+    const rota: MapPopupBadge = { label: 'Rota', image: '/logos/rota.svg', imageOnly: true, tone: 'destructive' };
+    const el = map({ markers: [{ id: 'm', lngLat: [0, 0], popup: { badges: ['Grão', rota] } }] });
+    const stored = (el.props.markers as MapMarkerDatum[])[0]!.popup!.badges!;
+    expect(stored).toEqual(['Grão', { label: 'Rota', image: '/logos/rota.svg', imageOnly: true, tone: 'destructive' }]);
+    expect(stored[1]).not.toBe(rota);
+
+    rota.label = 'Hacked';
+    rota.image = '/logos/other.svg';
+    expect(stored[1]).toEqual({ label: 'Rota', image: '/logos/rota.svg', imageOnly: true, tone: 'destructive' });
+  });
+
+  test('bad popup badges are rejected with the marker and badge index', () => {
+    const withBadge = (badge: unknown): MapMarkerDatum => ({
+      id: 'm',
+      lngLat: [0, 0],
+      popup: { badges: ['ok', badge as MapPopupBadge] },
+    });
+    const cases: Array<[unknown, string]> = [
+      [{ label: '' }, 'map marker "m" popup badges[1] label'],
+      [{ label: 'x', image: 'javascript:alert(1)' }, 'map marker "m" popup badges[1] image'],
+      [{ label: 'x', imageOnly: 'yes' }, 'map marker "m" popup badges[1] imageOnly'],
+      [{ label: 'x', tone: 5 }, 'map marker "m" popup badges[1] tone'],
+      [42, 'map marker "m" popup badges[1]: expected a string or { label, image?, imageOnly?, tone? }'],
+      [null, 'map marker "m" popup badges[1]: expected a string or { label, image?, imageOnly?, tone? }'],
+    ];
+    for (const [badge, message] of cases) {
+      expect(() => map({ markers: [withBadge(badge)] })).toThrow(message);
+    }
+    expect(() =>
+      map({ markers: [{ id: 'm', lngLat: [0, 0], popup: { badges: 'Grão' as unknown as string[] } }] }),
+    ).toThrow('map marker "m" popup badges: expected an array');
+
+    const el = map({ markers: MARKERS });
+    expect(() => el.setMarkers([withBadge({ label: 'x', image: 'javascript:alert(1)' })])).toThrow(
+      'map marker "m" popup badges[1] image',
+    );
+    expect(() => el.upsertMarker(withBadge({ label: 'x', tone: 5 }))).toThrow('map marker "m" popup badges[1] tone');
+    expect(el.props.markers).toEqual(MARKERS);
   });
 
   test('onPopupAction resolves the current marker and only fires for listed actions', async () => {

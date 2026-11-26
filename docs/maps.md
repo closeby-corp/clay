@@ -83,7 +83,7 @@ Coordinates are always `[longitude, latitude]`.
 | `description` | `string` | Shown under the title |
 | `image` | `string` | Logo or thumbnail beside the title |
 | `status` | `{ label, tone? }` | A line with a coloured dot. `tone` defaults to `muted` |
-| `badges` | `string[]` | Small pills |
+| `badges` | `(string \| { label, image?, imageOnly?, tone? })[]` | Small pills. `image` is a logo URL drawn at badge height on a white chip, so dark wordmarks stay visible on dark themes. `imageOnly` shows only the logo, and `label` stays as its alt text and tooltip. If the image fails to load, the badge shows the label. `tone` tints the badge, e.g. `destructive` for a paused partner |
 | `meta` | `{ label, value }[]` | Two-column rows |
 | `actions` | `{ id, label, icon?, variant? }[]` | Buttons. The first is `default`, the rest `outline`, unless `variant` is set (`default`, `outline` or `ghost`) |
 | `size` | `'sm' \| 'md' \| 'lg'` | Max width of 248, 320 or 384 px. Default `sm` |
@@ -103,7 +103,7 @@ const stores = ui.map({
         description: 'Rua Garrett 44, Lisboa',
         image: '/logos/grao.svg',
         status: { label: 'Open', tone: 'chart-2' },
-        badges: ['Grão', 'Glovo'],
+        badges: ['Grão', { label: 'Rota', image: '/logos/rota.svg', imageOnly: true }],
         meta: [
           { label: 'Orders today', value: '42' },
           { label: 'Last order', value: '5 min ago' },
@@ -210,8 +210,8 @@ ui.timer(0.25, () => {
 
 - a missing or empty id, or a duplicate id within its list (markers, routes, arc groups, arcs in a group, cluster groups, points in a group). The message is `duplicate id "…"`.
 - a coordinate that is not `[lng, lat]` with two finite numbers. This covers markers, cluster points, route coordinates, arc endpoints, popups, `flyTo` and `jumpTo` centres, and `fitBounds` corners.
-- a marker `image` or popup `image` that is not a URL string. Allowed: `http:` and `https:` URLs, relative and root-relative paths (`logos/a.png`, `/logos/a.svg`, `//cdn.example.com/a.png`), and `data:image/…` URIs. Other schemes such as `javascript:`, `data:text/html` and `file:` throw, and so do empty strings and values with whitespace.
-- popup `actions` that are not an array, that have a missing, empty or duplicate id (`duplicate id "…"`), or an empty `label`. A popup `status` needs a non-empty `label`, and `badges` must be an array of strings.
+- a marker `image`, popup `image` or popup badge `image` that is not a URL string. Allowed: `http:` and `https:` URLs, relative and root-relative paths (`logos/a.png`, `/logos/a.svg`, `//cdn.example.com/a.png`), and `data:image/…` URIs. Other schemes such as `javascript:`, `data:text/html` and `file:` throw, and so do empty strings and values with whitespace.
+- popup `actions` that are not an array, that have a missing, empty or duplicate id (`duplicate id "…"`), or an empty `label`. A popup `status` needs a non-empty `label`, and `badges` must be an array whose items are strings or `{ label, image?, imageOnly?, tone? }` objects with a non-empty `label`, a valid `image` URL, a boolean `imageOnly` and a string `tone`.
 
 ## Layout
 
@@ -256,7 +256,7 @@ All five are under the **Maps** group in the sidebar.
 
 - [`/examples/maps`](../apps/demo/src/examples/MapsGallery.ts): markers and popups, routes, arcs, a choropleth, clusters, a seismic heatmap on a globe, and a compact analytics map.
 - [`/examples/delivery-tracker`](../apps/demo/src/examples/DeliveryTracker.ts): a courier moving along a route, with `updateRoute` and `upsertMarker` on a timer.
-- [`/examples/store-locator`](../apps/demo/src/examples/StoreLocator.ts): a filterable store list where list rows and markers select each other. Markers show brand logos, and popups have a status, badges, stats and `Open store` / `Directions` actions handled by `onPopupAction`.
+- [`/examples/store-locator`](../apps/demo/src/examples/StoreLocator.ts): a filterable store list where list rows and markers select each other. Markers show brand logos, and popups have a status, a brand badge, delivery-partner logo badges (a paused partner is tinted `destructive`), stats and `Open store` / `Directions` actions handled by `onPopupAction`.
 - [`/examples/globe`](../apps/demo/src/examples/CommunityGlobe.ts): a globe with arcs and markers that refresh every 30 seconds.
 - [`/examples/uptime`](../apps/demo/src/examples/UptimeMonitor.ts): a status globe of edge locations, refreshed every 2 seconds.
 

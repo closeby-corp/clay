@@ -36,12 +36,14 @@ type LngLat = [number, number];
 
 type InfoData = { title?: string; description?: string };
 
+type PopupBadgeData = { label: string; image?: string; imageOnly?: boolean; tone?: string };
+
 type PopupAction = { id: string; label: string; icon?: string; variant?: 'default' | 'outline' | 'ghost' };
 
 type MarkerPopupData = InfoData & {
   image?: string;
   status?: { label: string; tone?: string };
-  badges?: string[];
+  badges?: (string | PopupBadgeData)[];
   meta?: { label: string; value: string }[];
   actions?: PopupAction[];
   size?: 'sm' | 'md' | 'lg';
@@ -269,6 +271,52 @@ function PopupImage({ src }: { src: string }) {
   );
 }
 
+/**
+ * Popup pill. An `image` (wide wordmark) sits on a white chip so dark logos stay visible on
+ * dark themes; `imageOnly` shows just the chip. Falls back to the text label if the image fails.
+ */
+function PopupBadge({ badge, palette }: { badge: PopupBadgeData; palette: ClayMapPalette }) {
+  const { label, image, imageOnly, tone } = badge;
+  const [failed, setFailed] = useState<string | null>(null);
+  const showImage = image !== undefined && failed !== image;
+  const logoOnly = showImage && imageOnly === true;
+  const color = tone ? resolveTone(tone, palette) : undefined;
+  const style: CSSProperties | undefined = color
+    ? {
+        borderColor: `color-mix(in oklab, ${color} 45%, transparent)`,
+        background: `color-mix(in oklab, ${color} 14%, transparent)`,
+      }
+    : undefined;
+  return (
+    <Badge
+      variant="secondary"
+      size="xs"
+      className={logoOnly ? 'px-0.5' : undefined}
+      style={style}
+      title={logoOnly ? label : undefined}
+    >
+      {showImage && (
+        // Logo-only: a concentric white pill (a square chip would be clipped by the rounded badge).
+        <span
+          className={cn(
+            'inline-flex items-center bg-white py-px',
+            logoOnly ? 'rounded-full px-1.5' : 'rounded-[3px] px-1',
+          )}
+        >
+          <img
+            src={image}
+            alt={logoOnly ? label : ''}
+            draggable={false}
+            className="h-3 w-auto max-w-16 object-contain"
+            onError={() => setFailed(image)}
+          />
+        </span>
+      )}
+      {!logoOnly && label}
+    </Badge>
+  );
+}
+
 function MarkerPopupBody({
   popup,
   palette,
@@ -303,11 +351,10 @@ function MarkerPopupBody({
       )}
       {badges && badges.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {badges.map((b, i) => (
-            <Badge key={`${i}-${b}`} variant="secondary" size="xs">
-              {b}
-            </Badge>
-          ))}
+          {badges.map((b, i) => {
+            const badge = typeof b === 'string' ? { label: b } : b;
+            return <PopupBadge key={`${i}-${badge.label}`} badge={badge} palette={palette} />;
+          })}
         </div>
       )}
       {meta && meta.length > 0 && (

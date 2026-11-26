@@ -33,6 +33,16 @@ export type MapControls = {
 export type MapPopupMeta = { label: string; value: string };
 
 export type MapPopupStatus = { label: string; tone?: MapToneOrColor };
+export type MapPopupBadge = {
+  /** Badge text. Also the image's alt text. */
+  label: string;
+  /** Logo URL (same rules as marker `image`). Drawn at badge height, natural width: suits wordmarks. */
+  image?: string;
+  /** Show only the image; `label` stays as its alt text and tooltip. Falls back to the label if the image fails. */
+  imageOnly?: boolean;
+  /** Tints the badge, e.g. `destructive` for a closed partner. */
+  tone?: MapToneOrColor;
+};
 export type MapPopupAction = {
   /** Unique within the popup. Passed to `onPopupAction`. */
   id: string;
@@ -49,7 +59,8 @@ export type MapMarkerPopup = {
   image?: string;
   /** Line with a coloured dot, e.g. `{ label: 'Open', tone: 'chart-2' }`. */
   status?: MapPopupStatus;
-  badges?: string[];
+  /** Plain text pills, or `{ label, image?, imageOnly?, tone? }` for logo or tinted badges. */
+  badges?: (string | MapPopupBadge)[];
   meta?: MapPopupMeta[];
   /** Buttons that fire `onPopupAction(actionId, marker)` on the server. */
   actions?: MapPopupAction[];
@@ -289,6 +300,22 @@ function assertLabel(value: unknown, where: string): void {
   }
 }
 
+function assertBadge(value: unknown, where: string): asserts value is string | MapPopupBadge {
+  if (typeof value === 'string') return;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(`${where}: expected a string or { label, image?, imageOnly?, tone? }, got ${preview(value)}`);
+  }
+  const b = value as Record<string, unknown>;
+  assertLabel(b.label, `${where} label`);
+  if (b.image !== undefined) assertImageUrl(b.image, `${where} image`);
+  if (b.imageOnly !== undefined && typeof b.imageOnly !== 'boolean') {
+    throw new Error(`${where} imageOnly: expected a boolean, got ${preview(b.imageOnly)}`);
+  }
+  if (b.tone !== undefined && typeof b.tone !== 'string') {
+    throw new Error(`${where} tone: expected a string, got ${preview(b.tone)}`);
+  }
+}
+
 function normalizeMarkers(markers: MapMarkerDatum[]): MapMarkerDatum[] {
   assertUniqueIds(markers, 'map markers');
   return markers.map((m) => {
@@ -304,8 +331,9 @@ function normalizeMarkers(markers: MapMarkerDatum[]): MapMarkerDatum[] {
         popup.actions.forEach((a) => assertLabel(a.label, `${where} popup action "${a.id}" label`));
       }
       if (popup.status !== undefined) assertLabel(popup.status?.label, `${where} popup status label`);
-      if (popup.badges !== undefined && (!Array.isArray(popup.badges) || popup.badges.some((b) => typeof b !== 'string'))) {
-        throw new Error(`${where} popup badges: expected an array of strings`);
+      if (popup.badges !== undefined) {
+        if (!Array.isArray(popup.badges)) throw new Error(`${where} popup badges: expected an array`);
+        popup.badges.forEach((b, i) => assertBadge(b, `${where} popup badges[${i}]`));
       }
     }
     return {
@@ -314,7 +342,7 @@ function normalizeMarkers(markers: MapMarkerDatum[]): MapMarkerDatum[] {
       ...(popup && { popup: {
         ...popup,
         ...(popup.status && { status: { ...popup.status } }),
-        ...(popup.badges && { badges: [...popup.badges] }),
+        ...(popup.badges && { badges: popup.badges.map((b) => (typeof b === 'string' ? b : { ...b })) }),
         ...(popup.meta && { meta: popup.meta.map((row) => ({ ...row })) }),
         ...(popup.actions && { actions: popup.actions.map((action) => ({ ...action })) }),
       } }),
