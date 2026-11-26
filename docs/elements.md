@@ -16,9 +16,9 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `textArea` | `textarea` | Native textarea (+ optional `error`) |
 | `checkbox` | `checkbox` | ShadCN `Checkbox` (+ optional `error`) |
 | `switch` | `switch` | ShadCN `Switch` (+ optional `error`) |
-| `select` | `select` | ShadCN `Select` (+ optional `error`) |
+| `select` | `select` | ShadCN `Select` (+ optional `error`; options may carry `image` / `icon`) |
 | `radioGroup` | `radiogroup` | ShadCN `RadioGroup` (+ optional `error`) |
-| `combobox` | `combobox` | ShadCN `Combobox` (searchable select; optional `error`) |
+| `combobox` | `combobox` | ShadCN `Combobox` (searchable select; optional `error`; options may carry `image` / `icon`) |
 | `date` | `date` | Calendar + Popover date picker (ISO `YYYY-MM-DD`; optional `error`) |
 | `dateRange` | `dateRange` | Range picker with presets (ISO `from` / `to`) |
 | `buttonGroup` | `buttonGroup` | Grouped buttons / segmented controls |
@@ -29,7 +29,7 @@ Each factory creates an `Element` with a wire `type` string. The React client ma
 | `numberField` | `numberField` | Numeric input with +/- steppers |
 | `phoneInput` | `phoneInput` | Country dial + local number |
 | `field` | `field` | Label + description + error wrapper for one control |
-| `nativeSelect` | `nativeSelect` | Styled native `<select>` |
+| `nativeSelect` | `nativeSelect` | Styled native `<select>` (options are label-only: no `image` / `icon`) |
 | `navigationMenu` | `navigationmenu` (+ sub/link children) | Top nav mega-menu |
 | `inputGroup` | `inputGroup` | Input with prefix/suffix addons |
 | `toggle` | `toggle` | Pressed toolbar toggle |
@@ -205,7 +205,8 @@ Field `error` is **server-owned** (via initial props, `.setError`, or `ui.valida
 
 On phone-sized touch screens (max-width 767px and coarse pointer), `select` uses the native picker
 and `date` uses the native date picker. `dropdownmenu` and `combobox` open bottom sheets.
-Props and events stay the same. Desktop rendering is unchanged.
+Props and events stay the same, except that the native `select` picker shows option labels only
+(no `image` / `icon`). Desktop rendering is unchanged.
 
 ## Styling
 
