@@ -73,7 +73,55 @@ Coordinates are always `[longitude, latitude]`.
 
 ## Data layers
 
-**Markers.** `id` (required, unique) and `lngLat` are required. Optional: `tone`, `label` (always visible), `tooltip` (on hover), `popup` (on click: `title`, `description`, `meta: [{ label, value }]`), `icon` (Lucide kebab-case name, drawn in a 28 px pin), `size` (`sm` / `md` / `lg` dots of 10 / 14 / 20 px, used when there is no icon), `pulse` (animated ring), `draggable`.
+**Markers.** `id` (required, unique) and `lngLat` are required. Optional: `tone`, `label` (always visible), `tooltip` (on hover), `popup` (on click; see **Marker popups** below), `image` (logo or photo URL drawn in a round pin; `tone` colours the ring), `icon` (Lucide kebab-case name, drawn in a 28 px pin), `size` (`sm` / `md` / `lg`: dots of 10 / 14 / 20 px, or image pins of 24 / 32 / 40 px), `pulse` (animated ring), `draggable`. If an `image` fails to load, the marker falls back to its `icon`, or to a dot.
+
+**Marker popups.** A marker `popup` opens on click. Every field is optional:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `title` | `string` | |
+| `description` | `string` | Shown under the title |
+| `image` | `string` | Logo or thumbnail beside the title |
+| `status` | `{ label, tone? }` | A line with a coloured dot. `tone` defaults to `muted` |
+| `badges` | `string[]` | Small pills |
+| `meta` | `{ label, value }[]` | Two-column rows |
+| `actions` | `{ id, label, icon?, variant? }[]` | Buttons. The first is `default`, the rest `outline`, unless `variant` is set (`default`, `outline` or `ghost`) |
+| `size` | `'sm' \| 'md' \| 'lg'` | Max width of 248, 320 or 384 px. Default `sm` |
+
+An action button calls `onPopupAction(actionId, marker)` on the server. Action ids are unique within a popup. The server only calls the handler for an action that the marker's current popup lists.
+
+```typescript
+const stores = ui.map({
+  markers: [
+    {
+      id: 'chiado',
+      lngLat: [-9.142, 38.7108],
+      image: '/logos/grao.svg',
+      tone: 'primary',
+      popup: {
+        title: 'Chiado Market',
+        description: 'Rua Garrett 44, Lisboa',
+        image: '/logos/grao.svg',
+        status: { label: 'Open', tone: 'chart-2' },
+        badges: ['Grão', 'Glovo'],
+        meta: [
+          { label: 'Orders today', value: '42' },
+          { label: 'Last order', value: '5 min ago' },
+        ],
+        actions: [{ id: 'open', label: 'Open store', icon: 'external-link' }],
+        size: 'md',
+      },
+    },
+  ],
+  onPopupAction: (actionId, marker) => {
+    if (actionId === 'open') ui.navigate(`/stores/${marker.id}`);
+  },
+});
+
+stores.openMarkerPopup('chiado');
+```
+
+`openMarkerPopup(id)` opens a marker's popup from the server, for example when a list row is selected. It closes the popup that an earlier `openMarkerPopup` call opened. Unknown ids are ignored.
 
 **Routes.** `id` and `coordinates: [lng, lat][]` are required. Optional: `tone`, `width` (px), `opacity`, `dashed`, `progress` (0..1: draws a progress overlay and a marker there), `progressIcon` (default `navigation`), `progressMarker` (default `true`; set `false` when you track the vehicle with your own marker), `progressTone` (colour of the travelled part, default `primary`), `active` (emphasise the selected route), `showEndpoints` (start ring and end dot). Change one route with `updateRoute` (see [Live data](#live-data--in-place-updates)).
 
@@ -98,7 +146,7 @@ const heat = ui.map({ projection: 'globe', heatmaps: [{ id: 'quakes', points, ma
 heat.setHeatmaps([{ id: 'quakes', points: points.filter((p) => (p.weight ?? 0) >= 5) }]);
 ```
 
-**Standalone popup.** `showPopup([lng, lat], { title?, description? })` opens one, and `closePopup()` closes it. The `popup` prop does the same declaratively. Only marker popups take `meta` rows.
+**Standalone popup.** `showPopup([lng, lat], { title?, description? })` opens one, and `closePopup()` closes it. The `popup` prop does the same declaratively. Only marker popups take images, status, badges, `meta` rows and actions.
 
 ## Camera
 
@@ -121,6 +169,7 @@ Handlers are registered only when you pass them. Each handler runs on the server
 | Handler | Fires when | Argument |
 |---------|------------|----------|
 | `onMarkerClick(marker)` | A marker is clicked | The current marker datum |
+| `onPopupAction(actionId, marker)` | A marker popup action button is clicked | The action id and the current marker datum. Ignored unless the marker's popup lists that action |
 | `onMarkerDragEnd(marker, lngLat)` | A draggable marker is dropped | The updated marker and its new `lngLat`. The stored position is updated first |
 | `onRouteClick(route)` | A route is clicked | The current route datum |
 | `onArcClick(arc, group)` | An arc is clicked | The arc and its group |
@@ -130,6 +179,7 @@ Handlers are registered only when you pass them. Each handler runs on the server
 | `onViewportChange(viewport)` | The camera stops moving (`moveend`) | `{ center, zoom, bearing, pitch }` |
 | `onLocate(lngLat)` | The locate control is used (needs `controls.locate`) | `[lng, lat]` |
 
+`onMapClick` fires only for clicks on the map itself. A click on a marker or a popup does not also fire it, and neither does a click on a cluster, an interactive GeoJSON layer, or a route or arc that has a click handler. Clicks on other overlays, such as heatmaps or a route without `onRouteClick`, still count as map clicks.
 
 `markerDragEnd` is always recorded on the server, even without `onMarkerDragEnd`, so a later `fitBounds('markers')` uses the dropped position.
 
@@ -142,6 +192,7 @@ The map owns its marker, route, arc, cluster and popup state. Each setter sends 
 | `setMarkers(list)` | Replaces all markers |
 | `upsertMarker(marker)` | Inserts, or replaces the marker with the same id |
 | `removeMarker(id)` | Removes a marker. No-op if absent |
+| `openMarkerPopup(id)` | Opens a marker's popup. No-op if absent |
 | `setRoutes(list)` / `updateRoute(id, patch)` | Replaces all routes, or merges `patch` into one. The id cannot change |
 | `setArcs(groups)` / `setGeoJSON(layers)` / `setClusters(groups)` / `setHeatmaps(layers)` | Replace that layer type |
 
@@ -159,6 +210,8 @@ ui.timer(0.25, () => {
 
 - a missing or empty id, or a duplicate id within its list (markers, routes, arc groups, arcs in a group, cluster groups, points in a group). The message is `duplicate id "…"`.
 - a coordinate that is not `[lng, lat]` with two finite numbers. This covers markers, cluster points, route coordinates, arc endpoints, popups, `flyTo` and `jumpTo` centres, and `fitBounds` corners.
+- a marker `image` or popup `image` that is not a URL string. Allowed: `http:` and `https:` URLs, relative and root-relative paths (`logos/a.png`, `/logos/a.svg`, `//cdn.example.com/a.png`), and `data:image/…` URIs. Other schemes such as `javascript:`, `data:text/html` and `file:` throw, and so do empty strings and values with whitespace.
+- popup `actions` that are not an array, that have a missing, empty or duplicate id (`duplicate id "…"`), or an empty `label`. A popup `status` needs a non-empty `label`, and `badges` must be an array of strings.
 
 ## Layout
 
@@ -203,7 +256,7 @@ All five are under the **Maps** group in the sidebar.
 
 - [`/examples/maps`](../apps/demo/src/examples/MapsGallery.ts): markers and popups, routes, arcs, a choropleth, clusters, a seismic heatmap on a globe, and a compact analytics map.
 - [`/examples/delivery-tracker`](../apps/demo/src/examples/DeliveryTracker.ts): a courier moving along a route, with `updateRoute` and `upsertMarker` on a timer.
-- [`/examples/store-locator`](../apps/demo/src/examples/StoreLocator.ts): a filterable store list where list rows and markers select each other.
+- [`/examples/store-locator`](../apps/demo/src/examples/StoreLocator.ts): a filterable store list where list rows and markers select each other. Markers show brand logos, and popups have a status, badges, stats and `Open store` / `Directions` actions handled by `onPopupAction`.
 - [`/examples/globe`](../apps/demo/src/examples/CommunityGlobe.ts): a globe with arcs and markers that refresh every 30 seconds.
 - [`/examples/uptime`](../apps/demo/src/examples/UptimeMonitor.ts): a status globe of edge locations, refreshed every 2 seconds.
 

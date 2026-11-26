@@ -302,6 +302,140 @@ describe('MapElement server state', () => {
     expect(() => map().flyTo([0, Infinity])).toThrow('map flyTo center');
   });
 
+  test('image URLs: http(s), relative and data:image are accepted on markers and popups', () => {
+    const ok = ['https://cdn.example.com/logo.png', 'http://x.test/a.png', '/logos/a.svg', 'logos/a.png', '//cdn.x/a.png', 'data:image/svg+xml;utf8,%3Csvg%2F%3E', 'DATA:IMAGE/png;base64,AAAA'];
+    for (const url of ok) {
+      expect(() => map({ markers: [{ id: 'm', lngLat: [0, 0], image: url, popup: { image: url } }] })).not.toThrow();
+    }
+  });
+
+  test('image URLs: unsafe schemes and malformed values throw, naming the marker', () => {
+    const bad: unknown[] = ['javascript:alert(1)', 'JavaScript:alert(1)', 'vbscript:x', 'data:text/html,<b>x</b>', 'file:///etc/passwd', '', 'a b', 'a\nb', 42, null];
+    for (const url of bad) {
+      expect(() => map({ markers: [{ id: 'm', lngLat: [0, 0], image: url as string }] })).toThrow('map marker "m" image');
+      expect(() => map({ markers: [{ id: 'm', lngLat: [0, 0], popup: { image: url as string } }] })).toThrow(
+        'map marker "m" popup image',
+      );
+    }
+    expect(() => map().setMarkers([{ id: 'x', lngLat: [0, 0], image: 'javascript:alert(1)' }])).toThrow(
+      'map marker "x" image: expected an http(s), relative or data:image URL, got "javascript:alert(1)"',
+    );
+    expect(() => map().upsertMarker({ id: 'x', lngLat: [0, 0], popup: { image: 'data:text/html,hi' } })).toThrow(
+      'map marker "x" popup image',
+    );
+    const long = `javascript:${'a'.repeat(500)}`;
+    expect(() => map({ markers: [{ id: 'm', lngLat: [0, 0], image: long }] })).toThrow('...');
+    try {
+      map({ markers: [{ id: 'm', lngLat: [0, 0], image: long }] });
+    } catch (e) {
+      expect((e as Error).message.length).toBeLessThan(200);
+    }
+  });
+
+  test('popup actions: ids unique and non-empty, labels non-empty', () => {
+    const marker = (actions: unknown): MapMarkerDatum => ({ id: 'm', lngLat: [0, 0], popup: { actions: actions as never } });
+    expect(() => map({ markers: [marker([{ id: 'open', label: 'Open' }, { id: 'open', label: 'Again' }])] })).toThrow(
+      'duplicate id "open"',
+    );
+    expect(() => map({ markers: [marker([{ id: '', label: 'Open' }])] })).toThrow('map marker "m" popup actions');
+    expect(() => map({ markers: [marker([{ label: 'Open' }])] })).toThrow('non-empty string id');
+    expect(() => map({ markers: [marker([{ id: 'open', label: '' }])] })).toThrow('map marker "m" popup action "open" label');
+    expect(() => map({ markers: [marker([{ id: 'open', label: 'Open' }])] })).not.toThrow();
+    expect(() => map({ markers: [marker('open')] })).toThrow('map marker "m" popup actions: expected an array');
+  });
+
+  test('popup status label and badges are validated', () => {
+    expect(() => map({ markers: [{ id: 'm', lngLat: [0, 0], popup: { status: { label: '' } } }] })).toThrow(
+      'map marker "m" popup status label',
+    );
+    expect(() =>
+      map({ markers: [{ id: 'm', lngLat: [0, 0], popup: { badges: ['ok', 3 as unknown as string] } }] }),
+    ).toThrow('map marker "m" popup badges');
+    expect(() =>
+      map({ markers: [{ id: 'm', lngLat: [0, 0], popup: { status: { label: 'Open', tone: 'chart-2' }, badges: ['A'] } }] }),
+    ).not.toThrow();
+  });
+
+  test('onPopupAction resolves the current marker and only fires for listed actions', async () => {
+    const seen: Array<[string, MapMarkerDatum]> = [];
+    const store: MapMarkerDatum = {
+      id: 's1',
+      lngLat: [0, 0],
+      popup: { title: 'Store', actions: [{ id: 'open', label: 'Open store' }, { id: 'directions', label: 'Directions' }] },
+    };
+    const el = map({
+      markers: [store, { id: 'plain', lngLat: [1, 1] }],
+      onPopupAction: (actionId, marker) => {
+        seen.push([actionId, marker]);
+      },
+    });
+    expect(el.props.events).toContain('popupAction');
+    expect(map().props.events).not.toContain('popupAction');
+
+    await el.handleEvent('popupAction', { id: 's1', actionId: 'directions' });
+    await el.handleEvent('popupAction', { id: 's1', actionId: 'delete' });
+    await el.handleEvent('popupAction', { id: 'missing', actionId: 'open' });
+    await el.handleEvent('popupAction', { id: 'plain', actionId: 'open' });
+    await el.handleEvent('popupAction', { id: 's1' });
+    expect(seen).toEqual([['directions', store]]);
+
+    // Uses the current datum: after the action is removed it no longer fires.
+    el.upsertMarker({ ...store, popup: { title: 'Store', actions: [{ id: 'open', label: 'Open store' }] } });
+    await el.handleEvent('popupAction', { id: 's1', actionId: 'directions' });
+    await el.handleEvent('popupAction', { id: 's1', actionId: 'open' });
+    expect(seen.map(([a]) => a)).toEqual(['directions', 'open']);
+    expect(seen[1]![1].popup?.actions).toEqual([{ id: 'open', label: 'Open store' }]);
+  });
+
+  test('openMarkerPopup pushes openPopup with an increasing nonce; unknown ids are ignored', () => {
+    const el = map({ markers: MARKERS });
+    const { session, patches } = fakeSession();
+    el.setSession(session);
+
+    el.openMarkerPopup('a');
+    el.openMarkerPopup('b');
+    el.openMarkerPopup('a');
+    el.openMarkerPopup('missing');
+    expect(patches).toHaveLength(3);
+    expect(patches.map((p) => p.props!.openPopup)).toEqual([
+      { nonce: 1, id: 'a' },
+      { nonce: 2, id: 'b' },
+      { nonce: 3, id: 'a' },
+    ]);
+    expect(patches.map((p) => Object.keys(p.props!).filter((k) => k !== 'events'))).toEqual([
+      ['openPopup'],
+      ['openPopup'],
+      ['openPopup'],
+    ]);
+    expect(el.props.openPopup).toEqual({ nonce: 3, id: 'a' });
+  });
+
+  test('normalisation copies nested popup data so later caller mutation does not leak', () => {
+    const popup = {
+      title: 'Store',
+      status: { label: 'Open', tone: 'chart-2' },
+      badges: ['Grão'],
+      meta: [{ label: 'Orders', value: '12' }],
+      actions: [{ id: 'open', label: 'Open store' }],
+    };
+    const input: MapMarkerDatum = { id: 'm', lngLat: [0, 0], popup };
+    const el = map({ markers: [input] });
+
+    popup.status.label = 'Closed';
+    popup.badges.push('Extra');
+    popup.meta[0]!.value = '99';
+    popup.actions[0]!.label = 'Hacked';
+    popup.actions.push({ id: 'x', label: 'X' });
+
+    expect((el.props.markers as MapMarkerDatum[])[0]!.popup).toEqual({
+      title: 'Store',
+      status: { label: 'Open', tone: 'chart-2' },
+      badges: ['Grão'],
+      meta: [{ label: 'Orders', value: '12' }],
+      actions: [{ id: 'open', label: 'Open store' }],
+    });
+  });
+
   test('onMapClick / onLocate receive a plain [lng, lat]', async () => {
     const clicks: unknown[] = [];
     const m = map({ onMapClick: (ll) => { clicks.push(ll); }, onLocate: (ll) => { clicks.push(ll); } });
