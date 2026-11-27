@@ -1,21 +1,24 @@
 import { auditRecord, listAuditRecords, clearAuditRecords } from '@close-by/clay-auth';
 import { ui } from '@close-by/clay';
 import { exampleFrame, exampleHeader } from '../chrome';
+import { accessDenied } from './_access-denied';
 import {
   ACCOUNT_PATH,
   clearSessionUser,
   getAuthStore,
   getSessionUser,
   listSignedInUsers,
-  LOGIN_PATH,
   requireAuth,
   requireRole,
   roleLabel,
   signEveryoneElseOut,
-  type SessionUser,
 } from './_auth';
 
-/** Admin-only nav entry (UX filter via pageMeta.roles; page still calls requireRole). */
+/**
+ * Admin-only: pageMeta.roles hides the nav entry and, with `getRoles`, gates the page
+ * (non-admins get `demoForbidden` from `_access-denied.ts`). The builder still calls
+ * requireRole for CLI mode, which runs without `getRoles`.
+ */
 export const pageMeta = {
   label: 'Admin',
   icon: 'shield',
@@ -24,31 +27,6 @@ export const pageMeta = {
   group: 'Account',
   groupIcon: 'lock',
 };
-
-function accessDenied(user: SessionUser | null): void {
-  exampleFrame(() => {
-    ui.column(
-      () => {
-        exampleHeader('Access denied', 'You need administrator access for this area.');
-        ui.card(
-          {
-            title: 'Not authorized',
-            description: user
-              ? `You're signed in as ${user.name} (${roleLabel(user.role)}).`
-              : 'Sign in with an administrator account to continue.',
-            gap: 4,
-          },
-          () => {
-            ui.button(user ? 'Back to my account' : 'Sign in', {
-              onClick: () => ui.navigate(user ? ACCOUNT_PATH : LOGIN_PATH),
-            });
-          },
-        );
-      },
-      { gap: 6 },
-    );
-  });
-}
 
 function formatAuditTime(at: number): string {
   try {

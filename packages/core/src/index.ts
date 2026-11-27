@@ -19,10 +19,13 @@ export {
   clearPages,
   setPageWrapper,
   getPageWrapper,
+  setPageGate,
+  getPageGate,
   type PageFn,
   type PageOptions,
   type PageEntry,
   type PageWrapper,
+  type PageGate,
 } from './page';
 export { reactive, state, subscribe, trackReads, type ReactiveDep } from './reactive';
 export { auto, AutoElement } from './auto';

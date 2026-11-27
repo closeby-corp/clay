@@ -487,6 +487,7 @@ import {
   draft as draftCore,
   validate as validateCore,
   setPageWrapper,
+  setPageGate,
   type NotifyOptions,
   type NotifyType,
   type ScrollToOptions,
@@ -518,6 +519,7 @@ import {
   navFromPages,
   clearPageMeta,
   attachPageMeta,
+  getPageMeta,
   importFresh,
   resetPageDiscovery,
   type PageMeta,
@@ -1358,9 +1360,13 @@ export function card(a: any, b?: any): Element {
   return cardFactory(a, b);
 }
 
-/** App shell (sidebar + header). Prefer `ui.app`, or pass via `ui.run({ app })`. See {@link AppProps}. */
+/**
+ * App shell (sidebar + header). Prefer `ui.app`, or pass via `ui.run({ app })`. See {@link AppProps}.
+ * Omit `nav` to use `ui.navFromPages()` per page build (role-filtered when `getRoles` is set).
+ */
 export function app(props: AppProps, fn: () => void): Element {
-  return appFactory(props, fn);
+  if (props.nav !== undefined) return appFactory(props, fn);
+  return appFactory({ ...props, nav: navFromPages() }, fn);
 }
 
 /** Modal dialog (`fn` or props-first). Prefer `ui.dialog`. See {@link DialogProps}. */
@@ -1868,6 +1874,12 @@ export type RunConfig = ClayServerConfig & {
   /** Global dashboard shell; wraps every page unless `ui.page(..., { shell: false })`. */
   app?: AppProps;
   /**
+   * View built instead of a page whose `pageMeta.roles` the session lacks (requires
+   * `getRoles`). Runs inside the app shell when `app` is set; may call
+   * `ui.redirect` / `ui.navigate`. Default: a "Not allowed" empty state.
+   */
+  forbidden?: (path: string) => void;
+  /**
    * Auto-build Tailwind utilities from app modules and inject after the client CSS.
    *
    * - `undefined` — on when `pages/`, `src/`, or `app/` exists under cwd
@@ -1923,6 +1935,15 @@ function applyClayTailwind(cfg: RunConfig): RunConfig {
   return { ...cfg, css: mergeClayCss(cfg.css, cssPath) };
 }
 
+/** Default `ui.run({ forbidden })` view: page exists but the session lacks its roles. */
+function defaultForbiddenView(): void {
+  empty({
+    icon: 'lock',
+    title: 'Not allowed',
+    description: "You don't have access to this page.",
+  });
+}
+
 let runCalled = false;
 
 /** Whether `ui.run` has been invoked in this process (used by the `clay` CLI). */
@@ -1964,8 +1985,18 @@ export function run(rootOrConfig: PageFn | RunConfig = {}, config: RunConfig = {
 
   cfg = applyClayTailwind(cfg);
 
-  const { app: appProps, tailwind: _tailwind, getRoles, ...serverConfig } = cfg;
+  const { app: appProps, tailwind: _tailwind, getRoles, forbidden, ...serverConfig } = cfg;
   setRoleResolver(getRoles ?? null);
+  if (getRoles) {
+    const forbiddenView = forbidden ?? defaultForbiddenView;
+    setPageGate((path, fn) => {
+      const roles = getPageMeta(path)?.roles;
+      if (!roles?.length || hasRoleCore(roles)) return fn;
+      return () => forbiddenView(path);
+    });
+  } else {
+    setPageGate(null);
+  }
   if (appProps) {
     setPageWrapper((pageFn) => app(appProps, pageFn));
   } else {

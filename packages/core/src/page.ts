@@ -19,8 +19,16 @@ export type PageEntry = {
  */
 export type PageWrapper = (runPage: PageFn) => void;
 
+/**
+ * Optional gate applied to every page build (set by `ui.run({ getRoles })`).
+ * Runs inside the mounting session; return `fn` to build the page or another
+ * builder (e.g. a "not allowed" view) to build instead.
+ */
+export type PageGate = (path: string, fn: PageFn) => PageFn;
+
 const pages = new Map<string, PageEntry>();
 let pageWrapper: PageWrapper | null = null;
+let pageGate: PageGate | null = null;
 
 /** Install or clear the global page shell wrapper. Prefer `ui.run({ app })`. */
 export function setPageWrapper(wrapper: PageWrapper | null): void {
@@ -30,6 +38,16 @@ export function setPageWrapper(wrapper: PageWrapper | null): void {
 /** Current global page wrapper, if any. */
 export function getPageWrapper(): PageWrapper | null {
   return pageWrapper;
+}
+
+/** Install or clear the global page gate. Prefer `ui.run({ getRoles })`. */
+export function setPageGate(gate: PageGate | null): void {
+  pageGate = gate;
+}
+
+/** Current global page gate, if any. */
+export function getPageGate(): PageGate | null {
+  return pageGate;
 }
 
 /**

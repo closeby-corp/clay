@@ -1,13 +1,21 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { clearPages, getRegisteredPaths, setPageWrapper } from '@close-by/clay-core';
-import { ui, resetRunState, wasRunCalled } from '@close-by/clay';
-import { applyDirRunConfig, mergeCliTailwind } from './main.ts';
+import {
+  ClientSession,
+  clearPages,
+  getRegisteredPaths,
+  setPageGate,
+  setPageWrapper,
+  setRoleResolver,
+} from '@close-by/clay-core';
+import { ui, resetPageDiscovery, resetRunState, wasRunCalled } from '@close-by/clay';
+import { applyDirRunConfig, buildRunConfig, mergeCliTailwind } from './main.ts';
 
 const fixtures = join(fileURLToPath(new URL('.', import.meta.url)), '../fixtures');
 const pagesFixture = join(fixtures, 'pages');
 const pagesWithRunFixture = join(fixtures, 'pages-with-run');
+const pagesRolesFixture = join(fixtures, 'pages-roles');
 
 beforeEach(() => {
   clearPages();
@@ -49,6 +57,37 @@ describe('clay CLI entry shapes', () => {
       expect(ui.navFromPages().map((n) => n.href)).toEqual(['/', '/other']);
     } finally {
       server.stop();
+    }
+  });
+
+  test('--app shell nav is built per page, filtered by getRoles', async () => {
+    await ui.loadPages(pagesRolesFixture);
+    let roles: string[] = [];
+    const server = ui.run({
+      ...buildRunConfig({ port: 0, title: 'T', app: true }),
+      tailwind: false,
+      getRoles: () => roles,
+    });
+    type Node = { type: string; props: Record<string, unknown>; children: Node[] };
+    const find = (node: Node): Node | undefined =>
+      node.type === 'app' ? node : node.children?.map(find).find(Boolean);
+    const navHrefs = () => {
+      let tree!: Node;
+      new ClientSession('/', (msg) => {
+        if (msg.op === 'mount') tree = msg.tree as Node;
+      }).mount();
+      return (find(tree)!.props.nav as { href: string }[]).map((n) => n.href);
+    };
+    try {
+      roles = ['admin'];
+      expect(navHrefs()).toEqual(['/', '/admin']);
+      roles = [];
+      expect(navHrefs()).toEqual(['/']);
+    } finally {
+      server.stop();
+      setPageGate(null);
+      setRoleResolver(null);
+      resetPageDiscovery();
     }
   });
 

@@ -217,7 +217,7 @@ Still redact before display when possible. Prefer VPN + auth for hubs that surfa
 
 ## Auth + role-filtered nav
 
-Nav filtering is UX only — always enforce roles in the page builder.
+Without `ui.run({ getRoles })`, nav filtering is UX only — enforce roles in the page builder. With `getRoles`, `pageMeta.roles` also gates the page (a "Not allowed" view, or `ui.run({ forbidden })`), and `app.nav` can be omitted to build it from `ui.navFromPages()` per page — see [Production — role-based content](./production.md#role-based-content).
 
 ```ts
 import { ui } from '@close-by/clay';

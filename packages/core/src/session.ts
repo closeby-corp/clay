@@ -13,7 +13,7 @@ import type {
   ServerMessage,
   ToastPosition,
 } from './protocol';
-import { getPageEntry, getPageWrapper } from './page';
+import { getPageEntry, getPageGate, getPageWrapper } from './page';
 import type { TimerHandle } from './timer';
 
 export type SendFn = (msg: ServerMessage) => void;
@@ -171,11 +171,13 @@ export class ClientSession {
       root.parent = null;
       this.root = root;
       withParent(root, () => {
+        const gate = getPageGate();
+        const build = gate ? gate(this.path, entry.fn) : entry.fn;
         const wrapper = getPageWrapper();
         if (wrapper && entry.options.shell !== false) {
-          wrapper(entry.fn);
+          wrapper(build);
         } else {
-          entry.fn();
+          build();
         }
       });
     });

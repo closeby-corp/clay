@@ -57,13 +57,13 @@ ui.page('/admin', () => {
 });
 ```
 
-`get nav()` is evaluated while each page shell is built, so it filters routes for the current session. Reserve `__clay_anonymous__` outside `userById`: the resolver substitutes it for missing or invalid cookies, and `getSessionUser` treats it as signed out. Replace `userById` with your app's user store.
+`get nav()` is evaluated while each page shell is built, so it filters routes for the current session. With `getRoles` set (below), just omit `nav`: the shell then calls `ui.navFromPages()` per page build. Reserve `__clay_anonymous__` outside `userById`: the resolver substitutes it for missing or invalid cookies, and `getSessionUser` treats it as signed out. Replace `userById` with your app's user store.
 
-- `pageMeta.roles` — hide nav items via `ui.navFromPages({ role })` (UX only)
-- `requireRole` / guards in the page builder — **enforce** access before building sensitive UI
+- `pageMeta.roles` — hide nav items via `ui.navFromPages({ role })`; with `ui.run({ getRoles })` it also **gates the page** (see below)
+- `requireRole` / guards in the page builder — **enforce** access before building sensitive UI (finer checks, or apps without `getRoles`)
 - See [API — auth](./api.md), `/examples/auth`, and [Ops patterns — auth nav](./ops-patterns.md#auth--role-filtered-nav)
 
-Nav filtering is not authorization. Always guard pages that must not leak data.
+Without `getRoles`, nav filtering is not authorization: a viewer who types the URL still gets the page. Always guard pages that must not leak data.
 
 ### Role-based content
 
@@ -90,6 +90,8 @@ ui.page('/projects', () => {
 
 - Checks run on the server while the page builds. Hidden content is never sent to the browser, and its handlers don't exist, so they can't be triggered.
 - With `getRoles` set, `ui.navFromPages()` (no arguments) and `requireRole(...)` use the same roles — no need to pass them separately.
+- With `getRoles` set, a page whose `pageMeta.roles` the session lacks is **not built**, even when the URL is typed directly (`shell: false` pages too). A default "Not allowed" view renders instead, inside the app shell; override it with `ui.run({ forbidden: (path) => … })` (may call `ui.redirect` / `ui.navigate`).
+- `ui.run({ app })` without `nav` builds the sidebar from `ui.navFromPages()` per page build, so it follows the session's roles (this is what `clay ./pages --app` does).
 - Roles are read when the page builds. Signing in or out reconnects and rebuilds, so the UI follows. A role changed while someone is signed in applies on their next page load.
 - Without `getRoles`, role checks treat the user as having no roles (fail closed) and log a warning once.
 - Still check the role inside handlers that change data — cheap protection against mistakes elsewhere.

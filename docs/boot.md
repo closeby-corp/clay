@@ -116,4 +116,4 @@ The CLI **auto-registers** the compile-time `let` transform when any loaded page
 | CSS | `_run.ts` → `css` | `ui.run({ css })` |
 | Client assets | CLI sets `clientDir` | `resolveClayClientDir()` or omit |
 | Reactive-let | off by default | off unless you register the plugin |
-| Nav / shell | `--app` | `app: { nav: ui.navFromPages() }` |
+| Nav / shell | `--app` | `app: { title }` (omit `nav` → `ui.navFromPages()` per page build) |
