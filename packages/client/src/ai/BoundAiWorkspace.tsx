@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BoundShell, asIdLabelList, type Emit } from './shared';
+import { useT } from '@/i18n';
 
 type DiffCol = { id: string; label: string };
 type DiffRow = {
@@ -133,7 +134,8 @@ export function BoundAiInsights({
   style: unknown;
   emit: Emit;
 }) {
-  const title = String(props.title ?? 'Insights');
+  const t = useT();
+  const title = String(props.title ?? t('ai.insights'));
   const insights = Array.isArray(props.insights) ? (props.insights as Insight[]) : [];
   const serverIndex = Math.max(0, Number(props.index ?? 0));
   const prompt = props.prompt != null ? String(props.prompt) : undefined;
@@ -167,6 +169,7 @@ export function BoundAiInsights({
               size="icon"
               variant="ghost"
               className="size-8"
+              aria-label={t('common.previous')}
               disabled={index <= 0}
               onClick={() => go(index - 1)}
             >
@@ -177,6 +180,7 @@ export function BoundAiInsights({
               size="icon"
               variant="ghost"
               className="size-8"
+              aria-label={t('common.next')}
               disabled={index >= insights.length - 1}
               onClick={() => go(index + 1)}
             >
@@ -205,7 +209,7 @@ export function BoundAiInsights({
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">No insights</p>
+            <p className="text-sm text-muted-foreground">{t('ai.noInsights')}</p>
           )}
         </CardContent>
         {prompt ? (
@@ -274,7 +278,8 @@ export function BoundAiFineTune({
   style: unknown;
   emit: Emit;
 }) {
-  const title = String(props.title ?? 'Fine-tune');
+  const t = useT();
+  const title = String(props.title ?? t('ai.fineTune'));
   const subtitle = props.subtitle != null ? String(props.subtitle) : undefined;
   const fields = Array.isArray(props.fields) ? (props.fields as FineField[]) : [];
   const [local, setLocal] = useState<Record<string, string | number>>(() => {

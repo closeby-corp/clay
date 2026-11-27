@@ -1,4 +1,5 @@
 import NumberFlow from '@number-flow/react';
+import { useLocale } from './i18n';
 
 export function parseAnimatedValue(value: string) {
   const match = value.match(/^([^\d.,+\-]*)([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)([^\d.,+\-]*)$/);
@@ -15,8 +16,13 @@ export function parseAnimatedValue(value: string) {
   };
 }
 
+/**
+ * Stat value. Numbers and English-formatted numeric strings are re-rendered with the active
+ * locale's separators, keeping any prefix/suffix (pt-PT: `$1,250.00` → `$1250,00`).
+ */
 export function AnimatedValue({ value }: { value: string | number }) {
-  if (typeof value === 'number') return <NumberFlow value={value} />;
+  const locale = useLocale();
+  if (typeof value === 'number') return <NumberFlow value={value} locales={locale} />;
   const parsed = parseAnimatedValue(value);
-  return parsed ? <NumberFlow {...parsed} /> : value;
+  return parsed ? <NumberFlow {...parsed} locales={locale} /> : value;
 }

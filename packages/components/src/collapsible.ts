@@ -12,7 +12,7 @@ export type CollapsibleProps = {
 export class CollapsibleElement extends Element {
   constructor(props: CollapsibleProps = {}) {
     super('collapsible', {
-      title: props.title ?? 'Toggle',
+      title: props.title,
       value: props.open ?? false,
       className: props.className,
       onChange: props.onChange,

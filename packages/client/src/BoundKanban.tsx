@@ -11,6 +11,7 @@ import {
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type Announcements,
   type UniqueIdentifier,
 } from '@dnd-kit/core';
 import {
@@ -35,6 +36,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 type RenderNode = (node: ElementNode, emit: Emit) => ReactNode;
@@ -306,10 +308,9 @@ function SwimlaneBoard({
   disabled: boolean;
   onCardClick?: (cardId: string) => void;
 }) {
-  const effectiveLanes =
-    lanes.length > 0
-      ? lanes
-      : [{ id: '', title: 'Unassigned' }];
+  const t = useT();
+  const unassigned: KanbanLane = { id: '', title: t('kanban.unassigned') };
+  const effectiveLanes = lanes.length > 0 ? lanes : [unassigned];
 
   // Include an Unassigned band when some cards lack a known laneId.
   const laneIds = new Set(lanes.map((l) => l.id));
@@ -318,7 +319,7 @@ function SwimlaneBoard({
   );
   const bands: KanbanLane[] =
     hasOrphans && !laneIds.has('')
-      ? [{ id: '', title: 'Unassigned' }, ...effectiveLanes]
+      ? [unassigned, ...effectiveLanes]
       : effectiveLanes;
 
   return (
@@ -390,6 +391,7 @@ function CardDetailDrawer({
   renderNode?: RenderNode;
 }) {
   const isMobile = useIsMobile();
+  const t = useT();
   const detail = card?.[DETAIL_FIELD];
 
   return (
@@ -400,9 +402,9 @@ function CardDetailDrawer({
     >
       <DrawerContent>
         <DrawerHeader className="gap-1">
-          <DrawerTitle>{card?.title ?? 'Card'}</DrawerTitle>
+          <DrawerTitle>{card?.title ?? t('kanban.card')}</DrawerTitle>
           <DrawerDescription>
-            {[column?.title, lane?.title].filter(Boolean).join(' · ') || 'Card details'}
+            {[column?.title, lane?.title].filter(Boolean).join(' · ') || t('kanban.cardDetails')}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4 text-sm">
@@ -413,16 +415,16 @@ function CardDetailDrawer({
               {card?.description ? (
                 <p className="text-muted-foreground">{card.description}</p>
               ) : (
-                <p className="text-muted-foreground">No description.</p>
+                <p className="text-muted-foreground">{t('kanban.noDescription')}</p>
               )}
               {column ? (
                 <div className="text-xs text-muted-foreground">
-                  Column: <span className="text-foreground">{column.title}</span>
+                  {t('kanban.columnLabel')} <span className="text-foreground">{column.title}</span>
                 </div>
               ) : null}
               {lane ? (
                 <div className="text-xs text-muted-foreground">
-                  Lane: <span className="text-foreground">{lane.title}</span>
+                  {t('kanban.laneLabel')} <span className="text-foreground">{lane.title}</span>
                 </div>
               ) : null}
             </>
@@ -430,7 +432,7 @@ function CardDetailDrawer({
         </div>
         <DrawerFooter>
           <DrawerClose asChild>
-            <Button variant="outline">Done</Button>
+            <Button variant="outline">{t('kanban.done')}</Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
@@ -453,6 +455,7 @@ export function BoundKanban({
   emit: Emit;
   renderNode?: RenderNode;
 }) {
+  const t = useT();
   const serverColumns = (
     Array.isArray(props.columns) ? props.columns : []
   ) as KanbanColumn[];
@@ -693,6 +696,35 @@ export function BoundKanban({
     });
   };
 
+  /** Screen-reader name for a dnd id: card title, column title, or `column · lane` for a cell. */
+  const dndLabel = (uid: UniqueIdentifier): string => {
+    const sid = String(uid);
+    const cols = columnsRef.current;
+    const card = findCard(cols, sid);
+    if (card) return card.title;
+    const cell = parseCellDropId(uid);
+    if (cell) {
+      const column = cols.find((c) => c.id === cell.columnId)?.title ?? cell.columnId;
+      const lane = cell.laneId
+        ? (serverLanes.find((l) => l.id === cell.laneId)?.title ?? cell.laneId)
+        : t('kanban.unassigned');
+      return `${column} · ${lane}`;
+    }
+    return cols.find((c) => c.id === sid)?.title ?? sid;
+  };
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => t('kanban.dragStart', { card: dndLabel(active.id) }),
+    onDragOver: ({ active, over }) =>
+      over
+        ? t('kanban.dragOver', { card: dndLabel(active.id), target: dndLabel(over.id) })
+        : t('kanban.dragOutside', { card: dndLabel(active.id) }),
+    onDragEnd: ({ active, over }) =>
+      over
+        ? t('kanban.dropOver', { card: dndLabel(active.id), target: dndLabel(over.id) })
+        : t('kanban.drop', { card: dndLabel(active.id) }),
+    onDragCancel: ({ active }) => t('kanban.dragCancel', { card: dndLabel(active.id) }),
+  };
+
   const onDragCancel = () => {
     setActiveId(null);
     originRef.current = null;
@@ -703,7 +735,7 @@ export function BoundKanban({
 
   return (
     <div className={cn('w-full min-w-0 max-w-full', className)} style={asStyle(style)}>
-      <p className="mb-2 text-xs text-muted-foreground sm:hidden">Swipe horizontally to see all columns →</p>
+      <p className="mb-2 text-xs text-muted-foreground sm:hidden">{t('kanban.swipeHint')}</p>
       <DndContext
         id={`${id}-kanban-dnd`}
         sensors={sensors}
@@ -712,13 +744,17 @@ export function BoundKanban({
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
         onDragCancel={onDragCancel}
+        accessibility={{
+          announcements,
+          screenReaderInstructions: { draggable: t('kanban.dragInstructions') },
+        }}
       >
         <div
           className="min-w-0 max-w-full overflow-x-auto pb-2 [scrollbar-width:thin]"
           style={{ scrollbarColor: 'var(--muted-foreground) var(--muted)' }}
           tabIndex={0}
           role="region"
-          aria-label="Kanban board — scroll horizontally to see all columns"
+          aria-label={t('kanban.boardLabel')}
         >
           {useLanes ? (
             <SwimlaneBoard

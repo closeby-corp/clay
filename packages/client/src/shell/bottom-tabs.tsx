@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { EllipsisIcon } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 import { go, resolveNavIcon, shouldHandleNavClick, type ShellNavItem } from './types';
 
 const MAX_TABS = 4;
@@ -24,6 +25,7 @@ export function BottomTabs({
   hasOtherNav: boolean;
 }) {
   const { setOpenMobile } = useSidebar();
+  const t = useT();
   const tabs = bottomTabItems(nav);
   const showMore = nav.length > tabs.length || hasOtherNav;
 
@@ -41,7 +43,7 @@ export function BottomTabs({
   return (
     <nav
       data-clay-tabbar
-      aria-label="Primary"
+      aria-label={t('shell.primaryNav')}
       className="fixed inset-x-0 bottom-0 z-30 flex border-t bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-md backdrop-saturate-150"
     >
       {tabs.map((item) => {
@@ -71,7 +73,7 @@ export function BottomTabs({
           onClick={() => setOpenMobile(true)}
         >
           <EllipsisIcon className="size-5 shrink-0" />
-          <span>More</span>
+          <span>{t('common.more')}</span>
         </button>
       ) : null}
     </nav>

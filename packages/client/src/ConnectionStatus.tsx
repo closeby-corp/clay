@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 
 export type ConnectionStatusProps = {
   connected: boolean;
@@ -19,6 +20,7 @@ const READY_FLASH_MS = 1200;
 export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) {
   const [flashReady, setFlashReady] = useState(false);
   const wasDown = useRef(true);
+  const t = useT();
 
   useEffect(() => {
     if (connected) {
@@ -44,11 +46,11 @@ export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) 
 
   const label =
     phase === 'connecting'
-      ? 'connecting'
+      ? t('connection.connecting')
       : phase === 'reconnecting'
-        ? 'reconnecting'
+        ? t('connection.reconnecting')
         : phase === 'ready'
-          ? 'ready'
+          ? t('connection.ready')
           : null;
 
   const busy = phase === 'connecting' || phase === 'reconnecting';
@@ -57,7 +59,7 @@ export function ConnectionStatus({ connected, hasTree }: ConnectionStatusProps) 
     <div
       role="status"
       aria-live="polite"
-      aria-label={label ? `Clay ${label}` : 'Clay connected'}
+      aria-label={label ? t('connection.status', { state: label }) : t('connection.connected')}
       className={cn(
         'pointer-events-none flex items-center gap-1.5 rounded-full border text-[11px] font-medium shadow-sm backdrop-blur-sm transition-all',
         // Idle: a quiet dot so the chip doesn't sit on top of sidebar items.

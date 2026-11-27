@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 
 export type DataTableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
 export type DataTableDensity = 'compact' | 'default' | 'comfortable';
@@ -42,6 +43,7 @@ export function EditableCell({
   onCommit: (next: unknown) => void;
   density: DataTableDensity;
 }) {
+  const t = useT();
   const inputHeight =
     density === 'compact' ? 'h-7' : density === 'comfortable' ? 'h-9' : 'h-8';
   const inputRef = useRef<HTMLInputElement>(null);
@@ -126,7 +128,7 @@ export function EditableCell({
               }
             }}
           >
-            <SelectValue placeholder="Select…" />
+            <SelectValue placeholder={t('dataTable.selectPlaceholder')} />
           </SelectTrigger>
           <SelectContent align="end">
             {options.map((opt) => (

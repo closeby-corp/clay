@@ -1,4 +1,16 @@
-import { ClientSession, getRegisteredPaths, runWithSession, setCurrentSession, storage, type ClientMessage } from '@close-by/clay-core';
+import {
+  ClientSession,
+  clientI18nBoot,
+  configureI18n,
+  getRegisteredPaths,
+  resolveHelloLocale,
+  runWithSession,
+  setCurrentSession,
+  storage,
+  type ClayMessageOverrides,
+  type ClientI18nBoot,
+  type ClientMessage,
+} from '@close-by/clay-core';
 import { createFilePersistence } from '@close-by/clay-persistence-file';
 import { isAbsolute, join, resolve } from 'path';
 import {
@@ -72,6 +84,19 @@ export type ClayServerConfig = {
    * switch live with `ui.theme.palette(name)`. Default: `kiln`.
    */
   palette?: string;
+  /**
+   * Default UI locale for Clay's built-in strings and formatting (BCP 47, e.g. `'pt-PT'`).
+   * `'auto'` follows the browser's languages (best match among available catalogs, else
+   * English). Sessions can switch live with `ui.setLocale(locale)`. Default: `'en'`.
+   * See `docs/i18n.md`.
+   */
+  locale?: string;
+  /**
+   * Override or extend Clay's built-in messages per locale, e.g.
+   * `{ 'pt-PT': { 'dataTable.export': 'Descarregar' } }`. A new locale key adds a language;
+   * missing keys fall back to English.
+   */
+  messages?: ClayMessageOverrides;
   /**
    * Play short synthesized interface sounds (presses, toggles, dialogs, toasts) by default.
    * Sessions can switch with `ui.sound.set(on)`; the client remembers the choice. Default: `false`.
@@ -215,17 +240,21 @@ function spaHtml(
   palette?: string,
   sound?: boolean,
   pwa?: ResolvedPwa,
+  i18n: ClientI18nBoot = { locale: 'en', locales: ['en'], messages: {} },
 ): string {
   const customLinks = customCssHrefs
     .map((href) => `  <link rel="stylesheet" href="${href}" />`)
     .join('\n');
+  const lang = i18n.locale === 'auto' ? 'en' : i18n.locale.replace(/[^a-z0-9-]/gi, '');
+  const i18nBoot = JSON.stringify(i18n).replace(/</g, '\\u003c');
   const devBoot = dev ? `  <script>window.__CLAY_DEV__=true</script>\n` : '';
   // Chunks import ../index.js; a query on the entry would create a second module instance.
   return `<!DOCTYPE html>
-<html lang="en"${palette ? ` data-palette="${sanitizePaletteName(palette)}"` : ''} data-sound="${sound ? 'on' : 'off'}">
+<html lang="${lang}"${palette ? ` data-palette="${sanitizePaletteName(palette)}"` : ''} data-sound="${sound ? 'on' : 'off'}">
 <head>
   <meta charset="UTF-8" />
   <script>window.__CLAY_VERSION__=${JSON.stringify(version)};window.__CLAY_RELOAD__=function(target){if(window.__CLAY_RELOADING__)return;try{if(sessionStorage.getItem('clay-reload')===target)return;sessionStorage.setItem('clay-reload',target)}catch(e){}window.__CLAY_RELOADING__=true;location.reload()}</script>
+  <script>window.__CLAY_I18N__=${i18nBoot}</script>
   <script>try{var p=localStorage.getItem('clay-palette');if(p)document.documentElement.dataset.palette=p;var s=localStorage.getItem('clay-sound');if(s)document.documentElement.dataset.sound=s}catch(e){}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0${pwa ? ', viewport-fit=cover' : ''}" />
 ${pwa ? pwaHeadHtml(pwa) : ''}  <title>${title}</title>
@@ -368,6 +397,8 @@ export class ClayServer {
       sound: config.sound,
     };
 
+    configureI18n({ locale: config.locale, messages: config.messages });
+
     if (authSecret) {
       configureAuthSession({
         secret: authSecret,
@@ -416,7 +447,16 @@ export class ClayServer {
     const version = clientVersion(clientDir, cssPaths);
     const customCssHrefs = cssPaths.map((_, i) => `/assets/custom-${i}.css?v=${version}`);
     const pwa = this.config.pwa;
-    const html = spaHtml(title, customCssHrefs, version, this.config.dev, this.config.palette, this.config.sound, pwa);
+    const html = spaHtml(
+      title,
+      customCssHrefs,
+      version,
+      this.config.dev,
+      this.config.palette,
+      this.config.sound,
+      pwa,
+      clientI18nBoot(),
+    );
     const swSource = pwa ? pwaServiceWorker(version, pwa, customCssHrefs) : KILL_SWITCH_SW;
     const hasTimeouts = sessionIdleMs != null || sessionAbsoluteMs != null;
 
@@ -647,6 +687,10 @@ export class ClayServer {
             if (typeof msg.palette === 'string' && /^[a-z0-9-]+$/i.test(msg.palette)) {
               session.clientPalette = msg.palette;
             }
+            session.clientLanguages = Array.isArray(msg.languages)
+              ? msg.languages.filter((l): l is string => typeof l === 'string').slice(0, 20)
+              : [];
+            session.locale = resolveHelloLocale(msg.locale, session.clientLanguages);
             if (typeof msg.hash === 'string') {
               session.urlHash = msg.hash.startsWith('#') ? msg.hash.slice(1) : msg.hash;
             }
@@ -663,6 +707,9 @@ export class ClayServer {
               }
               data.shellSession.clientPalette = session.clientPalette;
             }
+            data.shellSession.locale = session.locale;
+            data.shellSession.clientLanguages = session.clientLanguages;
+            data.shellSession.pageSession = session;
             session.shellSession = data.shellSession;
             data.session = session;
             session.mount();

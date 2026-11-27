@@ -1,4 +1,4 @@
-import { Element, getCurrentSession, withParent } from '@close-by/clay-core';
+import { Element, getCurrentSession, t, withParent } from '@close-by/clay-core';
 import { AlertDialogElement } from './alert-dialog';
 import { DialogElement } from './dialog';
 
@@ -131,9 +131,8 @@ function runEphemeralAlertDialog(
 }
 
 export function confirm(message: string, options: ConfirmOptions = {}): Promise<boolean> {
-  const title = options.title ?? 'Confirm';
-  const confirmLabel = options.confirmLabel ?? 'OK';
-  const cancelLabel = options.cancelLabel ?? 'Cancel';
+  // Unset title / labels fall back to the client's translated defaults (Confirm / OK / Cancel).
+  const { title, confirmLabel, cancelLabel } = options;
   const confirmVariant = options.confirmVariant ?? 'default';
 
   return runEphemeralAlertDialog(false, (settle) =>
@@ -151,9 +150,9 @@ export function confirm(message: string, options: ConfirmOptions = {}): Promise<
 }
 
 export function prompt(message: string, options: PromptOptions = {}): Promise<string | null> {
-  const title = options.title ?? 'Prompt';
-  const confirmLabel = options.confirmLabel ?? 'OK';
-  const cancelLabel = options.cancelLabel ?? 'Cancel';
+  const title = options.title ?? t('server.prompt.title');
+  const confirmLabel = options.confirmLabel ?? t('common.ok');
+  const cancelLabel = options.cancelLabel ?? t('common.cancel');
   let value = options.defaultValue ?? '';
 
   return runEphemeralDialog<string | null>(null, (settle) => {
@@ -194,8 +193,8 @@ export function choose(
   choices: ChooseOption[],
   options: ChooseOptions = {},
 ): Promise<string | null> {
-  const title = options.title ?? 'Choose';
-  const cancelLabel = options.cancelLabel ?? 'Cancel';
+  const title = options.title ?? t('server.choose.title');
+  const cancelLabel = options.cancelLabel ?? t('common.cancel');
   const items = normalizeChoices(choices);
 
   return runEphemeralDialog<string | null>(null, (settle) => {

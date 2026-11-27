@@ -16,6 +16,7 @@ import {
   resolveShowLegend,
   type ChartSeries,
 } from './chart-shared';
+import { useT } from './i18n';
 
 export function BoundScatterChart({
   props,
@@ -26,6 +27,7 @@ export function BoundScatterChart({
   className?: string;
   style: unknown;
 }) {
+  const t = useT();
   const data = (props.data as Record<string, unknown>[]) ?? [];
   const xKey = String(props.xKey ?? 'x');
   const yKey = String(props.yKey ?? 'y');
@@ -57,8 +59,9 @@ export function BoundScatterChart({
     }));
     rawConfig = buildSeriesConfig(series);
   } else {
-    groups = [{ key: 'points', label: 'Points', rows: data }];
-    rawConfig = { points: { label: 'Points', color: 'var(--chart-1)' } };
+    const label = t('chart.points');
+    groups = [{ key: 'points', label, rows: data }];
+    rawConfig = { points: { label, color: 'var(--chart-1)' } };
   }
 
   const config = useStableValue(rawConfig);

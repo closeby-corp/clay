@@ -18,6 +18,7 @@ The usual way to run an app is the **`clay` CLI** — a file or a folder of page
 - **Data** — DataTable (sort, filter, grouping, remote paging), charts, DuckDB / ClickHouse / Kibana helpers
 - **Auth** — signed cookies, roles, login limiter, audit log
 - **Files and state** — upload/download, clipboard, `ui.storage` (tab / user / app)
+- **Translations** — built-in text in English or European Portuguese (`ui.run({ locale: 'pt-PT' })`), per-session `ui.setLocale`, message overrides, a typed `ui.messages` helper for app strings, locale-aware dates and numbers. See [docs/i18n.md](./docs/i18n.md)
 - **Richer widgets** — dialogs, sheets, kanban, gantt, flow diagrams, editor, markdown, AI visual primitives (no model runtime)
 
 Public APIs are camelCase (`onClick`, `bindValue`, `setText`).
@@ -212,6 +213,7 @@ You mutate elements (`setText`, `refreshable`, bindings). Clay sends patches. Th
 | [Architecture](./docs/architecture.md) | Packages and data flow |
 | [WebSocket protocol](./docs/protocol.md) | Message formats |
 | [AI UI](./docs/ai.md) | `ui.ai.*` primitives |
+| [Translations](./docs/i18n.md) | `locale`, `ui.setLocale`, message overrides, `ui.messages`, formatting |
 | [DuckDB](./docs/duckdb.md) / [ClickHouse](./docs/clickhouse.md) / [Kibana](./docs/kibana.md) | Data clients (DuckDB and Kibana: monorepo only — not published to npm yet) |
 
 ## Packages

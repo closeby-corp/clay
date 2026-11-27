@@ -75,6 +75,12 @@ export class ClientSession {
   urlSearch = '';
   /** Palette reported by the client on hello (restored from storage / server default). */
   clientPalette: string | null = null;
+  /** UI locale for this session (hello resolution or `ui.setLocale`); `null` → app default. */
+  locale: string | null = null;
+  /** `navigator.languages` reported on hello (for `locale: 'auto'`). */
+  clientLanguages: string[] = [];
+  /** On a socket's shell session: the page session currently mounted beside it. */
+  pageSession: ClientSession | null = null;
   /** Socket-owned shell resources, shared by successive page sessions. */
   shellSession: ClientSession | null = null;
   root: Element | null = null;
@@ -271,6 +277,11 @@ export class ClientSession {
 
   setPalette(palette: string): void {
     this.send({ op: 'palette', palette });
+  }
+
+  /** Switch the client UI locale (`null` clears the stored choice → app default). */
+  setLocale(locale: string | null, remount = false): void {
+    this.send({ op: 'locale', locale, remount });
   }
 
   setSound(opts: { enabled?: boolean; volume?: number; play?: string }): void {

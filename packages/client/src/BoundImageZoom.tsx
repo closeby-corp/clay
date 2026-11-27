@@ -5,6 +5,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -36,6 +37,7 @@ export function BoundImageZoom({
   const src = String(props.src ?? '');
   const alt = String(props.alt ?? '');
   const [open, setOpen] = useState(false);
+  const t = useT();
 
   if (!src) return null;
 
@@ -50,7 +52,7 @@ export function BoundImageZoom({
         )}
         style={asStyle(style)}
         onClick={() => setOpen(true)}
-        aria-label={alt ? `Zoom image: ${alt}` : 'Zoom image'}
+        aria-label={alt ? t('imageZoom.zoomImageNamed', { alt }) : t('imageZoom.zoomImage')}
       >
         <img
           src={src}
@@ -61,7 +63,7 @@ export function BoundImageZoom({
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-[min(96vw,56rem)] border-none bg-transparent p-2 shadow-none sm:p-4">
-          <DialogTitle className="sr-only">{alt || 'Zoomed image'}</DialogTitle>
+          <DialogTitle className="sr-only">{alt || t('imageZoom.zoomedImage')}</DialogTitle>
           <img
             src={src}
             alt={alt}

@@ -3,6 +3,7 @@ import Cropper, { type Area } from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -81,6 +82,7 @@ export function BoundImageCrop({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
+  const t = useT();
 
   const applyCrop = async () => {
     if (!src || !croppedAreaPixels || !hasEvent(props, 'crop')) return;
@@ -112,7 +114,7 @@ export function BoundImageCrop({
       </div>
       <div className="flex items-center gap-3">
         <label className="flex flex-1 items-center gap-2 text-xs text-muted-foreground">
-          Zoom
+          {t('imageCrop.zoom')}
           <input
             type="range"
             min={1}
@@ -125,7 +127,7 @@ export function BoundImageCrop({
         </label>
         {hasEvent(props, 'crop') ? (
           <Button type="button" size="sm" disabled={busy || !croppedAreaPixels} onClick={applyCrop}>
-            {busy ? 'Cropping…' : 'Crop'}
+            {busy ? t('imageCrop.cropping') : t('imageCrop.crop')}
           </Button>
         ) : null}
       </div>

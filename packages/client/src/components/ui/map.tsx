@@ -50,6 +50,7 @@ import { createPortal } from "react-dom";
 import { X, Minus, Plus, Locate, Maximize, Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useT, type Translate } from "@/i18n";
 
 type MapLibreModule = typeof MapLibreGL;
 
@@ -292,6 +293,23 @@ function DefaultLoader() {
   );
 }
 
+/** MapLibre's built-in UI strings (attribution toggle, canvas/marker titles, gesture hints). */
+function mapLibreLocale(t: Translate): Record<string, string> {
+  return {
+    "AttributionControl.ToggleAttribution": t("map.toggleAttribution"),
+    "AttributionControl.MapFeedback": t("map.feedback"),
+    "GeolocateControl.FindMyLocation": t("map.findMyLocation"),
+    "Map.Title": t("map.title"),
+    "Marker.Title": t("map.marker"),
+    "NavigationControl.ZoomIn": t("map.zoomIn"),
+    "NavigationControl.ZoomOut": t("map.zoomOut"),
+    "Popup.Close": t("map.closePopup"),
+    "CooperativeGesturesHandler.WindowsHelpText": t("map.cooperativeWindows"),
+    "CooperativeGesturesHandler.MacHelpText": t("map.cooperativeMac"),
+    "CooperativeGesturesHandler.MobileHelpText": t("map.cooperativeMobile"),
+  };
+}
+
 function getViewport(map: MapLibreGL.Map): MapViewport {
   const center = map.getCenter();
   return {
@@ -327,6 +345,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
   const styleSwapInFlightRef = useRef(false);
   const internalUpdateRef = useRef(false);
   const resolvedTheme = useResolvedTheme(themeProp);
+  const t = useT();
 
   const isControlled = viewport !== undefined && onViewportChange !== undefined;
 
@@ -352,8 +371,9 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
     return defaultStyles;
   }, [stableStyles, blank, isGlobe]);
 
-  const initOptionsRef = useRef({ props, viewport, resolvedTheme, mapStyles });
-  initOptionsRef.current = { props, viewport, resolvedTheme, mapStyles };
+  // MapLibre reads `locale` only at construction; a live locale switch applies to the next map.
+  const initOptionsRef = useRef({ props, viewport, resolvedTheme, mapStyles, t });
+  initOptionsRef.current = { props, viewport, resolvedTheme, mapStyles, t };
 
   // Expose the map instance to the parent component
   useImperativeHandle(ref, () => mapInstance as MapLibreGL.Map, [mapInstance]);
@@ -368,7 +388,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
         if (cancelled || !containerRef.current) return;
 
         // Latest props, not the first render's
-        const { props, viewport, resolvedTheme, mapStyles } =
+        const { props, viewport, resolvedTheme, mapStyles, t } =
           initOptionsRef.current;
         const initialStyle =
           resolvedTheme === "dark" ? mapStyles.dark : mapStyles.light;
@@ -382,6 +402,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
           attributionControl: {
             compact: true,
           },
+          locale: mapLibreLocale(t),
           ...props,
           ...viewport,
         });
@@ -703,11 +724,12 @@ function DefaultMarkerIcon() {
 }
 
 function PopupCloseButton({ onClick }: { onClick: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="Close popup"
+      aria-label={t("map.closePopup")}
       className="focus-visible:ring-ring hover:bg-muted text-foreground absolute top-1 right-1 z-10 inline-flex size-5 cursor-pointer items-center justify-center rounded-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
     >
       <X className="size-3.5" />
@@ -962,6 +984,7 @@ function MapControls({
   onLocate,
 }: MapControlsProps) {
   const { map } = useMap();
+  const t = useT();
   const [waitingForLocation, setWaitingForLocation] = useState(false);
 
   const handleZoomIn = useCallback(() => {
@@ -1023,10 +1046,10 @@ function MapControls({
     >
       {showZoom && (
         <ControlGroup>
-          <ControlButton onClick={handleZoomIn} label="Zoom in">
+          <ControlButton onClick={handleZoomIn} label={t("map.zoomIn")}>
             <Plus className="size-4" />
           </ControlButton>
-          <ControlButton onClick={handleZoomOut} label="Zoom out">
+          <ControlButton onClick={handleZoomOut} label={t("map.zoomOut")}>
             <Minus className="size-4" />
           </ControlButton>
         </ControlGroup>
@@ -1040,7 +1063,7 @@ function MapControls({
         <ControlGroup>
           <ControlButton
             onClick={handleLocate}
-            label="Find my location"
+            label={t("map.findMyLocation")}
             disabled={waitingForLocation}
           >
             {waitingForLocation ? (
@@ -1053,7 +1076,7 @@ function MapControls({
       )}
       {showFullscreen && (
         <ControlGroup>
-          <ControlButton onClick={handleFullscreen} label="Toggle fullscreen">
+          <ControlButton onClick={handleFullscreen} label={t("map.toggleFullscreen")}>
             <Maximize className="size-4" />
           </ControlButton>
         </ControlGroup>
@@ -1064,6 +1087,7 @@ function MapControls({
 
 function CompassButton({ onClick }: { onClick: () => void }) {
   const { map } = useMap();
+  const t = useT();
   const compassRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -1088,7 +1112,7 @@ function CompassButton({ onClick }: { onClick: () => void }) {
   }, [map]);
 
   return (
-    <ControlButton onClick={onClick} label="Reset bearing to north">
+    <ControlButton onClick={onClick} label={t("map.resetBearing")}>
       <svg
         ref={compassRef}
         viewBox="0 0 24 24"

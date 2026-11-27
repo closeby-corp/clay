@@ -23,7 +23,7 @@ export function tags(props: TagsProps = {}): Element {
     options: props.options ?? [],
     creatable: props.creatable !== false,
     label: props.label,
-    placeholder: props.placeholder ?? 'Add tag…',
+    placeholder: props.placeholder,
     error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,

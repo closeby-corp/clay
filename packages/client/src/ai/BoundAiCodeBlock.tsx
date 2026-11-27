@@ -4,6 +4,7 @@ import { Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 import { BoundShell, type Emit } from './shared';
 
 export function BoundAiCodeBlock({
@@ -24,6 +25,7 @@ export function BoundAiCodeBlock({
   const showCopy = props.showCopy !== false;
   const [html, setHtml] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +67,7 @@ export function BoundAiCodeBlock({
             {language}
           </Badge>
           {streaming ? (
-            <span className="text-zinc-400 animate-pulse">streaming…</span>
+            <span className="text-zinc-400 animate-pulse">{t('ai.streaming')}</span>
           ) : null}
           {showCopy ? (
             <Button
@@ -76,7 +78,7 @@ export function BoundAiCodeBlock({
               onClick={copy}
             >
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('common.copied') : t('common.copy')}
             </Button>
           ) : null}
         </div>

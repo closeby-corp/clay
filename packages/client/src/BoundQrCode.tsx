@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import QRCode from 'qrcode';
 import { cn } from '@/lib/utils';
+import { useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -36,6 +37,7 @@ export function BoundQrCode({
     : 'M') as 'L' | 'M' | 'Q' | 'H';
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +73,7 @@ export function BoundQrCode({
       className={cn('inline-flex items-center justify-center', className)}
       style={asStyle(style)}
       role="img"
-      aria-label={value ? `QR code for ${value}` : 'QR code'}
+      aria-label={value ? t('widgets.qrCodeFor', { value }) : t('widgets.qrCode')}
     >
       {svg ? (
         <div
@@ -84,7 +86,7 @@ export function BoundQrCode({
           className="flex items-center justify-center rounded-md border bg-muted/40 text-xs text-muted-foreground"
           style={{ width: size, height: size }}
         >
-          {error ? 'Invalid QR' : '…'}
+          {error ? t('widgets.qrCodeInvalid') : '…'}
         </div>
       )}
     </div>

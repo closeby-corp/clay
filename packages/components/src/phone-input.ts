@@ -1,4 +1,4 @@
-import { Element } from '@close-by/clay-core';
+import { Element, getLocale } from '@close-by/clay-core';
 
 export type PhoneCountry = {
   code: string;
@@ -34,16 +34,27 @@ const DEFAULT_COUNTRIES: PhoneCountry[] = [
   { code: 'AU', dial: '+61', label: 'Australia' },
 ];
 
+/** Default country list with names in the session locale (English labels as fallback). */
+function localizedCountries(locale: string): PhoneCountry[] {
+  let names: Intl.DisplayNames | null = null;
+  try {
+    names = new Intl.DisplayNames([locale], { type: 'region' });
+  } catch {
+    return DEFAULT_COUNTRIES;
+  }
+  return DEFAULT_COUNTRIES.map((c) => ({ ...c, label: names?.of(c.code) ?? c.label }));
+}
+
 /** Country dial code + local number input (lightweight mask, no libphonenumber). */
 export function phoneInput(props: PhoneInputProps = {}): Element {
-  const countries = props.countries ?? DEFAULT_COUNTRIES;
+  const countries = props.countries ?? localizedCountries(getLocale());
   const country = props.country ?? countries[0]?.code ?? 'US';
   return new Element('phoneInput', {
     value: props.value ?? '',
     country,
     countries,
     label: props.label,
-    placeholder: props.placeholder ?? 'Phone number',
+    placeholder: props.placeholder,
     error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,

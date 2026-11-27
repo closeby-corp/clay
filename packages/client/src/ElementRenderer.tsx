@@ -281,6 +281,7 @@ import { CalendarIcon, CheckIcon, ChevronDownIcon, ChevronLeft, ChevronRight, Mi
 import { format, parseISO, isValid, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { go, resolveNavIcon } from './shell/types';
 import { MarkdownView } from './MarkdownView';
+import { useFormat, useT, type Translate } from './i18n';
 
 const KitchenSink = lazy(() => import('./KitchenSink'));
 const BoundMap = lazy(() => import('./map/BoundMap'));
@@ -643,6 +644,7 @@ function BoundSelect({
   style: unknown;
   emit: Emit;
 }) {
+  const t = useT();
   const phone = usePhone();
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
@@ -669,7 +671,7 @@ function BoundSelect({
               if (hasEvent(props, 'change')) emit(id, 'change', next);
             }}
           >
-            <option value="" disabled>{String(props.placeholder ?? 'Select…')}</option>
+            <option value="" disabled>{String(props.placeholder ?? t('select.placeholder'))}</option>
             {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </NativeSelect>
         </div>
@@ -683,7 +685,7 @@ function BoundSelect({
           }}
         >
           <SelectTrigger style={asStyle(style)} aria-invalid={!!error}>
-            <SelectValue placeholder={String(props.placeholder ?? 'Select…')} />
+            <SelectValue placeholder={String(props.placeholder ?? t('select.placeholder'))} />
           </SelectTrigger>
           <SelectContent>
             {options.map((opt) => (
@@ -768,6 +770,7 @@ function BoundRating({
   const serverValue = Math.min(max, Math.max(0, Number(props.value ?? 0)));
   const [value, setValue] = useOptimisticValue(serverValue);
   const [hover, setHover] = useState<number | null>(null);
+  const t = useT();
   const error = fieldError(props);
   const disabled = !!props.disabled;
   const display = hover ?? value;
@@ -790,7 +793,7 @@ function BoundRating({
         className="flex items-center gap-0.5"
         onMouseLeave={() => setHover(null)}
         role="radiogroup"
-        aria-label={props.label ? String(props.label) : 'Rating'}
+        aria-label={props.label ? String(props.label) : t('rating.label')}
       >
         {Array.from({ length: max }, (_, i) => {
           const n = i + 1;
@@ -801,6 +804,7 @@ function BoundRating({
               type="button"
               role="radio"
               aria-checked={value === n}
+              aria-label={t('rating.star', { count: n })}
               disabled={disabled}
               className={cn(
                 'rounded-sm p-0.5 text-amber-500 transition-colors disabled:opacity-50',
@@ -872,6 +876,7 @@ function BoundColorPicker({
     prevServer.current = serverValue;
     setDraft(serverValue);
   }
+  const t = useT();
   const error = fieldError(props);
   const disabled = !!props.disabled;
 
@@ -899,7 +904,7 @@ function BoundColorPicker({
                 'inline-flex size-9 shrink-0 items-center justify-center rounded-md border shadow-xs disabled:opacity-50',
               )}
               style={{ backgroundColor: normalizeHex(value) ?? value }}
-              aria-label="Open color picker"
+              aria-label={t('colorPicker.open')}
             />
           </PopoverTrigger>
           <PopoverContent className="w-64 space-y-3" align="start">
@@ -991,7 +996,8 @@ function BoundTags({
     value: string;
     label: string;
   }>;
-  const placeholder = String(props.placeholder ?? 'Add tag…');
+  const t = useT();
+  const placeholder = String(props.placeholder ?? t('tags.placeholder'));
 
   const commit = (next: string[]) => {
     setValue(next);
@@ -1054,7 +1060,7 @@ function BoundTags({
                 <button
                   type="button"
                   className="rounded-full p-0.5 hover:bg-muted"
-                  aria-label={`Remove ${label}`}
+                  aria-label={t('tags.remove', { label })}
                   onClick={() => commit(value.filter((t) => t !== tag))}
                 >
                   <X className="size-3" />
@@ -1269,6 +1275,7 @@ function BoundDialog({
   emit: Emit;
   children: ReactNode;
 }) {
+  const t = useT();
   const open = !!props.open;
   return (
     <Dialog
@@ -1283,7 +1290,7 @@ function BoundDialog({
             <DialogTitle>{String(props.title)}</DialogTitle>
           </DialogHeader>
         ) : (
-          <DialogTitle className="sr-only">Dialog</DialogTitle>
+          <DialogTitle className="sr-only">{t('widgets.dialog')}</DialogTitle>
         )}
         <div className="flex flex-col gap-4">{children}</div>
       </DialogContent>
@@ -1312,6 +1319,7 @@ function BoundDialogStack({
   emit: Emit;
   children: ElementNode[];
 }) {
+  const t = useT();
   const steps = children.filter((c) => c.type === 'dialogStackStep');
   const serverIndex = clampStackIndex(Number(props.index ?? 0), steps.length);
   const [index, setIndex] = useOptimisticValue(serverIndex);
@@ -1329,7 +1337,7 @@ function BoundDialogStack({
   const activeStep = steps[active];
   const stepTitle =
     activeStep?.props.title != null ? String(activeStep.props.title) : '';
-  const heading = stepTitle || stackTitle || 'Dialog';
+  const heading = stepTitle || stackTitle || t('widgets.dialog');
 
   const renderStepBody = (step: ElementNode) =>
     step.children.map((child) => (
@@ -1388,14 +1396,14 @@ function BoundDialogStack({
                           <DialogDescription className="text-sm text-muted-foreground">
                             {stackTitle}
                             {' · '}
-                            Step {active + 1} of {steps.length}
+                            {t('stepper.stepOf', { current: active + 1, total: steps.length })}
                           </DialogDescription>
                         ) : steps.length > 1 ? (
                           <DialogDescription className="text-sm text-muted-foreground">
-                            Step {active + 1} of {steps.length}
+                            {t('stepper.stepOf', { current: active + 1, total: steps.length })}
                           </DialogDescription>
                         ) : (
-                          <DialogDescription className="sr-only">Dialog stack</DialogDescription>
+                          <DialogDescription className="sr-only">{t('widgets.dialogStack')}</DialogDescription>
                         )}
                       </div>
 
@@ -1411,7 +1419,7 @@ function BoundDialogStack({
                             onClick={() => goTo(active - 1)}
                           >
                             <ChevronLeft className="size-4" />
-                            Back
+                            {t('stepper.back')}
                           </Button>
                           <div className="flex items-center gap-1.5">
                             {steps.map((s, dot) => (
@@ -1424,7 +1432,7 @@ function BoundDialogStack({
                                     ? 'bg-primary'
                                     : 'bg-muted-foreground/30 hover:bg-muted-foreground/50',
                                 )}
-                                aria-label={`Go to step ${dot + 1}`}
+                                aria-label={t('stepper.goToStep', { index: dot + 1 })}
                                 onClick={() => goTo(dot)}
                               />
                             ))}
@@ -1436,7 +1444,7 @@ function BoundDialogStack({
                             disabled={active >= steps.length - 1}
                             onClick={() => goTo(active + 1)}
                           >
-                            Next
+                            {t('common.next')}
                             <ChevronRight className="size-4" />
                           </Button>
                         </div>
@@ -1450,13 +1458,13 @@ function BoundDialogStack({
                         }}
                       >
                         <X className="size-4" />
-                        <span className="sr-only">Close</span>
+                        <span className="sr-only">{t('common.close')}</span>
                       </button>
                     </>
                   ) : (
                     <div className="flex flex-col gap-1.5 text-center sm:text-left">
                       <div className="text-lg leading-none font-semibold">
-                        {step.props.title != null ? String(step.props.title) : `Step ${i + 1}`}
+                        {step.props.title != null ? String(step.props.title) : t('stepper.step', { index: i + 1 })}
                       </div>
                       <div className="h-16" />
                     </div>
@@ -1484,6 +1492,7 @@ function BoundAlertDialog({
   style: unknown;
   emit: Emit;
 }) {
+  const t = useT();
   const open = !!props.open;
   const confirming = useRef(false);
   return (
@@ -1501,13 +1510,13 @@ function BoundAlertDialog({
     >
       <AlertDialogContent className={className} style={asStyle(style)}>
         <AlertDialogHeader>
-          <AlertDialogTitle>{String(props.title ?? 'Confirm')}</AlertDialogTitle>
+          <AlertDialogTitle>{String(props.title ?? t('widgets.confirm'))}</AlertDialogTitle>
           {props.description ? (
             <AlertDialogDescription>{String(props.description)}</AlertDialogDescription>
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{String(props.cancelLabel ?? 'Cancel')}</AlertDialogCancel>
+          <AlertDialogCancel>{String(props.cancelLabel ?? t('common.cancel'))}</AlertDialogCancel>
           <AlertDialogAction
             variant={(props.confirmVariant as any) ?? 'default'}
             onClick={() => {
@@ -1515,7 +1524,7 @@ function BoundAlertDialog({
               if (hasEvent(props, 'confirm')) emit(id, 'confirm');
             }}
           >
-            {String(props.confirmLabel ?? 'OK')}
+            {String(props.confirmLabel ?? t('common.ok'))}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -1538,6 +1547,7 @@ function BoundDropdownMenu({
   emit: Emit;
   children: ElementNode[];
 }) {
+  const t = useT();
   const phone = usePhone();
   const [open, setOpen] = useState(false);
   if (phone && !props.iconOnly) {
@@ -1550,11 +1560,11 @@ function BoundDropdownMenu({
             className={className}
             style={asStyle(style)}
           >
-            {String(props.label ?? 'Menu')}
+            {String(props.label ?? t('widgets.menu'))}
           </Button>
         </DrawerTrigger>
         <DrawerContent aria-describedby={undefined}>
-          <DrawerHeader><DrawerTitle>{String(props.label ?? 'Menu')}</DrawerTitle></DrawerHeader>
+          <DrawerHeader><DrawerTitle>{String(props.label ?? t('widgets.menu'))}</DrawerTitle></DrawerHeader>
           <div className="max-h-[60vh] overflow-y-auto px-4 pb-4">
             {children.map((child) => {
               if (child.type === 'dropdownseparator') return <Separator key={child.id} className="my-1" />;
@@ -1590,13 +1600,13 @@ function BoundDropdownMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant={(props.variant as any) ?? 'outline'}
-          aria-label={String(props.label ?? 'Menu')}
+          aria-label={String(props.label ?? t('widgets.menu'))}
           size={props.iconOnly ? 'icon' : 'default'}
           className={className}
           style={asStyle(style)}
         >
           {props.icon ? (() => { const Icon = resolveNavIcon(String(props.icon)); return <Icon aria-hidden />; })() : null}
-          {props.iconOnly ? null : String(props.label ?? 'Menu')}
+          {props.iconOnly ? null : String(props.label ?? t('widgets.menu'))}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
@@ -1619,6 +1629,7 @@ function BoundContextMenu({
   emit: Emit;
   children: ElementNode[];
 }) {
+  const t = useT();
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -1629,7 +1640,7 @@ function BoundContextMenu({
           )}
           style={asStyle(style)}
         >
-          {String(props.label ?? 'Right-click me')}
+          {String(props.label ?? t('widgets.contextMenuTrigger'))}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -1698,6 +1709,7 @@ function BoundPopover({
   emit: Emit;
   children: ReactNode;
 }) {
+  const t = useT();
   const open = !!props.open;
   return (
     <Popover
@@ -1708,7 +1720,7 @@ function BoundPopover({
     >
       <PopoverTrigger asChild>
         <Button variant="outline" className={className} style={asStyle(style)}>
-          {String(props.label ?? 'Open')}
+          {String(props.label ?? t('widgets.open'))}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="flex flex-col gap-3">{children}</PopoverContent>
@@ -1919,7 +1931,7 @@ function BoundFilterChips({
   return (
     <FilterChipsView
       chips={chips}
-      clearLabel={String(props.clearLabel ?? 'Clear all')}
+      clearLabel={props.clearLabel != null ? String(props.clearLabel) : undefined}
       className={cn(className)}
       onClear={
         hasEvent(props, 'clear')
@@ -1958,6 +1970,7 @@ function BoundNumberField({
   const min = props.min != null ? Number(props.min) : undefined;
   const max = props.max != null ? Number(props.max) : undefined;
   const precision = props.precision != null ? Number(props.precision) : undefined;
+  const t = useT();
   const disabled = !!props.disabled;
   const error = fieldError(props);
 
@@ -1990,7 +2003,7 @@ function BoundNumberField({
           variant="outline"
           size="icon"
           disabled={disabled || (min != null && Number(value) <= min)}
-          aria-label="Decrease"
+          aria-label={t('numberField.decrease')}
           onClick={() => commit(Number(value) - step)}
         >
           <Minus className="size-4" />
@@ -2015,7 +2028,7 @@ function BoundNumberField({
           variant="outline"
           size="icon"
           disabled={disabled || (max != null && Number(value) >= max)}
-          aria-label="Increase"
+          aria-label={t('numberField.increase')}
           onClick={() => commit(Number(value) + step)}
         >
           <Plus className="size-4" />
@@ -2046,6 +2059,7 @@ function BoundPhoneInput({
   const serverValue = String(props.value ?? '');
   const [country, setCountry] = useOptimisticValue(serverCountry);
   const [value, setValue] = useOptimisticValue(serverValue);
+  const t = useT();
   const disabled = !!props.disabled;
   const error = fieldError(props);
 
@@ -2069,6 +2083,7 @@ function BoundPhoneInput({
         <NativeSelect
           value={String(country)}
           disabled={disabled}
+          aria-label={t('phoneInput.countryCode')}
           className="w-[5.5rem] shrink-0"
           onChange={(e) => commit(e.target.value, String(value))}
         >
@@ -2081,7 +2096,7 @@ function BoundPhoneInput({
         <Input
           type="tel"
           value={String(value)}
-          placeholder={String(props.placeholder ?? 'Phone number')}
+          placeholder={String(props.placeholder ?? t('phoneInput.placeholder'))}
           disabled={disabled}
           aria-invalid={!!error}
           className="flex-1"
@@ -2384,6 +2399,7 @@ function renderNavigationMenuChildren(children: ElementNode[], emit: Emit): Reac
 function renderMenubarChildren(
   children: ElementNode[],
   emit: Emit,
+  t: Translate,
 ): ReactNode[] {
   return children.map((child) => {
     if (child.type === 'menubarseparator') {
@@ -2433,8 +2449,8 @@ function renderMenubarChildren(
     if (child.type === 'menubarsubmenu') {
       return (
         <MenubarSub key={child.id}>
-          <MenubarSubTrigger>{String(child.props.label ?? 'More')}</MenubarSubTrigger>
-          <MenubarSubContent>{renderMenubarChildren(child.children, emit)}</MenubarSubContent>
+          <MenubarSubTrigger>{String(child.props.label ?? t('common.more'))}</MenubarSubTrigger>
+          <MenubarSubContent>{renderMenubarChildren(child.children, emit, t)}</MenubarSubContent>
         </MenubarSub>
       );
     }
@@ -2470,14 +2486,15 @@ function BoundMenubar({
   children: ElementNode[];
 }) {
   void props;
+  const t = useT();
   return (
     <Menubar className={className} style={asStyle(style)}>
       {children
         .filter((c) => c.type === 'menubarmenu')
         .map((menu) => (
           <MenubarMenu key={menu.id}>
-            <MenubarTrigger>{String(menu.props.label ?? 'Menu')}</MenubarTrigger>
-            <MenubarContent>{renderMenubarChildren(menu.children, emit)}</MenubarContent>
+            <MenubarTrigger>{String(menu.props.label ?? t('widgets.menu'))}</MenubarTrigger>
+            <MenubarContent>{renderMenubarChildren(menu.children, emit, t)}</MenubarContent>
           </MenubarMenu>
         ))}
     </Menubar>
@@ -2541,14 +2558,15 @@ function BoundCommand({
   emit: Emit;
   children: ElementNode[];
 }) {
+  const t = useT();
   const inline = props.mode === 'inline';
   const open = inline ? true : !!props.open;
 
   const body = (
     <>
-      <CommandInput placeholder={String(props.placeholder ?? 'Type a command or search…')} />
+      <CommandInput placeholder={String(props.placeholder ?? t('command.placeholder'))} />
       <CommandList style={asStyle(style)}>
-        <CommandEmpty>{String(props.emptyText ?? 'No results found.')}</CommandEmpty>
+        <CommandEmpty>{String(props.emptyText ?? t('command.empty'))}</CommandEmpty>
         {children.map((child) => {
           if (child.type === 'commandseparator') {
             return <CommandSeparator key={child.id} />;
@@ -2604,8 +2622,8 @@ function BoundCommand({
       onOpenChange={(next) => {
         if (hasEvent(props, 'openChange')) emit(id, 'openChange', next);
       }}
-      title={String(props.title ?? 'Command Palette')}
-      description={String(props.description ?? 'Search for a command to run…')}
+      title={String(props.title ?? t('command.title'))}
+      description={String(props.description ?? t('command.description'))}
       className={className}
     >
       {body}
@@ -2963,6 +2981,7 @@ function BoundCombobox({
   style: unknown;
   emit: Emit;
 }) {
+  const t = useT();
   const phone = usePhone();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -2980,6 +2999,8 @@ function BoundCombobox({
     setOpen(false);
   };
   const filtered = options.filter((opt) => opt.label.toLowerCase().includes(search.toLowerCase()));
+  const placeholder = String(props.placeholder ?? t('combobox.placeholder'));
+  const emptyText = String(props.emptyText ?? t('common.noResults'));
 
   return (
     <div
@@ -3002,22 +3023,22 @@ function BoundCombobox({
               {selected ? (
                 <span className="flex min-w-0 items-center gap-2"><OptionLabel option={selected} /></span>
               ) : (
-                String(props.placeholder ?? 'Search…')
+                placeholder
               )}
               <ChevronDownIcon className="size-4 shrink-0" />
             </Button>
           </DrawerTrigger>
           <DrawerContent aria-describedby={undefined}>
-            <DrawerHeader><DrawerTitle>{String(props.label ?? 'Search…')}</DrawerTitle></DrawerHeader>
+            <DrawerHeader><DrawerTitle>{String(props.label ?? t('combobox.placeholder'))}</DrawerTitle></DrawerHeader>
             <div className="flex min-h-0 flex-col gap-2 px-4 pb-4">
               <Input
                 value={search}
-                placeholder={String(props.placeholder ?? 'Search…')}
-                aria-label={String(props.label ?? props.placeholder ?? 'Search options')}
+                placeholder={placeholder}
+                aria-label={String(props.label ?? props.placeholder ?? t('combobox.searchLabel'))}
                 onChange={(event) => setSearch(event.target.value)}
               />
               <div className="max-h-[50vh] overflow-y-auto">
-                {filtered.length === 0 ? <p className="p-3 text-sm text-muted-foreground">No results.</p> : null}
+                {filtered.length === 0 ? <p className="p-3 text-sm text-muted-foreground">{emptyText}</p> : null}
                 {filtered.map((opt) => (
                   <Button type="button" key={opt.value} variant="ghost" className="min-h-11 w-full justify-between" onClick={() => pick(opt.value)}>
                     <span className="flex min-w-0 items-center gap-2"><OptionLabel option={opt} /></span>
@@ -3025,7 +3046,7 @@ function BoundCombobox({
                   </Button>
                 ))}
               </div>
-              {selected ? <Button type="button" variant="ghost" className="min-h-11 w-full" onClick={() => pick('')}>Clear</Button> : null}
+              {selected ? <Button type="button" variant="ghost" className="min-h-11 w-full" onClick={() => pick('')}>{t('common.clear')}</Button> : null}
             </div>
           </DrawerContent>
         </Drawer>
@@ -3044,7 +3065,7 @@ function BoundCombobox({
           }}
         >
           <ComboboxInput
-            placeholder={String(props.placeholder ?? 'Search…')}
+            placeholder={placeholder}
             disabled={!!props.disabled}
             showClear={!!selected}
             aria-invalid={!!error}
@@ -3052,7 +3073,7 @@ function BoundCombobox({
             {selectedMedia ? <InputGroupAddon align="inline-start">{selectedMedia}</InputGroupAddon> : null}
           </ComboboxInput>
           <ComboboxContent>
-            <ComboboxEmpty>No results.</ComboboxEmpty>
+            <ComboboxEmpty>{emptyText}</ComboboxEmpty>
             <ComboboxList>
               {(item) => (
                 <ComboboxItem key={item.value} value={item}>
@@ -3091,6 +3112,8 @@ function BoundDate({
   style: unknown;
   emit: Emit;
 }) {
+  const t = useT();
+  const fmt = useFormat();
   const phone = usePhone();
   const serverValue = String(props.value ?? '');
   const [value, setValue] = useOptimisticValue(serverValue);
@@ -3133,7 +3156,7 @@ function BoundDate({
               )}
             >
               <CalendarIcon className="mr-2 size-4" />
-              {selected ? format(selected, 'PPP') : String(props.placeholder ?? 'Pick a date')}
+              {selected ? fmt.date(selected, { dateStyle: 'long' }) : String(props.placeholder ?? t('date.placeholder'))}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -3158,13 +3181,13 @@ function BoundDate({
 
 type DateRangePresetView = { label: string; from: string; to: string };
 
-function defaultDateRangePresets(): DateRangePresetView[] {
+function defaultDateRangePresets(t: Translate): DateRangePresetView[] {
   const today = new Date();
   const fmt = (d: Date) => format(d, 'yyyy-MM-dd');
   return [
-    { label: 'Last 7 days', from: fmt(subDays(today, 6)), to: fmt(today) },
-    { label: 'Last 30 days', from: fmt(subDays(today, 29)), to: fmt(today) },
-    { label: 'This month', from: fmt(startOfMonth(today)), to: fmt(endOfMonth(today)) },
+    { label: t('dateRange.last7Days'), from: fmt(subDays(today, 6)), to: fmt(today) },
+    { label: t('dateRange.last30Days'), from: fmt(subDays(today, 29)), to: fmt(today) },
+    { label: t('dateRange.thisMonth'), from: fmt(startOfMonth(today)), to: fmt(endOfMonth(today)) },
   ];
 }
 
@@ -3203,8 +3226,10 @@ function BoundDateRange({
       ? { from: fromDate, to: toDate }
       : undefined;
   const [open, setOpen] = useState(false);
+  const t = useT();
+  const fmt = useFormat();
   const error = fieldError(props);
-  const presets = (props.presets as DateRangePresetView[] | undefined) ?? defaultDateRangePresets();
+  const presets = (props.presets as DateRangePresetView[] | undefined) ?? defaultDateRangePresets(t);
 
   const applyRange = (from: string, to: string) => {
     const key = `${from}|${to}`;
@@ -3217,10 +3242,10 @@ function BoundDateRange({
 
   const label =
     fromDate && toDate
-      ? `${format(fromDate, 'LLL d, y')} – ${format(toDate, 'LLL d, y')}`
+      ? `${fmt.date(fromDate)} – ${fmt.date(toDate)}`
       : fromDate
-        ? format(fromDate, 'LLL d, y')
-        : String(props.placeholder ?? 'Pick a date range');
+        ? fmt.date(fromDate)
+        : String(props.placeholder ?? t('dateRange.placeholder'));
 
   return (
     <div
@@ -3247,7 +3272,7 @@ function BoundDateRange({
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <div className="flex flex-col gap-2 border-b p-3">
-            <div className="text-xs font-medium text-muted-foreground">Presets</div>
+            <div className="text-xs font-medium text-muted-foreground">{t('dateRange.presets')}</div>
             <div className="flex flex-wrap gap-1.5">
               {presets.map((p) => (
                 <Button
@@ -3442,6 +3467,7 @@ function BoundCollapsible({
   emit: Emit;
   children: ReactNode;
 }) {
+  const t = useT();
   const serverOpen = Boolean(props.open ?? props.value ?? false);
   const [open, setOpen] = useOptimisticValue(serverOpen);
 
@@ -3458,7 +3484,7 @@ function BoundCollapsible({
     >
       <CollapsibleTrigger asChild>
         <Button variant="ghost" className="flex w-full items-center justify-between gap-2 px-0">
-          <span>{String(props.title ?? 'Toggle')}</span>
+          <span>{String(props.title ?? t('widgets.toggle'))}</span>
           <ChevronDownIcon
             className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')}
           />
@@ -3484,6 +3510,7 @@ function BoundSheet({
   emit: Emit;
   children: ReactNode;
 }) {
+  const t = useT();
   const open = !!props.open;
   const side =
     props.side === 'top' || props.side === 'bottom' || props.side === 'left' || props.side === 'right'
@@ -3506,7 +3533,7 @@ function BoundSheet({
             ) : null}
           </SheetHeader>
         ) : (
-          <SheetTitle className="sr-only">Sheet</SheetTitle>
+          <SheetTitle className="sr-only">{t('widgets.sheet')}</SheetTitle>
         )}
         <div className="flex flex-col gap-4 px-4 pb-4">{children}</div>
       </SheetContent>
@@ -3529,6 +3556,7 @@ function BoundDrawer({
   emit: Emit;
   children: ReactNode;
 }) {
+  const t = useT();
   const open = !!props.open;
   const direction =
     props.direction === 'top' ||
@@ -3555,7 +3583,7 @@ function BoundDrawer({
             ) : null}
           </DrawerHeader>
         ) : (
-          <DrawerTitle className="sr-only">Drawer</DrawerTitle>
+          <DrawerTitle className="sr-only">{t('widgets.drawer')}</DrawerTitle>
         )}
         <div className="flex flex-col gap-4 px-4 pb-4">{children}</div>
       </DrawerContent>
@@ -3582,7 +3610,8 @@ function BoundUpload({
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const label = String(props.label ?? 'Upload');
+  const t = useT();
+  const label = String(props.label ?? t('upload.label'));
   const accept = props.accept ? String(props.accept) : undefined;
   const multiple = !!props.multiple;
   const abortable = props.abortable !== false;
@@ -3617,7 +3646,7 @@ function BoundUpload({
 
     for (const file of files) {
       if (maxSizeBytes != null && file.size > maxSizeBytes) {
-        const msg = `File "${file.name}" is ${file.size} bytes; max allowed is ${maxSizeBytes} bytes`;
+        const msg = t('upload.fileTooLarge', { name: file.name, size: String(file.size), max: String(maxSizeBytes) });
         setError(msg);
         if (hasEvent(props, 'error')) emit(id, 'error', msg);
         if (inputRef.current) inputRef.current.value = '';
@@ -3625,8 +3654,8 @@ function BoundUpload({
       }
       if (!matchesAcceptToken(file)) {
         const msg =
-          `File "${file.name}" (${file.type || 'unknown type'}) is not an allowed type` +
-          (accept ? ` (accept: ${accept})` : '');
+          t('upload.fileTypeNotAllowed', { name: file.name, type: file.type || t('upload.unknownType') }) +
+          (accept ? t('upload.acceptSuffix', { accept }) : '');
         setError(msg);
         if (hasEvent(props, 'error')) emit(id, 'error', msg);
         if (inputRef.current) inputRef.current.value = '';
@@ -3664,7 +3693,7 @@ function BoundUpload({
         error?: string;
       };
       if (xhr.status < 200 || xhr.status >= 300) {
-        const msg = data.error || `Upload failed (${xhr.status})`;
+        const msg = data.error || t('upload.failedStatus', { status: String(xhr.status) });
         setError(msg);
         if (hasEvent(props, 'error')) emit(id, 'error', msg);
         return;
@@ -3678,7 +3707,7 @@ function BoundUpload({
       setBusy(false);
       setProgress(null);
       if (inputRef.current) inputRef.current.value = '';
-      const msg = 'Upload failed (network error)';
+      const msg = t('upload.failedNetwork');
       setError(msg);
       if (hasEvent(props, 'error')) emit(id, 'error', msg);
     };
@@ -3716,7 +3745,7 @@ function BoundUpload({
   const abortUi =
     busy && abortable ? (
       <Button type="button" variant="ghost" size="sm" onClick={abortUpload}>
-        Cancel
+        {t('common.cancel')}
       </Button>
     ) : null;
 
@@ -3765,15 +3794,15 @@ function BoundUpload({
             <p className="text-sm font-medium">
               {busy
                 ? progress != null
-                  ? `Uploading… ${progress}%`
-                  : 'Uploading…'
+                  ? t('upload.uploadingProgress', { percent: progress })
+                  : t('upload.uploading')
                 : dragOver
-                  ? 'Drop files here'
+                  ? t('upload.dropHere')
                   : label}
             </p>
             {!busy ? (
               <p className="text-xs text-muted-foreground">
-                Drag and drop, or click to browse
+                {t('upload.dropzoneHint')}
                 {accept ? ` · ${accept}` : ''}
               </p>
             ) : null}
@@ -3798,8 +3827,8 @@ function BoundUpload({
         >
           {busy
             ? progress != null
-              ? `Uploading… ${progress}%`
-              : 'Uploading…'
+              ? t('upload.uploadingProgress', { percent: progress })
+              : t('upload.uploading')
             : label}
         </Button>
         {abortUi}
@@ -3815,6 +3844,7 @@ export function ElementRenderer({ node, emit }: { node: ElementNode; emit: Emit 
 }
 
 function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit }) {
+  const t = useT();
   const { id, type, props, children } = node;
   const className = props.className as string | undefined;
   const style = props.style;
@@ -4264,7 +4294,7 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
         <div className={cn('flex flex-col gap-3', className)} style={asStyle(style)}>
           <BoundFilterChips id={id} props={props} emit={emit} />
           {((props.chips as FilterChipWire[]) ?? []).length === 0 ? (
-            <p className="text-xs text-muted-foreground">No active filters — change controls below.</p>
+            <p className="text-xs text-muted-foreground">{t('widgets.noActiveFilters')}</p>
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
             {children.map((child) => (
@@ -4376,7 +4406,7 @@ function ElementRendererInner({ node, emit }: { node: ElementNode; emit: Emit })
             <button
               type="button"
               className="rounded-sm opacity-70 hover:opacity-100"
-              aria-label="Dismiss"
+              aria-label={t('widgets.dismiss')}
               onClick={() => {
                 if (hasEvent(props, 'dismiss')) emit(id, 'dismiss');
               }}

@@ -16,12 +16,12 @@ export type AiRecommendationProps = {
 
 export function recommendation(props: AiRecommendationProps): Element {
   return new Element('aiRecommendation', {
-    title: props.title ?? 'Recommendation',
+    title: props.title,
     body: props.body,
     confidence: props.confidence,
     confidenceLabel: props.confidenceLabel,
     alternatives: props.alternatives ?? [],
-    acceptLabel: props.acceptLabel ?? 'Accept',
+    acceptLabel: props.acceptLabel,
     className: props.className,
     onAccept: props.onAccept,
     onReject: props.onReject,

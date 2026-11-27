@@ -1,4 +1,5 @@
 import { useState, useRef, type CSSProperties } from 'react';
+import { useT } from './i18n';
 import {
   DndContext,
   DragOverlay,
@@ -158,6 +159,7 @@ function GroupDroppable({
   disabled: boolean;
   onItemClick?: (itemId: string) => void;
 }) {
+  const t = useT();
   const { setNodeRef, isOver } = useDroppable({ id: group.id });
   const ids = group.items.map((i) => i.id);
 
@@ -186,7 +188,7 @@ function GroupDroppable({
           ))}
         </SortableContext>
         {group.items.length === 0 ? (
-          <div className="px-3 py-4 text-center text-xs text-muted-foreground">Drop items here</div>
+          <div className="px-3 py-4 text-center text-xs text-muted-foreground">{t('list.dropHere')}</div>
         ) : null}
       </div>
     </div>

@@ -1,0 +1,63 @@
+import type { MessageDict } from '../translate';
+
+/**
+ * Generic words reused across components. Area files own everything component-specific;
+ * reuse these only when the meaning is truly generic.
+ */
+export const en = {
+  'common.ok': 'OK',
+  'common.cancel': 'Cancel',
+  'common.close': 'Close',
+  'common.save': 'Save',
+  'common.delete': 'Delete',
+  'common.edit': 'Edit',
+  'common.apply': 'Apply',
+  'common.reset': 'Reset',
+  'common.clear': 'Clear',
+  'common.search': 'Search',
+  'common.searchPlaceholder': 'Search...',
+  'common.noResults': 'No results.',
+  'common.loading': 'Loading...',
+  'common.previous': 'Previous',
+  'common.next': 'Next',
+  'common.more': 'More',
+  'common.yes': 'Yes',
+  'common.no': 'No',
+  'common.copy': 'Copy',
+  'common.copied': 'Copied',
+  'common.remove': 'Remove',
+  'common.add': 'Add',
+  'common.select': 'Select...',
+  'common.none': 'None',
+  'common.all': 'All',
+  'common.today': 'Today',
+} satisfies MessageDict;
+
+export const ptPT: Record<keyof typeof en, string> = {
+  'common.ok': 'OK',
+  'common.cancel': 'Cancelar',
+  'common.close': 'Fechar',
+  'common.save': 'Guardar',
+  'common.delete': 'Eliminar',
+  'common.edit': 'Editar',
+  'common.apply': 'Aplicar',
+  'common.reset': 'Repor',
+  'common.clear': 'Limpar',
+  'common.search': 'Pesquisar',
+  'common.searchPlaceholder': 'Pesquisar...',
+  'common.noResults': 'Sem resultados.',
+  'common.loading': 'A carregar...',
+  'common.previous': 'Anterior',
+  'common.next': 'Seguinte',
+  'common.more': 'Mais',
+  'common.yes': 'Sim',
+  'common.no': 'Não',
+  'common.copy': 'Copiar',
+  'common.copied': 'Copiado',
+  'common.remove': 'Remover',
+  'common.add': 'Adicionar',
+  'common.select': 'Selecionar...',
+  'common.none': 'Nenhum',
+  'common.all': 'Todos',
+  'common.today': 'Hoje',
+};

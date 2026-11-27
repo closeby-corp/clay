@@ -19,8 +19,8 @@ export class AlertDialogElement extends Element {
     super('alertdialog', {
       title: props.title,
       description: props.description,
-      confirmLabel: props.confirmLabel ?? 'OK',
-      cancelLabel: props.cancelLabel ?? 'Cancel',
+      confirmLabel: props.confirmLabel,
+      cancelLabel: props.cancelLabel,
       confirmVariant: props.confirmVariant ?? 'default',
       open: props.open ?? false,
       className: props.className,

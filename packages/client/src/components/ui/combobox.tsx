@@ -3,6 +3,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react"
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n"
 import { Button } from "@/components/ui/button"
 import {
   InputGroup,
@@ -38,10 +39,12 @@ function ComboboxTrigger({
 }
 
 function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
+  const t = useT()
   return (
     <ComboboxPrimitive.Clear
       data-slot="combobox-clear"
       render={<InputGroupButton variant="ghost" size="icon-xs" />}
+      aria-label={t("combobox.clear")}
       className={cn(className)}
       {...props}
     >
@@ -247,6 +250,7 @@ function ComboboxChip({
 }: ComboboxPrimitive.Chip.Props & {
   showRemove?: boolean
 }) {
+  const t = useT()
   return (
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
@@ -261,6 +265,7 @@ function ComboboxChip({
         <ComboboxPrimitive.ChipRemove
           render={<Button variant="ghost" size="icon-xs" />}
           className="-ml-1 opacity-50 hover:opacity-100"
+          aria-label={t("combobox.remove")}
           data-slot="combobox-chip-remove"
         >
           <XIcon className="pointer-events-none" />

@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 import { BoundShell, asIdLabelList, type Emit } from './shared';
 
 export function BoundAiPromptBar({
@@ -26,7 +27,8 @@ export function BoundAiPromptBar({
   style: unknown;
   emit: Emit;
 }) {
-  const placeholder = String(props.placeholder ?? 'Ask…');
+  const t = useT();
+  const placeholder = String(props.placeholder ?? t('ai.askPlaceholder'));
   const sources = asIdLabelList(props.sources);
   const models = asIdLabelList(props.models);
   const commands = asIdLabelList(props.commands);
@@ -71,7 +73,7 @@ export function BoundAiPromptBar({
                 <button
                   type="button"
                   className="rounded-sm p-0.5 hover:bg-muted"
-                  aria-label={`Remove ${s.label}`}
+                  aria-label={t('ai.removeSource', { label: s.label })}
                   disabled={disabled}
                   onClick={() => emit(id, 'sourceRemove', s.id)}
                 >
@@ -118,7 +120,7 @@ export function BoundAiPromptBar({
               }}
             >
               <SelectTrigger className="h-8 w-[8.5rem] shrink-0">
-                <SelectValue placeholder="Model" />
+                <SelectValue placeholder={t('ai.model')} />
               </SelectTrigger>
               <SelectContent>
                 {models.map((m) => (
@@ -137,7 +139,7 @@ export function BoundAiPromptBar({
               variant="ghost"
               className="size-8 shrink-0"
               disabled={disabled}
-              aria-label="Dictate"
+              aria-label={t('ai.dictate')}
               onClick={() => emit(id, 'dictate')}
             >
               <Mic className="size-4" />
@@ -149,7 +151,7 @@ export function BoundAiPromptBar({
             size="icon"
             className="size-8 shrink-0"
             disabled={disabled || !draft.trim()}
-            aria-label="Send"
+            aria-label={t('ai.send')}
             onClick={submit}
           >
             <Send className="size-4" />

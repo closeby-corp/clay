@@ -1,4 +1,4 @@
-import { Element, withDetached, withParent, type ClientSession } from '@close-by/clay-core';
+import { Element, runWithSession, t, withDetached, withParent, type ClientSession } from '@close-by/clay-core';
 import type { ElementNode } from '@close-by/clay-core';
 
 export type TableColumnEditor = 'text' | 'select' | 'number' | 'date' | 'boolean';
@@ -385,7 +385,7 @@ function inferColumnsFromRows(rows: Record<string, unknown>[]): TableColumn[] {
 }
 
 function formatGroupLabel(value: unknown): string {
-  if (value == null || value === '') return '(Empty)';
+  if (value == null || value === '') return t('dataTable.emptyGroup');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 }
@@ -644,7 +644,7 @@ export function normalizeTableData(data: unknown): NormalizedTable {
     );
     return {
       rows,
-      inferredColumns: [{ key: 'value', header: 'Value', sortable: true }],
+      inferredColumns: [{ key: 'value', header: t('server.dataTable.valueColumn'), sortable: true }],
     };
   }
 
@@ -662,8 +662,8 @@ export function normalizeTableData(data: unknown): NormalizedTable {
     return {
       rows,
       inferredColumns: [
-        { key: 'key', header: 'Key', sortable: true },
-        { key: 'value', header: 'Value', sortable: true },
+        { key: 'key', header: t('server.dataTable.keyColumn'), sortable: true },
+        { key: 'value', header: t('server.dataTable.valueColumn'), sortable: true },
       ],
     };
   }
@@ -671,7 +671,7 @@ export function normalizeTableData(data: unknown): NormalizedTable {
   const rows = stampRowIds([{ value: data }]);
   return {
     rows,
-    inferredColumns: [{ key: 'value', header: 'Value', sortable: true }],
+    inferredColumns: [{ key: 'value', header: t('server.dataTable.valueColumn'), sortable: true }],
   };
 }
 
@@ -893,7 +893,7 @@ export class DataTableElement extends Element {
   private stackOnMobile: boolean;
   private maxHeight?: string;
   private searchable: boolean;
-  private searchPlaceholder: string;
+  private searchPlaceholder: string | undefined;
   private filterDebounceMs: number;
   private columnFilterable: boolean;
   private columnToggle: boolean;
@@ -901,8 +901,8 @@ export class DataTableElement extends Element {
   private showFilterChips: boolean;
   private exportFilename: string;
   private loading: boolean;
-  private emptyTitle: string;
-  private emptyDescription: string;
+  private emptyTitle: string | undefined;
+  private emptyDescription: string | undefined;
   private selectable: boolean;
   private reorderable: boolean;
   private views: DataTableView[];
@@ -962,7 +962,7 @@ export class DataTableElement extends Element {
     const actions = props.actions ?? [];
     const bulkActions = props.bulkActions ?? [];
     const keyField = props.keyField ?? ROW_ID_FIELD;
-    const searchPlaceholder = props.searchPlaceholder ?? 'Search…';
+    const searchPlaceholder = props.searchPlaceholder;
     const filterDebounceMs =
       props.filterDebounceMs != null && Number.isFinite(props.filterDebounceMs)
         ? Math.max(0, Math.floor(Number(props.filterDebounceMs)))
@@ -973,9 +973,8 @@ export class DataTableElement extends Element {
     const showFilterChips = props.showFilterChips === true;
     const exportFilename = props.exportFilename ?? 'data';
     const loading = props.loading === true;
-    const emptyTitle = props.emptyTitle ?? 'No rows';
-    const emptyDescription =
-      props.emptyDescription ?? 'No matching rows. Try adjusting search or filters.';
+    const emptyTitle = props.emptyTitle;
+    const emptyDescription = props.emptyDescription;
     const selectable = props.selectable === true;
     const reorderable = props.reorderable === true;
     const views = props.views ?? [];
@@ -1418,10 +1417,16 @@ export class DataTableElement extends Element {
         mimeForFormat(format),
         content,
       );
-      session.notify(`Downloaded ${format.toUpperCase()}`, 'success');
+      session.notify(
+        runWithSession(session, () => t('server.dataTable.exportDownloaded', { format: format.toUpperCase() })),
+        'success',
+      );
     } else {
       session.clipboard(content);
-      session.notify(`Copied ${format.toUpperCase()} to clipboard`, 'success');
+      session.notify(
+        runWithSession(session, () => t('server.dataTable.exportCopied', { format: format.toUpperCase() })),
+        'success',
+      );
     }
   }
 
@@ -1686,6 +1691,14 @@ export class DataTableElement extends Element {
   }
 
   syncView(): void {
+    // Group / facet labels (`(Empty)`) are translated with the owning session's locale,
+    // also when the sync is triggered outside a session (timers, live data).
+    const session = this.session;
+    if (session) runWithSession(session, () => this.syncViewNow());
+    else this.syncViewNow();
+  }
+
+  private syncViewNow(): void {
     const processed = this.computeProcessedRows();
     const totalRows = this.manualPagination
       ? (this.manualTotalRows ?? processed.length)

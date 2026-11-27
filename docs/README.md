@@ -25,6 +25,7 @@ For coding agents: the repo-root [llms.txt](../llms.txt) is a short map of these
 | [Ops patterns](./ops-patterns.md) | Dense consoles: chips, master–detail, feeds, sensitive logs, auth nav |
 | [API reference](./api.md) | `ui.*`, `Element` methods, `reactive`, helpers |
 | [Elements](./elements.md) | All element types and props |
+| [Translations (i18n)](./i18n.md) | `ui.run({ locale: 'pt-PT' })`, `ui.setLocale`, overriding messages, `ui.messages` for app strings, locale-aware formatting |
 | [Maps](./maps.md) | `ui.map`: MapLibre markers, routes, arcs, GeoJSON, clusters; palette theming and in-place updates |
 | [WebSocket protocol](./protocol.md) | Client ↔ server message formats |
 | [Compatibility](./compatibility.md) | Public API promise, aliases, and compatibility checks |

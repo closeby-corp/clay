@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { CheckCircle2, Circle, Loader2, XCircle, Wrench, FilePenLine, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BoundShell, asIdLabelList, type Emit } from './shared';
+import { useT } from '@/i18n';
 
 type ApprovalOption = { id: string; label: string; description?: string };
 type ToolChip = { id: string; label: string; kind?: string; detail?: string };
@@ -39,7 +40,8 @@ export function BoundAiApproval({
   style: unknown;
   emit: Emit;
 }) {
-  const title = String(props.title ?? 'Needs approval');
+  const t = useT();
+  const title = String(props.title ?? t('ai.needsApproval'));
   const question = String(props.question ?? '');
   const options = Array.isArray(props.options) ? (props.options as ApprovalOption[]) : [];
 
@@ -70,7 +72,7 @@ export function BoundAiApproval({
         </CardContent>
         <CardFooter>
           <Button type="button" variant="ghost" size="sm" onClick={() => emit(id, 'reject')}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </CardFooter>
       </Card>
@@ -221,14 +223,15 @@ export function BoundAiRecommendation({
   style: unknown;
   emit: Emit;
 }) {
-  const title = String(props.title ?? 'Recommendation');
+  const t = useT();
+  const title = String(props.title ?? t('ai.recommendation'));
   const body = String(props.body ?? '');
   const confidence = typeof props.confidence === 'number' ? props.confidence : undefined;
   const confidenceLabel = props.confidenceLabel != null ? String(props.confidenceLabel) : undefined;
   const alternatives = Array.isArray(props.alternatives)
     ? (props.alternatives as Alternative[])
     : [];
-  const acceptLabel = String(props.acceptLabel ?? 'Accept');
+  const acceptLabel = String(props.acceptLabel ?? t('ai.accept'));
 
   return (
     <BoundShell className={className} style={style}>
@@ -243,12 +246,12 @@ export function BoundAiRecommendation({
               {confidence != null ? (
                 <Progress value={Math.max(0, Math.min(100, confidence * 100))} className="h-2 flex-1" />
               ) : null}
-              <Badge variant="secondary">{confidenceLabel ?? 'Confidence'}</Badge>
+              <Badge variant="secondary">{confidenceLabel ?? t('ai.confidence')}</Badge>
             </div>
           ) : null}
           {alternatives.length > 0 ? (
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Other options</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('ai.otherOptions')}</span>
               {alternatives.map((alt) => (
                 <button
                   key={alt.id}
@@ -277,7 +280,7 @@ export function BoundAiRecommendation({
             {acceptLabel}
           </Button>
           <Button type="button" variant="ghost" onClick={() => emit(id, 'reject')}>
-            Dismiss
+            {t('ai.dismiss')}
           </Button>
         </CardFooter>
       </Card>
@@ -298,7 +301,8 @@ export function BoundAiContext({
   style: unknown;
   emit: Emit;
 }) {
-  const title = String(props.title ?? 'Context');
+  const t = useT();
+  const title = String(props.title ?? t('ai.context'));
   const chunks = Array.isArray(props.chunks) ? (props.chunks as Chunk[]) : [];
 
   return (
@@ -306,7 +310,7 @@ export function BoundAiContext({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">{title}</h3>
-          <span className="text-xs text-muted-foreground">{chunks.length} chunks</span>
+          <span className="text-xs text-muted-foreground">{t('ai.chunks', { count: chunks.length })}</span>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {chunks.map((c) => (
@@ -320,7 +324,7 @@ export function BoundAiContext({
                 <span className="text-sm font-medium">{c.title}</span>
                 {c.charCount != null ? (
                   <span className="text-[10px] tabular-nums text-muted-foreground">
-                    {c.charCount} characters
+                    {t('ai.characters', { count: c.charCount })}
                   </span>
                 ) : null}
               </div>
