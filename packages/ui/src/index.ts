@@ -479,6 +479,17 @@ import {
   storage as storageCore,
   theme as themeCore,
   sound as soundCore,
+  i18n as i18nCore,
+  getCurrentSession as getCurrentSessionCore,
+  runWithSession as runWithSessionCore,
+  type ClayMessageKey,
+  type ClayTranslationKey,
+  type ClayMessages,
+  type ClayMessageOverrides,
+  type MessageDict,
+  type MessageParams,
+  type SetLocaleOptions,
+  type Translator,
   reactive as reactiveCore,
   state as stateCore,
   subscribe as subscribeCore,
@@ -750,6 +761,13 @@ export type {
   ToastPosition,
   ThemeMode,
   ThemePalette,
+  ClayMessageKey,
+  ClayMessages,
+  ClayMessageOverrides,
+  MessageDict,
+  MessageParams,
+  SetLocaleOptions,
+  Translator,
   PageMeta,
   NavFromPagesOptions,
   PageOptions,
@@ -937,7 +955,7 @@ export function copyButton(
     label,
     onClick: () => {
       clipboardCore(content);
-      notifyCore(notifyMessage ?? 'Copied', 'success');
+      notifyCore(notifyMessage ?? t('common.copied'), 'success');
     },
   });
 }
@@ -1398,13 +1416,13 @@ export { menuItem, menuSeparator, menuLabel };
 
 /** Appearance and palette picker using the browser's existing theme persistence. */
 export function themePicker(): DropdownMenuElement {
-  const menu = dropdownMenu({ label: 'Theme', variant: 'ghost' }, () => {
-    menuLabel('Appearance');
+  const menu = dropdownMenu({ label: t('server.themePicker.label'), variant: 'ghost' }, () => {
+    menuLabel(t('server.themePicker.appearance'));
     for (const mode of ['light', 'dark', 'system'] as const) {
-      menuItem(mode[0].toUpperCase() + mode.slice(1), { onClick: () => themeCore.set(mode) });
+      menuItem(t(`server.themePicker.${mode}`), { onClick: () => themeCore.set(mode) });
     }
     menuSeparator();
-    menuLabel('Palette');
+    menuLabel(t('server.themePicker.palette'));
     for (const palette of themeCore.palettes) {
       menuItem(palette, { onClick: () => themeCore.palette(palette) });
     }
@@ -1419,8 +1437,12 @@ export function themePicker(): DropdownMenuElement {
 export function presenceBadge(): Element {
   return row(() => {
     label('●').classes('animate-pulse text-xs text-green-500');
-    const online = label(`${presence.count()} online`).classes('text-sm text-muted-foreground');
-    onDispose(presence.subscribe((count) => online.setText(`${count} online`)));
+    // Presence updates fire outside any session; translate with the badge's own session.
+    const session = getCurrentSessionCore();
+    const text = (count: number) =>
+      session ? runWithSessionCore(session, () => t('server.presence.online', { count })) : t('server.presence.online', { count });
+    const online = label(text(presence.count())).classes('text-sm text-muted-foreground');
+    onDispose(presence.subscribe((count) => online.setText(text(count))));
   }, { gap: 2, wrap: false }).classes('w-fit items-center rounded-full border bg-card/70 px-3 py-1 shadow-xs');
 }
 
@@ -1800,6 +1822,41 @@ export const theme = themeCore;
 /** Interface sound cues: `ui.sound.set(on)`, `ui.sound.volume(0..1)`, `ui.sound.play(name)`. */
 export const sound = soundCore;
 
+/**
+ * i18n: `ui.i18n.setLocale('pt-PT')`, `ui.i18n.t('dataTable.export')`, `ui.i18n.messages({...})`,
+ * `ui.i18n.formatNumber(…)`. The common calls are also top-level (`ui.setLocale`, `ui.t`, …).
+ * See `docs/i18n.md`.
+ */
+export const i18n = i18nCore;
+
+/** Switch the UI language for this session (`'pt-PT'`, `'en'`, or `null` for the app default). */
+export function setLocale(locale: string | null, options?: SetLocaleOptions): void {
+  i18nCore.setLocale(locale, options);
+}
+
+/** Locale of the current session (else the `ui.run({ locale })` default). */
+export function getLocale(): string {
+  return i18nCore.getLocale();
+}
+
+/** Translate a built-in Clay message key for the session locale (honours `ui.run({ messages })`). */
+export function t(key: ClayTranslationKey | (string & {}), params?: MessageParams): string {
+  return i18nCore.t(key, params);
+}
+
+/**
+ * Typed message dictionary for the app's own strings, with Clay's locale + English fallback.
+ * `const t = ui.messages({ en: { hi: 'Hello {name}' }, 'pt-PT': { hi: 'Olá {name}' } })`.
+ */
+export const messages = i18nCore.messages;
+
+/** Format a number with the session locale. */
+export const formatNumber = i18nCore.formatNumber;
+/** Format a date with the session locale (default `{ dateStyle: 'medium' }`). */
+export const formatDate = i18nCore.formatDate;
+/** Relative time with the session locale (`há 5 minutos`). */
+export const formatRelativeTime = i18nCore.formatRelativeTime;
+
 /** Proxy that notifies subscribers on property change. Prefer this over importing from `@close-by/clay-core`. */
 export const reactive = reactiveCore;
 
@@ -2156,6 +2213,14 @@ export const ui = {
   storage,
   theme,
   sound,
+  i18n,
+  setLocale,
+  getLocale,
+  t,
+  messages,
+  formatNumber,
+  formatDate,
+  formatRelativeTime,
   reactive,
   state,
   urlState,

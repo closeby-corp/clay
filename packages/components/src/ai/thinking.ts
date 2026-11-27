@@ -13,7 +13,7 @@ export type AiThinkingProps = {
 
 export function thinking(props: AiThinkingProps = {}): Element {
   return new Element('aiThinking', {
-    title: props.title ?? 'Thinking',
+    title: props.title,
     steps: props.steps ?? [],
     open: props.open ?? false,
     className: props.className,

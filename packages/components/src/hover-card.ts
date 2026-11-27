@@ -50,7 +50,7 @@ export type PopoverProps = {
 export class PopoverElement extends Element {
   constructor(props: PopoverProps = {}) {
     super('popover', {
-      label: props.label ?? 'Open',
+      label: props.label,
       open: props.open ?? false,
       className: props.className,
       onOpenChange: props.onOpenChange,

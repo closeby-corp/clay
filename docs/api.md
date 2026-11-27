@@ -92,6 +92,8 @@ ui.run({
 | `clientDir` | `string` | `resolveClayClientDir()` | Built Vite assets (`@close-by/clay-cli/client-dist` when installed). Prefer `resolveClayClientDir()` over hardcoding `node_modules` paths — see [Boot](./boot.md). |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 | `sound` | `boolean` | | Play short synthesized interface sounds by default (`false`). See [Sound](#sound). |
+| `locale` | `string` | `'en'` | UI language for Clay's built-in text and formatting (`'pt-PT'`, `'en'`, or `'auto'` to follow the browser). See [Translations](./i18n.md). |
+| `messages` | `{ [locale]: { [key]: string } }` | | Override or add built-in messages per locale, e.g. `{ 'pt-PT': { 'dataTable.export': 'Descarregar' } }`. Missing keys fall back to English. See [Translations](./i18n.md#overriding-messages). |
 | `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate. Omit `app.nav` to build it from `ui.navFromPages()` per page (role-filtered with `getRoles`) |
 | `pwa` | `boolean \| ClayPwaConfig` | | Installable app: web manifest, icons, and a service worker that caches the app shell. See [Mobile and installable apps](./mobile.md#installable-app-pwa) |
 | `authSecret` | `string` | | Enables signed auth cookies (`POST`/`DELETE /auth/session`), `ui.establishAuthSession` / `ui.clearAuthSession`, and default `resolveUserId` from the cookie |
@@ -527,7 +529,7 @@ Searchable select for large option lists (optimistic like select). Supports `bin
 | `options` | `{ value: string; label: string; image?: string; icon?: string }[]` | yes |
 | `value` | `string` | defaults to first option |
 | `label` | `string` | |
-| `placeholder` | `string` | `'Search…'` |
+| `placeholder` | `string` | `'Search…'` (translated, see [i18n](./i18n.md)) |
 | `error` | `string` | |
 | `disabled` | `boolean` | |
 | `onChange` | `(value: string) => void` | |
@@ -542,7 +544,7 @@ Calendar + popover date picker. Value is an ISO date string (`YYYY-MM-DD`). Supp
 |------|------|---------|
 | `value` | `string` | `''` |
 | `label` | `string` | |
-| `placeholder` | `string` | `'Pick a date'` |
+| `placeholder` | `string` | `'Pick a date'` (translated, see [i18n](./i18n.md)) |
 | `error` | `string` | |
 | `disabled` | `boolean` | `false` |
 | `onChange` | `(value: string) => void` | |
@@ -556,7 +558,7 @@ Range picker with preset shortcuts and dual-month calendar. Values are ISO `YYYY
 | `from` | `string` | `''` |
 | `to` | `string` | `''` |
 | `label` | `string` | |
-| `placeholder` | `string` | `'Pick a date range'` |
+| `placeholder` | `string` | `'Pick a date range'` (translated, see [i18n](./i18n.md)) |
 | `presets` | `{ label, from, to }[]` | Last 7/30 days + this month |
 | `error` | `string` | |
 | `disabled` | `boolean` | `false` |
@@ -1333,14 +1335,14 @@ const table = ui.dataTable(tasks, {
 | `columns` | `TableColumn[]` | inferred from data | Column defs |
 | `keyField` | `string` | `'__rowId'` | Row identity for actions |
 | `searchable` | `boolean` | `true` | Global filter input |
-| `searchPlaceholder` | `string` | `'Search…'` | Filter placeholder |
+| `searchPlaceholder` | `string` | `'Search…'` (translated, see [i18n](./i18n.md)) | Filter placeholder |
 | `filterDebounceMs` | `number` | `300` | Debounce before applying global search and text column filters (`0` = immediate) |
 | `columnFilterable` | `boolean` | `true` | Per-column filters (header popovers: text and/or facet) |
 | `columnToggle` | `boolean` | `true` | Columns visibility menu |
 | `exportable` | `boolean` | `true` | Export / copy menu (CSV, TSV, JSON) |
 | `exportFilename` | `string` | `'data'` | Download base name (no extension) |
 | `loading` | `boolean` | `false` | Show a spinner in the table body (takes precedence over empty). `setLoading` / `withLoading` toggle it |
-| `emptyTitle` | `string` | `'No rows'` | Empty-state title (only when not loading and rows are empty) |
+| `emptyTitle` | `string` | `'No rows'` (translated, see [i18n](./i18n.md)) | Empty-state title (only when not loading and rows are empty) |
 | `emptyDescription` | `string` | search/filter hint | Empty-state description (only when not loading and rows are empty) |
 | `pageSize` | `number` | `10` | Rows per page; `0` disables pagination |
 | `pageSizeOptions` | `number[]` | `[10, 20, 30, 40, 50]` | Footer page-size select |
@@ -1572,8 +1574,8 @@ danger.open();
 |------|------|---------|-------------|
 | `title` | `string` | | Heading |
 | `description` | `string` | | Body copy |
-| `confirmLabel` | `string` | `'OK'` | Confirm button |
-| `cancelLabel` | `string` | `'Cancel'` | Cancel button |
+| `confirmLabel` | `string` | `'OK'` (translated, see [i18n](./i18n.md)) | Confirm button |
+| `cancelLabel` | `string` | `'Cancel'` (translated, see [i18n](./i18n.md)) | Cancel button |
 | `confirmVariant` | button variant | `'default'` | Confirm button style |
 | `open` | `boolean` | `false` | Visibility |
 | `onConfirm` | `() => void` | | Confirm click |
@@ -1842,6 +1844,12 @@ onClick: async () => {
 | `ui.theme.palette(name)` | `void` | Switch colour palette for this client (`kiln`, `cobalt`, `ocean`, `forest`, `orchid`, `citrus`, `graphite`, `chalk`, `brutal`, `terminal`, `editorial`, `bubble`, `soothe`, `nebula`, `studio`, `iris`, `ledger`, `contrast`, `dim`, `neon`, `sky`, `navy`, `indigo`, `denim`, `midnight`, or a custom one); remembered across reloads |
 | `ui.theme.getPalette()` | `ThemePalette \| null` | Last palette set, else the one the client reported on connect |
 | `ui.theme.palettes` | `readonly string[]` | Built-in palette names |
+| `ui.setLocale(locale, opts?)` | `void` | Switch this tab's UI language (`'pt-PT'`, `'en'`; `null` = app default); live, remembered across reloads. `opts.remount` (default `true`) rebuilds the page so `ui.t` / `ui.messages` text follows. See [Translations](./i18n.md) |
+| `ui.getLocale()` | `string` | Session locale (else the `ui.run({ locale })` default) |
+| `ui.t(key, params?)` | `string` | A built-in Clay message in the session locale (`ui.t('common.cancel')`) |
+| `ui.messages(dict)` | `t(key, params?)` | Typed dictionary for the app's own strings with Clay's locale + English fallback, `{name}` placeholders and `_one`/`_other` plurals. See [Translations](./i18n.md#your-apps-own-strings) |
+| `ui.formatNumber(n, opts?)` / `ui.formatDate(d, opts?)` / `ui.formatRelativeTime(d)` | `string` | `Intl` formatting with the session locale |
+| `ui.i18n` | object | All of the above plus `availableLocales()` / `getDefaultLocale()` |
 | `ui.sound.set(on)` | `void` | Turn automatic interface sounds on/off for this client; remembered across reloads. See [Sound](#sound) |
 | `ui.sound.volume(v)` | `void` | Master volume `0`–`1` (default `0.5`); remembered across reloads |
 | `ui.sound.play(name)` | `void` | Play one cue now, even when automatic sounds are off |

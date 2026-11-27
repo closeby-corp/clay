@@ -142,6 +142,7 @@ import {
 import { FilterChipsView } from './FilterChipsView';
 import { useRowChangeFlash } from './data-table/rowChanges';
 import { StackedRows } from './data-table/StackedRows';
+import { useFormat, useT, type Translate } from './i18n';
 
 /** Virtualize body once row count is large enough to matter. */
 const VIRTUALIZE_THRESHOLD = 40;
@@ -331,13 +332,14 @@ function FacetColumnFilter({
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
+  const t = useT();
   const options = column.facetOptions ?? [];
   const active = selected.length > 0;
   return (
     <div className="p-1">
       <div className="max-h-64 overflow-auto p-1">
         {options.length === 0 ? (
-          <p className="px-2 py-3 text-center text-sm text-muted-foreground">No options</p>
+          <p className="px-2 py-3 text-center text-sm text-muted-foreground">{t('dataTable.noOptions')}</p>
         ) : (
           options.map((opt) => {
             const checked = selected.includes(opt.value);
@@ -377,7 +379,7 @@ function FacetColumnFilter({
             className="h-8 w-full justify-center"
             onClick={() => onChange([])}
           >
-            Clear filter
+            {t('dataTable.clearFilter')}
           </Button>
         </div>
       ) : null}
@@ -396,17 +398,18 @@ function TextColumnFilter({
   onChange: (next: string) => void;
   onCommit: (next: string) => void;
 }) {
+  const t = useT();
   const active = value.trim().length > 0;
   const inputId = useId();
   return (
     <div className="p-1">
       <Label htmlFor={inputId} className="sr-only">
-        Filter {column.header}
+        {t('dataTable.filterColumn', { column: column.header })}
       </Label>
       <Input
         id={inputId}
         value={value}
-        placeholder="Filter…"
+        placeholder={t('dataTable.filterPlaceholder')}
         className="h-8"
         autoFocus
         onChange={(e) => onChange(e.target.value)}
@@ -427,7 +430,7 @@ function TextColumnFilter({
             onCommit('');
           }}
         >
-          Clear filter
+          {t('dataTable.clearFilter')}
         </Button>
       ) : null}
     </div>
@@ -466,6 +469,7 @@ function asStyle(style: unknown): CSSProperties | undefined {
 }
 
 function DragHandle({ id }: { id: UniqueIdentifier }) {
+  const t = useT();
   const { attributes, listeners } = useSortable({ id });
   return (
     <Button
@@ -476,7 +480,7 @@ function DragHandle({ id }: { id: UniqueIdentifier }) {
       className="size-7 text-muted-foreground hover:bg-transparent"
     >
       <GripVertical className="size-3.5" />
-      <span className="sr-only">Drag to reorder</span>
+      <span className="sr-only">{t('dataTable.dragToReorder')}</span>
     </Button>
   );
 }
@@ -489,6 +493,7 @@ function ColumnResizeHandle({
   onResizeStart: () => number;
   onResize: (width: number) => void;
 }) {
+  const t = useT();
   const dragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -518,7 +523,7 @@ function ColumnResizeHandle({
     <span
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize column"
+      aria-label={t('dataTable.resizeColumn')}
       className="absolute top-0 right-0 z-20 h-full w-1 cursor-col-resize touch-none select-none bg-transparent hover:bg-border active:bg-primary/40"
       onPointerDown={(e) => {
         e.preventDefault();
@@ -653,20 +658,20 @@ function isFirstRightPin(columns: DataTableColumn[], key: string): boolean {
   return false;
 }
 
-function aggregateLabel(kind: DataTableColumn['aggregate']): string {
+function aggregateLabel(kind: DataTableColumn['aggregate'], t: Translate): string {
   switch (kind) {
     case 'sum':
-      return 'Sum';
+      return t('dataTable.aggregateSum');
     case 'avg':
-      return 'Average';
+      return t('dataTable.aggregateAvg');
     case 'count':
-      return 'Count';
+      return t('dataTable.aggregateCount');
     case 'min':
-      return 'Min';
+      return t('dataTable.aggregateMin');
     case 'max':
-      return 'Max';
+      return t('dataTable.aggregateMax');
     default:
-      return 'Total';
+      return t('dataTable.aggregateTotal');
   }
 }
 
@@ -698,6 +703,7 @@ function DetailDrawer({
   emit: Emit;
   renderNode: RenderNode;
 }) {
+  const t = useT();
   const isMobile = useIsMobile();
   return (
     <Drawer direction={isMobile ? 'bottom' : 'right'}>
@@ -705,18 +711,18 @@ function DetailDrawer({
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle>{title}</DrawerTitle>
-          <DrawerDescription>Row details</DrawerDescription>
+          <DrawerDescription>{t('dataTable.rowDetails')}</DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4 text-sm">
           {isUiCell(detail) ? (
             renderNode(detail.__ui, emit)
           ) : (
-            <p className="text-muted-foreground">No detail content.</p>
+            <p className="text-muted-foreground">{t('dataTable.noDetailContent')}</p>
           )}
         </div>
         <DrawerFooter>
           <DrawerClose asChild>
-            <Button variant="outline">Done</Button>
+            <Button variant="outline">{t('dataTable.done')}</Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
@@ -791,6 +797,8 @@ export function BoundDataTable({
   emit: Emit;
   renderNode: RenderNode;
 }) {
+  const t = useT();
+  const fmt = useFormat();
   const columns = (props.columns as DataTableColumn[]) ?? [];
   const allColumns = (props.allColumns as DataTableColumn[]) ?? columns;
   const rows = (props.rows as Record<string, unknown>[]) ?? [];
@@ -807,10 +815,8 @@ export function BoundDataTable({
   const columnToggle = props.columnToggle !== false;
   const exportable = props.exportable !== false;
   const loading = props.loading === true;
-  const emptyTitle = String(props.emptyTitle ?? 'No rows');
-  const emptyDescription = String(
-    props.emptyDescription ?? 'No matching rows. Try adjusting search or filters.',
-  );
+  const emptyTitle = String(props.emptyTitle ?? t('dataTable.emptyTitle'));
+  const emptyDescription = String(props.emptyDescription ?? t('dataTable.emptyDescription'));
   const selectable = props.selectable === true;
   const reorderable = props.reorderable === true;
   const views = (props.views as DataTableView[]) ?? [];
@@ -1167,6 +1173,12 @@ export function BoundDataTable({
     }
   };
 
+  /** Client locale for formatted cells; an explicit `formatOptions.locale` from the server wins. */
+  const cellFormatOptions = (col: DataTableColumn): CellFormatOptions => ({
+    ...col.formatOptions,
+    locale: col.formatOptions?.locale ?? fmt.locale,
+  });
+
   const renderCellContent = (
     row: Record<string, unknown>,
     col: DataTableColumn,
@@ -1180,13 +1192,13 @@ export function BoundDataTable({
       // Server-built cells are plain display strings unless a custom `cell` renderer returned UI.
       if (!col.format || col.editor || isUiCell(cells?.[col.key])) return null;
       const value = row[col.key];
-      const text = formatCell(value, col.format, col.formatOptions);
+      const text = formatCell(value, col.format, cellFormatOptions(col));
       if (text === null) return null;
       if (col.format === 'relative') {
         try {
           const date = new Date(value as string | number | Date);
           if (Number.isNaN(date.getTime())) return text;
-          const absolute = formatCell(value, 'datetime', col.formatOptions);
+          const absolute = formatCell(value, 'datetime', cellFormatOptions(col));
           return (
             <time dateTime={date.toISOString()} title={absolute ?? undefined}>
               {text}
@@ -1266,7 +1278,7 @@ export function BoundDataTable({
       if (gk !== lastKey) {
         items.push({
           kind: 'group',
-          group: meta.get(gk) ?? { key: gk, label: gk || '(Empty)', count: 0 },
+          group: meta.get(gk) ?? { key: gk, label: gk || t('dataTable.emptyGroup'), count: 0 },
         });
         lastKey = gk;
       }
@@ -1275,7 +1287,7 @@ export function BoundDataTable({
       }
     });
     return items;
-  }, [rows, grouped, groups, collapsed]);
+  }, [rows, grouped, groups, collapsed, t]);
 
   const sortableIds = grouped ? visibleDataIds : dataIds;
 
@@ -1317,8 +1329,8 @@ export function BoundDataTable({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
           <Columns3 className="size-4" />
-          <span className="hidden lg:inline">Customize Columns</span>
-          <span className="lg:hidden">Columns</span>
+          <span className="hidden lg:inline">{t('dataTable.customizeColumns')}</span>
+          <span className="lg:hidden">{t('dataTable.columns')}</span>
           <ChevronDown className="size-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -1362,20 +1374,20 @@ export function BoundDataTable({
     >
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline">
-          Export
+          {t('dataTable.export')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {(
           [
-            ['download', 'csv', 'Download CSV'],
-            ['download', 'tsv', 'Download TSV'],
-            ['download', 'json', 'Download JSON'],
-            ['copy', 'csv', 'Copy CSV'],
-            ['copy', 'tsv', 'Copy TSV'],
-            ['copy', 'json', 'Copy JSON'],
+            ['download', 'csv', 'dataTable.downloadCsv'],
+            ['download', 'tsv', 'dataTable.downloadTsv'],
+            ['download', 'json', 'dataTable.downloadJson'],
+            ['copy', 'csv', 'dataTable.copyCsv'],
+            ['copy', 'tsv', 'dataTable.copyTsv'],
+            ['copy', 'json', 'dataTable.copyJson'],
           ] as const
-        ).map(([mode, format, label]) => (
+        ).map(([mode, format, labelKey]) => (
           <DropdownMenuItem
             key={`${mode}-${format}`}
             onSelect={() => {
@@ -1384,7 +1396,7 @@ export function BoundDataTable({
               }
             }}
           >
-            {label}
+            {t(labelKey)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -1406,10 +1418,10 @@ export function BoundDataTable({
   const groupChrome = grouped ? (
     <div className="flex items-center gap-1">
       <Button variant="outline" size="sm" onClick={collapseAllGroups}>
-        Collapse all
+        {t('dataTable.collapseAll')}
       </Button>
       <Button variant="outline" size="sm" onClick={expandAllGroups}>
-        Expand all
+        {t('dataTable.expandAll')}
       </Button>
     </div>
   ) : null;
@@ -1436,7 +1448,7 @@ export function BoundDataTable({
   const filterPicker = columnFilterable && filterableColumns.length > 0 ? (
     <Popover onOpenChange={(open) => { if (!open) setFilterPickerKey(null); }}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm"><Plus className="size-3.5" /> Filter</Button>
+        <Button variant="outline" size="sm"><Plus className="size-3.5" />{` ${t('dataTable.filter')}`}</Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-1" align="start">
         {filterPickerColumn ? (
@@ -1458,7 +1470,7 @@ export function BoundDataTable({
         {searchable ? (
           <Input
             value={filter}
-            placeholder={String(props.searchPlaceholder ?? 'Search…')}
+            placeholder={String(props.searchPlaceholder ?? t('dataTable.searchPlaceholder'))}
             className="max-w-sm"
             onChange={(e) => {
               const next = e.target.value;
@@ -1483,7 +1495,7 @@ export function BoundDataTable({
   const activeFilterChips = useMemo(() => {
     const chips: Array<{ id: string; label: string; value?: string }> = [];
     if (showFilterChips && filter.trim()) {
-      chips.push({ id: '__search', label: 'Search', value: filter.trim() });
+      chips.push({ id: '__search', label: t('common.search'), value: filter.trim() });
     }
     for (const col of allColumns) {
       const raw = columnFilters[col.key];
@@ -1497,7 +1509,7 @@ export function BoundDataTable({
       chips.push({ id: col.key, label: col.header, value });
     }
     return chips;
-  }, [showFilterChips, filter, columnFilters, allColumns]);
+  }, [showFilterChips, filter, columnFilters, allColumns, t]);
 
   const filterChipBar =
     activeFilterChips.length > 0 ? (
@@ -1509,7 +1521,7 @@ export function BoundDataTable({
             return col ? (
               <Popover>
                 <PopoverTrigger asChild>
-                  <button type="button" className="rounded-sm text-left hover:underline" aria-label={col.header + ' filter editor'}>
+                  <button type="button" className="rounded-sm text-left hover:underline" aria-label={t('dataTable.filterEditor', { column: col.header })}>
                     {chip.label}: {chip.value}
                   </button>
                 </PopoverTrigger>
@@ -1543,7 +1555,7 @@ export function BoundDataTable({
   const bulkBar = showBulkBar ? (
     <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2">
       <span className="text-sm text-muted-foreground">
-        {selected.size} row{selected.size === 1 ? '' : 's'} selected
+        {t('dataTable.rowsSelected', { count: selected.size })}
       </span>
       <div className="flex flex-wrap items-center gap-2">
         {bulkActions.map((action) => (
@@ -1626,7 +1638,7 @@ export function BoundDataTable({
           variant="ghost"
           className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
           size="icon"
-          aria-label="Open menu"
+          aria-label={t('dataTable.openMenu')}
         >
           <MoreVertical className="size-4" />
         </Button>
@@ -1664,7 +1676,7 @@ export function BoundDataTable({
         else next.delete(rowKey);
         emitSelection(next);
       }}
-      aria-label="Select row"
+      aria-label={t('dataTable.selectRow')}
     />
   );
 
@@ -1933,7 +1945,7 @@ export function BoundDataTable({
                     emitSelection(new Set());
                   }
                 }}
-                aria-label="Select all"
+                aria-label={t('dataTable.selectAll')}
               />
             </TableHead>
           ) : null}
@@ -2009,8 +2021,9 @@ export function BoundDataTable({
                           )}
                           aria-label={
                             active
-                              ? `${col.header}, sorted ${sortDir}${sorts.length > 1 ? `, sort priority ${sortIdx! + 1}` : ''}`
-                              : `Sort ${col.header}`
+                              ? t(sortDir === 'desc' ? 'dataTable.sortedDesc' : 'dataTable.sortedAsc', { column: col.header }) +
+                                (sorts.length > 1 ? t('dataTable.sortPriority', { priority: sortIdx! + 1 }) : '')
+                              : t('dataTable.sortColumn', { column: col.header })
                           }
                           onClick={(e) => {
                             if (!hasEvent(props, 'sort')) return;
@@ -2045,7 +2058,7 @@ export function BoundDataTable({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        Click to sort · Shift+click for multi-sort
+                        {t('dataTable.sortHint')}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
@@ -2053,18 +2066,18 @@ export function BoundDataTable({
                       {col.header}
                       {col.aggregate ? (
                         <span className="sr-only">
-                          {` (${aggregateLabel(col.aggregate)} in footer)`}
+                          {` ${t('dataTable.aggregateInFooter', { aggregate: aggregateLabel(col.aggregate, t) })}`}
                         </span>
                       ) : null}
                     </span>
                   )}
-                  {filterActive ? <span className="size-1.5 shrink-0 rounded-full bg-primary" role="img" aria-label={col.header + ' filter active'} /> : null}
+                  {filterActive ? <span className="size-1.5 shrink-0 rounded-full bg-primary" role="img" aria-label={t('dataTable.filterActive', { column: col.header })} /> : null}
                   {(sortable && hasEvent(props, 'sort')) || filterable || hasEvent(props, 'columnPin') || (columnToggle && hasEvent(props, 'columnVisibility')) ? (
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon"
                           className="absolute right-0 size-6 bg-muted text-muted-foreground opacity-0 group-hover/th:opacity-100 group-focus-within/th:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:relative [@media(hover:none)]:shrink-0 [@media(hover:none)]:opacity-100"
-                          aria-label={col.header + ' column menu'}>
+                          aria-label={t('dataTable.columnMenu', { column: col.header })}>
                           <ChevronDown className="size-3.5" />
                         </Button>
                       </PopoverTrigger>
@@ -2075,33 +2088,33 @@ export function BoundDataTable({
                               <Button key={dir} variant="ghost" size="sm" className="w-full justify-start"
                                 onClick={() => emit(id, 'sort', { key: col.key, dir })}>
                                 {dir === 'asc' ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />}
-                                Sort {dir === 'asc' ? 'ascending' : 'descending'}
+                                {t(dir === 'asc' ? 'dataTable.sortAscending' : 'dataTable.sortDescending')}
                               </Button>
                             ))}
                             {active ? <Button variant="ghost" size="sm" className="w-full justify-start"
-                              onClick={() => emit(id, 'sort', { sorts: sorts.filter((s) => s.key !== col.key) })}>Clear sort</Button> : null}
+                              onClick={() => emit(id, 'sort', { sorts: sorts.filter((s) => s.key !== col.key) })}>{t('dataTable.clearSort')}</Button> : null}
                             <Button variant="ghost" size="sm" className="w-full justify-start"
-                              onClick={() => emit(id, 'sort', { key: col.key, multi: true })}>Add to multi-sort</Button>
+                              onClick={() => emit(id, 'sort', { key: col.key, multi: true })}>{t('dataTable.addToMultiSort')}</Button>
                           </div>
                         ) : null}
-                        {filterable ? <div className="border-b py-1"><p className="px-2 text-xs text-muted-foreground">Filter {col.header}</p>{filterEditor(col)}</div> : null}
+                        {filterable ? <div className="border-b py-1"><p className="px-2 text-xs text-muted-foreground">{t('dataTable.filterColumn', { column: col.header })}</p>{filterEditor(col)}</div> : null}
                         {hasEvent(props, 'columnPin') ? (
                           <div className="py-1">
                             {(['left', 'right'] as const).map((pin) => (
                               <Button key={pin} variant="ghost" size="sm" className="w-full justify-start"
                                 onClick={() => emit(id, 'columnPin', { key: col.key, pin })}>
-                                <Pin className="size-3.5" />Pin {pin}
+                                <Pin className="size-3.5" />{t(pin === 'left' ? 'dataTable.pinLeft' : 'dataTable.pinRight')}
                               </Button>
                             ))}
                             {col.pin ? <Button variant="ghost" size="sm" className="w-full justify-start"
-                              onClick={() => emit(id, 'columnPin', { key: col.key, pin: null })}><PinOff className="size-3.5" />Unpin</Button> : null}
+                              onClick={() => emit(id, 'columnPin', { key: col.key, pin: null })}><PinOff className="size-3.5" />{t('dataTable.unpin')}</Button> : null}
                           </div>
                         ) : null}
                         {columnToggle && hasEvent(props, 'columnVisibility') ? (
                           <Button variant="ghost" size="sm" className="w-full justify-start"
                             disabled={allColumns.length - hiddenColumns.size <= 1}
                             onClick={() => emit(id, 'columnVisibility', { key: col.key, visible: false })}>
-                            <EyeOff className="size-3.5" />Hide column
+                            <EyeOff className="size-3.5" />{t('dataTable.hideColumn')}
                           </Button>
                         ) : null}
                       </PopoverContent>
@@ -2148,7 +2161,7 @@ export function BoundDataTable({
             {Array.from({ length: 5 }, (_, i) => (
               <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
                 <TableCell colSpan={Math.max(colSpan, 1)}>
-                  {i === 0 ? <span className="sr-only">Loading…</span> : null}
+                  {i === 0 ? <span className="sr-only">{t('dataTable.loading')}</span> : null}
                   <Skeleton className="h-5 w-full" />
                 </TableCell>
               </TableRow>
@@ -2257,7 +2270,7 @@ export function BoundDataTable({
                 col.format === 'bytes';
               const formattedAggregate =
                 numericFormat && col.format && col.aggregate && col.aggregate !== 'count'
-                  ? formatCell(value, col.format, col.formatOptions)
+                  ? formatCell(value, col.format, cellFormatOptions(col))
                   : null;
               const display =
                 value == null || value === ''
@@ -2267,7 +2280,7 @@ export function BoundDataTable({
                     : (formattedAggregate ?? String(value));
               const announced =
                 display != null && col.aggregate
-                  ? `${col.header} ${aggregateLabel(col.aggregate)}: ${display}`
+                  ? `${col.header} ${aggregateLabel(col.aggregate, t)}: ${display}`
                   : display != null
                     ? `${col.header}: ${display}`
                     : undefined;
@@ -2316,7 +2329,7 @@ export function BoundDataTable({
   const footerAggregateAnnouncement = showFooterRow
     ? columns
         .filter((c) => c.aggregate && footerCells?.[c.key] != null && footerCells[c.key] !== '')
-        .map((c) => `${c.header} ${aggregateLabel(c.aggregate)} ${footerCells![c.key]}`)
+        .map((c) => `${c.header} ${aggregateLabel(c.aggregate, t)} ${footerCells![c.key]}`)
         .join('; ')
     : '';
 
@@ -2345,7 +2358,7 @@ export function BoundDataTable({
     <TooltipProvider delayDuration={400}>
       {footerAggregateAnnouncement ? (
         <div className="sr-only" aria-live="polite">
-          Column aggregates: {footerAggregateAnnouncement}
+          {t('dataTable.columnAggregates', { aggregates: footerAggregateAnnouncement })}
         </div>
       ) : null}
       {stacked ? (
@@ -2370,13 +2383,17 @@ export function BoundDataTable({
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t bg-muted/30 px-4 py-4">
       <p className="shrink-0 whitespace-nowrap text-sm leading-normal text-muted-foreground">
         {selectable
-          ? `${selected.size} of ${totalRows} row(s) selected.`
-          : `Showing ${totalRows === 0 ? 0 : (page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalRows)} of ${totalRows}`}
+          ? t('dataTable.selectedOfTotal', { selected: selected.size, count: totalRows })
+          : t('dataTable.showingRange', {
+              from: totalRows === 0 ? 0 : (page - 1) * pageSize + 1,
+              to: Math.min(page * pageSize, totalRows),
+              total: totalRows,
+            })}
       </p>
       <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Label htmlFor={`${tableId}-rows`} className="text-sm font-medium whitespace-nowrap">
-            Rows per page
+            {t('dataTable.rowsPerPage')}
           </Label>
           <Select
             value={`${pageSize}`}
@@ -2398,7 +2415,7 @@ export function BoundDataTable({
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <div className="text-sm font-medium whitespace-nowrap tabular-nums">
-            Page {page} of {totalPages}
+            {t('dataTable.pageOf', { page, total: totalPages })}
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -2410,7 +2427,7 @@ export function BoundDataTable({
                 if (hasEvent(props, 'page')) emit(id, 'page', 1);
               }}
             >
-              <span className="sr-only">Go to first page</span>
+              <span className="sr-only">{t('dataTable.firstPage')}</span>
               <ChevronsLeft className="size-4" />
             </Button>
             <Button
@@ -2422,7 +2439,7 @@ export function BoundDataTable({
                 if (hasEvent(props, 'page')) emit(id, 'page', page - 1);
               }}
             >
-              <span className="sr-only">Go to previous page</span>
+              <span className="sr-only">{t('dataTable.previousPage')}</span>
               <ChevronLeft className="size-4" />
             </Button>
             <Button
@@ -2434,7 +2451,7 @@ export function BoundDataTable({
                 if (hasEvent(props, 'page')) emit(id, 'page', page + 1);
               }}
             >
-              <span className="sr-only">Go to next page</span>
+              <span className="sr-only">{t('dataTable.nextPage')}</span>
               <ChevronRight className="size-4" />
             </Button>
             <Button
@@ -2446,7 +2463,7 @@ export function BoundDataTable({
                 if (hasEvent(props, 'page')) emit(id, 'page', totalPages);
               }}
             >
-              <span className="sr-only">Go to last page</span>
+              <span className="sr-only">{t('dataTable.lastPage')}</span>
               <ChevronsRight className="size-4" />
             </Button>
           </div>
@@ -2496,7 +2513,7 @@ export function BoundDataTable({
       >
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor={`${tableId}-view`} className="sr-only">
-            View
+            {t('dataTable.view')}
           </Label>
           <Select
             value={activeView || defaultViewId}
@@ -2505,7 +2522,7 @@ export function BoundDataTable({
             }}
           >
             <SelectTrigger className="@4xl/main:hidden flex w-fit" id={`${tableId}-view`} size="sm">
-              <SelectValue placeholder="Select a view" />
+              <SelectValue placeholder={t('dataTable.selectView')} />
             </SelectTrigger>
             <SelectContent>
               {views.map((view) => (
@@ -2555,7 +2572,7 @@ export function BoundDataTable({
                   {searchable ? (
                     <Input
                       value={filter}
-                      placeholder={String(props.searchPlaceholder ?? 'Search…')}
+                      placeholder={String(props.searchPlaceholder ?? t('dataTable.searchPlaceholder'))}
                       className="max-w-sm"
                       onChange={(e) => {
                         const next = e.target.value;

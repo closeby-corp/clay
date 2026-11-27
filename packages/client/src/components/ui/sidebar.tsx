@@ -7,6 +7,7 @@ import { Slot } from "radix-ui"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -207,6 +208,7 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const t = useT()
 
   if (collapsible === "none") {
     return (
@@ -240,8 +242,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>{t("sidebar.title")}</SheetTitle>
+            <SheetDescription>{t("sidebar.mobileDescription")}</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -303,6 +305,7 @@ function SidebarTrigger({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar()
+  const t = useT()
 
   return (
     <Button
@@ -318,13 +321,14 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{t("sidebar.toggle")}</span>
     </Button>
   )
 }
 
 function SidebarRail({ className, collapsible = true, ...props }: React.ComponentProps<"button"> & { collapsible?: boolean }) {
   const { toggleSidebar, resizable, isMobile, width, limits, resize, setDragging, dragging } = useSidebar()
+  const t = useT()
   const drag = React.useRef<{ x: number; width: number; direction: number; moved: boolean; selection: string; frame: number | null; next: number } | null>(null)
   const suppressClick = React.useRef(false)
   const finish = React.useCallback(() => {
@@ -352,7 +356,7 @@ function SidebarRail({ className, collapsible = true, ...props }: React.Componen
       data-sidebar="rail"
       data-slot="sidebar-rail"
       role={resizable ? "separator" : undefined}
-      aria-label={resizable ? "Resize sidebar" : "Toggle Sidebar"}
+      aria-label={resizable ? t("sidebar.resize") : t("sidebar.toggle")}
       aria-orientation={resizable ? "vertical" : undefined}
       aria-valuenow={resizable ? Math.round(width ?? limits.default) : undefined}
       aria-valuemin={resizable ? Math.round(limits.min) : undefined}
@@ -394,7 +398,7 @@ function SidebarRail({ className, collapsible = true, ...props }: React.Componen
       onPointerUp={finish}
       onPointerCancel={finish}
       onLostPointerCapture={finish}
-      title={resizable ? "Drag to resize; double-click to reset" : "Toggle Sidebar"}
+      title={resizable ? t("sidebar.resizeHint") : t("sidebar.toggle")}
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 touch-none group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border focus-visible:after:bg-ring md:flex",
         resizable ? "cursor-col-resize" : "cursor-pointer",

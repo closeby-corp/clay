@@ -19,7 +19,7 @@ On unexpected socket close, the client reconnects with exponential backoff (500m
 { "op": "hello", "path": "/examples/counter", "userId": "optional-stable-id", "hash": "optional-hash-without-hash-sign", "browserStorage": {}, "clientStorage": {}, "tabStorage": {} }
 ```
 
-Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `hash` (no leading `#`) hydrates `ui.getUrlHash()`. Optional `search` (no leading `?`) hydrates `ui.getUrlSearch()`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`. Optional `palette` reports the palette the page shows, so `ui.theme.getPalette()` is correct after a reload.
+Client connects (or sends another `hello` after navigate on the same socket) and identifies the page. Optional `userId` (from localStorage/cookie) enables `ui.storage.user` unless overridden by `resolveUserId`. Optional `hash` (no leading `#`) hydrates `ui.getUrlHash()`. Optional `search` (no leading `?`) hydrates `ui.getUrlSearch()`. Optional `browserStorage` / `clientStorage` / `tabStorage` bags hydrate `ui.storage.browser` / `ui.storage.client` / `ui.storage.tab`. Optional `palette` reports the palette the page shows, so `ui.theme.getPalette()` is correct after a reload. Optional `locale` (the stored `ui.setLocale` choice) and `languages` (`navigator.languages`) let the server resolve the session locale (`ui.getLocale()`); see [Translations](./i18n.md).
 
 Sent on connect and after client-side navigation. The React client keeps matching `app` shell chrome mounted across remounts; only inset content is replaced.
 
@@ -219,6 +219,19 @@ Sent by `ui.theme.set(...)`.
 | `palette` | `string` | Sets `<html data-palette>` (`kiln` / empty clears to default); persisted under `clay-palette` and restored before first paint |
 
 Sent by `ui.theme.palette(...)`.
+
+### `locale`
+
+```json
+{ "op": "locale", "locale": "pt-PT", "remount": true }
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `locale` | `string \| null` | UI locale for Clay's built-in text and formatting; persisted under `clay-locale`. `null` clears the stored choice (back to the `ui.run({ locale })` default) |
+| `remount` | `boolean?` | When true the client re-sends `hello` for the current path so the server rebuilds the page with the new locale |
+
+Sent by `ui.setLocale(...)`. See [Translations](./i18n.md).
 
 ### `runJavaScript`
 

@@ -18,6 +18,7 @@ import {
   useLiveChartAnimation,
   useSeriesConfig,
 } from './chart-shared';
+import { useLocale } from './i18n';
 
 export function BoundAreaChart({
   props,
@@ -51,6 +52,7 @@ export function BoundAreaChart({
   );
   const config = useSeriesConfig(series);
   const anim = useLiveChartAnimation(filteredData, xKey, props.animate);
+  const locale = useLocale();
 
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
@@ -74,14 +76,14 @@ export function BoundAreaChart({
           tickMargin={8}
           minTickGap={32}
           hide={!interactive && filteredData.every((row) => !isIsoDate(row[xKey]))}
-          tickFormatter={formatAxisTick}
+          tickFormatter={(value) => formatAxisTick(value, locale)}
         />
         <ChartTooltip
           cursor={false}
           content={
             <ChartTooltipContent
               indicator="dot"
-              labelFormatter={formatTooltipLabel}
+              labelFormatter={(value) => formatTooltipLabel(value, locale)}
             />
           }
         />

@@ -12,6 +12,7 @@ import {
 } from 'date-fns';
 import { useOptimisticValue } from './useOptimisticValue';
 import { cn } from '@/lib/utils';
+import { useFormat, useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -275,6 +276,8 @@ export function BoundGantt({
   style: unknown;
   emit: Emit;
 }) {
+  const t = useT();
+  const fmt = useFormat();
   const serverRows = (Array.isArray(props.rows) ? props.rows : []) as GanttRow[];
   const [rows, setRows] = useOptimisticValue(serverRows);
   const rowsRef = useRef(rows);
@@ -477,7 +480,7 @@ export function BoundGantt({
     const marker: GanttMarker = {
       id: `m-${Date.now()}`,
       date: toIsoDay(date),
-      label: 'Marker',
+      label: t('gantt.defaultMarkerLabel'),
     };
     const next = [...markersRef.current, marker];
     markersRef.current = next;
@@ -497,8 +500,8 @@ export function BoundGantt({
       style={asStyle(style)}
       data-readonly={readonly || undefined}
     >
-      <p className="border-b px-3 py-1 text-xs text-muted-foreground sm:hidden">Swipe horizontally to explore the timeline →</p>
-      <div ref={scrollRef} className="flex max-h-[560px] overflow-x-scroll overflow-y-auto [scrollbar-width:thin]" style={{ scrollbarColor: 'var(--muted-foreground) var(--muted)' }} tabIndex={0} role="region" aria-label="Gantt timeline — scroll horizontally to see all dates">
+      <p className="border-b px-3 py-1 text-xs text-muted-foreground sm:hidden">{t('gantt.swipeHint')}</p>
+      <div ref={scrollRef} className="flex max-h-[560px] overflow-x-scroll overflow-y-auto [scrollbar-width:thin]" style={{ scrollbarColor: 'var(--muted-foreground) var(--muted)' }} tabIndex={0} role="region" aria-label={t('gantt.timelineLabel')}>
         {/* Sidebar */}
         <div
           ref={sidebarRef}
@@ -508,7 +511,7 @@ export function BoundGantt({
             className="sticky top-0 z-10 border-b bg-muted/40 px-3 text-xs font-medium text-muted-foreground"
             style={{ height: HEADER_HEIGHT, lineHeight: `${HEADER_HEIGHT}px` }}
           >
-            Rows
+            {t('gantt.rows')}
           </div>
           {rows.map((row) => (
             <div
@@ -535,7 +538,7 @@ export function BoundGantt({
               title={
                 readonly
                   ? undefined
-                  : 'Double-click to add a marker at this date'
+                  : t('gantt.addMarkerHint')
               }
               onDoubleClick={(ev) => {
                 addMarkerAtClientX(ev.clientX, ev.currentTarget);
@@ -554,9 +557,9 @@ export function BoundGantt({
                       style={{ left, width }}
                     >
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {format(month, 'yyyy')}
+                        {fmt.date(month, { year: 'numeric' })}
                       </span>
-                      <span className="text-xs font-medium">{format(month, 'MMM')}</span>
+                      <span className="text-xs font-medium">{fmt.date(month, { month: 'short' })}</span>
                     </div>
                   );
                 })}
@@ -583,10 +586,10 @@ export function BoundGantt({
                 <div
                   className="pointer-events-none absolute top-0 bottom-0 z-[5] w-px bg-rose-500"
                   style={{ left: dayToX(today) }}
-                  title={`Today ${toIsoDay(today)}`}
+                  title={t('gantt.todayTitle', { date: toIsoDay(today) })}
                 >
                   <span className="absolute top-1 left-1 whitespace-nowrap rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                    Today
+                    {t('gantt.today')}
                   </span>
                 </div>
               ) : null}

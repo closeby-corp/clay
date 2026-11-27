@@ -62,7 +62,7 @@ export class AiChatElement extends Element {
       tabs,
       activeTab: tabId,
       messages: owned.map(serializeChatMessage),
-      placeholder: rest.placeholder ?? 'Ask…',
+      placeholder: rest.placeholder,
       sources: rest.sources ?? [],
       models: rest.models ?? [],
       selectedModel: rest.selectedModel ?? rest.models?.[0]?.id,

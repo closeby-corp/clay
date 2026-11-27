@@ -11,7 +11,7 @@ export type AiFineTuneProps = {
 
 export function fineTune(props: AiFineTuneProps = {}): Element {
   return new Element('aiFineTune', {
-    title: props.title ?? 'Fine-tune',
+    title: props.title,
     subtitle: props.subtitle,
     fields: props.fields ?? [],
     className: props.className,

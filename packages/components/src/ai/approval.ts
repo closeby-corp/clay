@@ -14,7 +14,7 @@ export type AiApprovalProps = {
 
 export function approval(props: AiApprovalProps): Element {
   return new Element('aiApproval', {
-    title: props.title ?? 'Needs approval',
+    title: props.title,
     question: props.question,
     options: props.options ?? [],
     allowCustom: props.allowCustom ?? false,

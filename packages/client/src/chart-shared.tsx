@@ -19,6 +19,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
+import { formatDate } from '../../core/src/i18n';
+import { getLocale, useT, type Translate } from './i18n';
 
 export type ChartSeries = {
   key: string;
@@ -59,11 +61,13 @@ export type ChartReferenceArea = {
   fillOpacity?: number;
 };
 
-const DEFAULT_PERIODS: ChartPeriodDef[] = [
-  { value: '90d', label: 'Last 3 months', days: 90 },
-  { value: '30d', label: 'Last 30 days', days: 30 },
-  { value: '7d', label: 'Last 7 days', days: 7 },
-];
+function defaultPeriods(t: Translate): ChartPeriodDef[] {
+  return [
+    { value: '90d', label: t('chart.last3Months'), days: 90 },
+    { value: '30d', label: t('chart.last30Days'), days: 30 },
+    { value: '7d', label: t('chart.last7Days'), days: 7 },
+  ];
+}
 
 export type LineCurve =
   | 'monotone'
@@ -236,7 +240,8 @@ export function useInteractiveChartData(
   setPeriod: (v: string) => void;
   periods: ChartPeriodDef[];
 } {
-  const periodDefs = useStableValue(periods?.length ? periods : DEFAULT_PERIODS);
+  const t = useT();
+  const periodDefs = useStableValue(periods?.length ? periods : defaultPeriods(t));
   const defaultPeriod = periodDefs[0]?.value ?? '90d';
   const [period, setPeriod] = useState(defaultPeriod);
 
@@ -307,9 +312,12 @@ export function ChartChrome({
 }) {
   const styleProp =
     typeof style === 'object' && style ? (style as CSSProperties) : undefined;
-  const periodDefs = periods?.length ? periods : DEFAULT_PERIODS;
+  const t = useT();
+  const periodDefs = periods?.length ? periods : defaultPeriods(t);
   const periodLabel = periodDefs.find((p) => p.value === period)?.label;
-  const activeDescription = description || (interactive && periodLabel ? `Total for the ${periodLabel.toLowerCase()}` : '');
+  const activeDescription =
+    description ||
+    (interactive && periodLabel ? t('chart.totalForPeriod', { period: periodLabel.toLowerCase() }) : '');
   const showChrome = Boolean(title || activeDescription || headline || interactive);
 
   if (!showChrome) {
@@ -349,10 +357,10 @@ export function ChartChrome({
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger
                 className="flex w-40 @[767px]/card:hidden"
-                aria-label="Select a period"
+                aria-label={t('chart.selectPeriod')}
                 size="sm"
               >
-                <SelectValue placeholder={periodDefs[0]?.label ?? 'Period'} />
+                <SelectValue placeholder={periodDefs[0]?.label ?? t('chart.period')} />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {periodDefs.map((p) => (
@@ -454,22 +462,18 @@ export function parseReferenceArea(raw: unknown): ChartReferenceArea | undefined
   };
 }
 
-export function formatAxisTick(value: unknown): string {
+/** Axis tick: ISO dates as a short locale date (`Apr 1` / `1/04`), else the first 3 chars. */
+export function formatAxisTick(value: unknown, locale: string = getLocale()): string {
   if (isIsoDate(value)) {
-    return new Date(String(value)).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
+    return formatDate(locale, String(value), { month: 'short', day: 'numeric' });
   }
   return String(value).slice(0, 3);
 }
 
-export function formatTooltipLabel(value: unknown): string {
+/** Tooltip label: ISO dates as a short locale date, else the raw value. */
+export function formatTooltipLabel(value: unknown, locale: string = getLocale()): string {
   if (isIsoDate(value)) {
-    return new Date(String(value)).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
+    return formatDate(locale, String(value), { month: 'short', day: 'numeric' });
   }
   return String(value);
 }

@@ -1,4 +1,4 @@
-import { currentRoles, hasRoleResolver } from '@close-by/clay-core';
+import { currentRoles, hasRoleResolver, t } from '@close-by/clay-core';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { join } from 'path';
 import { readFile } from 'fs/promises';
@@ -171,7 +171,7 @@ export type NavFromPagesOptions = {
    * "Examples" group. Individual pages can override with `pageMeta.group`.
    */
   groupExamples?: boolean;
-  /** Label for the auto examples group. Default `"Examples"`. */
+  /** Label for the auto examples group. Default `"Examples"` (translated). */
   groupExamplesLabel?: string;
   /** Icon for the auto examples group. Default `"layout-grid"`. */
   groupExamplesIcon?: string;
@@ -196,7 +196,7 @@ function resolvePageGroup(
   }
   if (opts?.groupExamples && href.startsWith('/examples/') && href !== '/examples/auth') {
     return {
-      group: opts.groupExamplesLabel ?? 'Examples',
+      group: opts.groupExamplesLabel ?? t('server.pages.examplesGroup'),
       groupIcon: opts.groupExamplesIcon ?? 'layout-grid',
     };
   }

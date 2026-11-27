@@ -3,6 +3,7 @@ import { codeToHtml } from 'shiki';
 import { Check, Copy, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -38,6 +39,7 @@ export function BoundCodeBlock({
   const showCopy = props.showCopy !== false && revealed;
   const [html, setHtml] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     let cancelled = false;
@@ -85,11 +87,11 @@ export function BoundCodeBlock({
       {sensitive && !revealed ? (
         <div className="flex flex-col items-start gap-2 p-4">
           <p className="text-xs text-muted-foreground">
-            Content may include secrets. Reveal only if you trust this view.
+            {t('codeBlock.sensitiveWarning')}
           </p>
           <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setRevealed(true)}>
             <Eye className="size-3.5" />
-            Reveal
+            {t('codeBlock.reveal')}
           </Button>
           <pre className="max-h-24 w-full overflow-hidden font-mono text-[13px] leading-relaxed blur-sm select-none">
             {code.slice(0, 400) || '••••••••'}
@@ -101,7 +103,7 @@ export function BoundCodeBlock({
             <div className="absolute top-2 right-2 z-10 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
               <Button type="button" variant="secondary" size="sm" className="h-7 gap-1 px-2" onClick={copy} data-sound="copy">
                 {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? t('common.copied') : t('common.copy')}
               </Button>
             </div>
           ) : null}

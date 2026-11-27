@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 export type ParsedChord = {
   ctrl: boolean;
   meta: boolean;
@@ -123,7 +125,6 @@ export function chordList(keys: unknown): string[] {
 const KEY_DISPLAY: Record<string, string> = {
   escape: 'Esc',
   enter: '↵',
-  space: 'Space',
   tab: 'Tab',
   arrowup: '↑',
   arrowdown: '↓',
@@ -139,6 +140,7 @@ function formatKeyToken(token: string, isApple: boolean): string {
   if (token === 'shift') return '⇧';
 
   const key = normalizeKeyToken(token);
+  if (key === 'space') return t('keybind.space');
   if (KEY_DISPLAY[key]) return KEY_DISPLAY[key];
   if (key.length === 1) return key.toUpperCase();
   return key.charAt(0).toUpperCase() + key.slice(1);

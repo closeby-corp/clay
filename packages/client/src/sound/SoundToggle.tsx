@@ -1,12 +1,14 @@
 import { useSyncExternalStore } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 import { applySound, isSoundAvailable, isSoundEnabled, playSound, subscribeSound } from './engine';
 
 /** Corner mute button next to the Clay connection chip. Hidden until the app enables sound. */
 export function SoundToggle() {
   const on = useSyncExternalStore(subscribeSound, isSoundEnabled, () => false);
   const available = useSyncExternalStore(subscribeSound, isSoundAvailable, () => false);
+  const t = useT();
   if (!available) return null;
 
   const Icon = on ? Volume2 : VolumeX;
@@ -15,8 +17,8 @@ export function SoundToggle() {
       type="button"
       data-sound="none"
       aria-pressed={!on}
-      aria-label={on ? 'Mute interface sounds' : 'Unmute interface sounds'}
-      title={on ? 'Mute sounds' : 'Unmute sounds'}
+      aria-label={on ? t('sound.mute') : t('sound.unmute')}
+      title={on ? t('sound.muteShort') : t('sound.unmuteShort')}
       onClick={() => {
         applySound({ enabled: !on });
         if (!on) playSound('toggleOn');

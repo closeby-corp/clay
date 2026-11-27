@@ -23,7 +23,7 @@ export type DropdownItemOptions = {
 export class DropdownMenuElement extends Element {
   constructor(props: DropdownMenuProps = {}) {
     super('dropdownmenu', {
-      label: props.label ?? 'Menu',
+      label: props.label,
       variant: props.variant ?? 'outline',
       className: props.className,
     });

@@ -36,6 +36,11 @@ export type ServerMessage =
   | { op: 'theme'; theme: 'light' | 'dark' | 'system' }
   /** Colour palette name → `<html data-palette>` (`kiln` / empty = default). */
   | { op: 'palette'; palette: string }
+  /**
+   * Switch UI locale (`ui.setLocale`). `null` clears the stored choice (back to the app default).
+   * `remount` re-sends hello for the current path so server-built strings rebuild.
+   */
+  | { op: 'locale'; locale: string | null; remount?: boolean }
   /** Interface sounds: toggle automatic cues, set volume, or play one cue now. */
   | { op: 'sound'; enabled?: boolean; volume?: number; play?: string }
   | { op: 'runJavaScript'; code: string }
@@ -82,6 +87,10 @@ export type ClientMessage =
       tabStorage?: Record<string, unknown>;
       /** Palette the page currently shows (`<html data-palette>`, `kiln` when unset). */
       palette?: string;
+      /** Locale the user chose earlier (`ui.setLocale`, persisted in localStorage), if any. */
+      locale?: string;
+      /** `navigator.languages`, for `ui.run({ locale: 'auto' })`. */
+      languages?: string[];
     }
   | { op: 'event'; id: string; type: string; value?: unknown }
   /** Same-path popstate: search/hash only (no remount). */

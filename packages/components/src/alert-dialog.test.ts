@@ -20,8 +20,13 @@ describe('AlertDialogElement', () => {
       onClose: () => {},
     });
     expect(dlg.type).toBe('alertdialog');
-    expect(dlg.props.confirmLabel).toBe('OK');
-    expect(dlg.props.cancelLabel).toBe('Cancel');
+    // Unset labels are left to the client's translated defaults (OK / Cancel).
+    expect(dlg.props.confirmLabel).toBeUndefined();
+    expect(dlg.props.cancelLabel).toBeUndefined();
+    expect(alertDialog({ confirmLabel: 'Yes', cancelLabel: 'No' }).props).toMatchObject({
+      confirmLabel: 'Yes',
+      cancelLabel: 'No',
+    });
     expect(dlg.props.events).toEqual(expect.arrayContaining(['confirm', 'close']));
   });
 

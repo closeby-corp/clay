@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 
 export type FilterChipView = {
   id: string;
@@ -12,7 +13,7 @@ export type FilterChipView = {
 
 export function FilterChipsView({
   chips,
-  clearLabel = 'Clear all',
+  clearLabel,
   className,
   renderChipText,
   onClear,
@@ -25,6 +26,7 @@ export function FilterChipsView({
   onClear?: () => void;
   onRemoveChip?: (chipId: string) => void;
 }) {
+  const t = useT();
   if (chips.length === 0) return null;
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
@@ -40,7 +42,7 @@ export function FilterChipsView({
             <button
               type="button"
               className="rounded-sm p-0.5 hover:bg-muted"
-              aria-label={`Remove ${chip.label}`}
+              aria-label={t('filterChips.remove', { label: chip.label })}
               onClick={() => onRemoveChip(chip.id)}
             >
               <X className="size-3" />
@@ -50,7 +52,7 @@ export function FilterChipsView({
       ))}
       {onClear ? (
         <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={onClear}>
-          {clearLabel}
+          {clearLabel ?? t('filterChips.clearAll')}
         </Button>
       ) : null}
     </div>

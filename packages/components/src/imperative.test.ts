@@ -87,6 +87,38 @@ describe('imperative helpers', () => {
     expect(await resultPromise).toBeNull();
   });
 
+  test('confirm leaves unset title / labels to the client translations', async () => {
+    const session = new ClientSession('/imperative-test', () => {});
+    session.mount();
+    const resultPromise = runWithSession(session, () => confirm('Sure?'));
+    await Promise.resolve();
+    const dlg = findByType(session.root!, 'alertdialog')[0]!;
+    expect(dlg.props.title).toBeUndefined();
+    expect(dlg.props.confirmLabel).toBeUndefined();
+    expect(dlg.props.cancelLabel).toBeUndefined();
+    await runWithSession(session, () => dlg.handleEvent('close'));
+    expect(await resultPromise).toBe(false);
+  });
+
+  test('prompt and choose build labels in the session locale', async () => {
+    const session = new ClientSession('/imperative-test', () => {});
+    session.locale = 'pt-PT';
+    session.mount();
+
+    const promptResult = runWithSession(session, () => prompt('Nome?'));
+    await Promise.resolve();
+    expect(findByType(session.root!, 'dialog').at(-1)!.props.title).toBe('Introduzir valor');
+    expect(findButton(session.root!, 'OK')).toBeTruthy();
+    await runWithSession(session, () => findButton(session.root!, 'Cancelar')!.handleEvent('click'));
+    expect(await promptResult).toBeNull();
+
+    const chooseResult = runWithSession(session, () => choose('Cor', ['Azul']));
+    await Promise.resolve();
+    expect(findByType(session.root!, 'dialog').at(-1)!.props.title).toBe('Escolher');
+    await runWithSession(session, () => findButton(session.root!, 'Cancelar')!.handleEvent('click'));
+    expect(await chooseResult).toBeNull();
+  });
+
   test('choose returns selected value', async () => {
     const session = new ClientSession('/imperative-test', () => {});
     session.mount();

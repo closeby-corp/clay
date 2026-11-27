@@ -51,7 +51,7 @@ export function upload(props: UploadProps = {}): Element {
   return new Element('upload', {
     accept: props.accept ?? '',
     multiple: props.multiple ?? false,
-    label: props.label ?? 'Upload',
+    label: props.label,
     variant: props.variant === 'dropzone' ? 'dropzone' : 'button',
     disabled: props.disabled ?? false,
     className: props.className,

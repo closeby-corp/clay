@@ -11,7 +11,7 @@ export type AiContextProps = {
 export function context(props: AiContextProps = {}): Element {
   return new Element('aiContext', {
     chunks: props.chunks ?? [],
-    title: props.title ?? 'Context',
+    title: props.title,
     className: props.className,
     onChunkClick: props.onChunkClick,
   });

@@ -15,6 +15,7 @@ Notes for agents:
 - Installable app is opt-in: `ui.run({ pwa: true })` or `clay ./pages --app --pwa` adds a manifest and an app-shell service worker (see docs/mobile.md).
 - On phones the `app` nav becomes a bottom tab bar; `app: { mobileNav: 'menu' }` keeps only the sidebar sheet.
 - `ui.ai.*` is visual primitives only — no model or streaming runtime.
+- Translations: `ui.run({ locale: 'pt-PT' })` (or `'auto'`) localises Clay's built-in text, dates and numbers (English default; built-in `en` + `pt-PT`). `ui.setLocale(locale)` switches a tab live. Override built-in text with `ui.run({ messages: { 'pt-PT': { 'dataTable.export': '…' } } })`. For app strings use `const t = ui.messages({ en: {...}, 'pt-PT': {...} })` — do not hand-roll a dictionary. See docs/i18n.md.
 - Agent skill (Cursor / compatible tools): `@close-by/clay/SKILL.md` — copy to `.cursor/skills/clay/SKILL.md` or read from `node_modules` when installed.
 
 ## Docs
@@ -26,6 +27,7 @@ Notes for agents:
 - [Mobile and installable apps](docs/mobile.md): Phone tab bar (`mobileNav`), installable PWA (`ui.run({ pwa })`, `--pwa`)
 - [Sample app](docs/tutorial.md): Step-by-step tasks list, then two pages + shell
 - [Concepts](docs/concepts.md): Sessions, element tree, patches, refreshable, bindings, storage
+- [Translations](docs/i18n.md): `locale`, `ui.setLocale`, message overrides, `ui.messages`, `ui.formatNumber` / `formatDate`
 - [Browser APIs](docs/browser-apis.md): `ui.clipboard` / hash / `openExternal` — no `window` in page code
 - [Ops patterns](docs/ops-patterns.md): Dense consoles — chips, feeds, sensitive codeBlock, auth nav
 - [API reference](docs/api.md): Complete `ui.*` and Element API

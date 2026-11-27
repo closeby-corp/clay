@@ -1,6 +1,7 @@
 import { useOptimisticValue } from './useOptimisticValue';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useT } from './i18n';
 import type { CSSProperties } from 'react';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
@@ -47,6 +48,7 @@ function TreeRows({
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
 }) {
+  const t = useT();
   return (
     <>
       {nodes.map((node) => {
@@ -69,7 +71,7 @@ function TreeRows({
                   type="button"
                   disabled={disabled}
                   className="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-                  aria-label={isOpen ? 'Collapse' : 'Expand'}
+                  aria-label={isOpen ? t('tree.collapse') : t('tree.expand')}
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggle(node.id);

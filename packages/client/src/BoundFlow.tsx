@@ -28,6 +28,7 @@ import {
   useNodesInitialized,
   useReactFlow,
   useStore,
+  type AriaLabelConfig,
   type Connection,
   type Edge,
   type EdgeChange,
@@ -39,6 +40,7 @@ import {
 } from '@xyflow/react';
 import type { ElementNode } from './protocol';
 import { cn } from '@/lib/utils';
+import { useT, type Translate } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 type RenderNode = (node: ElementNode, emit: Emit) => ReactNode;
@@ -505,6 +507,33 @@ function FlowAutoFit({ enabled, revision }: { enabled: boolean; revision: string
   return null;
 }
 
+const FLOW_DIRECTIONS = {
+  up: 'flow.directionUp',
+  down: 'flow.directionDown',
+  left: 'flow.directionLeft',
+  right: 'flow.directionRight',
+} as const;
+
+/** React Flow's built-in aria labels / a11y descriptions in the active locale. */
+function flowAriaLabels(t: Translate): Partial<AriaLabelConfig> {
+  return {
+    'node.a11yDescription.default': t('flow.nodeDescription'),
+    'node.a11yDescription.keyboardDisabled': t('flow.nodeDescriptionKeyboard'),
+    'node.a11yDescription.ariaLiveMessage': ({ direction, x, y }) => {
+      const key = FLOW_DIRECTIONS[direction as keyof typeof FLOW_DIRECTIONS];
+      return t('flow.nodeMoved', { direction: key ? t(key) : direction, x, y });
+    },
+    'edge.a11yDescription.default': t('flow.edgeDescription'),
+    'controls.ariaLabel': t('flow.controls'),
+    'controls.zoomIn.ariaLabel': t('flow.zoomIn'),
+    'controls.zoomOut.ariaLabel': t('flow.zoomOut'),
+    'controls.fitView.ariaLabel': t('flow.fitView'),
+    'controls.interactive.ariaLabel': t('flow.toggleInteractivity'),
+    'minimap.ariaLabel': t('flow.miniMap'),
+    'handle.ariaLabel': t('flow.handle'),
+  };
+}
+
 function BoundFlowInner({
   id,
   props,
@@ -522,6 +551,8 @@ function BoundFlowInner({
   children: ElementNode[];
   renderNode: RenderNode;
 }) {
+  const t = useT();
+  const ariaLabelConfig = useMemo(() => flowAriaLabels(t), [t]);
   const [colorMode, setColorMode] = useState<'light' | 'dark'>(() =>
     document.documentElement.classList.contains('dark') ? 'dark' : 'light',
   );
@@ -753,6 +784,7 @@ function BoundFlowInner({
         fitViewOptions={FIT_OPTIONS}
         deleteKeyCode={['Backspace', 'Delete']}
         proOptions={{ hideAttribution: true }}
+        ariaLabelConfig={ariaLabelConfig}
       >
         <FlowAutoFit enabled={fitView} revision={`${topologyKey}|${positionsKey}`} />
         <Background gap={16} size={1} />

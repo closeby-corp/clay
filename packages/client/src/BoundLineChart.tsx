@@ -18,6 +18,7 @@ import {
   useLiveChartAnimation,
   useSeriesConfig,
 } from './chart-shared';
+import { useLocale } from './i18n';
 
 export function BoundLineChart({
   props,
@@ -50,6 +51,7 @@ export function BoundLineChart({
   );
   const config = useSeriesConfig(series);
   const anim = useLiveChartAnimation(filteredData, xKey, props.animate);
+  const locale = useLocale();
 
   const chart = (
     <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
@@ -62,11 +64,11 @@ export function BoundLineChart({
           tickMargin={8}
           minTickGap={32}
           hide={!interactive && filteredData.every((row) => !isIsoDate(row[xKey]))}
-          tickFormatter={formatAxisTick}
+          tickFormatter={(value) => formatAxisTick(value, locale)}
         />
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
+          content={<ChartTooltipContent labelFormatter={(value) => formatTooltipLabel(value, locale)} />}
         />
         {showLegend ? <ChartLegend content={<ChartLegendContent />} /> : null}
         {series.map((s) => {

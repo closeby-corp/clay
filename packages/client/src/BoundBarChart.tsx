@@ -17,6 +17,7 @@ import {
   useLiveChartAnimation,
   useSeriesConfig,
 } from './chart-shared';
+import { useLocale } from './i18n';
 
 export function BoundBarChart({
   props,
@@ -50,6 +51,7 @@ export function BoundBarChart({
   );
   const config = useSeriesConfig(series);
   const anim = useLiveChartAnimation(filteredData, xKey, props.animate);
+  const locale = useLocale();
   const hideCategoryTicks =
     !interactive && filteredData.every((row) => !isIsoDate(row[xKey]));
 
@@ -71,7 +73,7 @@ export function BoundBarChart({
               axisLine={false}
               tickMargin={8}
               width={80}
-              tickFormatter={formatAxisTick}
+              tickFormatter={(value) => formatAxisTick(value, locale)}
             />
             <XAxis type="number" hide />
           </>
@@ -83,12 +85,12 @@ export function BoundBarChart({
             tickMargin={8}
             minTickGap={32}
             hide={hideCategoryTicks}
-            tickFormatter={formatAxisTick}
+            tickFormatter={(value) => formatAxisTick(value, locale)}
           />
         )}
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
+          content={<ChartTooltipContent labelFormatter={(value) => formatTooltipLabel(value, locale)} />}
         />
         {showLegend ? <ChartLegend content={<ChartLegendContent />} /> : null}
         {series.map((s) => {

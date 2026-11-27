@@ -26,7 +26,7 @@ export type AiPromptBarProps = {
 
 export function promptBar(props: AiPromptBarProps = {}): Element {
   return new Element('aiPromptBar', {
-    placeholder: props.placeholder ?? 'Ask…',
+    placeholder: props.placeholder,
     value: props.value ?? '',
     sources: props.sources ?? [],
     models: props.models ?? [],

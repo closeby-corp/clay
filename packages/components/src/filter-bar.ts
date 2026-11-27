@@ -9,7 +9,7 @@ export type FilterChip = {
 
 export type FilterBarProps = {
   chips?: FilterChip[];
-  /** Label for the clear-all control. Default `Clear all`. */
+  /** Label for the clear-all control. Default: translated `Clear all`. */
   clearLabel?: string;
   className?: string;
   onClear?: () => void | Promise<void>;
@@ -43,7 +43,7 @@ export function filterBar(
   }
   const el = new Element('filterBar', {
     chips: props.chips ?? [],
-    clearLabel: props.clearLabel ?? 'Clear all',
+    clearLabel: props.clearLabel,
     className: props.className,
     onClear: props.onClear,
     onRemoveChip: props.onRemoveChip,
@@ -62,7 +62,7 @@ export function filterChips(props: {
 }): Element {
   return new Element('filterChips', {
     chips: props.chips,
-    clearLabel: props.clearLabel ?? 'Clear all',
+    clearLabel: props.clearLabel,
     className: props.className,
     onClear: props.onClear,
     onRemoveChip: props.onRemoveChip,

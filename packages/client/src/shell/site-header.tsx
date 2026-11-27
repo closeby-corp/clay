@@ -6,9 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { usePhone } from '../hooks/use-phone';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useT } from '@/i18n';
 
 export function SiteHeader({ title, hideTrigger = false, actions = [] }: { title: string; hideTrigger?: boolean; actions?: ReactNode[] }) {
   const phone = usePhone();
+  const t = useT();
   const inline = phone ? actions.slice(0, 2) : actions;
   const overflow = phone ? actions.slice(2) : [];
   return (
@@ -28,7 +30,7 @@ export function SiteHeader({ title, hideTrigger = false, actions = [] }: { title
           <ShellStatus />
           {inline}
           {overflow.length ? <Popover>
-            <PopoverTrigger asChild><Button variant="ghost" size="icon" aria-label="More header actions"><MoreHorizontalIcon /></Button></PopoverTrigger>
+            <PopoverTrigger asChild><Button variant="ghost" size="icon" aria-label={t('shell.moreHeaderActions')}><MoreHorizontalIcon /></Button></PopoverTrigger>
             <PopoverContent align="end" className="flex flex-col gap-2">{overflow}</PopoverContent>
           </Popover> : null}
         </div>

@@ -29,7 +29,7 @@ export function dateRange(props: DateRangeProps = {}): Element {
     from: props.from ?? '',
     to: props.to ?? '',
     label: props.label,
-    placeholder: props.placeholder ?? 'Pick a date range',
+    placeholder: props.placeholder,
     error: props.error,
     disabled: props.disabled ?? false,
     presets: props.presets,

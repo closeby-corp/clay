@@ -7,14 +7,18 @@ import {
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { useT } from "@/i18n"
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
+  const t = useT()
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      containerAriaLabel={t("toast.notifications")}
+      toastOptions={{ closeButtonAriaLabel: t("toast.close"), ...toastOptions }}
       mobileOffset={{ bottom: "calc(var(--clay-tabbar-h, 0px) + 16px)" }}
       icons={{
         success: <CircleCheckIcon className="size-4" />,

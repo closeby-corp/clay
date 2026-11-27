@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useOptimisticValue } from './useOptimisticValue';
 import { hasProtocolEvent } from './protocolEvents';
+import { useFormat, useT } from './i18n';
 
 type EventView = {
   id: string;
@@ -34,6 +35,11 @@ export function BoundEventCalendar({
   style: CSSProperties | undefined;
   emit: (id: string, type: string, value?: unknown) => void;
 }) {
+  const t = useT();
+  const fmt = useFormat();
+  // English keeps date-fns `PPP` ("August 30th, 2026"); other locales use Intl.
+  const selectedTitle = (d: Date) =>
+    fmt.locale.toLowerCase().startsWith('en') ? format(d, 'PPP') : fmt.date(d, { dateStyle: 'long' });
   const items = (props.items as EventView[]) ?? [];
   const serverMonth = String(props.month ?? format(new Date(), 'yyyy-MM-dd'));
   const serverSelected = String(props.selected ?? '');
@@ -90,12 +96,12 @@ export function BoundEventCalendar({
       <Card className="min-h-[18rem]">
         <CardHeader>
           <CardTitle className="text-base">
-            {selectedDate ? format(selectedDate, 'PPP') : 'Select a day'}
+            {selectedDate ? selectedTitle(selectedDate) : t('eventCalendar.selectDay')}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {dayEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No events this day.</p>
+            <p className="text-sm text-muted-foreground">{t('eventCalendar.noEvents')}</p>
           ) : (
             dayEvents.map((ev) => (
               <button

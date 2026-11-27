@@ -330,7 +330,7 @@ export function combobox(props: ComboboxProps): Element {
     options: props.options,
     value: props.value ?? props.options[0]?.value ?? '',
     label: props.label,
-    placeholder: props.placeholder ?? 'Search…',
+    placeholder: props.placeholder,
     error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,
@@ -353,7 +353,7 @@ export function date(props: DateProps = {}): Element {
   return new Element('date', {
     value: props.value ?? '',
     label: props.label,
-    placeholder: props.placeholder ?? 'Pick a date',
+    placeholder: props.placeholder,
     error: props.error,
     disabled: props.disabled ?? false,
     className: props.className,

@@ -13,6 +13,7 @@ import { MarkdownView } from '../MarkdownView';
 import { BoundAiThinking } from './BoundAiThinking';
 import { BoundShell, type Emit } from './shared';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 
 type Source = { id: string; label: string; href?: string };
 type Action = { id: string; label: string };
@@ -40,21 +41,22 @@ export function BoundAiMessage({
     : [];
   const thinking = Array.isArray(props.thinking) ? props.thinking : [];
   const isUser = role === 'user';
+  const t = useT();
 
   return (
     <BoundShell className={className} style={style}>
       <Message align={isUser ? 'end' : 'start'}>
         <MessageAvatar>
           <Avatar className="size-8">
-            <AvatarFallback className="text-xs">{isUser ? 'You' : 'AI'}</AvatarFallback>
+            <AvatarFallback className="text-xs">{isUser ? t('ai.you') : t('ai.aiInitials')}</AvatarFallback>
           </Avatar>
         </MessageAvatar>
         <MessageContent>
-          <MessageHeader>{isUser ? 'You' : 'Assistant'}</MessageHeader>
+          <MessageHeader>{isUser ? t('ai.you') : t('ai.assistant')}</MessageHeader>
           {thinking.length > 0 ? (
             <BoundAiThinking
               id={`${id}:thinking`}
-              props={{ title: 'Thinking', steps: thinking, open: false }}
+              props={{ title: t('ai.thinking'), steps: thinking, open: false }}
               style={undefined}
               emit={() => {}}
             />
@@ -73,7 +75,7 @@ export function BoundAiMessage({
           </Bubble>
           {sources.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 px-1">
-              <span className="text-xs text-muted-foreground">{sources.length} sources</span>
+              <span className="text-xs text-muted-foreground">{t('ai.sources', { count: sources.length })}</span>
               {sources.map((s) => (
                 <Badge key={s.id} variant="outline" className="font-normal">
                   {s.label}
@@ -100,7 +102,7 @@ export function BoundAiMessage({
           {followUps.length > 0 ? (
             <MessageFooter>
               <div className="flex w-full flex-col gap-1.5">
-                <span className="text-xs">Follow-ups</span>
+                <span className="text-xs">{t('ai.followUps')}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {followUps.map((f) => (
                     <Button

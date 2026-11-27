@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { resolveNavIcon } from './icons';
+import { useT } from './i18n';
 
 export type TimelineItemView = {
   id?: string;
@@ -86,6 +87,7 @@ function TimelineNode({
 }
 
 function TimelineItemRow({ item, last }: { item: TimelineItemView; last: boolean }): ReactNode {
+  const t = useT();
   const [open, setOpen] = useState(!!item.defaultOpen);
   const hasBody = !!item.body?.trim();
 
@@ -108,7 +110,7 @@ function TimelineItemRow({ item, last }: { item: TimelineItemView; last: boolean
       {hasBody ? (
         <>
           <CollapsibleTrigger className="text-left text-xs text-primary hover:underline">
-            {open ? 'Hide details' : 'Show details'}
+            {open ? t('timeline.hideDetails') : t('timeline.showDetails')}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <pre className="mt-1 max-h-48 overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap">
@@ -153,6 +155,7 @@ export function Timeline({
   className?: string;
   style?: React.CSSProperties;
 }): ReactNode {
+  const t = useT();
   if (orientation === 'horizontal') {
     const trackInset = items.length > 1 ? 'left-[calc(100%/6)] right-[calc(100%/6)]' : '';
     return (
@@ -166,7 +169,7 @@ export function Timeline({
             aria-hidden
           />
         ) : null}
-        <ol className="relative m-0 flex w-full list-none items-start p-0" aria-label="Timeline">
+        <ol className="relative m-0 flex w-full list-none items-start p-0" aria-label={t('timeline.label')}>
           {items.map((item, i) => (
             <li
               key={item.id ?? i}
@@ -189,7 +192,7 @@ export function Timeline({
   }
 
   return (
-    <ol className={cn('relative m-0 list-none p-0', className)} style={style} aria-label="Timeline">
+    <ol className={cn('relative m-0 list-none p-0', className)} style={style} aria-label={t('timeline.label')}>
       {items.map((item, i) => (
         <TimelineItemRow key={item.id ?? i} item={item} last={i === items.length - 1} />
       ))}
@@ -216,6 +219,7 @@ export function StepperView({
   className?: string;
   style?: React.CSSProperties;
 }): ReactNode {
+  const t = useT();
   const active = Math.min(Math.max(0, index), Math.max(0, steps.length - 1));
 
   const inferStatus = (i: number, explicit?: string) => {
@@ -260,7 +264,7 @@ export function StepperView({
           if (i <= active) onIndexChange(i);
         }}
         aria-current={i === active ? 'step' : undefined}
-        aria-label={step.title ? `Step ${i + 1}: ${step.title}` : `Step ${i + 1}`}
+        aria-label={step.title ? t('stepper.stepWithTitle', { index: i + 1, title: step.title }) : t('stepper.step', { index: i + 1 })}
       >
         {inner}
       </button>
@@ -277,7 +281,7 @@ export function StepperView({
               {i < steps.length - 1 ? <div className="my-1 w-px flex-1 min-h-6 bg-border" /> : null}
             </div>
             <div className={cn('pb-6 min-w-0', i === active ? 'font-medium' : 'text-muted-foreground')}>
-              <div className="text-sm">{step.title ?? `Step ${i + 1}`}</div>
+              <div className="text-sm">{step.title ?? t('stepper.step', { index: i + 1 })}</div>
               {step.description ? (
                 <div className="text-xs text-muted-foreground">{step.description}</div>
               ) : null}
@@ -295,7 +299,7 @@ export function StepperView({
               {i < steps.length - 1 ? <div className="h-px flex-1 bg-border" /> : <div className="flex-1" />}
             </div>
             <div className={cn('px-1 text-center', i === active ? 'font-medium' : 'text-muted-foreground')}>
-              <div className="text-sm leading-tight">{step.title ?? `Step ${i + 1}`}</div>
+              <div className="text-sm leading-tight">{step.title ?? t('stepper.step', { index: i + 1 })}</div>
               {step.description ? (
                 <div className="text-xs text-muted-foreground line-clamp-2">{step.description}</div>
               ) : null}
@@ -314,10 +318,10 @@ export function StepperView({
           disabled={active <= 0}
           onClick={() => onIndexChange(active - 1)}
         >
-          Back
+          {t('stepper.back')}
         </button>
         <span className="text-xs text-muted-foreground">
-          Step {active + 1} of {steps.length}
+          {t('stepper.stepOf', { current: active + 1, total: steps.length })}
         </span>
         <button
           type="button"
@@ -325,7 +329,7 @@ export function StepperView({
           disabled={active >= steps.length - 1}
           onClick={() => onIndexChange(active + 1)}
         >
-          Next
+          {t('common.next')}
         </button>
       </div>
     ) : null;

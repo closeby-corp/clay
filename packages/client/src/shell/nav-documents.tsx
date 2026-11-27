@@ -20,15 +20,17 @@ import {
   shouldHandleNavClick,
   type ShellNavItem,
 } from './types';
+import { useT } from '@/i18n';
 
 export function NavDocuments({ items }: { items: ShellNavItem[] }) {
   const { isMobile, setOpenMobile } = useSidebar();
+  const t = useT();
 
   if (items.length === 0) return null;
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Documents</SidebarGroupLabel>
+      <SidebarGroupLabel>{t('shell.documents')}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const Icon = resolveNavIcon(item.icon);
@@ -52,7 +54,7 @@ export function NavDocuments({ items }: { items: ShellNavItem[] }) {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuAction showOnHover className="rounded-sm data-[state=open]:bg-accent">
                     <MoreHorizontalIcon />
-                    <span className="sr-only">More</span>
+                    <span className="sr-only">{t('common.more')}</span>
                   </SidebarMenuAction>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -62,11 +64,11 @@ export function NavDocuments({ items }: { items: ShellNavItem[] }) {
                 >
                   <DropdownMenuItem>
                     <FolderIcon />
-                    <span>Open</span>
+                    <span>{t('shell.open')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <ShareIcon />
-                    <span>Share</span>
+                    <span>{t('shell.share')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

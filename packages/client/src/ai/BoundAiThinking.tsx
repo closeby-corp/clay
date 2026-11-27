@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, Code2, ListOrdered, Search, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFormat, useT } from '@/i18n';
 import { BoundShell, type Emit } from './shared';
 
 type Step = {
@@ -36,7 +37,9 @@ export function BoundAiThinking({
   style: unknown;
   emit: Emit;
 }) {
-  const title = String(props.title ?? 'Thinking');
+  const t = useT();
+  const fmt = useFormat();
+  const title = String(props.title ?? t('ai.thinking'));
   const steps = Array.isArray(props.steps) ? (props.steps as Step[]) : [];
   const serverOpen = !!props.open;
   const [open, setOpen] = useState(serverOpen);
@@ -78,7 +81,7 @@ export function BoundAiThinking({
                       <span className="font-medium text-foreground">{step.title}</span>
                       {typeof step.durationMs === 'number' ? (
                         <span className="text-xs tabular-nums text-muted-foreground">
-                          {(step.durationMs / 1000).toFixed(1)}s
+                          {fmt.number(step.durationMs / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false })}s
                         </span>
                       ) : null}
                     </div>

@@ -1,8 +1,12 @@
-import { expect, test } from 'bun:test';
+import { afterEach, expect, test } from 'bun:test';
 import { Window } from 'happy-dom';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BoundDataTable } from './BoundDataTable';
+import { FilterChipsView } from './FilterChipsView';
+import { __setI18nBootForTests } from './i18n';
+
+afterEach(() => __setI18nBootForTests());
 
 test('column menus, filter chips and clearing retain the server event payloads', async () => {
   const window = new Window({ url: 'http://localhost/' });
@@ -99,4 +103,44 @@ test('headers omit the menu when there are no supported actions', async () => {
   }} style={undefined} emit={() => {}} renderNode={() => null} />);
   expect(html).not.toContain('Status column menu');
   expect(html).toContain('Sort Status');
+});
+
+test('toolbar, pager, empty state and formatted cells follow the pt-PT locale', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const columns = [{ key: 'name', header: 'Nome' }, { key: 'amount', header: 'Valor', format: 'number' }];
+  const render = (rows: Record<string, unknown>[], extra: Record<string, unknown> = {}) => renderToStaticMarkup(
+    <BoundDataTable id="pt" props={{ columns, rows, page: 1, pageSize: 10, totalPages: 1, groupBy: 'name', ...extra }}
+      style={undefined} emit={() => {}} renderNode={() => null} />);
+
+  // English stays the default.
+  const en = render([{ id: 1, name: 'a', amount: 1234567.5 }]);
+  expect(en).toContain('placeholder="Search…"');
+  expect(en).toContain('Rows per page');
+  expect(en).toContain('1,234,567.5');
+
+  __setI18nBootForTests({ locale: 'pt-PT' });
+  const empty = render([]);
+  for (const text of ['placeholder="Pesquisar…"', 'Exportar', 'Personalizar colunas', 'Recolher tudo', 'Expandir tudo',
+    ' Filtrar</button>', 'Linhas por página', 'Página 1 de 1', 'A mostrar 0–0 de 0', 'Ir para a página seguinte',
+    'Sem linhas', 'Tente ajustar a pesquisa ou os filtros.']) {
+    expect(empty).toContain(text);
+  }
+  expect(empty).not.toContain('Rows per page');
+  const rows = render([{ id: 1, name: 'a', amount: 1234567.5 }], { selectable: true, totalRows: 1 });
+  expect(rows).toContain('1\u00a0234\u00a0567,5');
+  expect(rows).toContain('0 de 1 linha selecionada.');
+  expect(rows).toContain('aria-label="Menu da coluna Nome"');
+  // A server-pinned format locale still wins over the UI locale.
+  const pinned = render([{ id: 1, name: 'a', amount: 1234567.5 }],
+    { columns: [{ key: 'amount', header: 'Valor', format: 'number', formatOptions: { locale: 'en-US' } }] });
+  expect(pinned).toContain('1,234,567.5');
+});
+
+test('filter chips translate their built-in labels in pt-PT', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  __setI18nBootForTests({ locale: 'pt-PT' });
+  const html = renderToStaticMarkup(<FilterChipsView chips={[{ id: 's', label: 'Estado', value: 'Ativo' }]}
+    onClear={() => {}} onRemoveChip={() => {}} />);
+  expect(html).toContain('aria-label="Remover Estado"');
+  expect(html).toContain('Limpar tudo');
 });

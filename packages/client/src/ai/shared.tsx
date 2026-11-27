@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { useLocale } from '@/i18n';
 
 export type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -30,13 +31,16 @@ export function asIdLabelList(raw: unknown): { id: string; label: string }[] {
     .filter((x): x is { id: string; label: string } => x != null);
 }
 
-export function formatElapsed(ms: number): string {
+export function formatElapsed(ms: number, locale = 'en'): string {
   const s = Math.max(0, ms) / 1000;
-  if (s < 10) return `${s.toFixed(1)}s`;
+  if (s < 10) {
+    return `${new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false }).format(s)}s`;
+  }
   return `${Math.floor(s)}s`;
 }
 
 export function useElapsed(startedAt: unknown): string | null {
+  const locale = useLocale();
   const [now, setNow] = useState(() => Date.now());
   const start =
     typeof startedAt === 'number'
@@ -52,7 +56,7 @@ export function useElapsed(startedAt: unknown): string | null {
   }, [start]);
 
   if (!Number.isFinite(start)) return null;
-  return formatElapsed(now - start);
+  return formatElapsed(now - start, locale);
 }
 
 export function BoundShell({

@@ -15,7 +15,7 @@ export type ContextMenuItemOptions = {
 export class ContextMenuElement extends Element {
   constructor(props: ContextMenuProps = {}) {
     super('contextmenu', {
-      label: props.label ?? 'Right-click me',
+      label: props.label,
       className: props.className,
     });
   }

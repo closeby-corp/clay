@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
+import { useLocale, useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -69,6 +70,8 @@ export function BoundRelativeTime({
   style: unknown;
   emit: Emit;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const live = props.date == null || props.date === '';
   const [now, setNow] = useState(() => Date.now());
 
@@ -90,14 +93,14 @@ export function BoundRelativeTime({
       className={cn('flex flex-wrap gap-4 rounded-md border bg-background p-4', className)}
       style={asStyle(style)}
       role="group"
-      aria-label="Relative time"
+      aria-label={t('relativeTime.label')}
     >
       {zones.map(({ zone, label }) => {
         let dateText = '—';
         let timeText = '—';
         try {
-          dateText = new Intl.DateTimeFormat(undefined, { timeZone: zone, dateStyle }).format(instant);
-          timeText = new Intl.DateTimeFormat(undefined, { timeZone: zone, timeStyle }).format(instant);
+          dateText = new Intl.DateTimeFormat(locale, { timeZone: zone, dateStyle }).format(instant);
+          timeText = new Intl.DateTimeFormat(locale, { timeZone: zone, timeStyle }).format(instant);
         } catch {
           // Invalid IANA zone — leave placeholders
         }

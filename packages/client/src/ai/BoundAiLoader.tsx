@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 import { BoundShell, useElapsed, type Emit } from './shared';
 
 function PixelGrid() {
@@ -57,7 +58,8 @@ export function BoundAiLoader({
   style: unknown;
   emit: Emit;
 }) {
-  const label = String(props.label ?? 'Working');
+  const t = useT();
+  const label = String(props.label ?? t('ai.working'));
   const variant = String(props.variant ?? 'dots');
   const elapsed = useElapsed(props.startedAt);
 

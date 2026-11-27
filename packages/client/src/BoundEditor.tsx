@@ -9,6 +9,7 @@ import { Placeholder, StarterKit, type Editor } from '@domternal/core';
 import { Markdown, getMarkdown } from '@domternal/extension-markdown';
 import { cn } from '@/lib/utils';
 import { useOptimisticValue } from './useOptimisticValue';
+import { useT } from './i18n';
 
 type Emit = (id: string, type: string, value?: unknown) => void;
 
@@ -63,7 +64,8 @@ export function BoundEditor({
 }) {
   const format = props.format === 'markdown' ? 'markdown' : 'html';
   const serverValue = String(props.value ?? '');
-  const placeholder = props.placeholder ? String(props.placeholder) : undefined;
+  const t = useT();
+  const placeholder = props.placeholder ? String(props.placeholder) : t('editor.placeholder');
   const disabled = !!props.disabled;
 
   const [, setValue] = useOptimisticValue(serverValue);
@@ -96,7 +98,7 @@ export function BoundEditor({
     const list = [
       StarterKit,
       Placeholder.configure({
-        placeholder: placeholder ?? 'Write something…',
+        placeholder,
       }),
     ];
     if (format === 'markdown') {

@@ -17,6 +17,7 @@ import {
 } from './reconnect';
 import { applySound, isSoundName, playSound } from './sound/engine';
 import { applyPalette, applyServerTheme, currentPalette, isThemeMode } from './themeBridge';
+import { applyLocale, localeHello, t } from './i18n';
 import type {
   ClientMessage,
   ElementNode,
@@ -180,7 +181,7 @@ export function useClaySession(path: string) {
         if (msg.path) applyPath(msg.path);
         softClose();
       } catch (err) {
-        showToast(err instanceof Error ? err.message : 'Auth session failed', {
+        showToast(err instanceof Error ? err.message : t('toast.authFailed'), {
           type: 'error',
         });
       }
@@ -228,6 +229,28 @@ export function useClaySession(path: string) {
         if (isThemeMode(msg.theme)) applyServerTheme(msg.theme);
       } else if (msg.op === 'palette') {
         applyPalette(String(msg.palette ?? ''));
+      } else if (msg.op === 'locale') {
+        applyLocale(typeof msg.locale === 'string' ? msg.locale : null);
+        // Rebuild the page on the server so strings it built (`ui.t`, `ui.messages`) follow.
+        if (msg.remount) {
+          const ws = wsRef.current;
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                op: 'hello',
+                path: pathRef.current,
+                userId: userIdRef.current,
+                hash: lastHashRef.current,
+                search: lastSearchRef.current,
+                browserStorage: loadBrowserStorageBag(),
+                clientStorage: loadClientStorageBag(),
+                tabStorage: loadTabStorageBag(),
+                palette: currentPalette(),
+                ...localeHello(),
+              } satisfies ClientMessage),
+            );
+          }
+        }
       } else if (msg.op === 'sound') {
         applySound({ enabled: msg.enabled, volume: msg.volume });
         if (isSoundName(msg.play)) playSound(msg.play, { force: true });
@@ -235,7 +258,7 @@ export function useClaySession(path: string) {
         try {
           runClientJavaScript(msg.code);
         } catch (err) {
-          showToast(err instanceof Error ? err.message : 'JavaScript failed', {
+          showToast(err instanceof Error ? err.message : t('toast.javascriptFailed'), {
             type: 'error',
           });
         }
@@ -257,7 +280,7 @@ export function useClaySession(path: string) {
             await navigator.clipboard.writeText(msg.content);
             playSound('copy');
           } catch {
-            showToast('Clipboard copy failed', { type: 'error' });
+            showToast(t('toast.clipboardFailed'), { type: 'error' });
           }
         };
         void write();
@@ -285,7 +308,7 @@ export function useClaySession(path: string) {
         try {
           window.open(msg.url, '_blank', 'noopener,noreferrer');
         } catch {
-          showToast('Could not open link', { type: 'error' });
+          showToast(t('toast.openLinkFailed'), { type: 'error' });
         }
       } else if (msg.op === 'error') {
         showToast(msg.message, { type: 'error' });
@@ -330,6 +353,7 @@ export function useClaySession(path: string) {
             clientStorage: loadClientStorageBag(),
             tabStorage: loadTabStorageBag(),
             palette: currentPalette(),
+            ...localeHello(),
           } satisfies ClientMessage),
         );
       };
@@ -344,7 +368,7 @@ export function useClaySession(path: string) {
           clearOutageToastTimer();
           outageToastTimer = setTimeout(() => {
             outageToastTimer = null;
-            showToast('Disconnected — reconnecting…', {
+            showToast(t('toast.disconnected'), {
               id: WS_RECONNECT_TOAST_ID,
               type: 'warning',
               duration: 0,
@@ -400,6 +424,7 @@ export function useClaySession(path: string) {
           clientStorage: loadClientStorageBag(),
           tabStorage: loadTabStorageBag(),
           palette: currentPalette(),
+          ...localeHello(),
         } satisfies ClientMessage),
       );
     }

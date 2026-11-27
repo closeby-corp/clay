@@ -8,6 +8,7 @@ import {
 import { ArrowDownIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n"
 import { Button } from "@/components/ui/button"
 
 function MessageScrollerProvider(
@@ -89,6 +90,7 @@ function MessageScrollerButton({
   ...props
 }: React.ComponentProps<typeof MessageScrollerPrimitive.Button> &
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  const t = useT()
   return (
     <MessageScrollerPrimitive.Button
       data-slot="message-scroller-button"
@@ -107,7 +109,7 @@ function MessageScrollerButton({
         <>
           <ArrowDownIcon />
           <span className="sr-only">
-            {direction === "end" ? "Scroll to end" : "Scroll to start"}
+            {direction === "end" ? t("chat.scrollToEnd") : t("chat.scrollToStart")}
           </span>
         </>
       )}

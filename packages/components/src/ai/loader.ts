@@ -13,7 +13,7 @@ export type AiLoaderProps = {
 
 export function loader(props: AiLoaderProps = {}): Element {
   return new Element('aiLoader', {
-    label: props.label ?? 'Working',
+    label: props.label,
     variant: props.variant ?? 'dots',
     startedAt: props.startedAt,
     className: props.className,

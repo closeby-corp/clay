@@ -14,7 +14,7 @@ export type AiInsightsProps = {
 
 export function insights(props: AiInsightsProps = {}): Element {
   return new Element('aiInsights', {
-    title: props.title ?? 'Insights',
+    title: props.title,
     insights: props.insights ?? [],
     index: props.index ?? 0,
     prompt: props.prompt,

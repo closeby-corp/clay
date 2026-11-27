@@ -7,10 +7,15 @@ import {
 import {
   DayPicker,
   getDefaultClassNames,
+  type DateLib,
   type DayButton,
+  type Formatters,
+  type Labels,
+  type Modifiers,
 } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
+import { useFormat, useT, type LocaleFormat, type Translate } from "@/i18n"
 import { Button, buttonVariants } from "@/components/ui/button"
 
 function Calendar({
@@ -20,16 +25,22 @@ function Calendar({
   captionLayout = "label",
   buttonVariant = "ghost",
   formatters,
+  labels,
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
+  const t = useT()
+  const fmt = useFormat()
+  const localized = React.useMemo(() => calendarLocalization(fmt, t), [fmt, t])
 
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      weekStartsOn={fmt.weekStartsOn}
+      lang={localized.english ? undefined : fmt.locale}
       className={cn(
         "group/calendar bg-background p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
@@ -38,9 +49,12 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+        ...localized.formatters,
         ...formatters,
+      }}
+      labels={{
+        ...localized.labels,
+        ...labels,
       }}
       classNames={{
         root: cn("w-fit", defaultClassNames.root),
@@ -175,6 +189,58 @@ function Calendar({
       {...props}
     />
   )
+}
+
+/**
+ * Clay locale → react-day-picker formatters/labels. English keeps react-day-picker's date-fns
+ * output; any other locale formats captions, weekdays and aria labels with `Intl`, so no
+ * date-fns locale bundles are needed.
+ */
+function calendarLocalization(
+  fmt: LocaleFormat,
+  t: Translate
+): { english: boolean; formatters: Partial<Formatters>; labels: Partial<Labels> } {
+  const english = fmt.locale.toLowerCase().split("-")[0] === "en"
+  const fullDate = (date: Date, dateLib?: DateLib) =>
+    english && dateLib ? dateLib.format(date, "PPPP") : fmt.date(date, { dateStyle: "full" })
+  const monthYear = (date: Date, dateLib?: DateLib) =>
+    english && dateLib
+      ? dateLib.formatMonthYear(date)
+      : fmt.date(date, { month: "long", year: "numeric" })
+  const dayLabel = (date: Date, modifiers: Modifiers | undefined, dateLib?: DateLib) => {
+    let label = fullDate(date, dateLib)
+    if (modifiers?.today) label = t("calendar.today", { date: label })
+    return label
+  }
+
+  const formatters: Partial<Formatters> = {
+    formatMonthDropdown: (date) => fmt.date(date, { month: "short" }),
+  }
+  if (!english) {
+    formatters.formatCaption = (month) => monthYear(month)
+    // Column headers must stay compact: some locales' "short" names are whole words
+    // (pt-PT "segunda", "terça"), so drop a trailing dot and keep at most three letters.
+    formatters.formatWeekdayName = (weekday) =>
+      Array.from(fmt.date(weekday, { weekday: "short" }).replace(/\.$/, "")).slice(0, 3).join("")
+  }
+
+  const labels: Partial<Labels> = {
+    labelPrevious: () => t("calendar.previousMonth"),
+    labelNext: () => t("calendar.nextMonth"),
+    labelMonthDropdown: () => t("calendar.chooseMonth"),
+    labelYearDropdown: () => t("calendar.chooseYear"),
+    labelWeekNumber: (weekNumber) => t("calendar.weekNumber", { week: String(weekNumber) }),
+    labelWeekNumberHeader: () => t("calendar.weekNumberHeader"),
+    labelGrid: (date, _options, dateLib) => monthYear(date, dateLib),
+    labelGridcell: (date, modifiers, _options, dateLib) => dayLabel(date, modifiers, dateLib),
+    labelDayButton: (date, modifiers, _options, dateLib) => {
+      const label = dayLabel(date, modifiers, dateLib)
+      return modifiers.selected ? t("calendar.selected", { date: label }) : label
+    },
+    labelWeekday: (date, _options, dateLib) =>
+      english && dateLib ? dateLib.format(date, "cccc") : fmt.date(date, { weekday: "long" }),
+  }
+  return { english, formatters, labels }
 }
 
 function CalendarDayButton({

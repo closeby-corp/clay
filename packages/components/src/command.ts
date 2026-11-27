@@ -46,10 +46,10 @@ export class CommandElement extends Element {
     super('command', {
       mode,
       open: mode === 'inline' ? true : (props.open ?? false),
-      title: props.title ?? 'Command Palette',
-      description: props.description ?? 'Search for a command to run…',
-      placeholder: props.placeholder ?? 'Type a command or search…',
-      emptyText: props.emptyText ?? 'No results found.',
+      title: props.title,
+      description: props.description,
+      placeholder: props.placeholder,
+      emptyText: props.emptyText,
       className: props.className,
       onOpenChange: mode === 'dialog' ? props.onOpenChange : undefined,
     });
