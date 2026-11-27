@@ -72,6 +72,25 @@ test('tables with views expose the same toolbar filter picker', async () => {
   expect(html).toContain('Status column menu');
 });
 
+test('view tab count badges grow to fit 1, 3 and 4-digit counts', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const html = renderToStaticMarkup(<BoundDataTable id="counts" props={{
+    columns: [{ key: 'name', header: 'Name' }], rows: [],
+    views: [{ id: 'one', label: 'One', count: 6 }, { id: 'three', label: 'Three', count: 389 }, { id: 'four', label: 'Four', count: 1234 }],
+    activeView: 'one', searchable: false, exportable: false, columnToggle: false, pageSize: 0, events: [],
+  }} style={undefined} emit={() => {}} renderNode={() => null} />);
+  const badges = [...html.matchAll(/<span([^>]*data-view-count=""[^>]*)>([^<]*)<\/span>/g)]
+    .map(([, attrs, text]) => [attrs!.match(/class="([^"]*)"/)![1], text]);
+  expect(badges.map(([, text]) => text)).toEqual(['6', '389', '1234']);
+  for (const [cls] of badges) {
+    const classes = cls!.split(/\s+/);
+    expect(classes).toContain('min-w-5');
+    expect(classes).toContain('w-fit');
+    expect(classes).toContain('tabular-nums');
+    expect(classes).not.toContain('w-5');
+  }
+});
+
 test('headers omit the menu when there are no supported actions', async () => {
   const { renderToStaticMarkup } = await import('react-dom/server');
   const html = renderToStaticMarkup(<BoundDataTable id="plain" props={{

@@ -2522,7 +2522,8 @@ export function BoundDataTable({
                 {view.count != null ? (
                   <Badge
                     variant="secondary"
-                    className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/30 px-1"
+                    data-view-count=""
+                    className="h-5 min-w-5 rounded-full bg-muted-foreground/30 px-1.5 py-0 tabular-nums leading-none"
                   >
                     {view.count}
                   </Badge>
