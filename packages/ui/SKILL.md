@@ -92,12 +92,20 @@ ui.page('/dashboard', () => {
 - Tailwind: `ui.label('x').classes('text-sm text-muted-foreground')` or pass `className` in props.
 - Toasts: `ui.notify('Saved', 'success')`.
 
+## Translations
+
+- `ui.run({ locale: 'pt-PT' })` (or `'auto'` for the browser language) localises every built-in Clay string (table toolbars, pickers, dialogs, shell) plus dates and numbers. English is the default; `en` and `pt-PT` ship built in.
+- `ui.setLocale('pt-PT')` switches one tab live and is remembered; `ui.getLocale()` reads it.
+- Override built-in text: `ui.run({ messages: { 'pt-PT': { 'dataTable.export': 'Descarregar' } } })`.
+- App strings: `const t = ui.messages({ en: { hi: 'Hello {name}' }, 'pt-PT': { hi: 'Olá {name}' } }); ui.label(t('hi', { name }))`. Use `ui.formatNumber` / `ui.formatDate` / `ui.formatRelativeTime` instead of `toLocaleString()`. Details: `i18n.md`.
+
 ## Do not
 
 - Import React, write JSX, or add client components for screens.
 - Use `window`, `document`, `navigator` in page code — use `ui.clipboard`, `ui.setUrlHash`, `ui.getUrlSearch` / `ui.updateUrlSearch`, `ui.openExternal`.
 - Assume `let` is shared across tabs or users.
 - Use `ui.ai.*` as an LLM runtime — it is visual primitives only.
+- Hand-roll an i18n dictionary or pass translated copies of Clay's own defaults (placeholders, "No results", …) — set `locale` and use `ui.messages` for app text.
 
 ## Docs (shipped with package)
 
@@ -111,6 +119,7 @@ After install, read version-matched docs at `node_modules/@close-by/clay/docs/`:
 | `elements.md` | Wire types → client mapping |
 | `reactive-let.md` | `ui.state` / `ui.auto` / compile-time `let` |
 | `ops-patterns.md` | Dense consoles, feeds, tables |
+| `i18n.md` | `locale` / `ui.setLocale`, message overrides, `ui.messages` for app strings, formatting |
 | `examples.md` | Demo route catalog |
 
 Resolve docs programmatically: `resolveClayDocsDir()` from `@close-by/clay/docs-dir`.
