@@ -118,7 +118,7 @@ bun run clay hello.ts --port 4000
 
 ```bash
 bun run clay ./pages --app --title "My App"
-# loadPages + ui.run({ app: { title, nav: navFromPages() } })
+# loadPages + ui.run({ app: { title } }) — nav from navFromPages() per page build
 ```
 
 | Flag | Meaning |

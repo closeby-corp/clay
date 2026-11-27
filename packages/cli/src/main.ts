@@ -31,7 +31,8 @@ Use one of:
   // or call ui.page(...) then let the CLI start the server
 `;
 
-function buildRunConfig(opts: {
+/** Base `ui.run` config for the CLI (`--app` shell omits `nav` → per-build `navFromPages()`). */
+export function buildRunConfig(opts: {
   port: number;
   title: string;
   app: boolean;
@@ -43,10 +44,7 @@ function buildRunConfig(opts: {
     clientDir: BUNDLED_CLIENT_DIR,
   };
   if (opts.app) {
-    config.app = {
-      title: opts.title,
-      nav: ui.navFromPages(),
-    };
+    config.app = { title: opts.title };
   }
   if (opts.pwa) config.pwa = true;
   return config;

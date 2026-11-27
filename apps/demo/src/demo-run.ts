@@ -2,6 +2,7 @@ import { fileURLToPath } from 'url';
 import { ui, type RunConfig } from '@close-by/clay';
 import { clearSessionUser, getSessionUser } from './examples/_auth';
 import { demoOidcRoutes } from './examples/_oidc';
+import { demoForbidden } from './examples/_access-denied';
 
 const DEFAULT_AUTH_SECRET = 'clay-demo-auth-secret-change-me';
 
@@ -68,6 +69,7 @@ export function createDemoRunConfig(overrides: Partial<RunConfig> = {}): RunConf
     sessionExpiredPath: overrides.sessionExpiredPath ?? auth.sessionExpiredPath,
     css: overrides.css ?? auth.css,
     getRoles: overrides.getRoles ?? (() => getSessionUser()?.role ?? null),
+    forbidden: overrides.forbidden ?? demoForbidden,
     routes: overrides.routes ?? demoOidcRoutes(overrides.port ?? 3000),
     app: overrides.app ?? demoAppShell(overrides.title),
   };

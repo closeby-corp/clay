@@ -51,7 +51,7 @@ Nest pages under collapsible sidebar groups with `pageMeta.group` / `groupIcon`,
 ```typescript
 export const pageMeta = { label: 'Charts', icon: 'chart-area', order: 90 };
 // export const pageMeta = { nav: false }; // route only
-// export const pageMeta = { label: 'Admin', roles: ['admin'] }; // nav UX filter
+// export const pageMeta = { label: 'Admin', roles: ['admin'] }; // nav filter + page gate (with getRoles)
 // export const pageMeta = { label: 'Guide', group: 'Docs', groupIcon: 'book' };
 
 ui.navFromPages({ role: user.role, groupExamples: true });
@@ -92,7 +92,7 @@ ui.run({
 | `clientDir` | `string` | `resolveClayClientDir()` | Built Vite assets (`@close-by/clay-cli/client-dist` when installed). Prefer `resolveClayClientDir()` over hardcoding `node_modules` paths — see [Boot](./boot.md). |
 | `css` | `string \| string[]` | | Extra CSS file path(s) served after the client bundle (absolute or cwd-relative). Override theme tokens without rebuilding the client. |
 | `sound` | `boolean` | | Play short synthesized interface sounds by default (`false`). See [Sound](#sound). |
-| `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate |
+| `app` | `AppProps` | | Global dashboard shell; client keeps chrome sticky across navigate. Omit `app.nav` to build it from `ui.navFromPages()` per page (role-filtered with `getRoles`) |
 | `pwa` | `boolean \| ClayPwaConfig` | | Installable app: web manifest, icons, and a service worker that caches the app shell. See [Mobile and installable apps](./mobile.md#installable-app-pwa) |
 | `authSecret` | `string` | | Enables signed auth cookies (`POST`/`DELETE /auth/session`), `ui.establishAuthSession` / `ui.clearAuthSession`, and default `resolveUserId` from the cookie |
 | `authCookieMaxAgeSec` | `number` | `43200` (12h) | Auth cookie Max-Age |
@@ -100,7 +100,8 @@ ui.run({
 | `sessionAbsoluteMs` | `number` | | Optional: clear auth + redirect after this time since hello |
 | `sessionExpiredPath` | `string` | `'/'` | SPA path after idle/absolute expiry |
 | `resolveUserId` | `(ctx) => …` | cookie helper when `authSecret` set | Trusted identity on WebSocket hello |
-| `getRoles` | `() => string \| string[] \| null` | | Current user's roles. Enables `ui.forRoles`, `ui.hasRole`, `.roles()`, and default filtering in `ui.navFromPages()` / `requireRole` — see [Production — role-based content](./production.md#role-based-content) |
+| `getRoles` | `() => string \| string[] \| null` | | Current user's roles. Enables `ui.forRoles`, `ui.hasRole`, `.roles()`, default filtering in `ui.navFromPages()` / `requireRole`, and gates pages by `pageMeta.roles` — see [Production — role-based content](./production.md#role-based-content) |
+| `forbidden` | `(path) => void` | "Not allowed" empty state | With `getRoles`: view built instead of a page whose `pageMeta.roles` the session lacks. Runs inside the app shell; may call `ui.redirect` / `ui.navigate` |
 | `routes` | `Record<path, (req, ctx) => Response>` | | Extra HTTP routes, exact path, any method. `ctx.signIn(userId, location)` / `ctx.signOut(location)` redirect and set/clear the auth cookie. Used for OAuth callbacks — see [Production — single sign-on](./production.md#single-sign-on-oidc) |
 
 #### Auth cookie recipe
@@ -1973,7 +1974,7 @@ Sidebar layout for multi-page apps. Prefer `ui.run({ app })` so every page inher
 |------|------|-------------|
 | `title` | `string` | Brand label in the sidebar |
 | `headerTitle` | `string` | Optional site header title (client defaults to active nav label) |
-| `nav` | `AppNavItem[]` | Primary sidebar links (SPA `pushState` for `/…`) |
+| `nav` | `AppNavItem[]` | Primary sidebar links (SPA `pushState` for `/…`). Optional: omit to use `ui.navFromPages()` per page build |
 | `navSecondary` | `AppNavItem[]` | Optional secondary links (e.g. Settings) |
 | `documents` | `AppNavItem[]` | Optional documents group |
 | `primaryAction` | `{ label, href?, icon? }` | Optional CTA above primary nav (no default) |

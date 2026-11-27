@@ -37,7 +37,8 @@ export type AppProps = {
   sidebarResizable?: boolean;
   sidebarWidth?: { default?: string; min?: string; max?: string };
   account?: { user: AppUser | (() => AppUser | null); menu?: () => void };
-  nav: AppNavItem[];
+  /** Primary sidebar nav. `ui.app` / `ui.run({ app })`: omit to use `ui.navFromPages()` per page build. */
+  nav?: AppNavItem[];
   navSecondary?: AppNavItem[];
   documents?: AppNavItem[];
   /** Optional CTA above primary nav; omitted by default (no Quick Create). */

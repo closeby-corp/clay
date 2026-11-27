@@ -60,7 +60,9 @@ export type PageMeta = {
   /**
    * If set, `navFromPages({ role })` / `navFromPages({ roles })` only includes this
    * item when the viewer has at least one matching role. Omit = visible to everyone.
-   * UX only — still call `requireRole` in the page builder.
+   * With `ui.run({ getRoles })`, the page itself is also gated: a session without a
+   * matching role gets the `forbidden` view instead of the page. Without `getRoles`
+   * this is nav filtering only — call `requireRole` in the page builder.
    */
   roles?: string[];
   /** Nest this page under a collapsible sidebar group with the given label. */
